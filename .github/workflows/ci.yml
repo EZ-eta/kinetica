@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      # ubuntu-latest ships an Android SDK with platform 34 / build-tools
+      # 34.0.0 preinstalled; ANDROID_HOME is exported by the runner image.
+
+      - uses: gradle/actions/setup-gradle@v3
+
+      # The project's exact green gate: build, JVM golden suite, lint.
+      - run: ./gradlew assembleDebug test lint

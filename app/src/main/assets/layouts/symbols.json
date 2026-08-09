@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "name": "symbols",
+  "locale": "en_US",
+  "keys": [
+    { "id": "d1", "type": "char", "label": "1", "output": "1", "x": 0.00, "y": 0.00, "w": 0.10, "h": 0.25 },
+    { "id": "d2", "type": "char", "label": "2", "output": "2", "x": 0.10, "y": 0.00, "w": 0.10, "h": 0.25 },
+    { "id": "d3", "type": "char", "label": "3", "output": "3", "x": 0.20, "y": 0.00, "w": 0.10, "h": 0.25 },
+    { "id": "d4", "type": "char", "label": "4", "output": "4", "x": 0.30, "y": 0.00, "w": 0.10, "h": 0.25 },
+    { "id": "d5", "type": "char", "label": "5", "output": "5", "x": 0.40, "y": 0.00, "w": 0.10, "h": 0.25 },
+    { "id": "d6", "type": "char", "label": "6", "output": "6", "x": 0.50, "y": 0.00, "w": 0.10, "h": 0.25 },
+    { "id": "d7", "type": "char", "label": "7", "output": "7", "x": 0.60, "y": 0.00, "w": 0.10, "h": 0.25 },
+    { "id": "d8", "type": "char", "label": "8", "output": "8", "x": 0.70, "y": 0.00, "w": 0.10, "h": 0.25 },
+    { "id": "d9", "type": "char", "label": "9", "output": "9", "x": 0.80, "y": 0.00, "w": 0.10, "h": 0.25 },
+    { "id": "d0", "type": "char", "label": "0", "output": "0", "x": 0.90, "y": 0.00, "w": 0.10, "h": 0.25 },
+
+    { "id": "at", "type": "char", "label": "@", "output": "@", "x": 0.00, "y": 0.25, "w": 0.10, "h": 0.25 },
+    { "id": "hash", "type": "char", "label": "#", "output": "#", "x": 0.10, "y": 0.25, "w": 0.10, "h": 0.25 },
+    { "id": "dollar", "type": "char", "label": "$", "output": "$", "x": 0.20, "y": 0.25, "w": 0.10, "h": 0.25, "alternates": ["€", "£", "¥", "¢"] },
+    { "id": "percent", "type": "char", "label": "%", "output": "%", "x": 0.30, "y": 0.25, "w": 0.10, "h": 0.25 },
+    { "id": "amp", "type": "char", "label": "&", "output": "&", "x": 0.40, "y": 0.25, "w": 0.10, "h": 0.25 },
+    { "id": "minus", "type": "char", "label": "-", "output": "-", "x": 0.50, "y": 0.25, "w": 0.10, "h": 0.25, "alternates": ["_", "–", "—", "·"] },
+    { "id": "plus", "type": "char", "label": "+", "output": "+", "x": 0.60, "y": 0.25, "w": 0.10, "h": 0.25, "alternates": ["±"] },
+    { "id": "lparen", "type": "char", "label": "(", "output": "(", "x": 0.70, "y": 0.25, "w": 0.10, "h": 0.25 },
+    { "id": "rparen", "type": "char", "label": ")", "output": ")", "x": 0.80, "y": 0.25, "w": 0.10, "h": 0.25 },
+    { "id": "numpad", "type": "mode_numpad", "label": "123", "x": 0.90, "y": 0.25, "w": 0.10, "h": 0.25 },
+
+    { "id": "eq", "type": "char", "label": "=", "output": "=", "x": 0.00, "y": 0.50, "w": 0.10, "h": 0.25 },
+    { "id": "star", "type": "char", "label": "*", "output": "*", "x": 0.10, "y": 0.50, "w": 0.10, "h": 0.25 },
+    { "id": "quote", "type": "char", "label": "\"", "output": "\"", "x": 0.20, "y": 0.50, "w": 0.10, "h": 0.25, "alternates": ["«", "»", "„", "“"] },
+    { "id": "apos", "type": "char", "label": "'", "output": "'", "x": 0.30, "y": 0.50, "w": 0.10, "h": 0.25, "alternates": ["‘", "’", "`"] },
+    { "id": "colon", "type": "char", "label": ":", "output": ":", "x": 0.40, "y": 0.50, "w": 0.10, "h": 0.25 },
+    { "id": "semi", "type": "char", "label": ";", "output": ";", "x": 0.50, "y": 0.50, "w": 0.10, "h": 0.25 },
+    { "id": "excl", "type": "char", "label": "!", "output": "!", "x": 0.60, "y": 0.50, "w": 0.10, "h": 0.25, "alternates": ["¡"] },
+    { "id": "quest", "type": "char", "label": "?", "output": "?", "x": 0.70, "y": 0.50, "w": 0.10, "h": 0.25, "alternates": ["¿"] },
+    { "id": "backspace", "type": "backspace", "label": "⌫", "x": 0.80, "y": 0.50, "w": 0.20, "h": 0.25 },
+
+    { "id": "abc", "type": "mode_alpha", "label": "ABC", "x": 0.00, "y": 0.75, "w": 0.15, "h": 0.25 },
+    { "id": "page2", "type": "mode_symbols2", "label": "=\\<", "hint": "1/2", "x": 0.15, "y": 0.75, "w": 0.10, "h": 0.25 },
+    { "id": "comma", "type": "char", "label": ",", "output": ",", "x": 0.25, "y": 0.75, "w": 0.10, "h": 0.25 },
+    { "id": "space", "type": "space", "label": " ", "x": 0.35, "y": 0.75, "w": 0.40, "h": 0.25 },
+    { "id": "period", "type": "char", "label": ".", "output": ".", "x": 0.75, "y": 0.75, "w": 0.10, "h": 0.25 },
+    { "id": "enter", "type": "enter", "label": "⏎", "x": 0.85, "y": 0.75, "w": 0.15, "h": 0.25 }
+  ]
+}

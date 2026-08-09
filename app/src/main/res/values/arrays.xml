@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="layout_mode_entries">
+        <item>Full width</item>
+        <item>Right-aligned</item>
+        <item>Left-aligned</item>
+        <item>Split</item>
+        <item>One-handed</item>
+    </string-array>
+    <string-array name="layout_mode_values">
+        <item>full</item>
+        <item>right</item>
+        <item>left</item>
+        <item>split</item>
+        <item>one_handed</item>
+    </string-array>
+
+    <string-array name="trail_color_entries">
+        <item>Rainbow</item>
+        <item>Red</item>
+        <item>Orange</item>
+        <item>Green</item>
+        <item>Cyan</item>
+        <item>Violet</item>
+        <item>Custom hue</item>
+        <item>Theme color</item>
+    </string-array>
+    <string-array name="trail_color_values">
+        <item>rainbow</item>
+        <item>red</item>
+        <item>orange</item>
+        <item>green</item>
+        <item>cyan</item>
+        <item>violet</item>
+        <item>custom</item>
+        <item>theme</item>
+    </string-array>
+
+    <string-array name="theme_mode_entries">
+        <item>Kinetica dark (default)</item>
+        <item>Material You (Android 12+)</item>
+        <item>Custom color</item>
+    </string-array>
+    <string-array name="theme_mode_values">
+        <item>default</item>
+        <item>dynamic</item>
+        <item>custom</item>
+    </string-array>
+
+    <string-array name="theme_color_entries">
+        <item>Kinetica blue</item>
+        <item>Red</item>
+        <item>Pink</item>
+        <item>Purple</item>
+        <item>Deep purple</item>
+        <item>Indigo</item>
+        <item>Blue</item>
+        <item>Cyan</item>
+        <item>Teal</item>
+        <item>Green</item>
+        <item>Amber</item>
+        <item>Orange</item>
+        <item>Brown</item>
+    </string-array>
+    <string-array name="theme_color_values">
+        <item>#5468FF</item>
+        <item>#F44336</item>
+        <item>#E91E63</item>
+        <item>#9C27B0</item>
+        <item>#673AB7</item>
+        <item>#3F51B5</item>
+        <item>#2196F3</item>
+        <item>#00BCD4</item>
+        <item>#009688</item>
+        <item>#4CAF50</item>
+        <item>#FFC107</item>
+        <item>#FF9800</item>
+        <item>#795548</item>
+    </string-array>
+
+    <string-array name="reinforce_entries">
+        <item>Small (+1)</item>
+        <item>Medium (+5)</item>
+        <item>Large (+10)</item>
+    </string-array>
+    <string-array name="reinforce_values">
+        <item>small</item>
+        <item>medium</item>
+        <item>large</item>
+    </string-array>
+
+    <string-array name="comma_mode_entries">
+        <item>Comma (default)</item>
+        <item>Removed (spacebar widens)</item>
+        <item>Custom character</item>
+        <item>Custom text</item>
+        <item>Paste</item>
+        <item>Select all</item>
+    </string-array>
+    <string-array name="comma_mode_values">
+        <item>keep</item>
+        <item>remove</item>
+        <item>char</item>
+        <item>text</item>
+        <item>paste</item>
+        <item>select_all</item>
+    </string-array>
+
+    <string-array name="autocorrect_entries">
+        <item>Off</item>
+        <item>Normal</item>
+        <item>Aggressive</item>
+    </string-array>
+    <string-array name="autocorrect_values">
+        <item>off</item>
+        <item>normal</item>
+        <item>aggressive</item>
+    </string-array>
+
+    <string-array name="language_entries">
+        <item>English</item>
+        <item>Italiano</item>
+        <item>Español</item>
+    </string-array>
+    <string-array name="language_values">
+        <item>en</item>
+        <item>it</item>
+        <item>es</item>
+    </string-array>
+
+    <string-array name="lang_cycle_key_entries">
+        <item>Off</item>
+        <item>A</item><item>B</item><item>C</item><item>D</item><item>E</item>
+        <item>F</item><item>G</item><item>H</item><item>I</item><item>J</item>
+        <item>K</item><item>L</item><item>M</item><item>N</item><item>O</item>
+        <item>P</item><item>Q</item><item>R</item><item>S</item><item>T</item>
+        <item>U</item><item>V</item><item>W</item><item>X</item><item>Y</item>
+        <item>Z</item>
+    </string-array>
+    <string-array name="lang_cycle_key_values">
+        <item>none</item>
+        <item>a</item><item>b</item><item>c</item><item>d</item><item>e</item>
+        <item>f</item><item>g</item><item>h</item><item>i</item><item>j</item>
+        <item>k</item><item>l</item><item>m</item><item>n</item><item>o</item>
+        <item>p</item><item>q</item><item>r</item><item>s</item><item>t</item>
+        <item>u</item><item>v</item><item>w</item><item>x</item><item>y</item>
+        <item>z</item>
+    </string-array>
+</resources>

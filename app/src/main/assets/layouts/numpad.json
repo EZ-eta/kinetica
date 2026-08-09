@@ -1,0 +1,26 @@
+{
+  "schema": 1,
+  "name": "numpad",
+  "locale": "en_US",
+  "keys": [
+    { "id": "n1", "type": "char", "label": "1", "output": "1", "x": 0.00, "y": 0.00, "w": 0.25, "h": 0.25 },
+    { "id": "n2", "type": "char", "label": "2", "output": "2", "x": 0.25, "y": 0.00, "w": 0.25, "h": 0.25 },
+    { "id": "n3", "type": "char", "label": "3", "output": "3", "x": 0.50, "y": 0.00, "w": 0.25, "h": 0.25 },
+    { "id": "backspace", "type": "backspace", "label": "⌫", "x": 0.75, "y": 0.00, "w": 0.25, "h": 0.25 },
+
+    { "id": "n4", "type": "char", "label": "4", "output": "4", "x": 0.00, "y": 0.25, "w": 0.25, "h": 0.25 },
+    { "id": "n5", "type": "char", "label": "5", "output": "5", "x": 0.25, "y": 0.25, "w": 0.25, "h": 0.25 },
+    { "id": "n6", "type": "char", "label": "6", "output": "6", "x": 0.50, "y": 0.25, "w": 0.25, "h": 0.25 },
+    { "id": "enter", "type": "enter", "label": "⏎", "x": 0.75, "y": 0.25, "w": 0.25, "h": 0.25 },
+
+    { "id": "n7", "type": "char", "label": "7", "output": "7", "x": 0.00, "y": 0.50, "w": 0.25, "h": 0.25 },
+    { "id": "n8", "type": "char", "label": "8", "output": "8", "x": 0.25, "y": 0.50, "w": 0.25, "h": 0.25 },
+    { "id": "n9", "type": "char", "label": "9", "output": "9", "x": 0.50, "y": 0.50, "w": 0.25, "h": 0.25 },
+    { "id": "minus", "type": "char", "label": "-", "output": "-", "x": 0.75, "y": 0.50, "w": 0.25, "h": 0.25 },
+
+    { "id": "abc", "type": "mode_alpha", "label": "ABC", "x": 0.00, "y": 0.75, "w": 0.25, "h": 0.25 },
+    { "id": "n0", "type": "char", "label": "0", "output": "0", "x": 0.25, "y": 0.75, "w": 0.25, "h": 0.25 },
+    { "id": "period", "type": "char", "label": ".", "output": ".", "x": 0.50, "y": 0.75, "w": 0.25, "h": 0.25 },
+    { "id": "comma", "type": "char", "label": ",", "output": ",", "x": 0.75, "y": 0.75, "w": 0.25, "h": 0.25 }
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "schema": 2,
+  "name": "qwerty_es",
+  "locale": "es_ES",
+  "keys": [
+    { "id": "q", "type": "char", "label": "q", "output": "q", "x": 0.00, "y": 0.00, "w": 0.10, "h": 0.25, "alternates": ["1"] },
+    { "id": "w", "type": "char", "label": "w", "output": "w", "x": 0.10, "y": 0.00, "w": 0.10, "h": 0.25, "alternates": ["2"] },
+    { "id": "e", "type": "char", "label": "e", "output": "e", "x": 0.20, "y": 0.00, "w": 0.10, "h": 0.25, "alternates": ["é", "è", "ê", "ë", "3"] },
+    { "id": "r", "type": "char", "label": "r", "output": "r", "x": 0.30, "y": 0.00, "w": 0.10, "h": 0.25, "alternates": ["4"] },
+    { "id": "t", "type": "char", "label": "t", "output": "t", "x": 0.40, "y": 0.00, "w": 0.10, "h": 0.25, "alternates": ["5"] },
+    { "id": "y", "type": "char", "label": "y", "output": "y", "x": 0.50, "y": 0.00, "w": 0.10, "h": 0.25, "alternates": ["ý", "6"] },
+    { "id": "u", "type": "char", "label": "u", "output": "u", "x": 0.60, "y": 0.00, "w": 0.10, "h": 0.25, "alternates": ["ú", "ü", "ù", "û", "7"] },
+    { "id": "i", "type": "char", "label": "i", "output": "i", "x": 0.70, "y": 0.00, "w": 0.10, "h": 0.25, "alternates": ["í", "ì", "î", "ï", "8"] },
+    { "id": "o", "type": "char", "label": "o", "output": "o", "x": 0.80, "y": 0.00, "w": 0.10, "h": 0.25, "alternates": ["ó", "ò", "ô", "ö", "õ", "9"] },
+    { "id": "p", "type": "char", "label": "p", "output": "p", "x": 0.90, "y": 0.00, "w": 0.10, "h": 0.25, "alternates": ["0"] },
+
+    { "id": "a", "type": "char", "label": "a", "output": "a", "x": 0.05, "y": 0.25, "w": 0.10, "h": 0.25, "alternates": ["á", "à", "â", "ä", "@"] },
+    { "id": "s", "type": "char", "label": "s", "output": "s", "x": 0.15, "y": 0.25, "w": 0.10, "h": 0.25, "alternates": ["š", "#"] },
+    { "id": "d", "type": "char", "label": "d", "output": "d", "x": 0.25, "y": 0.25, "w": 0.10, "h": 0.25, "alternates": ["$"] },
+    { "id": "f", "type": "char", "label": "f", "output": "f", "x": 0.35, "y": 0.25, "w": 0.10, "h": 0.25, "alternates": ["&"] },
+    { "id": "g", "type": "char", "label": "g", "output": "g", "x": 0.45, "y": 0.25, "w": 0.10, "h": 0.25, "alternates": ["*"] },
+    { "id": "h", "type": "char", "label": "h", "output": "h", "x": 0.55, "y": 0.25, "w": 0.10, "h": 0.25, "alternates": ["-"] },
+    { "id": "j", "type": "char", "label": "j", "output": "j", "x": 0.65, "y": 0.25, "w": 0.10, "h": 0.25, "alternates": ["+"] },
+    { "id": "k", "type": "char", "label": "k", "output": "k", "x": 0.75, "y": 0.25, "w": 0.10, "h": 0.25, "alternates": ["("] },
+    { "id": "l", "type": "char", "label": "l", "output": "l", "x": 0.85, "y": 0.25, "w": 0.10, "h": 0.25, "alternates": [")"] },
+
+    { "id": "shift", "type": "shift", "label": "⇧", "x": 0.00, "y": 0.50, "w": 0.15, "h": 0.25 },
+    { "id": "z", "type": "char", "label": "z", "output": "z", "x": 0.15, "y": 0.50, "w": 0.10, "h": 0.25, "alternates": ["'"] },
+    { "id": "x", "type": "char", "label": "x", "output": "x", "x": 0.25, "y": 0.50, "w": 0.10, "h": 0.25, "alternates": ["\""] },
+    { "id": "c", "type": "char", "label": "c", "output": "c", "x": 0.35, "y": 0.50, "w": 0.10, "h": 0.25, "alternates": ["ç", ";"] },
+    { "id": "v", "type": "char", "label": "v", "output": "v", "x": 0.45, "y": 0.50, "w": 0.10, "h": 0.25, "alternates": [":"] },
+    { "id": "b", "type": "char", "label": "b", "output": "b", "x": 0.55, "y": 0.50, "w": 0.10, "h": 0.25, "alternates": ["/"] },
+    { "id": "n", "type": "char", "label": "n", "output": "n", "x": 0.65, "y": 0.50, "w": 0.10, "h": 0.25, "alternates": ["ñ", "!", "¡"] },
+    { "id": "m", "type": "char", "label": "m", "output": "m", "x": 0.75, "y": 0.50, "w": 0.10, "h": 0.25, "alternates": ["?", "¿"] },
+    { "id": "backspace", "type": "backspace", "label": "⌫", "x": 0.85, "y": 0.50, "w": 0.15, "h": 0.25 },
+
+    { "id": "mode", "type": "mode_symbols", "label": "?123", "x": 0.00, "y": 0.75, "w": 0.15, "h": 0.25 },
+    { "id": "comma", "type": "char", "label": ",", "output": ",", "x": 0.15, "y": 0.75, "w": 0.10, "h": 0.25, "alternates": ["_", "[", "]", "–", "—"] },
+    { "id": "space", "type": "space", "label": " ", "x": 0.25, "y": 0.75, "w": 0.50, "h": 0.25 },
+    { "id": "period", "type": "char", "label": ".", "output": ".", "x": 0.75, "y": 0.75, "w": 0.10, "h": 0.25, "alternates": ["…", "«", "»"] },
+    { "id": "enter", "type": "enter", "label": "⏎", "x": 0.85, "y": 0.75, "w": 0.15, "h": 0.25 }
+  ]
+}

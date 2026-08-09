@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Kinetica</string>
+    <string name="ime_name">Kinetica Keyboard</string>
+    <string name="subtype_en_us">English (US)</string>
+    <string name="subtype_it_it">Italiano</string>
+    <string name="subtype_es_es">Español</string>
+    <string name="settings_title">Kinetica Settings</string>
+    <string name="licenses_title">Open-source licenses</string>
+    <string name="pref_licenses_summary">Data sources and their licenses (GPL-3.0 app; MIT and CC BY 2.0 FR data)</string>
+    <string name="licenses_missing">License notices missing from this build.</string>
+
+    <string name="onboarding_title">Set up Kinetica</string>
+    <string name="onboarding_step1">1. Enable Kinetica in system keyboard list</string>
+    <string name="onboarding_step2">2. Select Kinetica as current keyboard</string>
+    <string name="onboarding_step3">3. Try it out</string>
+    <string name="onboarding_enable">Enable</string>
+    <string name="onboarding_select">Select</string>
+    <string name="onboarding_test_hint">Type or swipe here</string>
+    <string name="onboarding_open_settings">Keyboard settings</string>
+    <string name="onboarding_step_done">%1$s  (done)</string>
+
+    <string name="pref_height_title">Keyboard height (% of screen)</string>
+    <string name="pref_layout_mode_title">Layout mode</string>
+    <string name="pref_autospace_title">Autospace after swipe</string>
+    <string name="pref_autospace_delay_title">Autospace delay (ms)</string>
+    <string name="pref_zen_title">Zen mode (no animations)</string>
+    <string name="pref_zen_summary">Disables trails and effects to save battery</string>
+    <string name="pref_trail_custom_hue_title">Custom trail hue (degrees)</string>
+    <string name="pref_vibration_title">Vibration on key press</string>
+    <string name="pref_vibration_intensity_title">Vibration intensity</string>
+    <string name="pref_trail_color_title">Swipe trail color</string>
+    <string name="pref_language_title">Primary language</string>
+    <string name="pref_enabled_languages_title">Enabled languages</string>
+    <string name="pref_enabled_languages_summary">Languages the chord switch cycles through (order: English, Italiano, Español)</string>
+    <string name="pref_lang_cycle_key_title">Language switch chord key</string>
+    <string name="pref_lang_cycle_key_summary">Hold ?123 and tap this letter to cycle enabled languages mid-typing</string>
+    <string name="pref_peck_mode_title">Peck-type mode</string>
+    <string name="pref_peck_mode_summary">Turns off swipe typing, suggestions and autocorrect: every tap inserts its letter exactly. For slang and words the dictionary keeps correcting. The spacebar shows TAP while active</string>
+    <string name="pref_peck_chord_key_title">Peck-type chord key</string>
+    <string name="pref_peck_chord_key_summary">Hold ?123 and tap this letter to toggle peck-type mode from the keyboard</string>
+    <string name="pref_auto_detect_title">Mix enabled languages in suggestions (experimental)</string>
+    <string name="pref_auto_detect_summary">Swiped words decode against both enabled languages and share one suggestion list, so a word from either is always pickable. The other language is only offered first when it fits the gesture better.</string>
+    <string name="pref_long_press_title">Long-press duration (ms)</string>
+    <string name="pref_autocorrect_title">Autocorrect</string>
+    <string name="pref_reinforce_title">Suggestion reinforcement boost</string>
+    <string name="pref_reinforce_summary">Weight added when long-pressing a suggestion</string>
+
+    <string name="chord_settings_title">Chord shortcuts</string>
+    <string name="pref_chords_summary">Hold ?123 and tap a letter to insert its expansion</string>
+    <string name="chord_add">Add chord</string>
+    <string name="chord_edit">Edit</string>
+    <string name="chord_delete">Delete</string>
+    <string name="chord_letter_label">Letter</string>
+    <string name="chord_expansion_hint">Expansion text</string>
+    <string name="chord_empty_hint">No chords assigned. The feature stays off until you add one.</string>
+    <string name="chord_list_hint">Hold ?123, then tap the letter.</string>
+    <string name="chord_row">%1$s  →  %2$s</string>
+    <string name="chord_reserved_lang">Note: ?123+%1$s is reserved for the language cycle. This text chord will not fire while more than one language is enabled.</string>
+    <string name="chord_reserved_peck">Note: ?123+%1$s is reserved for the peck-type toggle. This text chord will not fire.</string>
+
+    <string name="pref_number_priority_title">Prioritize numbers over accents on long-press</string>
+    <string name="pref_number_priority_summary">Long-press popups and key hints show the digit or symbol first instead of the accent</string>
+
+    <string name="dict_settings_title">Dictionary</string>
+    <string name="pref_dictionary_summary">Base and personal dictionaries per language: info, import, export, reset</string>
+    <string name="dict_lang_header_active">%1$s (active)</string>
+    <string name="dict_base_line">Base: %1$s • %2$d words • %3$s</string>
+    <string name="dict_updated_bundled">ships with the app</string>
+    <string name="dict_personal_line">Personal overlay: %1$d learned words</string>
+    <string name="dict_source_bundled">bundled (OpenSubtitles/Tatoeba)</string>
+    <string name="dict_source_aosp">imported AOSP merge</string>
+    <string name="dict_import_base">Import improved dictionary (wordlist.combined)…</string>
+    <string name="dict_remove_base">Remove imported dictionary (revert to bundled)</string>
+    <string name="dict_remove_base_confirm">Remove the imported %1$s dictionary and revert to the bundled wordlist?</string>
+    <string name="dict_export_personal">Export personal dictionary…</string>
+    <string name="dict_import_personal">Import personal dictionary…</string>
+    <string name="dict_manage_personal">Review learned words (%1$d)…</string>
+    <string name="dict_manage_personal_title">Learned words — %1$s</string>
+    <string name="dict_word_row_active">%1$s — %2$d, used in predictions</string>
+    <string name="dict_word_row_inactive">%1$s — %2$d, below the merge floor</string>
+    <string name="dict_word_search_hint">Search learned words</string>
+    <string name="dict_word_search_empty">No learned word matches that.</string>
+    <string name="dict_word_delete_confirm">Delete the learned word \"%1$s\" and its weight? Typing it again will learn it back.</string>
+    <string name="dict_word_deleted">Deleted \"%1$s\"</string>
+    <string name="dict_reset_personal">Reset personal dictionary</string>
+    <string name="dict_reset_confirm">Delete all learned words and personal weights for %1$s? This cannot be undone.</string>
+    <string name="dict_import_done">Merged dictionary imported: %1$d new words added</string>
+    <string name="dict_import_not_wordlist">Not an AOSP wordlist.combined file (no word entries found)</string>
+    <string name="dict_import_not_personal">Not a Kinetica personal dictionary export</string>
+    <string name="dict_import_failed">Import failed: could not read the file</string>
+    <string name="dict_export_done">Exported %1$d personal words</string>
+    <string name="dict_export_failed">Export failed: could not write the file</string>
+    <string name="dict_db_error">Personal dictionary database unavailable</string>
+    <string name="dict_personal_import_done">Imported %1$d personal words</string>
+    <string name="dict_personal_import_mode_title">Import personal dictionary</string>
+    <string name="dict_personal_import_mode_message">Merge adds the file\'s counts onto what is already learned. Replace deletes all learned words for this language first.</string>
+    <string name="dict_personal_import_merge">Merge</string>
+    <string name="dict_personal_import_replace">Replace</string>
+    <string name="dict_import_note">Improved dictionaries use the AOSP wordlist.combined format (e.g. main_en_US or main_it from the Helium314/aosp-dictionaries mirror, Apache-2.0). The merge runs on-device against the bundled wordlist; abbreviations and offensive entries are dropped. Bigrams stay bundled.</string>
+
+    <string name="pref_backspace_char_slide_title">Backspace slide deletes letters</string>
+    <string name="pref_backspace_char_slide_summary">Sliding left from backspace stages one letter at a time instead of one word. Nothing is deleted until you lift, and sliding back right still undoes it.</string>
+
+    <string name="pref_alternate_swipes_title">Directional number/symbol swipes</string>
+    <string name="pref_alternate_swipes_summary">Swipe up on a top-row letter for its number, down on a bottom-row letter for its symbol. Your edge-swipe bindings take precedence.</string>
+
+    <string name="pref_enter_alternates_title">Enter slide-up symbols</string>
+    <string name="pref_enter_alternates_summary">Up to three symbols, space-separated (default \"? ! ,\"). The first sits above Enter and is inserted by a quick up-slide; slide left for the others.</string>
+    <string name="pref_enter_alternates_default">\? ! ,</string>
+
+    <string name="pref_apostrophe_key_title">Apostrophe key</string>
+    <string name="pref_apostrophe_key_summary">Adds a narrow apostrophe key right of L, for writing contracted and elided words (don\'t, nell\'immagine) without the symbols layer.</string>
+
+    <string name="edge_swipe_settings_title">Edge swipe shortcuts</string>
+    <string name="pref_edge_swipes_summary">Quick swipes on keys that insert text or open the emoji picker</string>
+    <string name="edge_swipe_hint">Swipe across a key in the shown direction to fire its action.</string>
+    <string name="edge_swipe_empty_hint">No edge swipes bound. Add one or reset to defaults.</string>
+    <string name="edge_swipe_add">Add edge swipe</string>
+    <string name="edge_swipe_reset">Reset to defaults</string>
+    <string name="edge_swipe_reset_confirm">Replace all edge-swipe bindings with the original five defaults?</string>
+    <string name="edge_swipe_row">%1$s %2$s  →  %3$s</string>
+    <string name="edge_swipe_key_label">Key</string>
+    <string name="edge_swipe_direction_label">Direction</string>
+    <string name="edge_swipe_action_label">Action</string>
+    <string name="edge_swipe_action_insert">Insert text</string>
+    <string name="edge_swipe_action_emoji">Open emoji picker</string>
+    <string name="edge_swipe_text_hint">Text to insert</string>
+
+    <string name="pref_emoji_key_title">Emoji on comma long-press</string>
+    <string name="pref_emoji_key_summary">Makes the emoji picker the first long-press option on the comma key; X-key swipe-down always opens the picker</string>
+    <string name="pref_comma_mode_title">Comma key</string>
+    <string name="pref_comma_mode_summary">Keep the comma, remove it (spacebar widens), or repurpose it as a custom character, text, or editor action; the comma stays in the key\'s long-press popup when repurposed</string>
+    <string name="pref_comma_custom_title">Comma key custom text</string>
+    <string name="pref_comma_custom_summary">Used by the custom character and custom text options above</string>
+    <string name="emoji_back_to_letters">ABC</string>
+
+    <string name="pref_theme_mode_title">Keyboard theme</string>
+    <string name="pref_theme_color_title">Custom theme color</string>
+    <string name="pref_theme_color_summary">Primary color the palette is derived from (theme: custom)</string>
+</resources>

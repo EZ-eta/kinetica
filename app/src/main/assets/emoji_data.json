@@ -1,0 +1,3125 @@
+{
+ "categories": [
+  {
+   "name": "Smileys",
+   "icon": "😀",
+   "emoji": [
+    {
+     "ch": "😀",
+     "name": "grinning face",
+     "kw": [
+      "happy",
+      "smile"
+     ]
+    },
+    {
+     "ch": "😃",
+     "name": "grinning face big eyes",
+     "kw": [
+      "happy"
+     ]
+    },
+    {
+     "ch": "😄",
+     "name": "grinning face smiling eyes",
+     "kw": [
+      "happy"
+     ]
+    },
+    {
+     "ch": "😁",
+     "name": "beaming face",
+     "kw": [
+      "grin"
+     ]
+    },
+    {
+     "ch": "😆",
+     "name": "grinning squinting",
+     "kw": [
+      "laugh",
+      "lol"
+     ]
+    },
+    {
+     "ch": "😅",
+     "name": "grinning sweat",
+     "kw": [
+      "phew"
+     ]
+    },
+    {
+     "ch": "🤣",
+     "name": "rolling on floor laughing",
+     "kw": [
+      "rofl",
+      "lol"
+     ]
+    },
+    {
+     "ch": "😂",
+     "name": "tears of joy",
+     "kw": [
+      "lol",
+      "funny"
+     ]
+    },
+    {
+     "ch": "🙂",
+     "name": "slightly smiling",
+     "kw": [
+      "smile"
+     ]
+    },
+    {
+     "ch": "😉",
+     "name": "winking face",
+     "kw": [
+      "wink"
+     ]
+    },
+    {
+     "ch": "😊",
+     "name": "smiling eyes",
+     "kw": [
+      "blush"
+     ]
+    },
+    {
+     "ch": "😇",
+     "name": "halo",
+     "kw": [
+      "angel",
+      "innocent"
+     ]
+    },
+    {
+     "ch": "🥰",
+     "name": "smiling hearts",
+     "kw": [
+      "love"
+     ]
+    },
+    {
+     "ch": "😍",
+     "name": "heart eyes",
+     "kw": [
+      "love"
+     ]
+    },
+    {
+     "ch": "🤩",
+     "name": "star struck",
+     "kw": [
+      "wow"
+     ]
+    },
+    {
+     "ch": "😘",
+     "name": "blowing kiss",
+     "kw": [
+      "kiss"
+     ]
+    },
+    {
+     "ch": "😗",
+     "name": "kissing",
+     "kw": [
+      "kiss"
+     ]
+    },
+    {
+     "ch": "😚",
+     "name": "kissing closed eyes",
+     "kw": [
+      "kiss"
+     ]
+    },
+    {
+     "ch": "😋",
+     "name": "savoring food",
+     "kw": [
+      "yum"
+     ]
+    },
+    {
+     "ch": "😛",
+     "name": "tongue out",
+     "kw": [
+      "silly"
+     ]
+    },
+    {
+     "ch": "😜",
+     "name": "winking tongue",
+     "kw": [
+      "silly",
+      "crazy"
+     ]
+    },
+    {
+     "ch": "🤪",
+     "name": "zany",
+     "kw": [
+      "crazy"
+     ]
+    },
+    {
+     "ch": "🤗",
+     "name": "hugging",
+     "kw": [
+      "hug"
+     ]
+    },
+    {
+     "ch": "🤭",
+     "name": "hand over mouth",
+     "kw": [
+      "oops"
+     ]
+    },
+    {
+     "ch": "🤔",
+     "name": "thinking",
+     "kw": [
+      "hmm"
+     ]
+    },
+    {
+     "ch": "🤐",
+     "name": "zipper mouth",
+     "kw": [
+      "secret"
+     ]
+    },
+    {
+     "ch": "🤨",
+     "name": "raised eyebrow",
+     "kw": [
+      "suspicious"
+     ]
+    },
+    {
+     "ch": "😐",
+     "name": "neutral",
+     "kw": [
+      "meh"
+     ]
+    },
+    {
+     "ch": "😑",
+     "name": "expressionless",
+     "kw": [
+      "blank"
+     ]
+    },
+    {
+     "ch": "😶",
+     "name": "no mouth",
+     "kw": [
+      "silent"
+     ]
+    },
+    {
+     "ch": "😏",
+     "name": "smirking",
+     "kw": [
+      "smirk"
+     ]
+    },
+    {
+     "ch": "😒",
+     "name": "unamused",
+     "kw": [
+      "meh"
+     ]
+    },
+    {
+     "ch": "🙄",
+     "name": "rolling eyes",
+     "kw": [
+      "whatever"
+     ]
+    },
+    {
+     "ch": "😬",
+     "name": "grimacing",
+     "kw": [
+      "awkward"
+     ]
+    },
+    {
+     "ch": "🤥",
+     "name": "lying face",
+     "kw": [
+      "liar",
+      "pinocchio"
+     ]
+    },
+    {
+     "ch": "😌",
+     "name": "relieved",
+     "kw": [
+      "calm"
+     ]
+    },
+    {
+     "ch": "😔",
+     "name": "pensive",
+     "kw": [
+      "sad"
+     ]
+    },
+    {
+     "ch": "😪",
+     "name": "sleepy",
+     "kw": [
+      "tired"
+     ]
+    },
+    {
+     "ch": "😴",
+     "name": "sleeping",
+     "kw": [
+      "zzz",
+      "sleep"
+     ]
+    },
+    {
+     "ch": "😷",
+     "name": "medical mask",
+     "kw": [
+      "sick"
+     ]
+    },
+    {
+     "ch": "🤒",
+     "name": "thermometer",
+     "kw": [
+      "sick",
+      "fever"
+     ]
+    },
+    {
+     "ch": "🤧",
+     "name": "sneezing",
+     "kw": [
+      "sick",
+      "achoo"
+     ]
+    },
+    {
+     "ch": "🥵",
+     "name": "hot face",
+     "kw": [
+      "heat"
+     ]
+    },
+    {
+     "ch": "🥶",
+     "name": "cold face",
+     "kw": [
+      "freezing"
+     ]
+    },
+    {
+     "ch": "😵",
+     "name": "dizzy",
+     "kw": [
+      "knocked out"
+     ]
+    },
+    {
+     "ch": "🤯",
+     "name": "exploding head",
+     "kw": [
+      "mind blown"
+     ]
+    },
+    {
+     "ch": "🤠",
+     "name": "cowboy",
+     "kw": [
+      "yeehaw"
+     ]
+    },
+    {
+     "ch": "🥳",
+     "name": "partying",
+     "kw": [
+      "celebration",
+      "party"
+     ]
+    },
+    {
+     "ch": "😎",
+     "name": "sunglasses",
+     "kw": [
+      "cool"
+     ]
+    },
+    {
+     "ch": "🤓",
+     "name": "nerd",
+     "kw": [
+      "geek"
+     ]
+    },
+    {
+     "ch": "😕",
+     "name": "confused",
+     "kw": [
+      "huh"
+     ]
+    },
+    {
+     "ch": "😟",
+     "name": "worried",
+     "kw": [
+      "concern"
+     ]
+    },
+    {
+     "ch": "🙁",
+     "name": "slightly frowning",
+     "kw": [
+      "sad"
+     ]
+    },
+    {
+     "ch": "😮",
+     "name": "open mouth",
+     "kw": [
+      "wow",
+      "surprised"
+     ]
+    },
+    {
+     "ch": "😲",
+     "name": "astonished",
+     "kw": [
+      "shocked"
+     ]
+    },
+    {
+     "ch": "😳",
+     "name": "flushed",
+     "kw": [
+      "embarrassed"
+     ]
+    },
+    {
+     "ch": "🥺",
+     "name": "pleading",
+     "kw": [
+      "puppy eyes"
+     ]
+    },
+    {
+     "ch": "😦",
+     "name": "frowning open mouth",
+     "kw": [
+      "sad"
+     ]
+    },
+    {
+     "ch": "😰",
+     "name": "anxious sweat",
+     "kw": [
+      "nervous"
+     ]
+    },
+    {
+     "ch": "😨",
+     "name": "fearful",
+     "kw": [
+      "scared"
+     ]
+    },
+    {
+     "ch": "😢",
+     "name": "crying",
+     "kw": [
+      "sad",
+      "tear"
+     ]
+    },
+    {
+     "ch": "😭",
+     "name": "loudly crying",
+     "kw": [
+      "sob"
+     ]
+    },
+    {
+     "ch": "😱",
+     "name": "screaming",
+     "kw": [
+      "scared",
+      "fear"
+     ]
+    },
+    {
+     "ch": "😖",
+     "name": "confounded",
+     "kw": [
+      "frustrated"
+     ]
+    },
+    {
+     "ch": "😣",
+     "name": "persevering",
+     "kw": [
+      "struggle"
+     ]
+    },
+    {
+     "ch": "😩",
+     "name": "weary",
+     "kw": [
+      "tired"
+     ]
+    },
+    {
+     "ch": "😫",
+     "name": "tired face",
+     "kw": [
+      "exhausted"
+     ]
+    },
+    {
+     "ch": "🥱",
+     "name": "yawning",
+     "kw": [
+      "tired",
+      "bored"
+     ]
+    },
+    {
+     "ch": "😤",
+     "name": "steam nose",
+     "kw": [
+      "triumph",
+      "angry"
+     ]
+    },
+    {
+     "ch": "😡",
+     "name": "pouting",
+     "kw": [
+      "angry",
+      "mad"
+     ]
+    },
+    {
+     "ch": "😠",
+     "name": "angry",
+     "kw": [
+      "mad"
+     ]
+    },
+    {
+     "ch": "🤬",
+     "name": "cursing",
+     "kw": [
+      "swearing",
+      "angry"
+     ]
+    },
+    {
+     "ch": "😈",
+     "name": "smiling devil",
+     "kw": [
+      "evil"
+     ]
+    },
+    {
+     "ch": "💀",
+     "name": "skull",
+     "kw": [
+      "dead"
+     ]
+    },
+    {
+     "ch": "💩",
+     "name": "pile of poo",
+     "kw": [
+      "poop"
+     ]
+    },
+    {
+     "ch": "🤡",
+     "name": "clown",
+     "kw": [
+      "joker"
+     ]
+    },
+    {
+     "ch": "👻",
+     "name": "ghost",
+     "kw": [
+      "boo"
+     ]
+    },
+    {
+     "ch": "👽",
+     "name": "alien",
+     "kw": [
+      "ufo"
+     ]
+    },
+    {
+     "ch": "🤖",
+     "name": "robot",
+     "kw": [
+      "bot"
+     ]
+    },
+    {
+     "ch": "😺",
+     "name": "smiling cat",
+     "kw": [
+      "cat"
+     ]
+    },
+    {
+     "ch": "😸",
+     "name": "grinning cat",
+     "kw": [
+      "cat"
+     ]
+    },
+    {
+     "ch": "😻",
+     "name": "heart eyes cat",
+     "kw": [
+      "cat",
+      "love"
+     ]
+    },
+    {
+     "ch": "🙃",
+     "name": "upside-down face",
+     "kw": [
+      "silly",
+      "sarcasm"
+     ]
+    },
+    {
+     "ch": "🤫",
+     "name": "shushing face",
+     "kw": [
+      "quiet",
+      "shh",
+      "secret"
+     ]
+    },
+    {
+     "ch": "😝",
+     "name": "squinting face with tongue",
+     "kw": [
+      "playful",
+      "tongue"
+     ]
+    },
+    {
+     "ch": "🤤",
+     "name": "drooling face",
+     "kw": [
+      "yum",
+      "drool"
+     ]
+    },
+    {
+     "ch": "😥",
+     "name": "sad but relieved face",
+     "kw": [
+      "phew",
+      "sad"
+     ]
+    },
+    {
+     "ch": "😓",
+     "name": "downcast face with sweat",
+     "kw": [
+      "tired",
+      "stress"
+     ]
+    },
+    {
+     "ch": "😯",
+     "name": "hushed face",
+     "kw": [
+      "surprised",
+      "wow"
+     ]
+    },
+    {
+     "ch": "☹️",
+     "name": "frowning face",
+     "kw": [
+      "sad",
+      "frown"
+     ]
+    },
+    {
+     "ch": "🤕",
+     "name": "face with head-bandage",
+     "kw": [
+      "hurt",
+      "injured"
+     ]
+    },
+    {
+     "ch": "🤢",
+     "name": "nauseated face",
+     "kw": [
+      "sick",
+      "gross"
+     ]
+    },
+    {
+     "ch": "🤮",
+     "name": "face vomiting",
+     "kw": [
+      "sick",
+      "vomit"
+     ]
+    },
+    {
+     "ch": "🥴",
+     "name": "woozy face",
+     "kw": [
+      "dizzy",
+      "drunk"
+     ]
+    },
+    {
+     "ch": "🥹",
+     "name": "face holding back tears",
+     "kw": [
+      "touched",
+      "grateful"
+     ]
+    },
+    {
+     "ch": "🥲",
+     "name": "smiling face with tear",
+     "kw": [
+      "bittersweet",
+      "touched"
+     ]
+    },
+    {
+     "ch": "🫠",
+     "name": "melting face",
+     "kw": [
+      "embarrassed",
+      "hot"
+     ]
+    },
+    {
+     "ch": "🫡",
+     "name": "saluting face",
+     "kw": [
+      "respect",
+      "salute"
+     ]
+    },
+    {
+     "ch": "🥸",
+     "name": "disguised face",
+     "kw": [
+      "incognito",
+      "glasses"
+     ]
+    },
+    {
+     "ch": "😹",
+     "name": "cat with tears of joy",
+     "kw": [
+      "cat",
+      "laugh"
+     ]
+    },
+    {
+     "ch": "😼",
+     "name": "cat with wry smile",
+     "kw": [
+      "cat",
+      "smirk"
+     ]
+    },
+    {
+     "ch": "😽",
+     "name": "kissing cat",
+     "kw": [
+      "cat",
+      "kiss"
+     ]
+    },
+    {
+     "ch": "🙀",
+     "name": "weary cat",
+     "kw": [
+      "cat",
+      "shocked"
+     ]
+    },
+    {
+     "ch": "😿",
+     "name": "crying cat",
+     "kw": [
+      "cat",
+      "sad"
+     ]
+    },
+    {
+     "ch": "😾",
+     "name": "pouting cat",
+     "kw": [
+      "cat",
+      "angry"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Gestures",
+   "icon": "👍",
+   "emoji": [
+    {
+     "ch": "👋",
+     "name": "waving hand",
+     "kw": [
+      "hi",
+      "bye",
+      "wave"
+     ]
+    },
+    {
+     "ch": "🤚",
+     "name": "raised back of hand",
+     "kw": [
+      "stop"
+     ]
+    },
+    {
+     "ch": "✋",
+     "name": "raised hand",
+     "kw": [
+      "stop",
+      "high five"
+     ]
+    },
+    {
+     "ch": "🖖",
+     "name": "vulcan salute",
+     "kw": [
+      "spock"
+     ]
+    },
+    {
+     "ch": "👌",
+     "name": "OK hand",
+     "kw": [
+      "ok",
+      "perfect"
+     ]
+    },
+    {
+     "ch": "🤏",
+     "name": "pinching hand",
+     "kw": [
+      "small"
+     ]
+    },
+    {
+     "ch": "✌️",
+     "name": "victory hand",
+     "kw": [
+      "peace"
+     ]
+    },
+    {
+     "ch": "🤞",
+     "name": "crossed fingers",
+     "kw": [
+      "luck",
+      "hope"
+     ]
+    },
+    {
+     "ch": "🤟",
+     "name": "love-you gesture",
+     "kw": [
+      "love"
+     ]
+    },
+    {
+     "ch": "🤘",
+     "name": "sign of horns",
+     "kw": [
+      "rock"
+     ]
+    },
+    {
+     "ch": "🤙",
+     "name": "call me hand",
+     "kw": [
+      "shaka"
+     ]
+    },
+    {
+     "ch": "👈",
+     "name": "pointing left",
+     "kw": [
+      "left"
+     ]
+    },
+    {
+     "ch": "👉",
+     "name": "pointing right",
+     "kw": [
+      "right"
+     ]
+    },
+    {
+     "ch": "👆",
+     "name": "pointing up",
+     "kw": [
+      "up"
+     ]
+    },
+    {
+     "ch": "👇",
+     "name": "pointing down",
+     "kw": [
+      "down"
+     ]
+    },
+    {
+     "ch": "☝️",
+     "name": "index up",
+     "kw": [
+      "one"
+     ]
+    },
+    {
+     "ch": "👍",
+     "name": "thumbs up",
+     "kw": [
+      "like",
+      "yes",
+      "approve"
+     ]
+    },
+    {
+     "ch": "👎",
+     "name": "thumbs down",
+     "kw": [
+      "dislike",
+      "no"
+     ]
+    },
+    {
+     "ch": "✊",
+     "name": "raised fist",
+     "kw": [
+      "power"
+     ]
+    },
+    {
+     "ch": "👊",
+     "name": "fist bump",
+     "kw": [
+      "punch"
+     ]
+    },
+    {
+     "ch": "🤛",
+     "name": "left fist",
+     "kw": [
+      "fist"
+     ]
+    },
+    {
+     "ch": "🤜",
+     "name": "right fist",
+     "kw": [
+      "fist"
+     ]
+    },
+    {
+     "ch": "👏",
+     "name": "clapping",
+     "kw": [
+      "applause",
+      "bravo"
+     ]
+    },
+    {
+     "ch": "🙌",
+     "name": "raising hands",
+     "kw": [
+      "hooray",
+      "praise"
+     ]
+    },
+    {
+     "ch": "👐",
+     "name": "open hands",
+     "kw": [
+      "hug"
+     ]
+    },
+    {
+     "ch": "🤲",
+     "name": "palms up",
+     "kw": [
+      "prayer"
+     ]
+    },
+    {
+     "ch": "🤝",
+     "name": "handshake",
+     "kw": [
+      "deal",
+      "agreement"
+     ]
+    },
+    {
+     "ch": "🙏",
+     "name": "folded hands",
+     "kw": [
+      "please",
+      "thanks",
+      "pray"
+     ]
+    },
+    {
+     "ch": "✍️",
+     "name": "writing hand",
+     "kw": [
+      "write"
+     ]
+    },
+    {
+     "ch": "💅",
+     "name": "nail polish",
+     "kw": [
+      "nails"
+     ]
+    },
+    {
+     "ch": "💪",
+     "name": "flexed biceps",
+     "kw": [
+      "strong",
+      "muscle"
+     ]
+    },
+    {
+     "ch": "🦾",
+     "name": "mechanical arm",
+     "kw": [
+      "robot"
+     ]
+    },
+    {
+     "ch": "👂",
+     "name": "ear",
+     "kw": [
+      "listen"
+     ]
+    },
+    {
+     "ch": "👃",
+     "name": "nose",
+     "kw": [
+      "smell"
+     ]
+    },
+    {
+     "ch": "👀",
+     "name": "eyes",
+     "kw": [
+      "look",
+      "watch"
+     ]
+    },
+    {
+     "ch": "👅",
+     "name": "tongue",
+     "kw": [
+      "taste"
+     ]
+    },
+    {
+     "ch": "👄",
+     "name": "mouth",
+     "kw": [
+      "lips"
+     ]
+    },
+    {
+     "ch": "🖐️",
+     "name": "hand with fingers splayed",
+     "kw": [
+      "hand",
+      "five"
+     ]
+    },
+    {
+     "ch": "🖕",
+     "name": "middle finger",
+     "kw": [
+      "rude",
+      "finger"
+     ]
+    },
+    {
+     "ch": "🤌",
+     "name": "pinched fingers",
+     "kw": [
+      "italian",
+      "what"
+     ]
+    },
+    {
+     "ch": "🫰",
+     "name": "hand with index and thumb crossed",
+     "kw": [
+      "snap",
+      "money",
+      "love"
+     ]
+    },
+    {
+     "ch": "🫵",
+     "name": "index pointing at viewer",
+     "kw": [
+      "you",
+      "point"
+     ]
+    },
+    {
+     "ch": "🫶",
+     "name": "heart hands",
+     "kw": [
+      "love",
+      "heart"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Animals",
+   "icon": "🐶",
+   "emoji": [
+    {
+     "ch": "🐶",
+     "name": "dog face",
+     "kw": [
+      "puppy",
+      "pet"
+     ]
+    },
+    {
+     "ch": "🐱",
+     "name": "cat face",
+     "kw": [
+      "kitten",
+      "pet"
+     ]
+    },
+    {
+     "ch": "🐭",
+     "name": "mouse face",
+     "kw": [
+      "mouse"
+     ]
+    },
+    {
+     "ch": "🐹",
+     "name": "hamster",
+     "kw": [
+      "pet"
+     ]
+    },
+    {
+     "ch": "🐰",
+     "name": "rabbit face",
+     "kw": [
+      "bunny"
+     ]
+    },
+    {
+     "ch": "🦊",
+     "name": "fox",
+     "kw": [
+      "fox"
+     ]
+    },
+    {
+     "ch": "🐻",
+     "name": "bear",
+     "kw": [
+      "bear"
+     ]
+    },
+    {
+     "ch": "🐼",
+     "name": "panda",
+     "kw": [
+      "panda"
+     ]
+    },
+    {
+     "ch": "🐨",
+     "name": "koala",
+     "kw": [
+      "koala"
+     ]
+    },
+    {
+     "ch": "🐯",
+     "name": "tiger face",
+     "kw": [
+      "tiger"
+     ]
+    },
+    {
+     "ch": "🦁",
+     "name": "lion",
+     "kw": [
+      "lion"
+     ]
+    },
+    {
+     "ch": "🐮",
+     "name": "cow face",
+     "kw": [
+      "cow"
+     ]
+    },
+    {
+     "ch": "🐷",
+     "name": "pig face",
+     "kw": [
+      "pig"
+     ]
+    },
+    {
+     "ch": "🐸",
+     "name": "frog",
+     "kw": [
+      "frog"
+     ]
+    },
+    {
+     "ch": "🐵",
+     "name": "monkey face",
+     "kw": [
+      "monkey"
+     ]
+    },
+    {
+     "ch": "🐔",
+     "name": "chicken",
+     "kw": [
+      "hen"
+     ]
+    },
+    {
+     "ch": "🐧",
+     "name": "penguin",
+     "kw": [
+      "penguin"
+     ]
+    },
+    {
+     "ch": "🐦",
+     "name": "bird",
+     "kw": [
+      "bird"
+     ]
+    },
+    {
+     "ch": "🦆",
+     "name": "duck",
+     "kw": [
+      "duck"
+     ]
+    },
+    {
+     "ch": "🦉",
+     "name": "owl",
+     "kw": [
+      "owl"
+     ]
+    },
+    {
+     "ch": "🦋",
+     "name": "butterfly",
+     "kw": [
+      "butterfly"
+     ]
+    },
+    {
+     "ch": "🐝",
+     "name": "honeybee",
+     "kw": [
+      "bee"
+     ]
+    },
+    {
+     "ch": "🐞",
+     "name": "lady beetle",
+     "kw": [
+      "ladybug"
+     ]
+    },
+    {
+     "ch": "🕷️",
+     "name": "spider",
+     "kw": [
+      "spider"
+     ]
+    },
+    {
+     "ch": "🐢",
+     "name": "turtle",
+     "kw": [
+      "slow"
+     ]
+    },
+    {
+     "ch": "🐍",
+     "name": "snake",
+     "kw": [
+      "snake"
+     ]
+    },
+    {
+     "ch": "🐙",
+     "name": "octopus",
+     "kw": [
+      "octopus"
+     ]
+    },
+    {
+     "ch": "🐠",
+     "name": "tropical fish",
+     "kw": [
+      "fish"
+     ]
+    },
+    {
+     "ch": "🐬",
+     "name": "dolphin",
+     "kw": [
+      "dolphin"
+     ]
+    },
+    {
+     "ch": "🐳",
+     "name": "spouting whale",
+     "kw": [
+      "whale"
+     ]
+    },
+    {
+     "ch": "🦍",
+     "name": "gorilla",
+     "kw": [
+      "ape"
+     ]
+    },
+    {
+     "ch": "🐘",
+     "name": "elephant",
+     "kw": [
+      "elephant"
+     ]
+    },
+    {
+     "ch": "🐴",
+     "name": "horse face",
+     "kw": [
+      "horse"
+     ]
+    },
+    {
+     "ch": "🦄",
+     "name": "unicorn",
+     "kw": [
+      "magic"
+     ]
+    },
+    {
+     "ch": "🌲",
+     "name": "evergreen tree",
+     "kw": [
+      "tree"
+     ]
+    },
+    {
+     "ch": "🌴",
+     "name": "palm tree",
+     "kw": [
+      "beach"
+     ]
+    },
+    {
+     "ch": "🌵",
+     "name": "cactus",
+     "kw": [
+      "desert"
+     ]
+    },
+    {
+     "ch": "🍀",
+     "name": "four leaf clover",
+     "kw": [
+      "luck"
+     ]
+    },
+    {
+     "ch": "🌹",
+     "name": "rose",
+     "kw": [
+      "flower"
+     ]
+    },
+    {
+     "ch": "🌻",
+     "name": "sunflower",
+     "kw": [
+      "flower"
+     ]
+    },
+    {
+     "ch": "🌷",
+     "name": "tulip",
+     "kw": [
+      "flower"
+     ]
+    },
+    {
+     "ch": "🌱",
+     "name": "seedling",
+     "kw": [
+      "plant"
+     ]
+    },
+    {
+     "ch": "🙈",
+     "name": "see-no-evil monkey",
+     "kw": [
+      "monkey",
+      "oops",
+      "hide"
+     ]
+    },
+    {
+     "ch": "🙉",
+     "name": "hear-no-evil monkey",
+     "kw": [
+      "monkey",
+      "ignore"
+     ]
+    },
+    {
+     "ch": "🙊",
+     "name": "speak-no-evil monkey",
+     "kw": [
+      "monkey",
+      "secret"
+     ]
+    },
+    {
+     "ch": "🐺",
+     "name": "wolf",
+     "kw": [
+      "wolf",
+      "howl"
+     ]
+    },
+    {
+     "ch": "🦌",
+     "name": "deer",
+     "kw": [
+      "deer",
+      "stag"
+     ]
+    },
+    {
+     "ch": "🐗",
+     "name": "boar",
+     "kw": [
+      "boar",
+      "pig"
+     ]
+    },
+    {
+     "ch": "🦓",
+     "name": "zebra",
+     "kw": [
+      "zebra",
+      "stripes"
+     ]
+    },
+    {
+     "ch": "🦝",
+     "name": "raccoon",
+     "kw": [
+      "raccoon",
+      "trash"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Food",
+   "icon": "🍕",
+   "emoji": [
+    {
+     "ch": "🍏",
+     "name": "green apple",
+     "kw": [
+      "fruit"
+     ]
+    },
+    {
+     "ch": "🍎",
+     "name": "red apple",
+     "kw": [
+      "fruit"
+     ]
+    },
+    {
+     "ch": "🍌",
+     "name": "banana",
+     "kw": [
+      "fruit"
+     ]
+    },
+    {
+     "ch": "🍉",
+     "name": "watermelon",
+     "kw": [
+      "fruit"
+     ]
+    },
+    {
+     "ch": "🍇",
+     "name": "grapes",
+     "kw": [
+      "fruit"
+     ]
+    },
+    {
+     "ch": "🍓",
+     "name": "strawberry",
+     "kw": [
+      "fruit"
+     ]
+    },
+    {
+     "ch": "🍒",
+     "name": "cherries",
+     "kw": [
+      "fruit"
+     ]
+    },
+    {
+     "ch": "🍑",
+     "name": "peach",
+     "kw": [
+      "fruit"
+     ]
+    },
+    {
+     "ch": "🍋",
+     "name": "lemon",
+     "kw": [
+      "sour"
+     ]
+    },
+    {
+     "ch": "🍊",
+     "name": "tangerine",
+     "kw": [
+      "orange"
+     ]
+    },
+    {
+     "ch": "🥑",
+     "name": "avocado",
+     "kw": [
+      "food"
+     ]
+    },
+    {
+     "ch": "🍅",
+     "name": "tomato",
+     "kw": [
+      "vegetable"
+     ]
+    },
+    {
+     "ch": "🥕",
+     "name": "carrot",
+     "kw": [
+      "vegetable"
+     ]
+    },
+    {
+     "ch": "🌽",
+     "name": "corn",
+     "kw": [
+      "vegetable"
+     ]
+    },
+    {
+     "ch": "🥔",
+     "name": "potato",
+     "kw": [
+      "vegetable"
+     ]
+    },
+    {
+     "ch": "🍞",
+     "name": "bread",
+     "kw": [
+      "loaf"
+     ]
+    },
+    {
+     "ch": "🥐",
+     "name": "croissant",
+     "kw": [
+      "breakfast"
+     ]
+    },
+    {
+     "ch": "🥨",
+     "name": "pretzel",
+     "kw": [
+      "snack"
+     ]
+    },
+    {
+     "ch": "🧀",
+     "name": "cheese",
+     "kw": [
+      "cheese"
+     ]
+    },
+    {
+     "ch": "🍳",
+     "name": "cooking egg",
+     "kw": [
+      "breakfast"
+     ]
+    },
+    {
+     "ch": "🥓",
+     "name": "bacon",
+     "kw": [
+      "breakfast"
+     ]
+    },
+    {
+     "ch": "🌭",
+     "name": "hot dog",
+     "kw": [
+      "fast food"
+     ]
+    },
+    {
+     "ch": "🍔",
+     "name": "hamburger",
+     "kw": [
+      "burger",
+      "fast food"
+     ]
+    },
+    {
+     "ch": "🍟",
+     "name": "fries",
+     "kw": [
+      "fast food"
+     ]
+    },
+    {
+     "ch": "🍕",
+     "name": "pizza",
+     "kw": [
+      "slice"
+     ]
+    },
+    {
+     "ch": "🌮",
+     "name": "taco",
+     "kw": [
+      "mexican"
+     ]
+    },
+    {
+     "ch": "🌯",
+     "name": "burrito",
+     "kw": [
+      "mexican"
+     ]
+    },
+    {
+     "ch": "🍝",
+     "name": "spaghetti",
+     "kw": [
+      "pasta"
+     ]
+    },
+    {
+     "ch": "🍜",
+     "name": "steaming bowl",
+     "kw": [
+      "ramen",
+      "noodles"
+     ]
+    },
+    {
+     "ch": "🍣",
+     "name": "sushi",
+     "kw": [
+      "japanese"
+     ]
+    },
+    {
+     "ch": "🍱",
+     "name": "bento",
+     "kw": [
+      "japanese"
+     ]
+    },
+    {
+     "ch": "🍚",
+     "name": "cooked rice",
+     "kw": [
+      "rice"
+     ]
+    },
+    {
+     "ch": "🍲",
+     "name": "pot of food",
+     "kw": [
+      "stew"
+     ]
+    },
+    {
+     "ch": "🥗",
+     "name": "green salad",
+     "kw": [
+      "healthy"
+     ]
+    },
+    {
+     "ch": "🍦",
+     "name": "soft ice cream",
+     "kw": [
+      "dessert"
+     ]
+    },
+    {
+     "ch": "🍨",
+     "name": "ice cream",
+     "kw": [
+      "dessert"
+     ]
+    },
+    {
+     "ch": "🍪",
+     "name": "cookie",
+     "kw": [
+      "dessert"
+     ]
+    },
+    {
+     "ch": "🎂",
+     "name": "birthday cake",
+     "kw": [
+      "celebration"
+     ]
+    },
+    {
+     "ch": "🍰",
+     "name": "shortcake",
+     "kw": [
+      "dessert"
+     ]
+    },
+    {
+     "ch": "🍫",
+     "name": "chocolate",
+     "kw": [
+      "sweet"
+     ]
+    },
+    {
+     "ch": "🍬",
+     "name": "candy",
+     "kw": [
+      "sweet"
+     ]
+    },
+    {
+     "ch": "🍿",
+     "name": "popcorn",
+     "kw": [
+      "movie"
+     ]
+    },
+    {
+     "ch": "☕",
+     "name": "hot beverage",
+     "kw": [
+      "coffee",
+      "tea"
+     ]
+    },
+    {
+     "ch": "🍵",
+     "name": "teacup",
+     "kw": [
+      "tea"
+     ]
+    },
+    {
+     "ch": "🍺",
+     "name": "beer",
+     "kw": [
+      "drink"
+     ]
+    },
+    {
+     "ch": "🍻",
+     "name": "clinking beers",
+     "kw": [
+      "cheers"
+     ]
+    },
+    {
+     "ch": "🍷",
+     "name": "wine glass",
+     "kw": [
+      "drink"
+     ]
+    },
+    {
+     "ch": "🥂",
+     "name": "clinking glasses",
+     "kw": [
+      "cheers",
+      "celebrate"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Activities",
+   "icon": "⚽",
+   "emoji": [
+    {
+     "ch": "⚽",
+     "name": "soccer ball",
+     "kw": [
+      "football",
+      "sport"
+     ]
+    },
+    {
+     "ch": "🏀",
+     "name": "basketball",
+     "kw": [
+      "sport"
+     ]
+    },
+    {
+     "ch": "🏈",
+     "name": "american football",
+     "kw": [
+      "sport"
+     ]
+    },
+    {
+     "ch": "⚾",
+     "name": "baseball",
+     "kw": [
+      "sport"
+     ]
+    },
+    {
+     "ch": "🎾",
+     "name": "tennis",
+     "kw": [
+      "sport"
+     ]
+    },
+    {
+     "ch": "🏐",
+     "name": "volleyball",
+     "kw": [
+      "sport"
+     ]
+    },
+    {
+     "ch": "🏉",
+     "name": "rugby",
+     "kw": [
+      "sport"
+     ]
+    },
+    {
+     "ch": "🎱",
+     "name": "pool 8 ball",
+     "kw": [
+      "billiards"
+     ]
+    },
+    {
+     "ch": "🏓",
+     "name": "ping pong",
+     "kw": [
+      "table tennis"
+     ]
+    },
+    {
+     "ch": "🏸",
+     "name": "badminton",
+     "kw": [
+      "sport"
+     ]
+    },
+    {
+     "ch": "🥅",
+     "name": "goal net",
+     "kw": [
+      "goal"
+     ]
+    },
+    {
+     "ch": "⛳",
+     "name": "flag in hole",
+     "kw": [
+      "golf"
+     ]
+    },
+    {
+     "ch": "🏹",
+     "name": "bow and arrow",
+     "kw": [
+      "archery"
+     ]
+    },
+    {
+     "ch": "🎣",
+     "name": "fishing",
+     "kw": [
+      "fish"
+     ]
+    },
+    {
+     "ch": "🥊",
+     "name": "boxing glove",
+     "kw": [
+      "fight"
+     ]
+    },
+    {
+     "ch": "🛹",
+     "name": "skateboard",
+     "kw": [
+      "skate"
+     ]
+    },
+    {
+     "ch": "⛸️",
+     "name": "ice skate",
+     "kw": [
+      "skating"
+     ]
+    },
+    {
+     "ch": "🎿",
+     "name": "skis",
+     "kw": [
+      "skiing"
+     ]
+    },
+    {
+     "ch": "🚴",
+     "name": "biking",
+     "kw": [
+      "cycling"
+     ]
+    },
+    {
+     "ch": "🏋️",
+     "name": "weight lifting",
+     "kw": [
+      "gym"
+     ]
+    },
+    {
+     "ch": "🤸",
+     "name": "cartwheel",
+     "kw": [
+      "gymnastics"
+     ]
+    },
+    {
+     "ch": "🏊",
+     "name": "swimming",
+     "kw": [
+      "pool"
+     ]
+    },
+    {
+     "ch": "🧘",
+     "name": "lotus position",
+     "kw": [
+      "yoga",
+      "meditate"
+     ]
+    },
+    {
+     "ch": "🎯",
+     "name": "bullseye",
+     "kw": [
+      "dart",
+      "target"
+     ]
+    },
+    {
+     "ch": "🎮",
+     "name": "video game",
+     "kw": [
+      "gaming",
+      "controller"
+     ]
+    },
+    {
+     "ch": "🕹️",
+     "name": "joystick",
+     "kw": [
+      "gaming"
+     ]
+    },
+    {
+     "ch": "🎲",
+     "name": "game die",
+     "kw": [
+      "dice"
+     ]
+    },
+    {
+     "ch": "♟️",
+     "name": "chess pawn",
+     "kw": [
+      "chess"
+     ]
+    },
+    {
+     "ch": "🧩",
+     "name": "puzzle piece",
+     "kw": [
+      "jigsaw"
+     ]
+    },
+    {
+     "ch": "🎸",
+     "name": "guitar",
+     "kw": [
+      "music"
+     ]
+    },
+    {
+     "ch": "🎹",
+     "name": "piano",
+     "kw": [
+      "music"
+     ]
+    },
+    {
+     "ch": "🎷",
+     "name": "saxophone",
+     "kw": [
+      "music"
+     ]
+    },
+    {
+     "ch": "🎺",
+     "name": "trumpet",
+     "kw": [
+      "music"
+     ]
+    },
+    {
+     "ch": "🎻",
+     "name": "violin",
+     "kw": [
+      "music"
+     ]
+    },
+    {
+     "ch": "🥁",
+     "name": "drum",
+     "kw": [
+      "music"
+     ]
+    },
+    {
+     "ch": "🎤",
+     "name": "microphone",
+     "kw": [
+      "sing",
+      "karaoke"
+     ]
+    },
+    {
+     "ch": "🎧",
+     "name": "headphone",
+     "kw": [
+      "music",
+      "listen"
+     ]
+    },
+    {
+     "ch": "🎬",
+     "name": "clapper board",
+     "kw": [
+      "movie"
+     ]
+    },
+    {
+     "ch": "🎨",
+     "name": "artist palette",
+     "kw": [
+      "paint",
+      "art"
+     ]
+    },
+    {
+     "ch": "🎭",
+     "name": "performing arts",
+     "kw": [
+      "theater"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Travel",
+   "icon": "✈️",
+   "emoji": [
+    {
+     "ch": "🚗",
+     "name": "car",
+     "kw": [
+      "automobile"
+     ]
+    },
+    {
+     "ch": "🚕",
+     "name": "taxi",
+     "kw": [
+      "cab"
+     ]
+    },
+    {
+     "ch": "🚌",
+     "name": "bus",
+     "kw": [
+      "transit"
+     ]
+    },
+    {
+     "ch": "🚒",
+     "name": "fire engine",
+     "kw": [
+      "firetruck"
+     ]
+    },
+    {
+     "ch": "🚑",
+     "name": "ambulance",
+     "kw": [
+      "emergency"
+     ]
+    },
+    {
+     "ch": "🚓",
+     "name": "police car",
+     "kw": [
+      "police"
+     ]
+    },
+    {
+     "ch": "🚚",
+     "name": "delivery truck",
+     "kw": [
+      "truck"
+     ]
+    },
+    {
+     "ch": "🚲",
+     "name": "bicycle",
+     "kw": [
+      "bike"
+     ]
+    },
+    {
+     "ch": "🏍️",
+     "name": "motorcycle",
+     "kw": [
+      "bike"
+     ]
+    },
+    {
+     "ch": "🚂",
+     "name": "locomotive",
+     "kw": [
+      "train"
+     ]
+    },
+    {
+     "ch": "🚆",
+     "name": "train",
+     "kw": [
+      "rail"
+     ]
+    },
+    {
+     "ch": "🚇",
+     "name": "metro",
+     "kw": [
+      "subway"
+     ]
+    },
+    {
+     "ch": "✈️",
+     "name": "airplane",
+     "kw": [
+      "flight",
+      "travel"
+     ]
+    },
+    {
+     "ch": "🛫",
+     "name": "airplane departure",
+     "kw": [
+      "takeoff"
+     ]
+    },
+    {
+     "ch": "🛬",
+     "name": "airplane arrival",
+     "kw": [
+      "landing"
+     ]
+    },
+    {
+     "ch": "🚁",
+     "name": "helicopter",
+     "kw": [
+      "chopper"
+     ]
+    },
+    {
+     "ch": "🚀",
+     "name": "rocket",
+     "kw": [
+      "space",
+      "launch"
+     ]
+    },
+    {
+     "ch": "🛸",
+     "name": "flying saucer",
+     "kw": [
+      "ufo"
+     ]
+    },
+    {
+     "ch": "⛵",
+     "name": "sailboat",
+     "kw": [
+      "boat"
+     ]
+    },
+    {
+     "ch": "🚢",
+     "name": "ship",
+     "kw": [
+      "cruise"
+     ]
+    },
+    {
+     "ch": "⚓",
+     "name": "anchor",
+     "kw": [
+      "harbor"
+     ]
+    },
+    {
+     "ch": "🗺️",
+     "name": "world map",
+     "kw": [
+      "map"
+     ]
+    },
+    {
+     "ch": "🌍",
+     "name": "globe europe africa",
+     "kw": [
+      "earth",
+      "world"
+     ]
+    },
+    {
+     "ch": "🗽",
+     "name": "statue of liberty",
+     "kw": [
+      "new york"
+     ]
+    },
+    {
+     "ch": "🗼",
+     "name": "tokyo tower",
+     "kw": [
+      "japan"
+     ]
+    },
+    {
+     "ch": "🏔️",
+     "name": "snow capped mountain",
+     "kw": [
+      "mountain"
+     ]
+    },
+    {
+     "ch": "🏖️",
+     "name": "beach umbrella",
+     "kw": [
+      "beach",
+      "vacation"
+     ]
+    },
+    {
+     "ch": "🏝️",
+     "name": "desert island",
+     "kw": [
+      "island"
+     ]
+    },
+    {
+     "ch": "🏠",
+     "name": "house",
+     "kw": [
+      "home"
+     ]
+    },
+    {
+     "ch": "🏥",
+     "name": "hospital",
+     "kw": [
+      "medical"
+     ]
+    },
+    {
+     "ch": "🏫",
+     "name": "school",
+     "kw": [
+      "education"
+     ]
+    },
+    {
+     "ch": "🏨",
+     "name": "hotel",
+     "kw": [
+      "stay"
+     ]
+    },
+    {
+     "ch": "⛺",
+     "name": "tent",
+     "kw": [
+      "camping"
+     ]
+    },
+    {
+     "ch": "🌁",
+     "name": "foggy",
+     "kw": [
+      "fog"
+     ]
+    },
+    {
+     "ch": "🌃",
+     "name": "night with stars",
+     "kw": [
+      "night"
+     ]
+    },
+    {
+     "ch": "🌄",
+     "name": "sunrise over mountains",
+     "kw": [
+      "sunrise"
+     ]
+    },
+    {
+     "ch": "🌇",
+     "name": "sunset",
+     "kw": [
+      "dusk"
+     ]
+    },
+    {
+     "ch": "🌉",
+     "name": "bridge at night",
+     "kw": [
+      "bridge"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Objects",
+   "icon": "💡",
+   "emoji": [
+    {
+     "ch": "⌚",
+     "name": "watch",
+     "kw": [
+      "time"
+     ]
+    },
+    {
+     "ch": "📱",
+     "name": "mobile phone",
+     "kw": [
+      "smartphone"
+     ]
+    },
+    {
+     "ch": "💻",
+     "name": "laptop",
+     "kw": [
+      "computer"
+     ]
+    },
+    {
+     "ch": "⌨️",
+     "name": "keyboard",
+     "kw": [
+      "typing"
+     ]
+    },
+    {
+     "ch": "🖥️",
+     "name": "desktop computer",
+     "kw": [
+      "pc"
+     ]
+    },
+    {
+     "ch": "🖨️",
+     "name": "printer",
+     "kw": [
+      "print"
+     ]
+    },
+    {
+     "ch": "📷",
+     "name": "camera",
+     "kw": [
+      "photo"
+     ]
+    },
+    {
+     "ch": "📹",
+     "name": "video camera",
+     "kw": [
+      "record"
+     ]
+    },
+    {
+     "ch": "🔋",
+     "name": "battery",
+     "kw": [
+      "power"
+     ]
+    },
+    {
+     "ch": "🔌",
+     "name": "electric plug",
+     "kw": [
+      "power"
+     ]
+    },
+    {
+     "ch": "💡",
+     "name": "light bulb",
+     "kw": [
+      "idea"
+     ]
+    },
+    {
+     "ch": "🔦",
+     "name": "flashlight",
+     "kw": [
+      "torch"
+     ]
+    },
+    {
+     "ch": "🕯️",
+     "name": "candle",
+     "kw": [
+      "light"
+     ]
+    },
+    {
+     "ch": "🧰",
+     "name": "toolbox",
+     "kw": [
+      "tools"
+     ]
+    },
+    {
+     "ch": "🔧",
+     "name": "wrench",
+     "kw": [
+      "tool"
+     ]
+    },
+    {
+     "ch": "🔨",
+     "name": "hammer",
+     "kw": [
+      "tool"
+     ]
+    },
+    {
+     "ch": "⚙️",
+     "name": "gear",
+     "kw": [
+      "settings"
+     ]
+    },
+    {
+     "ch": "🧲",
+     "name": "magnet",
+     "kw": [
+      "attraction"
+     ]
+    },
+    {
+     "ch": "🔬",
+     "name": "microscope",
+     "kw": [
+      "science"
+     ]
+    },
+    {
+     "ch": "🔭",
+     "name": "telescope",
+     "kw": [
+      "astronomy"
+     ]
+    },
+    {
+     "ch": "💊",
+     "name": "pill",
+     "kw": [
+      "medicine"
+     ]
+    },
+    {
+     "ch": "💉",
+     "name": "syringe",
+     "kw": [
+      "vaccine"
+     ]
+    },
+    {
+     "ch": "🌡️",
+     "name": "thermometer",
+     "kw": [
+      "temperature"
+     ]
+    },
+    {
+     "ch": "🚽",
+     "name": "toilet",
+     "kw": [
+      "bathroom"
+     ]
+    },
+    {
+     "ch": "🚿",
+     "name": "shower",
+     "kw": [
+      "bath"
+     ]
+    },
+    {
+     "ch": "🛁",
+     "name": "bathtub",
+     "kw": [
+      "bath"
+     ]
+    },
+    {
+     "ch": "🔑",
+     "name": "key",
+     "kw": [
+      "lock"
+     ]
+    },
+    {
+     "ch": "🔒",
+     "name": "locked",
+     "kw": [
+      "secure"
+     ]
+    },
+    {
+     "ch": "💰",
+     "name": "money bag",
+     "kw": [
+      "cash",
+      "rich"
+     ]
+    },
+    {
+     "ch": "💳",
+     "name": "credit card",
+     "kw": [
+      "payment"
+     ]
+    },
+    {
+     "ch": "📦",
+     "name": "package",
+     "kw": [
+      "box",
+      "delivery"
+     ]
+    },
+    {
+     "ch": "✉️",
+     "name": "envelope",
+     "kw": [
+      "mail",
+      "email"
+     ]
+    },
+    {
+     "ch": "📝",
+     "name": "memo",
+     "kw": [
+      "note",
+      "write"
+     ]
+    },
+    {
+     "ch": "📎",
+     "name": "paperclip",
+     "kw": [
+      "attach"
+     ]
+    },
+    {
+     "ch": "✂️",
+     "name": "scissors",
+     "kw": [
+      "cut"
+     ]
+    },
+    {
+     "ch": "📏",
+     "name": "straight ruler",
+     "kw": [
+      "measure"
+     ]
+    },
+    {
+     "ch": "📚",
+     "name": "books",
+     "kw": [
+      "reading",
+      "study"
+     ]
+    },
+    {
+     "ch": "📖",
+     "name": "open book",
+     "kw": [
+      "read"
+     ]
+    },
+    {
+     "ch": "🖊️",
+     "name": "pen",
+     "kw": [
+      "write"
+     ]
+    },
+    {
+     "ch": "✏️",
+     "name": "pencil",
+     "kw": [
+      "write"
+     ]
+    },
+    {
+     "ch": "🎁",
+     "name": "wrapped gift",
+     "kw": [
+      "present",
+      "birthday"
+     ]
+    },
+    {
+     "ch": "🎈",
+     "name": "balloon",
+     "kw": [
+      "party"
+     ]
+    },
+    {
+     "ch": "🎉",
+     "name": "party popper",
+     "kw": [
+      "celebration",
+      "tada"
+     ]
+    },
+    {
+     "ch": "🎊",
+     "name": "confetti ball",
+     "kw": [
+      "party"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Symbols",
+   "icon": "❤️",
+   "emoji": [
+    {
+     "ch": "❤️",
+     "name": "red heart",
+     "kw": [
+      "love"
+     ]
+    },
+    {
+     "ch": "🧡",
+     "name": "orange heart",
+     "kw": [
+      "love"
+     ]
+    },
+    {
+     "ch": "💛",
+     "name": "yellow heart",
+     "kw": [
+      "love"
+     ]
+    },
+    {
+     "ch": "💚",
+     "name": "green heart",
+     "kw": [
+      "love"
+     ]
+    },
+    {
+     "ch": "💙",
+     "name": "blue heart",
+     "kw": [
+      "love"
+     ]
+    },
+    {
+     "ch": "💜",
+     "name": "purple heart",
+     "kw": [
+      "love"
+     ]
+    },
+    {
+     "ch": "🖤",
+     "name": "black heart",
+     "kw": [
+      "love"
+     ]
+    },
+    {
+     "ch": "🤍",
+     "name": "white heart",
+     "kw": [
+      "love"
+     ]
+    },
+    {
+     "ch": "💔",
+     "name": "broken heart",
+     "kw": [
+      "heartbreak",
+      "sad"
+     ]
+    },
+    {
+     "ch": "❣️",
+     "name": "heart exclamation",
+     "kw": [
+      "love"
+     ]
+    },
+    {
+     "ch": "💕",
+     "name": "two hearts",
+     "kw": [
+      "love"
+     ]
+    },
+    {
+     "ch": "💞",
+     "name": "revolving hearts",
+     "kw": [
+      "love"
+     ]
+    },
+    {
+     "ch": "💓",
+     "name": "beating heart",
+     "kw": [
+      "love"
+     ]
+    },
+    {
+     "ch": "💘",
+     "name": "heart with arrow",
+     "kw": [
+      "cupid"
+     ]
+    },
+    {
+     "ch": "💋",
+     "name": "kiss mark",
+     "kw": [
+      "lips"
+     ]
+    },
+    {
+     "ch": "💯",
+     "name": "hundred points",
+     "kw": [
+      "100",
+      "perfect"
+     ]
+    },
+    {
+     "ch": "💢",
+     "name": "anger symbol",
+     "kw": [
+      "angry"
+     ]
+    },
+    {
+     "ch": "💥",
+     "name": "collision",
+     "kw": [
+      "boom"
+     ]
+    },
+    {
+     "ch": "💫",
+     "name": "dizzy",
+     "kw": [
+      "stars"
+     ]
+    },
+    {
+     "ch": "💦",
+     "name": "sweat droplets",
+     "kw": [
+      "water"
+     ]
+    },
+    {
+     "ch": "💨",
+     "name": "dashing away",
+     "kw": [
+      "wind",
+      "fast"
+     ]
+    },
+    {
+     "ch": "💤",
+     "name": "zzz",
+     "kw": [
+      "sleep"
+     ]
+    },
+    {
+     "ch": "⭐",
+     "name": "star",
+     "kw": [
+      "favorite"
+     ]
+    },
+    {
+     "ch": "🌟",
+     "name": "glowing star",
+     "kw": [
+      "sparkle"
+     ]
+    },
+    {
+     "ch": "✨",
+     "name": "sparkles",
+     "kw": [
+      "magic",
+      "shiny"
+     ]
+    },
+    {
+     "ch": "⚡",
+     "name": "high voltage",
+     "kw": [
+      "lightning",
+      "zap"
+     ]
+    },
+    {
+     "ch": "🔥",
+     "name": "fire",
+     "kw": [
+      "hot",
+      "lit"
+     ]
+    },
+    {
+     "ch": "🌈",
+     "name": "rainbow",
+     "kw": [
+      "pride"
+     ]
+    },
+    {
+     "ch": "☀️",
+     "name": "sun",
+     "kw": [
+      "sunny"
+     ]
+    },
+    {
+     "ch": "🌙",
+     "name": "crescent moon",
+     "kw": [
+      "night"
+     ]
+    },
+    {
+     "ch": "⭕",
+     "name": "hollow red circle",
+     "kw": [
+      "correct"
+     ]
+    },
+    {
+     "ch": "❌",
+     "name": "cross mark",
+     "kw": [
+      "wrong",
+      "no"
+     ]
+    },
+    {
+     "ch": "❗",
+     "name": "exclamation mark",
+     "kw": [
+      "warning"
+     ]
+    },
+    {
+     "ch": "❓",
+     "name": "question mark",
+     "kw": [
+      "what"
+     ]
+    },
+    {
+     "ch": "⚠️",
+     "name": "warning",
+     "kw": [
+      "caution"
+     ]
+    },
+    {
+     "ch": "🚫",
+     "name": "prohibited",
+     "kw": [
+      "forbidden"
+     ]
+    },
+    {
+     "ch": "♻️",
+     "name": "recycling",
+     "kw": [
+      "recycle"
+     ]
+    },
+    {
+     "ch": "✅",
+     "name": "check mark button",
+     "kw": [
+      "done",
+      "yes"
+     ]
+    },
+    {
+     "ch": "✔️",
+     "name": "check mark",
+     "kw": [
+      "done"
+     ]
+    },
+    {
+     "ch": "➕",
+     "name": "plus",
+     "kw": [
+      "add"
+     ]
+    },
+    {
+     "ch": "➖",
+     "name": "minus",
+     "kw": [
+      "subtract"
+     ]
+    },
+    {
+     "ch": "➗",
+     "name": "divide",
+     "kw": [
+      "division"
+     ]
+    },
+    {
+     "ch": "✖️",
+     "name": "multiply",
+     "kw": [
+      "times"
+     ]
+    },
+    {
+     "ch": "🔝",
+     "name": "top arrow",
+     "kw": [
+      "top"
+     ]
+    },
+    {
+     "ch": "🆒",
+     "name": "cool button",
+     "kw": [
+      "cool"
+     ]
+    },
+    {
+     "ch": "🆓",
+     "name": "free button",
+     "kw": [
+      "free"
+     ]
+    },
+    {
+     "ch": "🆕",
+     "name": "new button",
+     "kw": [
+      "new"
+     ]
+    },
+    {
+     "ch": "🆗",
+     "name": "OK button",
+     "kw": [
+      "ok"
+     ]
+    },
+    {
+     "ch": "🎵",
+     "name": "musical note",
+     "kw": [
+      "music"
+     ]
+    },
+    {
+     "ch": "🎶",
+     "name": "musical notes",
+     "kw": [
+      "music"
+     ]
+    },
+    {
+     "ch": "🤎",
+     "name": "brown heart",
+     "kw": [
+      "heart",
+      "brown"
+     ]
+    },
+    {
+     "ch": "💗",
+     "name": "growing heart",
+     "kw": [
+      "heart",
+      "love"
+     ]
+    },
+    {
+     "ch": "💖",
+     "name": "sparkling heart",
+     "kw": [
+      "heart",
+      "love",
+      "sparkle"
+     ]
+    },
+    {
+     "ch": "💝",
+     "name": "heart with ribbon",
+     "kw": [
+      "heart",
+      "gift"
+     ]
+    },
+    {
+     "ch": "♥️",
+     "name": "heart suit",
+     "kw": [
+      "heart",
+      "cards"
+     ]
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,45 @@
+{
+  "schema": 2,
+  "name": "symbols2",
+  "locale": "en_US",
+  "keys": [
+    { "id": "euro", "type": "char", "label": "€", "output": "€", "x": 0.00, "y": 0.00, "w": 0.10, "h": 0.25 },
+    { "id": "pound", "type": "char", "label": "£", "output": "£", "x": 0.10, "y": 0.00, "w": 0.10, "h": 0.25 },
+    { "id": "yen", "type": "char", "label": "¥", "output": "¥", "x": 0.20, "y": 0.00, "w": 0.10, "h": 0.25 },
+    { "id": "cent", "type": "char", "label": "¢", "output": "¢", "x": 0.30, "y": 0.00, "w": 0.10, "h": 0.25 },
+    { "id": "plusminus", "type": "char", "label": "±", "output": "±", "x": 0.40, "y": 0.00, "w": 0.10, "h": 0.25 },
+    { "id": "times", "type": "char", "label": "×", "output": "×", "x": 0.50, "y": 0.00, "w": 0.10, "h": 0.25 },
+    { "id": "divide", "type": "char", "label": "÷", "output": "÷", "x": 0.60, "y": 0.00, "w": 0.10, "h": 0.25 },
+    { "id": "approx", "type": "char", "label": "≈", "output": "≈", "x": 0.70, "y": 0.00, "w": 0.10, "h": 0.25 },
+    { "id": "noteq", "type": "char", "label": "≠", "output": "≠", "x": 0.80, "y": 0.00, "w": 0.10, "h": 0.25 },
+    { "id": "infinity", "type": "char", "label": "∞", "output": "∞", "x": 0.90, "y": 0.00, "w": 0.10, "h": 0.25 },
+
+    { "id": "lbracket", "type": "char", "label": "[", "output": "[", "x": 0.00, "y": 0.25, "w": 0.10, "h": 0.25 },
+    { "id": "rbracket", "type": "char", "label": "]", "output": "]", "x": 0.10, "y": 0.25, "w": 0.10, "h": 0.25 },
+    { "id": "lbrace", "type": "char", "label": "{", "output": "{", "x": 0.20, "y": 0.25, "w": 0.10, "h": 0.25 },
+    { "id": "rbrace", "type": "char", "label": "}", "output": "}", "x": 0.30, "y": 0.25, "w": 0.10, "h": 0.25 },
+    { "id": "less", "type": "char", "label": "<", "output": "<", "x": 0.40, "y": 0.25, "w": 0.10, "h": 0.25 },
+    { "id": "greater", "type": "char", "label": ">", "output": ">", "x": 0.50, "y": 0.25, "w": 0.10, "h": 0.25 },
+    { "id": "caret", "type": "char", "label": "^", "output": "^", "x": 0.60, "y": 0.25, "w": 0.10, "h": 0.25 },
+    { "id": "degree", "type": "char", "label": "°", "output": "°", "x": 0.70, "y": 0.25, "w": 0.10, "h": 0.25 },
+    { "id": "section", "type": "char", "label": "§", "output": "§", "x": 0.80, "y": 0.25, "w": 0.10, "h": 0.25 },
+    { "id": "numpad", "type": "mode_numpad", "label": "123", "x": 0.90, "y": 0.25, "w": 0.10, "h": 0.25 },
+
+    { "id": "backslash", "type": "char", "label": "\\", "output": "\\", "x": 0.00, "y": 0.50, "w": 0.10, "h": 0.25 },
+    { "id": "tilde", "type": "char", "label": "~", "output": "~", "x": 0.10, "y": 0.50, "w": 0.10, "h": 0.25 },
+    { "id": "backtick", "type": "char", "label": "`", "output": "`", "x": 0.20, "y": 0.50, "w": 0.10, "h": 0.25 },
+    { "id": "bullet", "type": "char", "label": "•", "output": "•", "x": 0.30, "y": 0.50, "w": 0.10, "h": 0.25 },
+    { "id": "sqrt", "type": "char", "label": "√", "output": "√", "x": 0.40, "y": 0.50, "w": 0.10, "h": 0.25 },
+    { "id": "pi", "type": "char", "label": "π", "output": "π", "x": 0.50, "y": 0.50, "w": 0.10, "h": 0.25 },
+    { "id": "pipe", "type": "char", "label": "|", "output": "|", "x": 0.60, "y": 0.50, "w": 0.10, "h": 0.25 },
+    { "id": "para", "type": "char", "label": "¶", "output": "¶", "x": 0.70, "y": 0.50, "w": 0.10, "h": 0.25 },
+    { "id": "backspace", "type": "backspace", "label": "⌫", "x": 0.80, "y": 0.50, "w": 0.20, "h": 0.25 },
+
+    { "id": "abc", "type": "mode_alpha", "label": "ABC", "x": 0.00, "y": 0.75, "w": 0.15, "h": 0.25 },
+    { "id": "page1", "type": "mode_symbols", "label": "?123", "hint": "2/2", "x": 0.15, "y": 0.75, "w": 0.10, "h": 0.25 },
+    { "id": "comma", "type": "char", "label": ",", "output": ",", "x": 0.25, "y": 0.75, "w": 0.10, "h": 0.25 },
+    { "id": "space", "type": "space", "label": " ", "x": 0.35, "y": 0.75, "w": 0.40, "h": 0.25 },
+    { "id": "period", "type": "char", "label": ".", "output": ".", "x": 0.75, "y": 0.75, "w": 0.10, "h": 0.25 },
+    { "id": "enter", "type": "enter", "label": "⏎", "x": 0.85, "y": 0.75, "w": 0.15, "h": 0.25 }
+  ]
+}

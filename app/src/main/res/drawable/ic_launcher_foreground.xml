@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Two crossing swipe strokes, the dual-thumb signature. -->
+    <path
+        android:pathData="M28,66 C38,46 52,44 66,52 C74,57 78,64 80,70"
+        android:strokeColor="#FF5468FF"
+        android:strokeWidth="7"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+    <path
+        android:pathData="M80,42 C68,58 54,62 40,58 C34,56 30,52 28,48"
+        android:strokeColor="#FF54D0FF"
+        android:strokeWidth="7"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+</vector>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="kbd_background">#FF1B1B1F</color>
+    <color name="kbd_key">#FF303034</color>
+    <color name="kbd_key_special">#FF25252A</color>
+    <color name="kbd_key_pressed">#FF4A4A52</color>
+    <color name="kbd_key_text">#FFEDEDF2</color>
+    <color name="kbd_key_hint">#FF9A9AA5</color>
+    <color name="suggestion_bar_bg">#FF232327</color>
+    <color name="suggestion_text">#FFD8D8E0</color>
+    <color name="suggestion_text_primary">#FFFFFFFF</color>
+    <color name="correction_chip">#FF3A3A55</color>
+    <color name="popup_bg">#FF3F3F46</color>
+    <color name="popup_selected">#FF5468FF</color>
+    <color name="launcher_background">#FF1B1B1F</color>
+</resources>
