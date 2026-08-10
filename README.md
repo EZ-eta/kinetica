@@ -18,6 +18,13 @@ Example - typing SOMETHING:
 - Right thumb swipes `O -> M`, then `T -> H -> I -> N -> G`, overlapping in time
 - Kinetica merges `S + OM + E + THING -> "something"`
 
+## Video Example
+
+
+https://github.com/user-attachments/assets/220ca042-322f-45df-bbd5-04a6b06d4a66
+
+
+
 ## Features
 
 - Dual-pointer gesture tracking: two independent swipe/tap streams, merged by
