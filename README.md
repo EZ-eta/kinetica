@@ -399,5 +399,5 @@ shows no ads, and will never ask you for anything at runtime.
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the build/test/lint gate, commit
-conventions, and the regression-test rules; ADDING_A_LANGUAGE.md documents
+conventions, and the regression-test rules; [ADDING_A_LANGUAGE.md](ADDING_A_LANGUAGE.md) documents
 the end-to-end recipe for contributing a new language.
