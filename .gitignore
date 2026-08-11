@@ -9,3 +9,4 @@ keystore.properties
 .DS_Store
 .kotlin/
 captures/
+__pycache__/
