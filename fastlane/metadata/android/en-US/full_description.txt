@@ -1,0 +1,52 @@
+Kinetica is a two-handed keyboard. Both thumbs swipe or tap at the same time,
+independently, and the two gesture streams merge into one word.
+
+Typing "something": the left thumb taps S, then E, while the right thumb
+swipes O -> M and then T -> H -> I -> N -> G. The streams are merged by
+timestamp into S + OM + E + THING.
+
+It is a spiritual successor to the discontinued Nintype, written from scratch
+on Android's public IME APIs - not a fork, and with no third-party gesture or
+prediction library. The dynamic time warping, the trie search, the path
+resampling and the dual-stream merge are all in the app, so every constant is
+understood and tunable.
+
+The manifest declares no INTERNET permission. Nothing you type can leave the
+device, because there is no code path that could send it. Decoding, prediction
+and learning are local, the personal dictionary is on-device storage only, and
+password or private fields switch off suggestions, trails and learning.
+
+Features
+
+* Two independent swipe/tap streams merged by timestamp, including
+  near-simultaneous order swaps and mid-swipe cross-thumb taps for double
+  letters
+* Swipe decoding written from scratch: banded dynamic time warping over
+  arc-length-resampled paths, an anchored trie search, frequency and
+  bigram-context scoring
+* English, Italian and Spanish: 46k to 49k words and 100k bigrams each, with
+  real corpus frequencies. Accented words are matched through their base-key
+  path and restored with accents on commit (perche -> perché)
+* Tap autocorrect with three aggressiveness levels
+* Live completions while you tap, and the letters you actually typed are
+  always a pickable suggestion, so a word the dictionary does not know still
+  commits verbatim
+* Personal weighting, kept per language: words you commit rank higher over
+  time, long-press a suggestion to reinforce it, slide up or down while
+  holding to change by how much
+* Long-press alternates on every key, customizable edge swipes, chord
+  shortcuts, a two-page symbols layer and a numpad
+* Five layout modes (full, right, left, split, one-handed), adjustable
+  height, a dark theme, Material You wallpaper colors, or a whole palette
+  derived from one custom color
+* Peck-type mode that switches decoding off entirely, for slang and anything
+  else the engine would otherwise mangle
+* Reversible backspace slide: the span to be deleted is previewed
+  struck-through, sliding back retracts it, and only lifting commits it
+* Dictionary management on the device: import an AOSP wordlist.combined,
+  export or import your personal dictionary as JSON, reset it per language
+
+Source, build instructions and the full feature list:
+https://github.com/EZ-eta/kinetica
+
+If Kinetica is useful to you: https://ko-fi.com/ez_eta

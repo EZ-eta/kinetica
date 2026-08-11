@@ -1,0 +1,7 @@
+First public release.
+
+Two-thumb dual-stream gesture typing. English, Italian and Spanish
+dictionaries. Tap autocorrect and live completions. Per-language personal
+weighting with manual reinforcement. Customizable edge swipes and chord
+shortcuts. Five layout modes, adjustable height, dark, Material You and
+custom themes. Peck-type mode. No network permission.
