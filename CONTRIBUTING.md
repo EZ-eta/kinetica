@@ -32,6 +32,15 @@ description, with exact steps and expected behavior per item.
 - **Tunables live in `engine/KineticaConstants.kt`**, each with a comment
   explaining the rationale for its value. Geometric values in key-width
   units, times in milliseconds.
+- **The release build has to reproduce.** F-Droid rebuilds every tag and
+  publishes this project's own signed APK only when its build matches ours,
+  so AGP, Kotlin and `buildToolsVersion` stay pinned to exact versions, and
+  nothing build-time-varying (a timestamp, a hostname, a generated id) may
+  enter the APK. `signingConfigs` is declared only when
+  `keystore.properties` exists, and that conditional is what lets a build
+  server produce an unsigned APK without patching the build file - do not
+  simplify it away. `tools/compare_apks.py` is the check: two builds of one
+  commit must differ only in the signature.
 
 ## Tests
 
