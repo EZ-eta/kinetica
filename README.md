@@ -34,7 +34,7 @@ Grab `kinetica-<version>.apk` from the
 [latest release](https://github.com/EZ-eta/kinetica/releases/latest):
 
 ```bash
-adb install -r kinetica-1.0.0.apk
+adb install -r kinetica-*.apk
 ```
 
 Then open the Kinetica icon and follow the three enable steps. If you have been

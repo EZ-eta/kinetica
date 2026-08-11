@@ -1,0 +1,4 @@
+Removes the dependency-metadata block that the Android Gradle plugin embeds in
+the APK signing block. It is a Play Store feature, it is opaque to anyone
+inspecting the APK, and it is not wanted in a build meant to be verifiable.
+No functional change.
