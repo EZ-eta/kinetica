@@ -1,5 +1,8 @@
 # Kinetica
 
+[![Latest release](https://img.shields.io/github/v/release/EZ-eta/kinetica?logo=github)](https://github.com/EZ-eta/kinetica/releases/latest)
+[![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue)](LICENSE)
+
 An open-source (GPL-3.0) Android keyboard (IME) built around **two-handed
 hybrid swipe/tap input**: each thumb can independently swipe or tap,
 simultaneously, and both gesture streams merge into a single word prediction.
@@ -24,6 +27,28 @@ Example - typing SOMETHING:
 https://github.com/user-attachments/assets/220ca042-322f-45df-bbd5-04a6b06d4a66
 
 
+
+## Install
+
+Grab `kinetica-<version>.apk` from the
+[latest release](https://github.com/EZ-eta/kinetica/releases/latest):
+
+```bash
+adb install -r kinetica-1.0.0.apk
+```
+
+Then open the Kinetica icon and follow the three enable steps. If you have been
+running a debug build, uninstall it first - it carries a different signing key,
+so Android will refuse the upgrade. Export your personal dictionary
+(Settings > Dictionary) before you do.
+
+Release APKs are signed with the project's own key by the tagged
+[release workflow](.github/workflows/release.yml), so the build behind any given
+APK is public and inspectable. Kinetica is being submitted to F-Droid as a
+[reproducible build](https://f-droid.org/docs/Reproducible_Builds): F-Droid
+rebuilds the tag, verifies its own output against the APK above, and ships this
+same signature - so once the listing is live, either source can install and
+update the other's build.
 
 ## Features
 
@@ -406,5 +431,6 @@ shows no ads, and will never ask you for anything at runtime.
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the build/test/lint gate, commit
-conventions, and the regression-test rules; [ADDING_A_LANGUAGE.md](ADDING_A_LANGUAGE.md) documents
-the end-to-end recipe for contributing a new language.
+conventions, and the regression-test rules;
+[ADDING_A_LANGUAGE.md](ADDING_A_LANGUAGE.md) documents the end-to-end recipe for
+contributing a new language.
