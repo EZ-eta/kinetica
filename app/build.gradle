@@ -51,6 +51,14 @@ android {
         }
     }
 
+    // AGP otherwise writes a Google-signed protobuf of the dependency tree into
+    // the APK signing block. It is a Play Store feature, it is opaque to anyone
+    // inspecting the APK, and F-Droid's scanner rejects an APK that carries it.
+    dependenciesInfo {
+        includeInApk false
+        includeInBundle false
+    }
+
     buildTypes {
         release {
             minifyEnabled false
