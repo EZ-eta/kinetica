@@ -3,17 +3,20 @@
 
   tools/compare_apks.py build-a.apk build-b.apk
 
-Comparing whole-file hashes is the wrong test: apksigner signs with RSASSA-PSS
-for minSdk >= 24 and PSS draws a random salt, so signing identical input twice
-never yields identical bytes. The APK Signing Block is not required to
-reproduce either - a verifier copies it across rather than regenerating it -
-while a v2/v3 signature covers every other byte of the file, which therefore
-must match exactly.
+A verifier copies the APK Signing Block across rather than regenerating it, so
+that block is the one part not required to match, while the v2 signature covers
+every other byte of the file and those must match exactly. Splitting the file
+there is what makes the check meaningful: a whole-file hash cannot separate a
+real content change from a difference confined to the signature, and it cannot
+say which entry moved.
 
-So split each APK at the signing block and compare what has to match: the ZIP
-entries before it and the central directory after it. On a mismatch, the
-per-entry CRCs name the file that moved. Exits 0 when the two APKs differ only
-in the signature.
+On a mismatch the per-entry CRCs name the file. Exits 0 when the two APKs
+differ only in the signature.
+
+As it happens this project signs with RSASSA-PKCS1-v1.5, which is
+deterministic, so two builds of one commit currently come out byte-identical
+and even a plain hash would agree. That is a property of today's key and
+build, not something to depend on.
 """
 
 from __future__ import annotations
