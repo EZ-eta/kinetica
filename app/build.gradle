@@ -20,6 +20,11 @@ if (keystorePropsFile.exists()) {
 android {
     namespace 'com.kinetica.keyboard'
     compileSdk 34
+    // AGP 8.5.2 already defaults to these build-tools, so pinning changes
+    // nothing locally. It matters because F-Droid rebuilds the tagged release
+    // and compares it against the published APK: every input that could drift
+    // between two machines has to be fixed in the build script.
+    buildToolsVersion '34.0.0'
 
     defaultConfig {
         applicationId "com.kinetica.keyboard"
