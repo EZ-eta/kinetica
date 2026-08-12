@@ -2,6 +2,7 @@
 
 [![Latest release](https://img.shields.io/github/v/release/EZ-eta/kinetica?logo=github)](https://github.com/EZ-eta/kinetica/releases/latest)
 [![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue)](LICENSE)
+[![Support on Ko-fi](https://img.shields.io/badge/support-Ko--fi-FF5A16?logo=kofi&logoColor=white)](https://ko-fi.com/ez_eta)
 
 An open-source (GPL-3.0) Android keyboard (IME) built around **two-handed
 hybrid swipe/tap input**: each thumb can independently swipe or tap,
@@ -463,9 +464,7 @@ GPL, name aside.
 
 ## Support
 
-If Kinetica is useful to you, you can buy me a coffee:
-
-[![Support me on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/ez_eta)
+If Kinetica is useful to you, you can [buy me a coffee](https://ko-fi.com/ez_eta).
 
 Entirely optional. The app is and stays free, declares no network permission,
 shows no ads, and will never ask you for anything at runtime.
