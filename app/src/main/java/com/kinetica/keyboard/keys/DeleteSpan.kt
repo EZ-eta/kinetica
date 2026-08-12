@@ -23,6 +23,26 @@ object DeleteSpan {
     fun slideDpPerUnit(charMode: Boolean): Float = if (charMode) 18f else 40f
 
     /**
+     * Characters a staged slide of [units] covers when the editor already holds a
+     * selection of [selectionLength] characters, counting back from the
+     * selection's END.
+     *
+     * A selection is the first unit, whatever the granularity: the user selected
+     * it as one thing, so one step of the slide removes exactly it and further
+     * steps continue into [before] (the text preceding the selection start). With
+     * no selection this is the shipped word or character walk unchanged, which is
+     * what keeps the no-selection path byte-identical.
+     */
+    fun staged(selectionLength: Int, before: CharSequence, units: Int, charMode: Boolean): Int {
+        if (units <= 0) return 0
+        if (selectionLength <= 0) {
+            return if (charMode) chars(before, units) else words(before, units)
+        }
+        val rest = units - 1
+        return selectionLength + if (charMode) chars(before, rest) else words(before, rest)
+    }
+
+    /**
      * Length of the tail of [text] holding the last [units] whitespace-delimited
      * words, trailing whitespace included. Punctuation is part of a word, which
      * is what makes one slide step remove "word," rather than leaving the comma

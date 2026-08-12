@@ -4,6 +4,8 @@ import android.content.SharedPreferences
 import com.kinetica.keyboard.engine.KineticaConstants
 import com.kinetica.keyboard.keys.EdgeSwipeBindings
 import com.kinetica.keyboard.layout.LayoutMode
+import com.kinetica.keyboard.ui.BarMetrics
+import com.kinetica.keyboard.ui.KeyboardTheme
 
 /**
  * Immutable snapshot of all preferences the keyboard consumes, rebuilt on any
@@ -12,6 +14,10 @@ import com.kinetica.keyboard.layout.LayoutMode
  */
 data class KeyboardConfig(
     val heightPct: Int,
+    /** Suggestion-strip height in dp; its text and ornaments scale off it. */
+    val suggestionBarDp: Int,
+    /** Draw the resize handle strip above the suggestion bar. */
+    val dragHandle: Boolean,
     val layoutMode: LayoutMode,
     val autospace: Boolean,
     val autospaceDelayMs: Long,
@@ -26,12 +32,18 @@ data class KeyboardConfig(
     val emojiKey: Boolean,
     /** Digits/symbols before accents in long-press popups and key hints. */
     val numberPriority: Boolean,
+    /** Accented letters removed from the letter keys' long-press popups. */
+    val plainLetterAlternates: Boolean,
     /** Implicit directional alternate swipes on the letter rows. */
     val alternateSwipes: Boolean,
     /** Backspace slide stages single characters instead of whole words. */
     val backspaceCharSlide: Boolean,
     /** Enter popup symbols; first is the primary. Never empty. */
     val enterAlternates: List<String>,
+    /** Period long-press alternates; EMPTY keeps the layout's own list. */
+    val periodAlternates: List<String>,
+    /** Comma long-press alternates; EMPTY keeps the layout's own list. */
+    val commaAlternates: List<String>,
     /** Optional apostrophe key in the home-row right padding. */
     val apostropheKey: Boolean,
     /** Comma-key role (pre-coerced: char/text without a custom fall to keep). */
@@ -39,6 +51,8 @@ data class KeyboardConfig(
     val commaCustom: String,
     val themeMode: String,
     val themeColor: Int,
+    /** dark | light | system; resolved against the configuration at use. */
+    val themeBrightness: String,
     /** Raw trail selection; "theme" resolves against the active theme accent. */
     val trailColorMode: String,
     val edgeSwipes: EdgeSwipeBindings,
@@ -58,6 +72,10 @@ data class KeyboardConfig(
         fun from(prefs: SharedPreferences): KeyboardConfig = KeyboardConfig(
             heightPct = prefs.getInt(Prefs.KEYBOARD_HEIGHT_PCT, Prefs.DEFAULT_HEIGHT_PCT)
                 .coerceIn(Prefs.MIN_HEIGHT_PCT, Prefs.MAX_HEIGHT_PCT),
+            suggestionBarDp = prefs.getInt(
+                Prefs.SUGGESTION_BAR_DP, Prefs.DEFAULT_SUGGESTION_BAR_DP,
+            ).coerceIn(BarMetrics.MIN_DP.toInt(), BarMetrics.MAX_DP.toInt()),
+            dragHandle = prefs.getBoolean(Prefs.DRAG_HANDLE, Prefs.DEFAULT_DRAG_HANDLE),
             layoutMode = LayoutMode.fromPref(
                 prefs.getString(Prefs.LAYOUT_MODE, "full"),
             ),
@@ -93,6 +111,9 @@ data class KeyboardConfig(
             numberPriority = prefs.getBoolean(
                 Prefs.NUMBER_PRIORITY, Prefs.DEFAULT_NUMBER_PRIORITY,
             ),
+            plainLetterAlternates = prefs.getBoolean(
+                Prefs.PLAIN_LETTER_ALTERNATES, Prefs.DEFAULT_PLAIN_LETTER_ALTERNATES,
+            ),
             alternateSwipes = prefs.getBoolean(
                 Prefs.ALTERNATE_SWIPES, Prefs.DEFAULT_ALTERNATE_SWIPES,
             ),
@@ -102,6 +123,12 @@ data class KeyboardConfig(
             enterAlternates = parseEnterAlternates(
                 prefs.getString(Prefs.ENTER_ALTERNATES, Prefs.DEFAULT_ENTER_ALTERNATES),
             ),
+            periodAlternates = parseAlternates(
+                prefs.getString(Prefs.PERIOD_ALTERNATES, null), MAX_PUNCTUATION_ALTERNATES,
+            ),
+            commaAlternates = parseAlternates(
+                prefs.getString(Prefs.COMMA_ALTERNATES, null), MAX_PUNCTUATION_ALTERNATES,
+            ),
             apostropheKey = prefs.getBoolean(
                 Prefs.APOSTROPHE_KEY, Prefs.DEFAULT_APOSTROPHE_KEY,
             ),
@@ -109,9 +136,10 @@ data class KeyboardConfig(
             commaCustom = commaCustom(prefs),
             themeMode = prefs.getString(Prefs.THEME_MODE, Prefs.DEFAULT_THEME_MODE)
                 ?: Prefs.DEFAULT_THEME_MODE,
-            themeColor = parseColorOr(
-                prefs.getString(Prefs.THEME_COLOR, Prefs.DEFAULT_THEME_COLOR),
-            ),
+            themeColor = themePrimary(prefs),
+            themeBrightness = prefs.getString(
+                Prefs.THEME_BRIGHTNESS, Prefs.DEFAULT_THEME_BRIGHTNESS,
+            ) ?: Prefs.DEFAULT_THEME_BRIGHTNESS,
             trailColorMode = prefs.getString(Prefs.TRAIL_COLOR, Prefs.DEFAULT_TRAIL_COLOR)
                 ?: Prefs.DEFAULT_TRAIL_COLOR,
             edgeSwipes = EdgeSwipeBindings.parse(prefs.getString(Prefs.EDGE_SWIPES, null)),
@@ -152,6 +180,13 @@ data class KeyboardConfig(
 
         /** Enter popup can host at most three cells (see the popup strip). */
         private const val MAX_ENTER_ALTERNATES = 3
+
+        /**
+         * Punctuation popups may be longer than enter's. Not a renderer limit -
+         * showPopup divides the available width by the cell count and the English
+         * "a" already ships nine - but past this the cells are too narrow to hit.
+         */
+        private const val MAX_PUNCTUATION_ALTERNATES = 8
         private val DEFAULT_ENTER_ALTERNATES_LIST = listOf("?", "!", ",")
 
         /**
@@ -160,11 +195,33 @@ data class KeyboardConfig(
          * literal comma is a valid symbol; capped at three cells; a blank or
          * all-whitespace value falls back to the built-in default.
          */
-        fun parseEnterAlternates(raw: String?): List<String> {
-            val parsed = raw.orEmpty().split(Regex("\\s+"))
-                .filter { it.isNotEmpty() }
-                .take(MAX_ENTER_ALTERNATES)
-            return parsed.ifEmpty { DEFAULT_ENTER_ALTERNATES_LIST }
+        fun parseEnterAlternates(raw: String?): List<String> =
+            parseAlternates(raw, MAX_ENTER_ALTERNATES).ifEmpty { DEFAULT_ENTER_ALTERNATES_LIST }
+
+        /**
+         * Whitespace-split symbol list, capped at [max]. Empty for a blank value,
+         * which every caller reads as "no opinion" - enter substitutes its
+         * built-in default, the punctuation keys keep the layout's own list.
+         */
+        fun parseAlternates(raw: String?, max: Int): List<String> =
+            raw.orEmpty().split(Regex("\\s+")).filter { it.isNotEmpty() }.take(max)
+
+        /**
+         * The custom-theme primary, from the hue slider. Migration matters more
+         * than the slider here: when THEME_HUE has never been written, the hue is
+         * taken from whatever THEME_COLOR the user had picked from the retired
+         * thirteen-colour list, so nobody's keyboard changes colour on upgrade.
+         */
+        private fun themePrimary(prefs: SharedPreferences): Int {
+            val stored = prefs.getInt(Prefs.THEME_HUE, -1)
+            val hue = if (stored in 0..360) {
+                stored.toFloat()
+            } else {
+                KeyboardTheme.hueOf(
+                    parseColorOr(prefs.getString(Prefs.THEME_COLOR, Prefs.DEFAULT_THEME_COLOR)),
+                )
+            }
+            return KeyboardTheme.primaryForHue(hue)
         }
 
         private fun parseColorOr(value: String?): Int = try {

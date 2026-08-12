@@ -12,5 +12,23 @@
     <color name="correction_chip">#FF3A3A55</color>
     <color name="popup_bg">#FF3F3F46</color>
     <color name="popup_selected">#FF5468FF</color>
+
+    <!-- Light counterpart of the roles above, same order. Keys sit BRIGHTER
+         than the background so the gaps between them read as the darker line,
+         which is the relationship the dark palette has rather than its
+         inverse. Selected separately in Kotlin, not by a values-night
+         qualifier: the bundled look is dark and must stay dark for anyone who
+         never opens the setting. -->
+    <color name="kbd_background_light">#FFE6E6EA</color>
+    <color name="kbd_key_light">#FFFFFFFF</color>
+    <color name="kbd_key_special_light">#FFD5D5DC</color>
+    <color name="kbd_key_pressed_light">#FFBFBFCB</color>
+    <color name="kbd_key_text_light">#FF1B1B1F</color>
+    <color name="kbd_key_hint_light">#FF6C6C77</color>
+    <color name="suggestion_bar_bg_light">#FFF1F1F5</color>
+    <color name="suggestion_text_light">#FF3A3A42</color>
+    <color name="suggestion_text_primary_light">#FF101014</color>
+    <color name="correction_chip_light">#FFC9CEF5</color>
+    <color name="popup_bg_light">#FFFFFFFF</color>
     <color name="launcher_background">#FF1B1B1F</color>
 </resources>

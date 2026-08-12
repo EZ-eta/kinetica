@@ -11,6 +11,10 @@ import org.junit.Test
  */
 class LayoutMutationsTest {
 
+    private companion object {
+        val ALTERNATES = Regex("\"alternates\"\\s*:\\s*\\[([^]]*)]")
+    }
+
     private fun layout(): KeyboardLayout = KeyboardLayout(
         name = "qwerty", locale = "en_US",
         keys = listOf(
@@ -63,6 +67,157 @@ class LayoutMutationsTest {
         val out = LayoutMutations.withEnterAlternates(noEnter)
         assertTrue(out.keys.none { it.type == KeyType.ENTER })
         assertEquals(1, out.keys.size)
+    }
+
+    /** The bundled English alternates for the four keys that carry the most. */
+    private fun accentLayout(nativeAccents: Boolean = false): KeyboardLayout = KeyboardLayout(
+        name = "qwerty", locale = "en_US",
+        keys = listOf(
+            Key("a", KeyType.CHAR, "a", "a", 0.05f, 0.25f, 0.10f, 0.25f,
+                alternates = listOf("à", "á", "â", "ä", "ã", "å", "æ", "ā", "@")),
+            Key("s", KeyType.CHAR, "s", "s", 0.15f, 0.25f, 0.10f, 0.25f,
+                alternates = listOf("ß", "ś", "š", "#")),
+            Key("q", KeyType.CHAR, "q", "q", 0f, 0f, 0.10f, 0.25f, alternates = listOf("1")),
+            Key("comma", KeyType.CHAR, ",", ",", 0.15f, 0.75f, 0.1f, 0.25f),
+        ),
+        nativeAccents = nativeAccents,
+    )
+
+    @Test
+    fun withoutForeignAlternatesKeepsOnlyDigitsAndSymbols() {
+        val out = LayoutMutations.withoutForeignAlternates(accentLayout())
+        assertEquals(listOf("@"), out.keys.first { it.id == "a" }.alternates)
+        assertEquals(listOf("#"), out.keys.first { it.id == "s" }.alternates)
+        // A key with no accent to lose is untouched, popup and hint intact.
+        assertEquals(listOf("1"), out.keys.first { it.id == "q" }.alternates)
+        assertTrue(out.keys.first { it.id == "comma" }.alternates.isEmpty())
+        assertEquals(4, out.keys.size)
+    }
+
+    @Test
+    fun withoutForeignAlternatesIsANoopForALayoutWhoseAccentsAreItsOwn() {
+        // The whole point of declaring it: an Italian or Spanish writer keeps
+        // "è" and "ñ" even with the setting on.
+        val before = accentLayout(nativeAccents = true)
+        val out = LayoutMutations.withoutForeignAlternates(before)
+        assertEquals(before, out)
+        assertEquals(9, out.keys.first { it.id == "a" }.alternates.size)
+    }
+
+    @Test
+    fun withoutForeignAlternatesNeverEmptiesAPopup() {
+        // A key whose alternates are ALL accents would lose its popup and its
+        // corner hint, so it is left alone instead. No bundled key is like this
+        // (see the asset guard below), which is why the rule can be this simple.
+        val allAccents = KeyboardLayout(
+            "x", "x",
+            listOf(Key("e", KeyType.CHAR, "e", "e", 0f, 0f, 0.1f, 0.25f,
+                alternates = listOf("è", "é"))),
+        )
+        val out = LayoutMutations.withoutForeignAlternates(allAccents)
+        assertEquals(listOf("è", "é"), out.keys.first().alternates)
+    }
+
+    @Test
+    fun withNumberPriorityFindsNothingLeftToReorderAfterTheTrim() {
+        // The two settings compose rather than fight: order matters only in that
+        // the trim must run first, which KineticaIME.alphaLayout does.
+        val trimmed = LayoutMutations.withoutForeignAlternates(accentLayout())
+        assertEquals(trimmed, LayoutMutations.withNumberPriority(trimmed))
+    }
+
+    @Test
+    fun everyBundledAccentKeyKeepsANonLetterAlternate() {
+        // The precondition withoutForeignAlternates rests on, guarded against a
+        // future layout edit. Read as text on purpose: the JVM test runtime stubs
+        // org.json, so LayoutLoader cannot be used here.
+        for (name in listOf("qwerty", "qwerty_it", "qwerty_es")) {
+            val p = listOf(
+                java.nio.file.Paths.get("src/main/assets/layouts/$name.json"),
+                java.nio.file.Paths.get("app/src/main/assets/layouts/$name.json"),
+            ).firstOrNull { java.nio.file.Files.exists(it) }
+            org.junit.Assume.assumeTrue("layout asset $name not found", p != null)
+            for (line in java.nio.file.Files.readAllLines(p!!)) {
+                val arr = ALTERNATES.find(line)?.groupValues?.get(1) ?: continue
+                val entries = arr.split(',').map { it.trim().trim('"') }.filter { it.isNotEmpty() }
+                if (entries.none { it.first().isLetter() }) continue
+                assertTrue(
+                    "$name: ${line.trim()} would be left with an empty popup",
+                    entries.any { !it.first().isLetter() },
+                )
+            }
+        }
+    }
+
+    // ---- user-editable punctuation flyouts ---------------------------------
+
+    /** Period and comma with the alternates all three bundled layouts author. */
+    private fun punctuationLayout(): KeyboardLayout = KeyboardLayout(
+        name = "qwerty", locale = "en_US",
+        keys = listOf(
+            Key("comma", KeyType.CHAR, ",", ",", 0.15f, 0.75f, 0.1f, 0.25f,
+                alternates = listOf("_", "[", "]", "\u2013", "\u2014")),
+            Key("period", KeyType.CHAR, ".", ".", 0.75f, 0.75f, 0.1f, 0.25f,
+                alternates = listOf("\u2026", "\u00ab", "\u00bb")),
+            Key("q", KeyType.CHAR, "q", "q", 0f, 0f, 0.1f, 0.25f, alternates = listOf("1")),
+        ),
+    )
+
+    @Test
+    fun aBlankListLeavesTheLayoutsOwnPunctuation() {
+        // The whole reason the preference defaults to blank: the layout JSON stays
+        // the source of truth, so a future language layout with different
+        // punctuation is not overridden by a global default.
+        val before = punctuationLayout()
+        assertEquals(before, LayoutMutations.withPunctuationAlternates(before, emptyList(), emptyList()))
+    }
+
+    @Test
+    fun eachKeyIsReplacedIndependently() {
+        val out = LayoutMutations.withPunctuationAlternates(
+            punctuationLayout(), listOf("!", "?"), emptyList(),
+        )
+        assertEquals(listOf("!", "?"), out.keys.first { it.id == "period" }.alternates)
+        // Comma untouched, because its list was empty.
+        assertEquals(5, out.keys.first { it.id == "comma" }.alternates.size)
+        // And no other key is disturbed.
+        assertEquals(listOf("1"), out.keys.first { it.id == "q" }.alternates)
+    }
+
+    @Test
+    fun bothKeysTakeTheirOwnList() {
+        val out = LayoutMutations.withPunctuationAlternates(
+            punctuationLayout(), listOf(";"), listOf(":", "-"),
+        )
+        assertEquals(listOf(";"), out.keys.first { it.id == "period" }.alternates)
+        assertEquals(listOf(":", "-"), out.keys.first { it.id == "comma" }.alternates)
+    }
+
+    @Test
+    fun theEmojiEntryStillLandsFirstOnAUserCommaList() {
+        // Ordering in KineticaIME.alphaLayout is load-bearing: the punctuation
+        // mutation runs BEFORE withEmojiOnComma, so the emoji cell still leads.
+        val custom = LayoutMutations.withPunctuationAlternates(
+            punctuationLayout(), emptyList(), listOf(":", "-"),
+        )
+        val out = LayoutMutations.withEmojiOnComma(custom)
+        assertEquals(
+            listOf(LayoutMutations.EMOJI_ALTERNATE, ":", "-"),
+            out.keys.first { it.id == "comma" }.alternates,
+        )
+    }
+
+    @Test
+    fun aRepurposedCommaKeepsTheUserListBehindTheComma() {
+        // withCommaKey runs last and pushes "," to the front so the character
+        // stays reachable; the user's own symbols must survive after it.
+        val custom = LayoutMutations.withPunctuationAlternates(
+            punctuationLayout(), emptyList(), listOf(":", "-"),
+        )
+        val out = LayoutMutations.withCommaKey(custom, "paste", "")
+        val comma = out.keys.first { it.id == "comma" }
+        assertEquals(LayoutMutations.ACTION_PASTE, comma.output)
+        assertEquals(listOf(",", ":", "-"), comma.alternates)
     }
 
     /** Home row mirroring the bundled layouts: "l" ends at 0.95, right pad free. */

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The project's only layout resource, and it exists because a custom Preference
+  needs one: everything else in this app is a Canvas view built in Kotlin. It
+  replaces the whole preference row rather than filling the narrow widget slot,
+  which is why the caption is a TextView here instead of the preference summary.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingStart="16dp"
+    android:paddingEnd="16dp"
+    android:paddingTop="4dp"
+    android:paddingBottom="12dp">
+
+    <TextView
+        android:id="@+id/theme_preview_note"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingBottom="6dp"
+        android:textSize="12sp" />
+
+    <com.kinetica.keyboard.ui.ThemePreviewView
+        android:id="@+id/theme_preview"
+        android:layout_width="match_parent"
+        android:layout_height="72dp" />
+</LinearLayout>

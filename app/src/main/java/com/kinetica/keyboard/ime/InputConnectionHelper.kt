@@ -21,6 +21,28 @@ class InputConnectionHelper(private val connection: () -> InputConnection?) {
     fun textAfterCursor(count: Int): CharSequence? =
         connection()?.getTextAfterCursor(count, 0)
 
+    fun selectedText(): CharSequence? = connection()?.getSelectedText(0)
+
+    /**
+     * Batch-edit deletion of [count] characters ending at absolute offset [end],
+     * used to remove a selection.
+     *
+     * [InputConnection.deleteSurroundingText] is specified relative to the
+     * selection BOUNDARIES and leaves the selection itself in place, so it can
+     * never delete one; collapsing the cursor to [end] first is what turns it
+     * into an ordinary backward delete. One batch edit, so the editor reports a
+     * single selection change like every other mutation here.
+     */
+    fun deleteEndingAt(end: Int, count: Int): Boolean {
+        if (count <= 0) return false
+        val ic = connection() ?: return false
+        ic.beginBatchEdit()
+        ic.setSelection(end, end)
+        ic.deleteSurroundingText(count, 0)
+        ic.endBatchEdit()
+        return true
+    }
+
     /** Batch-edit replacement of the last [deleteCount] chars with [text]. */
     fun replaceBeforeCursor(deleteCount: Int, text: CharSequence): Boolean {
         val ic = connection() ?: return false

@@ -206,8 +206,12 @@ class SuggestionBarView @JvmOverloads constructor(
         val vis = visible()
         if (vis.isEmpty()) return
 
-        textPaint.textSize = h * 0.40f
-        primaryPaint.textSize = h * 0.40f
+        // Ornaments scale with the bar so a user-thinned bar shrinks its
+        // furniture rather than overlapping the word; 1.0 at BarMetrics
+        // .REFERENCE_DP, so the shipped 44dp look is unchanged.
+        val orn = BarMetrics.scale(h, density)
+        textPaint.textSize = BarMetrics.textSize(h)
+        primaryPaint.textSize = BarMetrics.textSize(h)
         val baseY = h / 2f - (textPaint.descent() + textPaint.ascent()) / 2f
         val zoneW = w / vis.size
 
@@ -220,9 +224,10 @@ class SuggestionBarView @JvmOverloads constructor(
             // the committed word, wherever the current page puts it.
             val emphasized = if (correctionMode) fullIdx == selectedIndex else fullIdx == 0
             if (correctionMode && fullIdx == selectedIndex) {
-                val pad = 4f * density
+                val pad = 4f * density * orn
                 zoneRect.set(left + pad, pad, left + zoneW - pad, h - pad)
-                canvas.drawRoundRect(zoneRect, 6f * density, 6f * density, chipPaint)
+                val corner = 6f * density * orn
+                canvas.drawRoundRect(zoneRect, corner, corner, chipPaint)
             }
             val paint = if (emphasized) primaryPaint else textPaint
             val shown = fit(s.word, paint, zoneW)
@@ -236,9 +241,9 @@ class SuggestionBarView @JvmOverloads constructor(
             }
             if (tier > 0) {
                 drawTierBadge(
-                    canvas, tier,
-                    cx + paint.measureText(shown) / 2f + 6f * density,
-                    baseY + paint.ascent() + 3f * density,
+                    canvas, tier, orn,
+                    cx + paint.measureText(shown) / 2f + 6f * density * orn,
+                    baseY + paint.ascent() + 3f * density * orn,
                 )
             }
             if (i > 0) {
@@ -250,12 +255,12 @@ class SuggestionBarView @JvmOverloads constructor(
         // affordance for the right-edge leftward swipe that cycles pages.
         val pages = pageCount()
         if (pages > 1) {
-            val spacing = 8f * density
-            val cy = h - 3.5f * density
+            val spacing = 8f * density * orn
+            val cy = h - 3.5f * density * orn
             val startX = w / 2f - (pages - 1) * spacing / 2f
             for (p in 0 until pages) {
                 badgePaint.alpha = if (p == page) 255 else 90
-                canvas.drawCircle(startX + p * spacing, cy, 1.5f * density, badgePaint)
+                canvas.drawCircle(startX + p * spacing, cy, 1.5f * density * orn, badgePaint)
             }
             badgePaint.alpha = 255
         }
@@ -265,10 +270,10 @@ class SuggestionBarView @JvmOverloads constructor(
      * Personal-weight badge riding a word's top-right: tier 1 is the center
      * dot, tiers 2..7 fill the six hexagon corners clockwise from the top.
      */
-    private fun drawTierBadge(canvas: Canvas, tier: Int, cx: Float, cy: Float) {
-        val r = 1.2f * density
+    private fun drawTierBadge(canvas: Canvas, tier: Int, orn: Float, cx: Float, cy: Float) {
+        val r = 1.2f * density * orn
         canvas.drawCircle(cx, cy, r, badgePaint)
-        val ring = 3.2f * density
+        val ring = 3.2f * density * orn
         val corners = (tier - 1).coerceAtMost(6)
         for (k in 0 until corners) {
             val rad = Math.toRadians(-90.0 + k * 60.0)
@@ -282,9 +287,10 @@ class SuggestionBarView @JvmOverloads constructor(
     }
 
     private fun fit(word: String, paint: Paint, maxW: Float): String {
-        if (paint.measureText(word) <= maxW - 8f * density) return word
+        val inset = 8f * density * BarMetrics.scale(height.toFloat(), density)
+        if (paint.measureText(word) <= maxW - inset) return word
         var s = word
-        while (s.length > 3 && paint.measureText("$s…") > maxW - 8f * density) {
+        while (s.length > 3 && paint.measureText("$s…") > maxW - inset) {
             s = s.dropLast(1)
         }
         return "$s…"

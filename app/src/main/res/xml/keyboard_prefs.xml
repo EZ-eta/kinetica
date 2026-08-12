@@ -2,13 +2,37 @@
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
+    <!-- Not a setting: three shipped gestures that users kept asking for
+         because nothing in the interface mentions them. -->
+    <Preference
+        android:key="pref_tips"
+        android:title="@string/pref_tips_title"
+        android:summary="@string/pref_tips_summary"
+        android:selectable="false"
+        android:persistent="false" />
+
     <SeekBarPreference
         android:key="pref_keyboard_height_pct"
         android:title="@string/pref_height_title"
         android:defaultValue="35"
         android:max="50"
-        app:min="25"
+        app:min="10"
         app:showSeekBarValue="true" />
+
+    <SeekBarPreference
+        android:key="pref_suggestion_bar_dp"
+        android:title="@string/pref_suggestion_bar_title"
+        android:summary="@string/pref_suggestion_bar_summary"
+        android:defaultValue="44"
+        android:max="72"
+        app:min="24"
+        app:showSeekBarValue="true" />
+
+    <SwitchPreferenceCompat
+        android:key="pref_drag_handle"
+        android:title="@string/pref_drag_handle_title"
+        android:summary="@string/pref_drag_handle_summary"
+        android:defaultValue="true" />
 
     <ListPreference
         android:key="pref_layout_mode"
@@ -61,12 +85,27 @@
         app:useSimpleSummaryProvider="true" />
 
     <ListPreference
-        android:key="pref_theme_color"
-        android:title="@string/pref_theme_color_title"
-        android:summary="@string/pref_theme_color_summary"
-        android:entries="@array/theme_color_entries"
-        android:entryValues="@array/theme_color_values"
-        android:defaultValue="#5468FF" />
+        android:key="pref_theme_brightness"
+        android:title="@string/pref_theme_brightness_title"
+        android:entries="@array/theme_brightness_entries"
+        android:entryValues="@array/theme_brightness_values"
+        android:defaultValue="dark"
+        app:useSimpleSummaryProvider="true" />
+
+    <SeekBarPreference
+        android:key="pref_theme_hue"
+        android:title="@string/pref_theme_hue_title"
+        android:summary="@string/pref_theme_hue_summary"
+        android:defaultValue="233"
+        android:max="360"
+        app:min="0"
+        app:showSeekBarValue="true"
+        app:updatesContinuously="true" />
+
+    <com.kinetica.keyboard.settings.ThemePreviewPreference
+        android:key="pref_theme_preview"
+        android:persistent="false"
+        android:selectable="false" />
 
     <ListPreference
         android:key="pref_trail_color"
@@ -153,6 +192,12 @@
         android:defaultValue="medium" />
 
     <SwitchPreferenceCompat
+        android:key="pref_plain_letter_alternates"
+        android:title="@string/pref_plain_letter_alternates_title"
+        android:summary="@string/pref_plain_letter_alternates_summary"
+        android:defaultValue="false" />
+
+    <SwitchPreferenceCompat
         android:key="pref_number_priority"
         android:title="@string/pref_number_priority_title"
         android:summary="@string/pref_number_priority_summary"
@@ -171,6 +216,16 @@
         android:entries="@array/comma_mode_entries"
         android:entryValues="@array/comma_mode_values"
         android:defaultValue="keep" />
+
+    <EditTextPreference
+        android:key="pref_period_alternates"
+        android:title="@string/pref_period_alternates_title"
+        android:summary="@string/pref_punctuation_alternates_summary" />
+
+    <EditTextPreference
+        android:key="pref_comma_alternates"
+        android:title="@string/pref_comma_alternates_title"
+        android:summary="@string/pref_punctuation_alternates_summary" />
 
     <EditTextPreference
         android:key="pref_comma_custom"

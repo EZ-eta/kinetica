@@ -74,6 +74,52 @@ class DeleteSpanTest {
         assertEquals(1, DeleteSpan.chars("\uDE00", 1))
     }
 
+    // ---- a selection is the first staged unit -------------------------------
+
+    @Test
+    fun aSelectionIsOneUnitWhateverTheGranularity() {
+        // "hello |world| again" with "world" selected: before = "hello ",
+        // selection = 5. One step takes the selection and nothing else, in either
+        // mode, because the user already picked it out as one thing.
+        val before = "hello "
+        assertEquals(5, DeleteSpan.staged(5, before, 1, charMode = false))
+        assertEquals(5, DeleteSpan.staged(5, before, 1, charMode = true))
+    }
+
+    @Test
+    fun furtherStepsContinueIntoTheTextBeforeTheSelection() {
+        val before = "hello "
+        // Word mode: the selection, then "hello " as one word with its space.
+        assertEquals(5 + 6, DeleteSpan.staged(5, before, 2, charMode = false))
+        // Char mode: the selection, then one character of "hello " at a time.
+        assertEquals(5 + 1, DeleteSpan.staged(5, before, 2, charMode = true))
+        assertEquals(5 + 2, DeleteSpan.staged(5, before, 3, charMode = true))
+    }
+
+    @Test
+    fun withNoSelectionTheSpanIsTheShippedWalk() {
+        // The regression that matters: staging without a selection must not have
+        // changed at all, in either mode, including the degenerate counts.
+        val t = "hello world, again"
+        for (units in 0..4) {
+            assertEquals(DeleteSpan.words(t, units), DeleteSpan.staged(0, t, units, false))
+            assertEquals(DeleteSpan.chars(t, units), DeleteSpan.staged(0, t, units, true))
+        }
+        assertEquals(0, DeleteSpan.staged(0, t, -1, false))
+    }
+
+    @Test
+    fun aSelectionAtTheStartOfTheFieldCannotOverrun() {
+        // Nothing before it, so every further step is a no-op rather than a walk
+        // past offset zero.
+        assertEquals(4, DeleteSpan.staged(4, "", 1, charMode = false))
+        assertEquals(4, DeleteSpan.staged(4, "", 9, charMode = false))
+        assertEquals(4, DeleteSpan.staged(4, "", 9, charMode = true))
+        // And a zero-unit slide stages nothing even with a selection up: the
+        // slide must stay retractable to a no-op.
+        assertEquals(0, DeleteSpan.staged(4, "abc", 0, charMode = false))
+    }
+
     // ---- the two granularities are the same gesture ------------------------
 
     @Test

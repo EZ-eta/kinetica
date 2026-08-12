@@ -45,6 +45,10 @@ object LayoutLoader {
             name = root.optString("name", "unnamed"),
             locale = root.optString("locale", "en_US"),
             keys = keys,
+            // Optional, so no schema bump and no existing layout needs editing:
+            // absent is "these accents are foreign", which is what the English
+            // layout and the plain-qwerty fallback both want.
+            nativeAccents = root.optBoolean("nativeAccents", false),
         )
     }
 }

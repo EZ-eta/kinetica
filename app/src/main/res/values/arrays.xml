@@ -146,4 +146,15 @@
         <item>u</item><item>v</item><item>w</item><item>x</item><item>y</item>
         <item>z</item>
     </string-array>
+
+    <string-array name="theme_brightness_entries">
+        <item>Dark</item>
+        <item>Light</item>
+        <item>Follow system</item>
+    </string-array>
+    <string-array name="theme_brightness_values">
+        <item>dark</item>
+        <item>light</item>
+        <item>system</item>
+    </string-array>
 </resources>

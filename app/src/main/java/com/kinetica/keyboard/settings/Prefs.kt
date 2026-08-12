@@ -3,6 +3,20 @@ package com.kinetica.keyboard.settings
 /** Single source of truth for SharedPreferences keys and defaults. */
 object Prefs {
     const val KEYBOARD_HEIGHT_PCT = "pref_keyboard_height_pct"
+
+    /**
+     * Suggestion-strip height in dp. Its text and every ornament scale off it
+     * (BarMetrics), so this one value governs how thin the strip reads - there is
+     * deliberately no separate font size.
+     */
+    const val SUGGESTION_BAR_DP = "pref_suggestion_bar_dp"
+
+    /**
+     * Draw the resize handle above the suggestion strip. It costs 20dp that the
+     * height percentage cannot reach; off, the keyboard is resized from the
+     * height slider instead.
+     */
+    const val DRAG_HANDLE = "pref_drag_handle"
     const val LAYOUT_MODE = "pref_layout_mode"
     const val AUTOSPACE = "pref_autospace"
     const val AUTOSPACE_DELAY_MS = "pref_autospace_delay_ms"
@@ -17,6 +31,16 @@ object Prefs {
     const val REINFORCE_INCREMENT = "pref_reinforce_increment"
     const val EMOJI_KEY = "pref_emoji_key"
     const val NUMBER_PRIORITY = "pref_number_priority"
+
+    /**
+     * Drop accented letters from the letter keys' long-press popups, keeping
+     * digits and symbols. Off by default: the accents are the shipped behaviour
+     * and are what makes a second language writable without switching layout.
+     * Has no effect on a layout whose accents are its own language's
+     * (KeyboardLayout.nativeAccents), so enabling it cannot cost an Italian or
+     * Spanish writer their letters.
+     */
+    const val PLAIN_LETTER_ALTERNATES = "pref_plain_letter_alternates"
 
     /** Comma-key role: keep | remove | char | text | paste | select_all. */
     const val COMMA_MODE = "pref_comma_mode"
@@ -47,6 +71,15 @@ object Prefs {
      * reached by sliding left. Blank falls back to the built-in "? ! ,".
      */
     const val ENTER_ALTERNATES = "pref_enter_alternates"
+
+    /**
+     * Space-separated long-press alternates for the period and comma keys.
+     * BLANK means "leave the layout's own list alone", so the layout JSON stays
+     * the source of truth and a future language layout with different
+     * punctuation is not silently overridden by a global default.
+     */
+    const val PERIOD_ALTERNATES = "pref_period_alternates"
+    const val COMMA_ALTERNATES = "pref_comma_alternates"
 
     /**
      * Optional apostrophe key: a narrow tappable "'" in the free
@@ -82,8 +115,30 @@ object Prefs {
     const val THEME_MODE = "pref_theme_mode"
     const val THEME_COLOR = "pref_theme_color"
 
+    /** dark | light | system. Orthogonal to THEME_MODE, which picks the source. */
+    const val THEME_BRIGHTNESS = "pref_theme_brightness"
+
+    /**
+     * Accent hue in degrees, 0-360, replacing the fixed thirteen-colour list.
+     * Absent means "never set": KeyboardConfig then derives it from
+     * [THEME_COLOR] so an existing install keeps the colour it had.
+     */
+    const val THEME_HUE = "pref_theme_hue"
+
     const val DEFAULT_HEIGHT_PCT = 35
-    const val MIN_HEIGHT_PCT = 25
+    /** The shipped strip height, so an existing install does not move. */
+    const val DEFAULT_SUGGESTION_BAR_DP = 44
+    const val DEFAULT_DRAG_HANDLE = true
+
+    /**
+     * 25 -> 10 on a user report that the old floor was still too tall. It is one
+     * of TWO floors and was rarely the binding one: `KeyboardHeights.minPx` takes
+     * the larger of this and an absolute dp height, and on a tall phone or an
+     * unfolded foldable it is the dp floor that decides. Both had to move, and
+     * `app:min` in keyboard_prefs.xml has to match this or the slider cannot
+     * reach it.
+     */
+    const val MIN_HEIGHT_PCT = 10
     const val MAX_HEIGHT_PCT = 50
     const val DEFAULT_AUTOSPACE = true
     const val DEFAULT_AUTOSPACE_DELAY_MS = 300
@@ -97,6 +152,7 @@ object Prefs {
     const val DEFAULT_REINFORCE_INCREMENT = "medium"
     const val DEFAULT_EMOJI_KEY = false
     const val DEFAULT_NUMBER_PRIORITY = false
+    const val DEFAULT_PLAIN_LETTER_ALTERNATES = false
     const val DEFAULT_ALTERNATE_SWIPES = false
     const val DEFAULT_BACKSPACE_CHAR_SLIDE = false
     const val DEFAULT_ENTER_ALTERNATES = "? ! ,"
@@ -105,6 +161,7 @@ object Prefs {
     const val DEFAULT_COMMA_CUSTOM = ""
     const val DEFAULT_THEME_MODE = "default"
     const val DEFAULT_THEME_COLOR = "#5468FF"
+    const val DEFAULT_THEME_BRIGHTNESS = "dark"
     const val DEFAULT_LANG_CYCLE_KEY = "l"
     const val DEFAULT_AUTO_DETECT_LANGUAGE = false
     const val DEFAULT_PECK_MODE = false

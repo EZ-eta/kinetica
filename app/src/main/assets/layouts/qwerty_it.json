@@ -2,6 +2,7 @@
   "schema": 2,
   "name": "qwerty_it",
   "locale": "it_IT",
+  "nativeAccents": true,
   "keys": [
     { "id": "q", "type": "char", "label": "q", "output": "q", "x": 0.00, "y": 0.00, "w": 0.10, "h": 0.25, "alternates": ["1"] },
     { "id": "w", "type": "char", "label": "w", "output": "w", "x": 0.10, "y": 0.00, "w": 0.10, "h": 0.25, "alternates": ["2"] },

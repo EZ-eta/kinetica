@@ -35,6 +35,7 @@ import com.kinetica.keyboard.engine.models.TapToken
 import com.kinetica.keyboard.engine.models.WordCandidate
 import com.kinetica.keyboard.keys.AutoCapitalization
 import com.kinetica.keyboard.keys.DeleteSpan
+import com.kinetica.keyboard.keys.EditorAction
 import com.kinetica.keyboard.keys.EdgeSwipeBindings
 import com.kinetica.keyboard.keys.ShiftState
 import com.kinetica.keyboard.layout.Key
@@ -43,6 +44,7 @@ import com.kinetica.keyboard.layout.KeyboardLayout
 import com.kinetica.keyboard.layout.LayoutLoader
 import com.kinetica.keyboard.layout.LayoutMutations
 import com.kinetica.keyboard.settings.KeyboardConfig
+import com.kinetica.keyboard.settings.KeyboardHeights
 import com.kinetica.keyboard.settings.Prefs
 import com.kinetica.keyboard.settings.SettingsActivity
 import com.kinetica.keyboard.ui.EmojiPickerView
@@ -132,6 +134,15 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     private var lastCandidates: List<WordCandidate> = emptyList()
     private var lastLiteral = ""
     private var expectedSelectionUpdates = 0
+
+    // The editor's selection, normalized so start <= end; equal means a plain
+    // cursor. Insertions need none of this - commitText replaces a selection by
+    // itself, and this app never sets a composing region for it to prefer - but
+    // deleteSurroundingText is specified relative to the selection boundaries and
+    // leaves the selection standing, so backspace over selected text used to
+    // delete a character BESIDE it and leave the selection alone.
+    private var selStart = 0
+    private var selEnd = 0
     // Set when the latest decode of a swipe-bearing word returned no candidates:
     // the visible tentative is then a stale earlier partial decode that must not
     // be autospaced or learned.
@@ -170,6 +181,11 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             val previous = config
             config = KeyboardConfig.from(p)
             applyViewConfig()
+            if (config.dragHandle != previous.dragHandle && keyboardView != null) {
+                // The strip is added or omitted when the container is built, so
+                // this one setting cannot be applied in place.
+                setInputView(onCreateInputView())
+            }
             if (config.peckMode != previous.peckMode) {
                 // Entering or leaving literal mode mid-word would leave a
                 // half-tracked tentative; settle it as plain text first.
@@ -190,8 +206,11 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
                 loadDictionaryAsync()
             } else if (config.emojiKey != previous.emojiKey ||
                 config.numberPriority != previous.numberPriority ||
+                config.plainLetterAlternates != previous.plainLetterAlternates ||
                 config.commaMode != previous.commaMode ||
-                config.commaCustom != previous.commaCustom
+                config.commaCustom != previous.commaCustom ||
+                config.periodAlternates != previous.periodAlternates ||
+                config.commaAlternates != previous.commaAlternates
             ) {
                 closeEmojiPicker()
                 keyboardView?.setKeyboardLayout(alphaLayout())
@@ -342,9 +361,18 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         // Enter's held/slide-up alternate popup is always on; the
         // symbols are settings-configurable (first is the primary).
         l = LayoutMutations.withEnterAlternates(l, config.enterAlternates)
+        // Before the emoji and comma-role mutations, so a user list still gets
+        // the emoji entry prepended and still survives a repurposed comma.
+        l = LayoutMutations.withPunctuationAlternates(
+            l, config.periodAlternates, config.commaAlternates,
+        )
         // Optional apostrophe key in the home-row right padding.
         if (config.apostropheKey) l = LayoutMutations.withApostropheKey(l)
         if (config.emojiKey) l = LayoutMutations.withEmojiOnComma(l)
+        // Before the reorder: with the accents gone there is nothing left for
+        // number-priority to move, so the two settings compose instead of
+        // fighting over the same list.
+        if (config.plainLetterAlternates) l = LayoutMutations.withoutForeignAlternates(l)
         if (config.numberPriority) l = LayoutMutations.withNumberPriority(l)
         // After the emoji mutation, so a removal can relocate the emoji
         // alternate and a repurposed key keeps it in its popup.
@@ -374,11 +402,12 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
 
         val container = InputContainerView(
             this, bar, kv,
-            barHeightPx = dpToPx(SUGGESTION_BAR_DP),
+            barHeightPx = dpToPx(config.suggestionBarDp.toFloat()),
             keyboardHeightPx = keyboardHeightPx(),
             minKeyboardPx = minKeyboardPx(),
             maxKeyboardPx = maxKeyboardPx(),
             onHeightCommitted = { px -> persistHeightPct(px) },
+            showHandle = config.dragHandle,
         )
         containerView = container
         applyViewConfig()
@@ -405,25 +434,18 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     private fun layoutFor(name: String): KeyboardLayout =
         layouts.getOrPut(name) { LayoutLoader.load(assets, "layouts/$name.json") }
 
-    // The 180dp floor must yield to the percentage ceiling: on short screens
-    // (landscape phones, split-screen) half the screen is less than 180dp, and
-    // an inverted min..max range makes coerceIn throw - which killed the whole
-    // app process the moment the keyboard opened.
-    private fun minKeyboardPx(): Int = minOf(
-        maxOf(
-            dpToPx(MIN_KEYBOARD_DP),
-            resources.displayMetrics.heightPixels * Prefs.MIN_HEIGHT_PCT / 100,
-        ),
-        maxKeyboardPx(),
+    // Bounds arithmetic lives in KeyboardHeights, which is pure and therefore
+    // testable: an inverted min..max range here once made coerceIn throw and took
+    // the whole app process down with it.
+    private fun minKeyboardPx(): Int = KeyboardHeights.minPx(
+        resources.displayMetrics.heightPixels, resources.displayMetrics.density,
     )
 
     private fun maxKeyboardPx(): Int =
-        resources.displayMetrics.heightPixels * Prefs.MAX_HEIGHT_PCT / 100
+        KeyboardHeights.maxPx(resources.displayMetrics.heightPixels)
 
     private fun persistHeightPct(px: Int) {
-        val screenH = resources.displayMetrics.heightPixels
-        val pct = (px * 100f / screenH).toInt()
-            .coerceIn(Prefs.MIN_HEIGHT_PCT, Prefs.MAX_HEIGHT_PCT)
+        val pct = KeyboardHeights.pctFor(px, resources.displayMetrics.heightPixels)
         PreferenceManager.getDefaultSharedPreferences(this)
             .edit().putInt(Prefs.KEYBOARD_HEIGHT_PCT, pct).apply()
     }
@@ -436,7 +458,9 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         // password or no-learning fields. In peck mode swipes do nothing, so
         // a trail would advertise a gesture that has no effect.
         kv.trailsEnabled = !editorState.privateMode && !config.peckMode
-        val theme = KeyboardTheme.resolve(this, config.themeMode, config.themeColor)
+        val theme = KeyboardTheme.resolve(
+            this, config.themeMode, config.themeColor, config.themeBrightness,
+        )
         kv.theme = theme
         suggestionBar?.theme = theme
         containerView?.applyTheme(theme)
@@ -457,6 +481,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             config.edgeSwipes
         }
         suggestionBar?.reinforceIncrement = config.reinforceIncrement
+        containerView?.setBarHeight(dpToPx(config.suggestionBarDp.toFloat()))
         val targetH = keyboardHeightPx()
         val lp = kv.layoutParams
         if (lp != null && lp.height != targetH) {
@@ -487,10 +512,11 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         }
     }
 
-    private fun keyboardHeightPx(): Int {
-        val screenH = resources.displayMetrics.heightPixels
-        return ((screenH * config.heightPct) / 100).coerceIn(minKeyboardPx(), maxKeyboardPx())
-    }
+    private fun keyboardHeightPx(): Int = KeyboardHeights.targetPx(
+        resources.displayMetrics.heightPixels,
+        resources.displayMetrics.density,
+        config.heightPct,
+    )
 
     private fun dpToPx(dp: Float): Int = TypedValue.applyDimension(
         TypedValue.COMPLEX_UNIT_DIP, dp, resources.displayMetrics,
@@ -504,6 +530,12 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         abandonWord()
         composer?.reset()
         expectedSelectionUpdates = 0
+        // A field can open with text already selected, so seed from the editor
+        // rather than assuming a collapsed cursor. Either offset is -1 when the
+        // editor did not report one, which is no selection, not a huge one.
+        val s = attribute?.initialSelStart ?: -1
+        val e = attribute?.initialSelEnd ?: -1
+        setSelectionCache(s, e)
         updateAutoShift()
         reloadChords()
     }
@@ -552,6 +584,10 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         super.onUpdateSelection(
             oldSelStart, oldSelEnd, newSelStart, newSelEnd, candidatesStart, candidatesEnd,
         )
+        // Recorded on every update, including the ones this service caused: after
+        // its own edit the cursor is where the editor says it is, and the delete
+        // paths read these offsets.
+        setSelectionCache(newSelStart, newSelEnd)
         if (expectedSelectionUpdates > 0) {
             expectedSelectionUpdates--
             return
@@ -561,7 +597,29 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         if (tentativeLength > 0 || composer?.hasPendingWord == true) {
             abandonWord()
         }
+        // The correction strip names the text immediately before the cursor, and
+        // with a selection up it is not that. Left standing it stayed tappable,
+        // and onCorrectionPicked's replaceBeforeCursor would then delete text
+        // BESIDE the selection and have commitText replace the selection too -
+        // two edits, neither of them the one asked for. Narrowed to the selection
+        // case on purpose: a plain cursor move already clears the strip through
+        // abandonWord whenever a word was pending, and widening it here would
+        // make any editor that miscounts expectedSelectionUpdates lose the strip.
+        if (selectionLength() > 0) clearCorrection()
     }
+
+    /** Normalized selection; -1 from the editor means "unknown", i.e. none. */
+    private fun setSelectionCache(start: Int, end: Int) {
+        if (start < 0 || end < 0) {
+            selStart = 0
+            selEnd = 0
+            return
+        }
+        selStart = minOf(start, end)
+        selEnd = maxOf(start, end)
+    }
+
+    private fun selectionLength(): Int = selEnd - selStart
 
     // -------------------------------------------------- engine listener (UI)
 
@@ -788,7 +846,9 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             }
             val expansion = chordMap[letterCode] ?: return
             cancelAutospace()
-            finalizeThenCommitText(expansion)
+            // A chord may name an editor command instead of text; anything else
+            // inserts as before.
+            if (!performIfAction(expansion)) finalizeThenCommitText(expansion)
             updateAutoShift()
         }
 
@@ -852,6 +912,33 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         pushSuggestions()
     }
 
+    /**
+     * Runs [text] as an editor command when it names one, and reports whether it
+     * did. Shared by the configurable comma key and the chord shortcuts, which is
+     * the point: the chord path used to insert "action:paste" into the document as
+     * literal text because it never consulted this at all.
+     *
+     * The pending word is settled first so the command applies to finished
+     * content rather than to a half-decoded one. A string carrying the reserved
+     * prefix but naming no command is swallowed rather than typed - it is a typo
+     * in a chord expansion, and inserting it is the worse of the two answers.
+     */
+    private fun performIfAction(text: String): Boolean {
+        val action = EditorAction.of(text)
+        if (action == null) return EditorAction.isUnknownAction(text)
+        finalizePendingWord()
+        ich.performContextMenuAction(
+            when (action) {
+                EditorAction.PASTE -> android.R.id.paste
+                EditorAction.COPY -> android.R.id.copy
+                EditorAction.CUT -> android.R.id.cut
+                EditorAction.SELECT_ALL -> android.R.id.selectAll
+            },
+        )
+        expectedSelectionUpdates++
+        return true
+    }
+
     private fun finalizeThenCommitText(text: String) {
         val committed = finalizePendingWord()
         commitTracked(text)
@@ -910,36 +997,64 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     // right retracts unit by unit down to a no-op. A unit is a word, or a single
     // character when the char-slide preference is on.
     private var stagedDeletion = ""
+    private var stagedDeletionLength = 0
 
     private fun stageDeletion(units: Int, chars: Boolean) {
         if (units <= 0) {
-            if (stagedDeletion.isNotEmpty()) {
+            if (stagedDeletionLength > 0) {
                 stagedDeletion = ""
+                stagedDeletionLength = 0
                 keyboardView?.setDeletePreview(null)
             }
             return
         }
         cancelAutospace()
+        // One tick per unit, because BackspaceController only reports a CHANGED
+        // count - so this fires on each threshold crossing and never repeats while
+        // the finger sits still. Retractions tick too: the reading that matters is
+        // "the count moved", and not feeling a retraction is how a slide deletes
+        // less than intended. Same idiom as the suggestion bar's reinforce steps,
+        // and it honours the existing vibration setting rather than adding one.
+        vibrateForKeyPress()
         if (composer?.hasPendingWord == true || tentativeLength > 0) abandonWord()
+        // Text before the SELECTION START, which is what getTextBeforeCursor
+        // returns while a selection is up. The selection itself is the first
+        // staged unit; see DeleteSpan.staged.
         val before = ich.textBeforeCursor(STAGE_FETCH_CHARS) ?: return
-        val span = if (chars) DeleteSpan.chars(before, units) else DeleteSpan.words(before, units)
-        stagedDeletion = before.subSequence(before.length - span, before.length).toString()
+        val selected = selectionLength()
+        val span = DeleteSpan.staged(selected, before, units, chars)
+        stagedDeletionLength = span
+        val tail = (span - selected).coerceIn(0, before.length)
+        // The chip previews what would go, so the selected run has to be shown
+        // too; a null getSelectedText keeps the LENGTH honest with placeholders
+        // rather than desynchronising the preview from what commit will delete.
+        val selectedText = if (selected > 0) {
+            ich.selectedText()?.toString()?.takeIf { it.length == selected } ?: "·".repeat(selected)
+        } else {
+            ""
+        }
+        stagedDeletion =
+            before.subSequence(before.length - tail, before.length).toString() + selectedText
         keyboardView?.setDeletePreview(
             when {
-                stagedDeletion.isEmpty() -> null
+                span <= 0 -> null
                 // Never echo password characters into the preview chip.
-                editorState.privateMode -> "•".repeat(stagedDeletion.length.coerceAtMost(24))
+                editorState.privateMode -> "•".repeat(span.coerceAtMost(24))
                 else -> stagedDeletion
             },
         )
     }
 
     private fun commitStagedDeletion() {
-        val staged = stagedDeletion
+        val span = stagedDeletionLength
         stagedDeletion = ""
+        stagedDeletionLength = 0
         keyboardView?.setDeletePreview(null)
-        if (staged.isEmpty()) return
-        ich.deleteBeforeCursor(staged.length)
+        if (span <= 0) return
+        // Relative delete unless a selection has to be collapsed first: an
+        // absolute setSelection is only as good as the cached offsets, so the
+        // no-selection path stays on the same relative call it always used.
+        if (selectionLength() > 0) ich.deleteEndingAt(selEnd, span) else ich.deleteBeforeCursor(span)
         expectedSelectionUpdates++
         abandonWord()
         updateAutoShift()
@@ -972,23 +1087,8 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
 
     private fun onPunctuation(text: String) {
         cancelAutospace()
-        // Reserved action outputs (configurable comma key) never reach the
-        // editor as text; the pending word is finalized first so the action
-        // applies to settled content.
-        when (text) {
-            LayoutMutations.ACTION_PASTE -> {
-                finalizePendingWord()
-                ich.performContextMenuAction(android.R.id.paste)
-                expectedSelectionUpdates++
-                return
-            }
-            LayoutMutations.ACTION_SELECT_ALL -> {
-                finalizePendingWord()
-                ich.performContextMenuAction(android.R.id.selectAll)
-                expectedSelectionUpdates++
-                return
-            }
-        }
+        // Reserved action outputs never reach the editor as text.
+        if (performIfAction(text)) return
         val committed = finalizePendingWord()
         commitTracked(text)
         if (committed) lastCommitTrailing = text
@@ -997,7 +1097,11 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
 
     private fun onBackspace() {
         cancelAutospace()
-        ich.deleteBeforeCursor(1)
+        // Selected text is what backspace deletes, and only the whole of it: the
+        // standard editing contract, and the one case where deleting a single
+        // character would destroy text the user did not point at.
+        val selected = selectionLength()
+        if (selected > 0) ich.deleteEndingAt(selEnd, selected) else ich.deleteBeforeCursor(1)
         expectedSelectionUpdates++
         // Editing inside a decoded word invalidates gesture tracking; the
         // remaining text becomes plain committed text, then reloads as exact
@@ -1330,8 +1434,6 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
 
     private companion object {
         const val TAG = "KineticaIME"
-        const val SUGGESTION_BAR_DP = 44f
-        const val MIN_KEYBOARD_DP = 180f
         const val USER_DICT_LIMIT = 5000
         // Backspace slide: how much text to fetch for word-span staging.
         const val STAGE_FETCH_CHARS = 256

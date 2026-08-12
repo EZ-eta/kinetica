@@ -1,0 +1,8 @@
+Typing or backspacing over selected text replaces it.
+Keyboard height goes much lower, and the suggestion bar has its own height setting.
+The resize handle can be hidden.
+New light theme; the accent colour is a hue slider with a live preview.
+Accented letters can be hidden from the letter keys.
+Period and comma long-press symbols are editable.
+Chord shortcuts can paste, copy, cut and select all.
+Backspace slide vibrates once per word.

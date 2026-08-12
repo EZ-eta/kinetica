@@ -20,6 +20,7 @@ import androidx.core.view.setPadding
 import androidx.preference.PreferenceManager
 import com.kinetica.keyboard.R
 import com.kinetica.keyboard.data.ChordShortcut
+import com.kinetica.keyboard.keys.EditorAction
 import com.kinetica.keyboard.data.KineticaDb
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -144,10 +145,40 @@ class ChordSettingsActivity : AppCompatActivity() {
             )
             setSelection(letters.indexOf(existing?.chord).coerceAtLeast(0))
         }
+        // What the chord DOES. Free text was the only option, and the reserved
+        // "action:" outputs were undiscoverable - a user could only reach them by
+        // guessing the magic string, which until now inserted itself as literal
+        // text instead of running.
+        val existingAction = existing?.expansion?.let { EditorAction.of(it) }
+        val kinds = listOf(
+            null to getString(R.string.chord_kind_text),
+            EditorAction.PASTE to getString(R.string.chord_kind_paste),
+            EditorAction.COPY to getString(R.string.chord_kind_copy),
+            EditorAction.CUT to getString(R.string.chord_kind_cut),
+            EditorAction.SELECT_ALL to getString(R.string.chord_kind_select_all),
+        )
+        val kindSpinner = Spinner(this).apply {
+            adapter = ArrayAdapter(
+                this@ChordSettingsActivity,
+                android.R.layout.simple_spinner_dropdown_item,
+                kinds.map { it.second },
+            )
+            setSelection(kinds.indexOfFirst { it.first == existingAction }.coerceAtLeast(0))
+        }
         val expansion = EditText(this).apply {
             hint = getString(R.string.chord_expansion_hint)
             inputType = InputType.TYPE_CLASS_TEXT
-            setText(existing?.expansion.orEmpty())
+            // A command chord has no text, so an existing one leaves this blank
+            // rather than showing its reserved output back to the user.
+            setText(if (existingAction == null) existing?.expansion.orEmpty() else "")
+            visibility = if (existingAction == null) View.VISIBLE else View.GONE
+        }
+        kindSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(p: AdapterView<*>?, v: View?, pos: Int, id: Long) {
+                expansion.visibility =
+                    if (kinds[pos].first == null) View.VISIBLE else View.GONE
+            }
+            override fun onNothingSelected(p: AdapterView<*>?) = Unit
         }
         // Reserved chords (language cycle, peck toggle) take precedence over
         // text chords on the same letter (KineticaIME.onChordTriggered), so a
@@ -185,6 +216,8 @@ class ChordSettingsActivity : AppCompatActivity() {
             addView(TextView(context).apply { text = getString(R.string.chord_letter_label) })
             addView(spinner)
             addView(warning)
+            addView(TextView(context).apply { text = getString(R.string.chord_kind_label) })
+            addView(kindSpinner)
             addView(expansion)
         }
         AlertDialog.Builder(this)
@@ -194,7 +227,8 @@ class ChordSettingsActivity : AppCompatActivity() {
             .setView(content)
             .setPositiveButton(android.R.string.ok) { _, _ ->
                 val letter = spinner.selectedItem as String
-                val text = expansion.text.toString()
+                val action = kinds[kindSpinner.selectedItemPosition].first
+                val text = action?.output ?: expansion.text.toString()
                 if (text.isEmpty()) return@setPositiveButton
                 io.execute {
                     // Editing to a different letter frees the old binding.

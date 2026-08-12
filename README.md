@@ -151,6 +151,46 @@ update the other's build.
 - Privacy: **zero network permission**; password fields disable suggestions,
   trails, and learning
 
+## Worth a look in Settings
+
+Most of what people have asked for since the first release was already in
+Settings and simply hard to find. The ones that come up most:
+
+- **Chord shortcuts that paste, copy, cut or select all.** Settings > Chords, add
+  a chord and set *This chord* to the action you want. Hold `?123` and tap that
+  letter to fire it. Chords still type text too - a signature, an email address.
+- **Long-press popups without the accents.** *Hide accented letters on
+  long-press* leaves only digits and symbols, so `A` gives you `@` instead of
+  eight forms of `a` you will never type. Ignored for Italian and Spanish, whose
+  own alphabets need theirs. If you would rather keep the accents but reach the
+  digits first, *Prioritize numbers over accents on long-press* does that
+  instead.
+- **A shorter keyboard.** *Keyboard height* goes down to 10% of the screen.
+  *Suggestion bar height* shrinks the strip above it - the word text scales with
+  it - and *Show the resize handle* off reclaims the grip strip as well.
+- **Light theme and your own colour.** *Light or dark* (or follow the system),
+  and *Accent hue* is a slider with a preview of the palette underneath it, so
+  you can see the change without leaving Settings.
+- **Your own period and comma symbols.** *Period long-press symbols* and *Comma
+  long-press symbols* take a space-separated list; leave either blank to keep the
+  built-in one.
+- **Move the cursor without arrow keys.** Slide sideways along the spacebar. No
+  setting, it is always on.
+- **Push a word up or down the suggestions.** Long-press a suggestion and slide
+  up to prefer it, down to demote it. *Reinforce increment* sets the step size,
+  and Settings > Dictionary > *Review learned words* lists everything Kinetica
+  has picked up, with a search box and per-word delete.
+- **A much bigger dictionary.** Settings > Dictionary > *Import improved
+  dictionary* takes an AOSP `wordlist.combined` and merges it with the bundled
+  list - three to five times the words. Grab one from
+  [aosp-dictionaries](https://codeberg.org/Helium314/aosp-dictionaries) under
+  `wordlists/` (the `.combined` files, not the compiled `.dict` ones).
+- **When a word refuses to come out right.** *Peck-type mode* turns off swiping,
+  suggestions and autocorrect so every tap inserts exactly its letter. Good for
+  slang, codes and passwords the dictionary keeps fighting.
+- **Repurpose the comma key.** *Comma key* can become Paste or Select all, or a
+  character or short phrase of your own; the comma stays in its long-press popup.
+
 ## Requirements
 
 - JDK 17

@@ -22,6 +22,13 @@ class InputContainerView(
     val keyboardView: KeyboardView,
     barHeightPx: Int,
     keyboardHeightPx: Int,
+    /**
+     * Draw the resize handle strip at all. It costs 20dp above the suggestion
+     * bar, which the height percentage cannot reach, and two reporters wanted
+     * that space back. With it off the keyboard is resized from Settings
+     * instead, so the capability moves rather than disappearing.
+     */
+    private val showHandle: Boolean,
     minKeyboardPx: Int,
     maxKeyboardPx: Int,
     private val onHeightCommitted: (px: Int) -> Unit,
@@ -40,7 +47,12 @@ class InputContainerView(
     init {
         orientation = VERTICAL
         val density = resources.displayMetrics.density
-        addView(handle, LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (20 * density).toInt()))
+        if (showHandle) {
+            addView(
+                handle,
+                LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (HANDLE_DP * density).toInt()),
+            )
+        }
         addView(suggestionBar, LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, barHeightPx))
         addView(
             keyboardView,
@@ -49,12 +61,21 @@ class InputContainerView(
                 keyboardHeightPx.coerceIn(minKeyboardPx, maxKeyboardPx),
             ),
         )
-        wireHandle()
+        if (showHandle) wireHandle()
     }
 
     /** Handle strip colors follow the active theme. */
     fun applyTheme(theme: KeyboardTheme) {
         handle.setColors(theme.suggestionBg, theme.keyHint)
+    }
+
+    /** Live resize of the suggestion strip, mirroring the keyboard's own path. */
+    fun setBarHeight(px: Int) {
+        val lp = suggestionBar.layoutParams ?: return
+        if (lp.height != px) {
+            lp.height = px
+            suggestionBar.requestLayout()
+        }
     }
 
     /** Swaps the keyboard for the emoji picker at the keyboard's height. */
@@ -134,4 +155,11 @@ class InputContainerView(
             )
         }
     }
+
+    private companion object {
+        // Unchanged from the first ship; the setting turns the strip off
+        // rather than shrinking it, so nobody's handle moves under them.
+        const val HANDLE_DP = 20f
+    }
+
 }

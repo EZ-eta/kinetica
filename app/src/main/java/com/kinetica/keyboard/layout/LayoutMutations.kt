@@ -1,5 +1,7 @@
 package com.kinetica.keyboard.layout
 
+import com.kinetica.keyboard.keys.EditorAction
+
 /** Optional, settings-driven edits applied to a loaded layout. */
 object LayoutMutations {
 
@@ -7,12 +9,13 @@ object LayoutMutations {
     const val EMOJI_ALTERNATE = "☺"
 
     /**
-     * Reserved key outputs for editor actions: a "action:"
-     * prefix can never collide with typeable text, and the IME intercepts
-     * these before the commit path (same pattern as [EMOJI_ALTERNATE]).
+     * Reserved key outputs for editor actions, defined once in [EditorAction] so
+     * the comma key and the chord shortcuts cannot disagree about what one means.
+     * The IME intercepts them before the commit path (same pattern as
+     * [EMOJI_ALTERNATE]).
      */
-    const val ACTION_PASTE = "action:paste"
-    const val ACTION_SELECT_ALL = "action:select_all"
+    val ACTION_PASTE = EditorAction.PASTE.output
+    val ACTION_SELECT_ALL = EditorAction.SELECT_ALL.output
 
     /**
      * Enter's alternate-popup cells. Enter carries no alternates
@@ -59,7 +62,7 @@ object LayoutMutations {
             id = APOSTROPHE_KEY_ID, type = KeyType.CHAR, label = "'", output = "'",
             x = 0.95f, y = 0.25f, w = 0.05f, h = 0.25f, chromeless = true,
         )
-        return KeyboardLayout(layout.name, layout.locale, shifted + apos)
+        return layout.copy(keys = shifted + apos)
     }
 
     /**
@@ -76,7 +79,43 @@ object LayoutMutations {
         val keys = layout.keys.map { k ->
             if (k.type == KeyType.ENTER) k.copy(alternates = alts) else k
         }
-        return KeyboardLayout(layout.name, layout.locale, keys)
+        return layout.copy(keys = keys)
+    }
+
+    /**
+     * Replaces the period and comma keys' long-press alternates with the user's
+     * own lists. An EMPTY list leaves that key untouched, so the layout JSON stays
+     * the source of truth: all three bundled layouts happen to author the same
+     * punctuation (period `... << >>`, comma `_ [ ] en-dash em-dash`), but a
+     * future language layout may not, and a global default would have overridden
+     * it silently.
+     *
+     * Applied EARLY in the alpha-layout chain, before [withEmojiOnComma] and
+     * [withCommaKey], so a user list still gets the emoji entry prepended and
+     * still survives the comma being repurposed (see [commaFirst]).
+     */
+    fun withPunctuationAlternates(
+        layout: KeyboardLayout,
+        period: List<String>,
+        comma: List<String>,
+    ): KeyboardLayout {
+        if (period.isEmpty() && comma.isEmpty()) return layout
+        var changed = false
+        val keys = layout.keys.map { k ->
+            if (k.type != KeyType.CHAR) return@map k
+            val replacement = when (k.output) {
+                "." -> period
+                "," -> comma
+                else -> return@map k
+            }
+            if (replacement.isEmpty() || replacement == k.alternates) {
+                k
+            } else {
+                changed = true
+                k.copy(alternates = replacement)
+            }
+        }
+        return if (changed) layout.copy(keys = keys) else layout
     }
 
     /**
@@ -116,7 +155,7 @@ object LayoutMutations {
                     else -> keys.add(k)
                 }
             }
-            return KeyboardLayout(layout.name, layout.locale, keys)
+            return layout.copy(keys = keys)
         }
 
         val (label, output) = when (mode) {
@@ -136,7 +175,7 @@ object LayoutMutations {
                 k
             }
         }
-        return KeyboardLayout(layout.name, layout.locale, keys)
+        return layout.copy(keys = keys)
     }
 
     /** "," joins the popup right after a leading emoji entry, if any. */
@@ -163,7 +202,42 @@ object LayoutMutations {
                 k
             }
         }
-        return KeyboardLayout(layout.name, layout.locale, keys)
+        return layout.copy(keys = keys)
+    }
+
+    /**
+     * Drops accented letters from every key's long-press alternates, keeping the
+     * digits and symbols. In the English layout "a" offers
+     * `à á â ä ã å æ ā @` — eight forms of a letter English does not accent
+     * before the one character the key is really there for — and "o" carries
+     * seven; a user who writes only English can reach neither `@` nor a digit
+     * without walking past them.
+     *
+     * A no-op for a layout that declares [KeyboardLayout.nativeAccents], which is
+     * what keeps this from taking "ñ" away from a Spanish writer: the layout, not
+     * this function, knows whether its accents belong to its language.
+     *
+     * Safe to run before [withNumberPriority] (which then finds nothing to
+     * reorder): measured against all three bundled layouts, every
+     * accent-carrying key has at least one non-letter alternate — `e`→`3`,
+     * `a`→`@`, `s`→`#`, `l`→`)`, `z`→`'`, `c`→`;`, `n`→`!`, `y`→`6`, `u`→`7`,
+     * `i`→`8`, `o`→`9` — so no key is left with an empty popup or without the
+     * [Key.hintChar] its corner hint derives from.
+     */
+    fun withoutForeignAlternates(layout: KeyboardLayout): KeyboardLayout {
+        if (layout.nativeAccents) return layout
+        var changed = false
+        val keys = layout.keys.map { k ->
+            if (k.alternates.isEmpty()) return@map k
+            val kept = k.alternates.filter { it.firstOrNull()?.isLetter() != true }
+            if (kept.size == k.alternates.size || kept.isEmpty()) {
+                k
+            } else {
+                changed = true
+                k.copy(alternates = kept)
+            }
+        }
+        return if (changed) layout.copy(keys = keys) else layout
     }
 
     /**
@@ -187,6 +261,6 @@ object LayoutMutations {
                 k.copy(alternates = symbols + accents)
             }
         }
-        return if (changed) KeyboardLayout(layout.name, layout.locale, keys) else layout
+        return if (changed) layout.copy(keys = keys) else layout
     }
 }

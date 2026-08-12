@@ -20,7 +20,13 @@
     <string name="onboarding_open_settings">Keyboard settings</string>
     <string name="onboarding_step_done">%1$s  (done)</string>
 
+    <string name="pref_tips_title">Gestures you may not have found</string>
+    <string name="pref_tips_summary">Slide along the spacebar to move the cursor. Long-press a suggestion and slide up or down to change how strongly it is preferred. Dictionary → Import improved dictionary adds three to five times more words.</string>
     <string name="pref_height_title">Keyboard height (% of screen)</string>
+    <string name="pref_suggestion_bar_title">Suggestion bar height (dp)</string>
+    <string name="pref_suggestion_bar_summary">The word text and its badges scale with the bar, so a thinner bar means smaller text too</string>
+    <string name="pref_drag_handle_title">Show the resize handle</string>
+    <string name="pref_drag_handle_summary">The grip strip above the suggestion bar. Turning it off reclaims 20dp; the keyboard can still be resized with the height slider above</string>
     <string name="pref_layout_mode_title">Layout mode</string>
     <string name="pref_autospace_title">Autospace after swipe</string>
     <string name="pref_autospace_delay_title">Autospace delay (ms)</string>
@@ -52,6 +58,12 @@
     <string name="chord_edit">Edit</string>
     <string name="chord_delete">Delete</string>
     <string name="chord_letter_label">Letter</string>
+    <string name="chord_kind_label">This chord</string>
+    <string name="chord_kind_text">Types text</string>
+    <string name="chord_kind_paste">Pastes</string>
+    <string name="chord_kind_copy">Copies the selection</string>
+    <string name="chord_kind_cut">Cuts the selection</string>
+    <string name="chord_kind_select_all">Selects all</string>
     <string name="chord_expansion_hint">Expansion text</string>
     <string name="chord_empty_hint">No chords assigned. The feature stays off until you add one.</string>
     <string name="chord_list_hint">Hold ?123, then tap the letter.</string>
@@ -59,6 +71,8 @@
     <string name="chord_reserved_lang">Note: ?123+%1$s is reserved for the language cycle. This text chord will not fire while more than one language is enabled.</string>
     <string name="chord_reserved_peck">Note: ?123+%1$s is reserved for the peck-type toggle. This text chord will not fire.</string>
 
+    <string name="pref_plain_letter_alternates_title">Hide accented letters on long-press</string>
+    <string name="pref_plain_letter_alternates_summary">Letter keys offer only digits and symbols. Ignored for a language whose own alphabet uses accents, such as Italian or Spanish</string>
     <string name="pref_number_priority_title">Prioritize numbers over accents on long-press</string>
     <string name="pref_number_priority_summary">Long-press popups and key hints show the digit or symbol first instead of the accent</string>
 
@@ -131,11 +145,19 @@
     <string name="pref_emoji_key_summary">Makes the emoji picker the first long-press option on the comma key; X-key swipe-down always opens the picker</string>
     <string name="pref_comma_mode_title">Comma key</string>
     <string name="pref_comma_mode_summary">Keep the comma, remove it (spacebar widens), or repurpose it as a custom character, text, or editor action; the comma stays in the key\'s long-press popup when repurposed</string>
+    <string name="pref_period_alternates_title">Period long-press symbols</string>
+    <string name="pref_comma_alternates_title">Comma long-press symbols</string>
+    <string name="pref_punctuation_alternates_summary">Space-separated, up to eight. Leave blank to keep the built-in list</string>
     <string name="pref_comma_custom_title">Comma key custom text</string>
     <string name="pref_comma_custom_summary">Used by the custom character and custom text options above</string>
     <string name="emoji_back_to_letters">ABC</string>
 
     <string name="pref_theme_mode_title">Keyboard theme</string>
+    <string name="pref_theme_brightness_title">Light or dark</string>
+    <string name="theme_preview_note_custom">Preview — drag the hue above to change it</string>
+    <string name="theme_preview_note_fixed">Preview — this palette ignores the hue; choose Custom colour above to use it</string>
+    <string name="pref_theme_hue_title">Accent hue</string>
+    <string name="pref_theme_hue_summary">Colour wheel position, 0-360. Used when the theme above is set to a custom colour; every surface is derived from it</string>
     <string name="pref_theme_color_title">Custom theme color</string>
     <string name="pref_theme_color_summary">Primary color the palette is derived from (theme: custom)</string>
 </resources>
