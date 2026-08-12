@@ -463,7 +463,9 @@ GPL, name aside.
 
 ## Support
 
-If Kinetica is useful to you, you can [buy me a coffee](https://ko-fi.com/ez_eta).
+If Kinetica is useful to you, you can buy me a coffee:
+
+[![Support me on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/ez_eta)
 
 Entirely optional. The app is and stays free, declares no network permission,
 shows no ads, and will never ask you for anything at runtime.
