@@ -85,6 +85,23 @@ class DictionaryMergerTest {
     }
 
     @Test
+    fun polishPatternAdmitsAccentedWords() {
+        val aosp = """
+             word=zażółć,f=200
+             word=gęślą,f=180
+             word=jaźń,f=170
+             word=señal,f=150
+        """.trimIndent()
+        val result = DictionaryMerger.merge(primary, reader(aosp), "pl")
+        val words = result.rows.map { it.first }
+        assertTrue(words.contains("zażółć"))
+        assertTrue(words.contains("gęślą"))
+        assertTrue(words.contains("jaźń"))
+        // Ñ is not Polish orthography: filtered on import.
+        assertFalse(words.contains("señal"))
+    }
+
+    @Test
     fun readPrimaryParsesTabSeparatedRows() {
         val rows = DictionaryMerger.readPrimary(reader("the\t1000\nbroken line\nof\t500\n"))
         assertEquals(listOf("the" to 1000, "of" to 500), rows)

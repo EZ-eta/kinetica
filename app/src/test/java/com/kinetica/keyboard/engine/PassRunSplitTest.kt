@@ -177,10 +177,11 @@ class PassRunSplitTest {
 
     @Test
     fun shortReversalWordsAreReachableOnPrecisePaths() {
-        // Three dictionaries, so the fix is the mechanism and not a patch for one
-        // word. Every entry here is unspellable pre-fix on its own clean path:
-        // measured across the shipped assets, 114 it / 87 en / 108 es words of
-        // the top 20k are, and 0.7 kw of prominence recovers all but four.
+        // A three-language regression sample, so the fix is the mechanism and
+        // not a patch for one word. Every entry here is unspellable pre-fix on
+        // its own clean path: measured across those assets, 114 it / 87 en /
+        // 108 es words of the top 20k are, and 0.7 kw of prominence recovers
+        // all but four.
         // Reachability is this suite's contract; where these words RANK is a scoring question.
         for ((lang, words) in listOf(
             "it" to listOf("vede", "sede", "cede", "rese"),

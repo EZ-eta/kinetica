@@ -37,8 +37,8 @@ object Prefs {
      * digits and symbols. Off by default: the accents are the shipped behaviour
      * and are what makes a second language writable without switching layout.
      * Has no effect on a layout whose accents are its own language's
-     * (KeyboardLayout.nativeAccents), so enabling it cannot cost an Italian or
-     * Spanish writer their letters.
+     * (KeyboardLayout.nativeAccents), so enabling it cannot cost an Italian,
+     * Spanish or Polish writer their letters.
      */
     const val PLAIN_LETTER_ALTERNATES = "pref_plain_letter_alternates"
 
@@ -168,5 +168,5 @@ object Prefs {
     const val DEFAULT_PECK_CHORD_KEY = "none"
 
     /** Canonical order of all bundled languages; cycling follows this order. */
-    val ALL_LANGUAGES = listOf("en", "it", "es")
+    val ALL_LANGUAGES = listOf("en", "it", "es", "pl")
 }

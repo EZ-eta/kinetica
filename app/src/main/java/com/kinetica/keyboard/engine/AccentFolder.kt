@@ -10,8 +10,8 @@ package com.kinetica.keyboard.engine
 object AccentFolder {
 
     private val FOLD = HashMap<Char, Char>().apply {
-        "àáâäãå".forEach { put(it, 'a') }
-        "èéêë".forEach { put(it, 'e') }
+        "àáâäãåą".forEach { put(it, 'a') }
+        "èéêëę".forEach { put(it, 'e') }
         "ìíîï".forEach { put(it, 'i') }
         "òóôöõ".forEach { put(it, 'o') }
         "ùúûü".forEach { put(it, 'u') }

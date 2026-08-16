@@ -629,13 +629,14 @@ object KineticaConstants {
     //
     // 1. No cross-dictionary frequency normalization is needed. freqByteFor
     //    already log-quantizes each asset against its OWN maximum count, and
-    //    the three bundled assets are the same construction (hermitdave
+    //    the four bundled assets are the same construction (hermitdave
     //    FrequencyWords top-50k, OpenSubtitles), so fw at matched rank
-    //    percentiles agrees to within 1.02-1.04x across it/es/en (measured:
-    //    p50 0.5265/0.5382/0.5265, p99 0.4706/0.4882/0.4706). Against relative
-    //    corpus frequency the spread runs 1.00x at r=1e-3 to 1.05x at r=1e-6.
-    //    geometricTerm moves 1.335x between d=0.25 and d=0.35, so the residual
-    //    asset bias is worth about 0.015 kw of distance - an order of
+    //    percentiles agrees to within 1.04-1.07x across en/it/es/pl (measured:
+    //    p50 0.5265/0.5265/0.5382/0.5471,
+    //    p99 0.4706/0.4706/0.4882/0.5029). Against relative corpus frequency
+    //    the spread remains small. geometricTerm moves 1.335x between d=0.25
+    //    and d=0.35, so the residual asset bias is worth under 0.025 kw of
+    //    distance - an order of
     //    magnitude below what decides any ranking. The roadmap's stated risk
     //    ("the larger asset wins everything") does not materialize here, and
     //    would have to be re-measured only for an asset built differently -

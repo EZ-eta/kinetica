@@ -171,10 +171,10 @@ class WordComposer(
      *
      * Ranking them together needs no such answer, and no threshold. Scores are
      * already comparable across the bundled dictionaries: Trie.freqByteFor
-     * normalizes each asset against its OWN maximum count, and all three
+     * normalizes each asset against its OWN maximum count, and all four
      * assets are the same construction (FrequencyWords top-50k), so fw at
-     * matched rank percentiles agrees to within 1.02-1.04x - worth about
-     * 0.015 kw of distance against a geometric term that moves 1.335x between
+     * matched rank percentiles agrees to within 1.04-1.07x - worth under
+     * 0.025 kw of distance against a geometric term that moves 1.335x between
      * d=0.25 and d=0.35. No cross-dictionary frequency normalization is
      * applied because none is needed, and any that were would have to be a
      * per-language MULTIPLICATIVE constant: score is a product, so a

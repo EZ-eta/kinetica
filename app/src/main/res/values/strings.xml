@@ -5,6 +5,7 @@
     <string name="subtype_en_us">English (US)</string>
     <string name="subtype_it_it">Italiano</string>
     <string name="subtype_es_es">Español</string>
+    <string name="subtype_pl_pl">Polski</string>
     <string name="settings_title">Kinetica Settings</string>
     <string name="licenses_title">Open-source licenses</string>
     <string name="pref_licenses_summary">Data sources and their licenses (GPL-3.0 app; MIT and CC BY 2.0 FR data)</string>
@@ -38,7 +39,7 @@
     <string name="pref_trail_color_title">Swipe trail color</string>
     <string name="pref_language_title">Primary language</string>
     <string name="pref_enabled_languages_title">Enabled languages</string>
-    <string name="pref_enabled_languages_summary">Languages the chord switch cycles through (order: English, Italiano, Español)</string>
+    <string name="pref_enabled_languages_summary">Languages the chord switch cycles through (order: English, Italiano, Español, Polski)</string>
     <string name="pref_lang_cycle_key_title">Language switch chord key</string>
     <string name="pref_lang_cycle_key_summary">Hold ?123 and tap this letter to cycle enabled languages mid-typing</string>
     <string name="pref_peck_mode_title">Peck-type mode</string>
@@ -46,7 +47,7 @@
     <string name="pref_peck_chord_key_title">Peck-type chord key</string>
     <string name="pref_peck_chord_key_summary">Hold ?123 and tap this letter to toggle peck-type mode from the keyboard</string>
     <string name="pref_auto_detect_title">Mix enabled languages in suggestions (experimental)</string>
-    <string name="pref_auto_detect_summary">Swiped words decode against both enabled languages and share one suggestion list, so a word from either is always pickable. The other language is only offered first when it fits the gesture better.</string>
+    <string name="pref_auto_detect_summary">Swiped words decode against the active language and the first enabled non-active language, sharing one suggestion list. That other language is only offered first when it fits the gesture better.</string>
     <string name="pref_long_press_title">Long-press duration (ms)</string>
     <string name="pref_autocorrect_title">Autocorrect</string>
     <string name="pref_reinforce_title">Suggestion reinforcement boost</string>
@@ -72,7 +73,7 @@
     <string name="chord_reserved_peck">Note: ?123+%1$s is reserved for the peck-type toggle. This text chord will not fire.</string>
 
     <string name="pref_plain_letter_alternates_title">Hide accented letters on long-press</string>
-    <string name="pref_plain_letter_alternates_summary">Letter keys offer only digits and symbols. Ignored for a language whose own alphabet uses accents, such as Italian or Spanish</string>
+    <string name="pref_plain_letter_alternates_summary">Letter keys offer only digits and symbols. Ignored for a language whose own alphabet uses accents, such as Italian, Spanish or Polish</string>
     <string name="pref_number_priority_title">Prioritize numbers over accents on long-press</string>
     <string name="pref_number_priority_summary">Long-press popups and key hints show the digit or symbol first instead of the accent</string>
 
@@ -111,7 +112,7 @@
     <string name="dict_personal_import_mode_message">Merge adds the file\'s counts onto what is already learned. Replace deletes all learned words for this language first.</string>
     <string name="dict_personal_import_merge">Merge</string>
     <string name="dict_personal_import_replace">Replace</string>
-    <string name="dict_import_note">Improved dictionaries use the AOSP wordlist.combined format (e.g. main_en_US or main_it from the Helium314/aosp-dictionaries mirror, Apache-2.0). The merge runs on-device against the bundled wordlist; abbreviations and offensive entries are dropped. Bigrams stay bundled.</string>
+    <string name="dict_import_note">Improved dictionaries use the AOSP wordlist.combined format (e.g. main_en_US, main_it or main_pl from the Helium314/aosp-dictionaries mirror, Apache-2.0). The merge runs on-device against the bundled wordlist; abbreviations and offensive entries are dropped. Bigrams stay bundled.</string>
 
     <string name="pref_backspace_char_slide_title">Backspace slide deletes letters</string>
     <string name="pref_backspace_char_slide_summary">Sliding left from backspace stages one letter at a time instead of one word. Nothing is deleted until you lift, and sliding back right still undoes it.</string>
