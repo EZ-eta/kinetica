@@ -21,6 +21,7 @@ class AccentFoldingTest {
     fun foldMapsAccentsAndSharpS() {
         assertEquals("perche", AccentFolder.fold("perché"))
         assertEquals("citta", AccentFolder.fold("città"))
+        assertEquals("zazolc gesla jazn", AccentFolder.fold("zażółć gęślą jaźń"))
         assertEquals("strasse", AccentFolder.fold("straße"))
         val plain = "already plain"
         assertTrue(plain === AccentFolder.fold(plain))
@@ -74,6 +75,8 @@ class AccentFoldingTest {
         assertEquals('o' - 'a', AccentFolder.accentedLetterCode("ó"))
         assertEquals('a' - 'a', AccentFolder.accentedLetterCode("à"))
         assertEquals('n' - 'a', AccentFolder.accentedLetterCode("ñ"))
+        assertEquals('a' - 'a', AccentFolder.accentedLetterCode("Ą"))
+        assertEquals('e' - 'a', AccentFolder.accentedLetterCode("ę"))
         assertEquals('c' - 'a', AccentFolder.accentedLetterCode("Ç"))
         assertEquals('e' - 'a', AccentFolder.accentedLetterCode("É"))
         // The popup's own base cell is a letter but not an accented one: it keeps

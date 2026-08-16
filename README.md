@@ -59,14 +59,14 @@ update the other's build.
 - From-scratch swipe decoding: banded dynamic time warping over
   arc-length-resampled paths, an anchored segmental trie search, frequency and
   bigram-context scoring
-- Three languages: 46k-word English, 49k-word Italian, and 49k-word Spanish
-  dictionaries with real corpus frequencies; 100k bigrams each; switch
-  languages in Settings without restarting the IME. Accented words (perché,
-  città, señal, también) are matched through their base-key gesture path and
-  restored with accents on commit.
+- Four languages: 46k-word English plus 49k-word Italian, Spanish, and Polish
+  dictionaries with real corpus frequencies; 62k–100k bigrams per language;
+  switch languages in Settings without restarting the IME. Accented words
+  (perché, città, señal, también, dziękuję, późno) are matched through their
+  base-key gesture path and restored with accents on commit.
 - Tap autocorrect (adjacent-key substitutions and transpositions) with three
-  aggressiveness levels; in Italian it also restores missing accents
-  (perche -> perché)
+  aggressiveness levels; it also restores missing accents
+  (perche -> perché, pozno -> późno)
 - Suggestion bar of 3-5 equal-width, independently tappable candidate zones,
   best first (bold), with flick-up fast commit; up to 10 candidates are kept
   and a leftward swipe starting at the bar's right edge cycles to the next
@@ -115,9 +115,9 @@ update the other's build.
   chord (hold `?123` + tap the configured letter, default L) without leaving
   the current field; with several languages enabled the active language code
   shows at the spacebar's bottom-center; an experimental "auto-detect
-  language per word" toggle (default off) decodes swiped words against both
-  enabled languages and prefers the other language only when it is clearly
-  more confident
+  language per word" toggle (default off) mixes the active language with the
+  first enabled non-active language and prefers that other language only when
+  it is clearly more confident
 - Contraction/elision writing: English contractions ("don't", "aren't",
   "here's" ...) are in the dictionary and decode straight from the
   apostrophe-free letters (the engine inserts the dictionary apostrophe for
@@ -162,9 +162,9 @@ Settings and simply hard to find. The ones that come up most:
   letter to fire it. Chords still type text too - a signature, an email address.
 - **Long-press popups without the accents.** *Hide accented letters on
   long-press* leaves only digits and symbols, so `A` gives you `@` instead of
-  eight forms of `a` you will never type. Ignored for Italian and Spanish, whose
-  own alphabets need theirs. If you would rather keep the accents but reach the
-  digits first, *Prioritize numbers over accents on long-press* does that
+  eight forms of `a` you will never type. Ignored for Italian, Spanish and
+  Polish, whose own alphabets need theirs. If you would rather keep the accents
+  but reach the digits first, *Prioritize numbers over accents on long-press* does that
   instead.
 - **A shorter keyboard.** *Keyboard height* goes down to 10% of the screen.
   *Suggestion bar height* shrinks the strip above it - the word text scales with
@@ -185,7 +185,8 @@ Settings and simply hard to find. The ones that come up most:
   dictionary* takes an AOSP `wordlist.combined` and merges it with the bundled
   list - three to five times the words. Grab one from
   [aosp-dictionaries](https://codeberg.org/Helium314/aosp-dictionaries) under
-  `wordlists/` (the `.combined` files, not the compiled `.dict` ones).
+  `wordlists/` (the `.combined` files, not the compiled `.dict` ones); Polish
+  users should choose `main_pl.combined`.
 - **When a word refuses to come out right.** *Peck-type mode* turns off swiping,
   suggestions and autocorrect so every tap inserts exactly its letter. Good for
   slang, codes and passwords the dictionary keeps fighting.
@@ -339,14 +340,16 @@ Source layout (package `com.kinetica.keyboard`):
 ## Data sources
 
 Regenerate the bundled dictionaries with `python3 tools/generate_assets.py
---lang en|it|es` (add `--dry-run` to preview):
+--lang en|it|es|pl` (add `--dry-run` to preview):
 
 - Word frequencies (all languages):
   [hermitdave/FrequencyWords](https://github.com/hermitdave/FrequencyWords)
-  `en_50k` / `it_50k` / `es_50k` (OpenSubtitles 2018), MIT License.
+  `en_50k` / `it_50k` / `es_50k` / `pl_50k` (OpenSubtitles 2018), MIT
+  License.
 - Bigrams (all languages): counted from the [Tatoeba](https://tatoeba.org)
   per-language sentence corpora (`eng_sentences.tsv` ~2.03M sentences,
-  `ita_sentences.tsv` ~975k, `spa_sentences.tsv` ~441k), licensed
+  `ita_sentences.tsv` ~975k, `spa_sentences.tsv` ~441k,
+  `pol_sentences.tsv` ~137k), licensed
   [CC BY 2.0 FR](https://creativecommons.org/licenses/by/2.0/fr/),
   attribution: tatoeba.org. Conversational register, which matches the
   OpenSubtitles-derived unigrams. (English previously used Peter Norvig's
@@ -366,7 +369,7 @@ wordlists (July 2026):
 
 | Project | Code license | Dictionary data | Verdict |
 |---|---|---|---|
-| [HeliBoard](https://github.com/Helium314/HeliBoard) | Apache-2.0 | [Helium314/aosp-dictionaries](https://codeberg.org/Helium314/aosp-dictionaries) (repo LICENSE: GPL-3.0); the `main_*` wordlists are AOSP LatinIME dictionaries (Apache-2.0 at origin) mirrored via OpenBoard; experimental lists CC BY 4.0 | Cleanest import path: raw `wordlist.combined` format with per-word `f=0..255` log frequency, `flags` (abbreviation, possibly_offensive) and per-word next-word bigram ranks; `main_en_US` and `main_it` both exist |
+| [HeliBoard](https://github.com/Helium314/HeliBoard) | Apache-2.0 | [Helium314/aosp-dictionaries](https://codeberg.org/Helium314/aosp-dictionaries) (repo LICENSE: GPL-3.0); the `main_*` wordlists are AOSP LatinIME dictionaries (Apache-2.0 at origin) mirrored via OpenBoard; experimental lists CC BY 4.0 | Cleanest import path: raw `wordlist.combined` format with per-word `f=0..255` log frequency, `flags` (abbreviation, possibly_offensive) and per-word next-word bigram ranks; `main_en_US`, `main_it`, and `main_pl` exist |
 | [FUTO Keyboard](https://github.com/futo-org/android-keyboard) | FUTO Source First 1.1 (non-commercial redistribution limits, not OSI-open) | Same restrictive terms apply to repo contents | Rejected: incompatible with open redistribution |
 | [FlorisBoard](https://github.com/florisboard/florisboard) | Apache-2.0 | Ships no frequency wordlists usable for import | Nothing to import |
 

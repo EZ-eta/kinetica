@@ -19,12 +19,13 @@ class AutoCapitalizationTest {
         // wrong mid-sentence, which is why the rule is language-gated at all.
         assertEquals("i", AutoCapitalization.forWord("i", "it"))
         assertEquals("i", AutoCapitalization.forWord("i", "es"))
+        assertEquals("i", AutoCapitalization.forWord("i", "pl"))
         assertEquals("i", AutoCapitalization.forWord("i", ""))
     }
 
     @Test
     fun everyOtherWordIsUntouched() {
-        for (lang in listOf("en", "it", "es")) {
+        for (lang in listOf("en", "it", "es", "pl")) {
             for (w in listOf("in", "if", "is", "it", "ii", "a", "o", "island", "iowa", "")) {
                 assertEquals("$w changed under $lang", w, AutoCapitalization.forWord(w, lang))
             }

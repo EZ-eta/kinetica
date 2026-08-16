@@ -5,7 +5,8 @@ application code is licensed under the GNU General Public License v3.0
 (see LICENSE); the data licenses follow.
 
 --------------------------------------------------------------------------
-1. Word frequency lists (en_wordlist.txt, it_wordlist.txt, es_wordlist.txt)
+1. Word frequency lists
+   (en_wordlist.txt, it_wordlist.txt, es_wordlist.txt, pl_wordlist.txt)
 
 Derived from hermitdave/FrequencyWords (OpenSubtitles 2018 frequency lists):
 https://github.com/hermitdave/FrequencyWords
@@ -33,7 +34,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
 --------------------------------------------------------------------------
-2. Bigram tables (en_bigrams.txt, it_bigrams.txt, es_bigrams.txt)
+2. Bigram tables
+   (en_bigrams.txt, it_bigrams.txt, es_bigrams.txt, pl_bigrams.txt)
 
 Word-pair counts derived from the Tatoeba sentence corpora:
 https://tatoeba.org

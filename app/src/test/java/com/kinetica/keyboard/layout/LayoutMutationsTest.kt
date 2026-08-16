@@ -96,8 +96,8 @@ class LayoutMutationsTest {
 
     @Test
     fun withoutForeignAlternatesIsANoopForALayoutWhoseAccentsAreItsOwn() {
-        // The whole point of declaring it: an Italian or Spanish writer keeps
-        // "è" and "ñ" even with the setting on.
+        // The whole point of declaring it: Italian, Spanish and Polish writers
+        // keep "è", "ñ" and "ą" even with the setting on.
         val before = accentLayout(nativeAccents = true)
         val out = LayoutMutations.withoutForeignAlternates(before)
         assertEquals(before, out)
@@ -131,7 +131,7 @@ class LayoutMutationsTest {
         // The precondition withoutForeignAlternates rests on, guarded against a
         // future layout edit. Read as text on purpose: the JVM test runtime stubs
         // org.json, so LayoutLoader cannot be used here.
-        for (name in listOf("qwerty", "qwerty_it", "qwerty_es")) {
+        for (name in listOf("qwerty", "qwerty_it", "qwerty_es", "qwerty_pl")) {
             val p = listOf(
                 java.nio.file.Paths.get("src/main/assets/layouts/$name.json"),
                 java.nio.file.Paths.get("app/src/main/assets/layouts/$name.json"),
@@ -149,9 +149,40 @@ class LayoutMutationsTest {
         }
     }
 
+    @Test
+    fun polishLayoutExposesEveryNativeLetter() {
+        val p = listOf(
+            java.nio.file.Paths.get("src/main/assets/layouts/qwerty_pl.json"),
+            java.nio.file.Paths.get("app/src/main/assets/layouts/qwerty_pl.json"),
+        ).firstOrNull { java.nio.file.Files.exists(it) }
+        org.junit.Assume.assumeTrue("Polish layout asset not found", p != null)
+        val lines = java.nio.file.Files.readAllLines(p!!)
+        val expected = mapOf(
+            "a" to listOf("ą"),
+            "c" to listOf("ć"),
+            "e" to listOf("ę"),
+            "l" to listOf("ł"),
+            "n" to listOf("ń"),
+            "o" to listOf("ó"),
+            "s" to listOf("ś"),
+            "z" to listOf("ź", "ż"),
+        )
+        for ((key, letters) in expected) {
+            val line = lines.firstOrNull { it.contains("\"id\": \"$key\"") }
+            assertTrue("qwerty_pl is missing key $key", line != null)
+            for (letter in letters) {
+                assertTrue(
+                    "qwerty_pl key $key is missing $letter: $line",
+                    line!!.contains("\"$letter\""),
+                )
+            }
+        }
+        assertTrue(lines.any { it.contains("\"nativeAccents\": true") })
+    }
+
     // ---- user-editable punctuation flyouts ---------------------------------
 
-    /** Period and comma with the alternates all three bundled layouts author. */
+    /** Period and comma with the alternates all four bundled layouts author. */
     private fun punctuationLayout(): KeyboardLayout = KeyboardLayout(
         name = "qwerty", locale = "en_US",
         keys = listOf(

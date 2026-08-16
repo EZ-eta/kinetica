@@ -10,7 +10,7 @@ data class WordForm(val display: String, val freqByte: Int)
  * A trie over folded (a-z + apostrophe) keys plus, for the folded keys whose
  * spelling differs from the key or that several spellings share ("po" vs
  * "pò", "senti" vs "sentì"), the display variants ordered by frequency.
- * English produces an empty map; Italian ~1k entries.
+ * English produces an empty map; accented-language assets populate it.
  */
 class LoadedDictionary(
     val trie: Trie,
