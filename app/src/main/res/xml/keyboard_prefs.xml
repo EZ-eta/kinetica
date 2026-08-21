@@ -7,6 +7,7 @@
     <Preference
         android:key="pref_tips"
         android:title="@string/pref_tips_title"
+        app:singleLineTitle="false"
         android:summary="@string/pref_tips_summary"
         android:selectable="false"
         android:persistent="false" />
@@ -14,6 +15,7 @@
     <SeekBarPreference
         android:key="pref_keyboard_height_pct"
         android:title="@string/pref_height_title"
+        app:singleLineTitle="false"
         android:defaultValue="35"
         android:max="50"
         app:min="10"
@@ -22,6 +24,7 @@
     <SeekBarPreference
         android:key="pref_suggestion_bar_dp"
         android:title="@string/pref_suggestion_bar_title"
+        app:singleLineTitle="false"
         android:summary="@string/pref_suggestion_bar_summary"
         android:defaultValue="44"
         android:max="72"
@@ -31,25 +34,45 @@
     <SwitchPreferenceCompat
         android:key="pref_drag_handle"
         android:title="@string/pref_drag_handle_title"
+        app:singleLineTitle="false"
         android:summary="@string/pref_drag_handle_summary"
         android:defaultValue="true" />
 
     <ListPreference
+        android:key="pref_key_arrangement"
+        android:title="@string/pref_key_arrangement_title"
+        app:singleLineTitle="false"
+        android:summary="@string/pref_key_arrangement_summary"
+        android:entries="@array/key_arrangement_entries"
+        android:entryValues="@array/key_arrangement_values"
+        android:defaultValue="qwerty" />
+
+    <ListPreference
         android:key="pref_layout_mode"
         android:title="@string/pref_layout_mode_title"
+        app:singleLineTitle="false"
         android:entries="@array/layout_mode_entries"
         android:entryValues="@array/layout_mode_values"
         android:defaultValue="full"
         app:useSimpleSummaryProvider="true" />
 
     <SwitchPreferenceCompat
+        android:key="pref_auto_capitalize"
+        android:title="@string/pref_auto_capitalize_title"
+        app:singleLineTitle="false"
+        android:summary="@string/pref_auto_capitalize_summary"
+        android:defaultValue="true" />
+
+    <SwitchPreferenceCompat
         android:key="pref_autospace"
         android:title="@string/pref_autospace_title"
+        app:singleLineTitle="false"
         android:defaultValue="true" />
 
     <SeekBarPreference
         android:key="pref_autospace_delay_ms"
         android:title="@string/pref_autospace_delay_title"
+        app:singleLineTitle="false"
         android:defaultValue="300"
         android:max="800"
         app:min="100"
@@ -59,17 +82,20 @@
     <SwitchPreferenceCompat
         android:key="pref_zen_mode"
         android:title="@string/pref_zen_title"
+        app:singleLineTitle="false"
         android:summary="@string/pref_zen_summary"
         android:defaultValue="false" />
 
     <SwitchPreferenceCompat
         android:key="pref_vibration"
         android:title="@string/pref_vibration_title"
+        app:singleLineTitle="false"
         android:defaultValue="true" />
 
     <SeekBarPreference
         android:key="pref_vibration_intensity"
         android:title="@string/pref_vibration_intensity_title"
+        app:singleLineTitle="false"
         android:defaultValue="2"
         android:max="3"
         app:min="1"
@@ -79,6 +105,7 @@
     <ListPreference
         android:key="pref_theme_mode"
         android:title="@string/pref_theme_mode_title"
+        app:singleLineTitle="false"
         android:entries="@array/theme_mode_entries"
         android:entryValues="@array/theme_mode_values"
         android:defaultValue="default"
@@ -87,6 +114,7 @@
     <ListPreference
         android:key="pref_theme_brightness"
         android:title="@string/pref_theme_brightness_title"
+        app:singleLineTitle="false"
         android:entries="@array/theme_brightness_entries"
         android:entryValues="@array/theme_brightness_values"
         android:defaultValue="dark"
@@ -95,6 +123,7 @@
     <SeekBarPreference
         android:key="pref_theme_hue"
         android:title="@string/pref_theme_hue_title"
+        app:singleLineTitle="false"
         android:summary="@string/pref_theme_hue_summary"
         android:defaultValue="233"
         android:max="360"
@@ -110,6 +139,7 @@
     <ListPreference
         android:key="pref_trail_color"
         android:title="@string/pref_trail_color_title"
+        app:singleLineTitle="false"
         android:entries="@array/trail_color_entries"
         android:entryValues="@array/trail_color_values"
         android:defaultValue="rainbow"
@@ -118,6 +148,7 @@
     <SeekBarPreference
         android:key="pref_trail_color_custom_hue"
         android:title="@string/pref_trail_custom_hue_title"
+        app:singleLineTitle="false"
         android:defaultValue="200"
         android:max="360"
         app:min="0"
@@ -126,6 +157,7 @@
     <ListPreference
         android:key="pref_language"
         android:title="@string/pref_language_title"
+        app:singleLineTitle="false"
         android:entries="@array/language_entries"
         android:entryValues="@array/language_values"
         android:defaultValue="en"
@@ -134,6 +166,7 @@
     <MultiSelectListPreference
         android:key="pref_enabled_languages"
         android:title="@string/pref_enabled_languages_title"
+        app:singleLineTitle="false"
         android:summary="@string/pref_enabled_languages_summary"
         android:entries="@array/language_entries"
         android:entryValues="@array/language_values"
@@ -142,6 +175,7 @@
     <ListPreference
         android:key="pref_lang_cycle_key"
         android:title="@string/pref_lang_cycle_key_title"
+        app:singleLineTitle="false"
         android:summary="@string/pref_lang_cycle_key_summary"
         android:entries="@array/lang_cycle_key_entries"
         android:entryValues="@array/lang_cycle_key_values"
@@ -150,18 +184,21 @@
     <SwitchPreferenceCompat
         android:key="pref_auto_detect_language"
         android:title="@string/pref_auto_detect_title"
+        app:singleLineTitle="false"
         android:summary="@string/pref_auto_detect_summary"
         android:defaultValue="false" />
 
     <SwitchPreferenceCompat
         android:key="pref_peck_mode"
         android:title="@string/pref_peck_mode_title"
+        app:singleLineTitle="false"
         android:summary="@string/pref_peck_mode_summary"
         android:defaultValue="false" />
 
     <ListPreference
         android:key="pref_peck_chord_key"
         android:title="@string/pref_peck_chord_key_title"
+        app:singleLineTitle="false"
         android:summary="@string/pref_peck_chord_key_summary"
         android:entries="@array/lang_cycle_key_entries"
         android:entryValues="@array/lang_cycle_key_values"
@@ -170,6 +207,7 @@
     <SeekBarPreference
         android:key="pref_long_press_ms"
         android:title="@string/pref_long_press_title"
+        app:singleLineTitle="false"
         android:defaultValue="500"
         android:max="700"
         app:min="300"
@@ -178,6 +216,7 @@
     <ListPreference
         android:key="pref_autocorrect_level"
         android:title="@string/pref_autocorrect_title"
+        app:singleLineTitle="false"
         android:entries="@array/autocorrect_entries"
         android:entryValues="@array/autocorrect_values"
         android:defaultValue="normal"
@@ -186,6 +225,7 @@
     <ListPreference
         android:key="pref_reinforce_increment"
         android:title="@string/pref_reinforce_title"
+        app:singleLineTitle="false"
         android:summary="@string/pref_reinforce_summary"
         android:entries="@array/reinforce_entries"
         android:entryValues="@array/reinforce_values"
@@ -194,24 +234,28 @@
     <SwitchPreferenceCompat
         android:key="pref_plain_letter_alternates"
         android:title="@string/pref_plain_letter_alternates_title"
+        app:singleLineTitle="false"
         android:summary="@string/pref_plain_letter_alternates_summary"
         android:defaultValue="false" />
 
     <SwitchPreferenceCompat
         android:key="pref_number_priority"
         android:title="@string/pref_number_priority_title"
+        app:singleLineTitle="false"
         android:summary="@string/pref_number_priority_summary"
         android:defaultValue="false" />
 
     <SwitchPreferenceCompat
         android:key="pref_emoji_key"
         android:title="@string/pref_emoji_key_title"
+        app:singleLineTitle="false"
         android:summary="@string/pref_emoji_key_summary"
         android:defaultValue="false" />
 
     <ListPreference
         android:key="pref_comma_mode"
         android:title="@string/pref_comma_mode_title"
+        app:singleLineTitle="false"
         android:summary="@string/pref_comma_mode_summary"
         android:entries="@array/comma_mode_entries"
         android:entryValues="@array/comma_mode_values"
@@ -220,21 +264,25 @@
     <EditTextPreference
         android:key="pref_period_alternates"
         android:title="@string/pref_period_alternates_title"
+        app:singleLineTitle="false"
         android:summary="@string/pref_punctuation_alternates_summary" />
 
     <EditTextPreference
         android:key="pref_comma_alternates"
         android:title="@string/pref_comma_alternates_title"
+        app:singleLineTitle="false"
         android:summary="@string/pref_punctuation_alternates_summary" />
 
     <EditTextPreference
         android:key="pref_comma_custom"
         android:title="@string/pref_comma_custom_title"
+        app:singleLineTitle="false"
         android:summary="@string/pref_comma_custom_summary" />
 
     <Preference
         android:key="pref_chords"
         android:title="@string/chord_settings_title"
+        app:singleLineTitle="false"
         android:summary="@string/pref_chords_summary">
         <intent
             android:targetPackage="com.kinetica.keyboard"
@@ -244,30 +292,35 @@
     <SwitchPreferenceCompat
         android:key="pref_alternate_swipes"
         android:title="@string/pref_alternate_swipes_title"
+        app:singleLineTitle="false"
         android:summary="@string/pref_alternate_swipes_summary"
         android:defaultValue="false" />
 
     <SwitchPreferenceCompat
         android:key="pref_backspace_char_slide"
         android:title="@string/pref_backspace_char_slide_title"
+        app:singleLineTitle="false"
         android:summary="@string/pref_backspace_char_slide_summary"
         android:defaultValue="false" />
 
     <EditTextPreference
         android:key="pref_enter_alternates"
         android:title="@string/pref_enter_alternates_title"
+        app:singleLineTitle="false"
         android:summary="@string/pref_enter_alternates_summary"
         android:defaultValue="@string/pref_enter_alternates_default" />
 
     <SwitchPreferenceCompat
         android:key="pref_apostrophe_key"
         android:title="@string/pref_apostrophe_key_title"
+        app:singleLineTitle="false"
         android:summary="@string/pref_apostrophe_key_summary"
         android:defaultValue="false" />
 
     <Preference
         android:key="pref_edge_swipes_screen"
         android:title="@string/edge_swipe_settings_title"
+        app:singleLineTitle="false"
         android:summary="@string/pref_edge_swipes_summary">
         <intent
             android:targetPackage="com.kinetica.keyboard"
@@ -277,6 +330,7 @@
     <Preference
         android:key="pref_dictionary_screen"
         android:title="@string/dict_settings_title"
+        app:singleLineTitle="false"
         android:summary="@string/pref_dictionary_summary">
         <intent
             android:targetPackage="com.kinetica.keyboard"
@@ -286,6 +340,7 @@
     <Preference
         android:key="pref_licenses_screen"
         android:title="@string/licenses_title"
+        app:singleLineTitle="false"
         android:summary="@string/pref_licenses_summary">
         <intent
             android:targetPackage="com.kinetica.keyboard"

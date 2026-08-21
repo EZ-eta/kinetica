@@ -149,6 +149,120 @@ class LayoutMutationsTest {
         }
     }
 
+    // ---- letter arrangements (QWERTZ / QZERTY) -----------------------------
+
+    /** The three keys the two swaps touch, with the bundled English alternates. */
+    private fun arrangementLayout(): KeyboardLayout = KeyboardLayout(
+        name = "qwerty", locale = "en_US",
+        keys = listOf(
+            Key("w", KeyType.CHAR, "w", "w", 0.10f, 0.0f, 0.1f, 0.25f,
+                alternates = listOf("2")),
+            Key("y", KeyType.CHAR, "y", "y", 0.50f, 0.0f, 0.1f, 0.25f,
+                alternates = listOf("\u00fd", "\u00ff", "6")),
+            Key("z", KeyType.CHAR, "z", "z", 0.15f, 0.5f, 0.1f, 0.25f,
+                alternates = listOf("\u017e", "\u017a", "\u017c", "'")),
+            Key("a", KeyType.CHAR, "a", "a", 0.05f, 0.25f, 0.1f, 0.25f,
+                alternates = listOf("\u00e0", "@")),
+        ),
+    )
+
+    private fun keyAt(l: KeyboardLayout, x: Float, y: Float): Key =
+        l.keys.first { it.x == x && it.y == y }
+
+    @Test
+    fun qwertyIsTheIdentityAndSoIsAnUnknownValue() {
+        val before = arrangementLayout()
+        assertEquals(before, LayoutMutations.withLetterArrangement(before, "qwerty"))
+        // A stale or misspelt preference must not silently rearrange the board.
+        assertEquals(before, LayoutMutations.withLetterArrangement(before, "dvorak"))
+        assertEquals(before, LayoutMutations.withLetterArrangement(before, ""))
+    }
+
+    @Test
+    fun qwertzPutsZInTheTopRowAndYInTheBottom() {
+        val out = LayoutMutations.withLetterArrangement(arrangementLayout(), "qwertz")
+        val top = keyAt(out, 0.50f, 0.0f)
+        val bottom = keyAt(out, 0.15f, 0.5f)
+        assertEquals("z", top.output)
+        assertEquals("z", top.label)
+        assertEquals("z", top.id)
+        assertEquals("y", bottom.output)
+        // Untouched keys stay exactly as they were.
+        assertEquals("w", keyAt(out, 0.10f, 0.0f).output)
+        assertEquals("a", keyAt(out, 0.05f, 0.25f).output)
+        assertEquals(4, out.keys.size)
+    }
+
+    @Test
+    fun qzertySwapsZAndWInstead() {
+        val out = LayoutMutations.withLetterArrangement(arrangementLayout(), "qzerty")
+        assertEquals("z", keyAt(out, 0.10f, 0.0f).output)
+        assertEquals("w", keyAt(out, 0.15f, 0.5f).output)
+        // Y is not involved in this one.
+        assertEquals("y", keyAt(out, 0.50f, 0.0f).output)
+    }
+
+    @Test
+    fun accentsFollowTheLetterAndDigitsStayWithThePosition() {
+        // The rule the whole mutation rests on. Digits are positional on this
+        // keyboard - the top row is 1-0 - while an accent belongs to its letter.
+        val out = LayoutMutations.withLetterArrangement(arrangementLayout(), "qwertz")
+        val top = keyAt(out, 0.50f, 0.0f)
+        val bottom = keyAt(out, 0.15f, 0.5f)
+        assertEquals(listOf("\u017e", "\u017a", "\u017c", "6"), top.alternates)
+        assertEquals(listOf("\u00fd", "\u00ff", "'"), bottom.alternates)
+    }
+
+    @Test
+    fun theImplicitDigitSwipesSurviveTheSwap() {
+        // withImplicitAlternates takes the first NON-letter alternate per key,
+        // so this is the assertion that the top row still offers 6 rather than
+        // the apostrophe that would arrive with a whole-key swap.
+        val out = LayoutMutations.withLetterArrangement(arrangementLayout(), "qwertz")
+        val top = keyAt(out, 0.50f, 0.0f)
+        assertEquals("6", top.alternates.first { it.firstOrNull()?.isLetter() != true })
+        val bottom = keyAt(out, 0.15f, 0.5f)
+        assertEquals("'", bottom.alternates.first { it.firstOrNull()?.isLetter() != true })
+    }
+
+    @Test
+    fun theCornerHintStaysAnAccentJustAsItIsAuthored() {
+        // hintChar is the first alternate, so accents-first ordering has to
+        // survive the rebuild or every hint on the board changes.
+        val out = LayoutMutations.withLetterArrangement(arrangementLayout(), "qwertz")
+        assertEquals("\u017e", keyAt(out, 0.50f, 0.0f).hintChar)
+        assertEquals("\u00fd", keyAt(out, 0.15f, 0.5f).hintChar)
+    }
+
+    @Test
+    fun aLetterWithNoAccentsSwapsCleanly() {
+        // The it/es case: their w and z carry only a symbol, so the letter half
+        // of the swap is empty and must not drop the position's digit.
+        val plain = KeyboardLayout(
+            "qwerty_it", "it_IT",
+            listOf(
+                Key("w", KeyType.CHAR, "w", "w", 0.10f, 0.0f, 0.1f, 0.25f,
+                    alternates = listOf("2")),
+                Key("z", KeyType.CHAR, "z", "z", 0.15f, 0.5f, 0.1f, 0.25f,
+                    alternates = listOf("'")),
+            ),
+        )
+        val out = LayoutMutations.withLetterArrangement(plain, "qzerty")
+        assertEquals("z", keyAt(out, 0.10f, 0.0f).output)
+        assertEquals(listOf("2"), keyAt(out, 0.10f, 0.0f).alternates)
+        assertEquals("w", keyAt(out, 0.15f, 0.5f).output)
+        assertEquals(listOf("'"), keyAt(out, 0.15f, 0.5f).alternates)
+    }
+
+    @Test
+    fun aLayoutMissingOneOfThePairIsLeftAlone() {
+        val noZ = KeyboardLayout(
+            "x", "x",
+            listOf(Key("y", KeyType.CHAR, "y", "y", 0.5f, 0f, 0.1f, 0.25f)),
+        )
+        assertEquals(noZ, LayoutMutations.withLetterArrangement(noZ, "qwertz"))
+    }
+
     @Test
     fun polishLayoutExposesEveryNativeLetter() {
         val p = listOf(

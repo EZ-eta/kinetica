@@ -115,6 +115,7 @@ class DictionarySettingsActivity : AppCompatActivity() {
         val updatedAt: Long?,
         val hasOverride: Boolean,
         val personalWords: Int,
+        val blockedWords: Int,
     )
 
     private fun refresh() {
@@ -139,7 +140,15 @@ class DictionarySettingsActivity : AppCompatActivity() {
                 } catch (e: RuntimeException) {
                     0
                 }
-                LangState(lang, label, source, baseWords, updatedAt, override.exists(), personal)
+                val blocked = try {
+                    KineticaDb.get(this).blockedWords().countForLanguage(lang)
+                } catch (e: RuntimeException) {
+                    0
+                }
+                LangState(
+                    lang, label, source, baseWords, updatedAt, override.exists(),
+                    personal, blocked,
+                )
             }
             main.post { if (!isDestroyed) render(states) }
         }
@@ -219,6 +228,12 @@ class DictionarySettingsActivity : AppCompatActivity() {
                     },
                 )
             }
+            container.addView(
+                Button(this).apply {
+                    text = getString(R.string.dict_manage_blocked, s.blockedWords)
+                    setOnClickListener { showBlockedWords(s.lang, s.label) }
+                },
+            )
             container.addView(
                 Button(this).apply {
                     text = getString(R.string.dict_export_personal)
@@ -322,6 +337,99 @@ class DictionarySettingsActivity : AppCompatActivity() {
                     return@post
                 }
                 showPersonalWordsDialog(lang, label, rows)
+            }
+        }
+    }
+
+    /**
+     * The block list for one language: add a spelling, tap a row to lift it.
+     *
+     * Deliberately a plain list with no search box, unlike the learned words -
+     * that list runs to thousands of rows, this one holds the handful of things
+     * a user has actually objected to.
+     *
+     * Every change bumps DICT_GENERATION, which is what makes the running
+     * keyboard rebuild its trie; without it a blocked word stays decodable until
+     * the next dictionary load.
+     */
+    private fun showBlockedWords(lang: String, label: String) {
+        io.execute {
+            val rows = try {
+                KineticaDb.get(this).blockedWords().allForLanguage(lang).map { it.word }
+            } catch (e: RuntimeException) {
+                toastLater(R.string.dict_db_error)
+                return@execute
+            }
+            main.post { if (!isDestroyed) showBlockedWordsDialog(lang, label, rows) }
+        }
+    }
+
+    private fun showBlockedWordsDialog(lang: String, label: String, rows: List<String>) {
+        val pad = (16 * resources.displayMetrics.density).toInt()
+        val entry = EditText(this).apply {
+            setHint(R.string.dict_blocked_add_hint)
+            isSingleLine = true
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+            setPadding(pad, pad / 2, pad, pad / 2)
+        }
+        val empty = TextView(this).apply {
+            setText(R.string.dict_blocked_empty)
+            setPadding(pad)
+            visibility = if (rows.isEmpty()) android.view.View.VISIBLE else android.view.View.GONE
+        }
+        val list = ListView(this)
+        val adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, ArrayList(rows))
+        list.adapter = adapter
+        list.visibility = if (rows.isEmpty()) android.view.View.GONE else android.view.View.VISIBLE
+
+        val view = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(entry)
+            addView(empty)
+            addView(list)
+        }
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(getString(R.string.dict_blocked_title, label))
+            .setPositiveButton(R.string.dict_blocked_add, null)
+            .setNegativeButton(android.R.string.cancel, null)
+            .create()
+        list.setOnItemClickListener { _, _, which, _ ->
+            val word = adapter.getItem(which) ?: return@setOnItemClickListener
+            dialog.dismiss()
+            setBlocked(lang, word, blocked = false)
+        }
+        dialog.setView(view)
+        dialog.show()
+        // Overridden after show() so adding a word does not dismiss the dialog -
+        // blocking several in a row is the normal case.
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+            val word = entry.text.toString().trim().lowercase()
+            if (word.isEmpty()) return@setOnClickListener
+            entry.setText("")
+            adapter.remove(word)
+            adapter.add(word)
+            adapter.sort { a, b -> a.compareTo(b) }
+            adapter.notifyDataSetChanged()
+            empty.visibility = android.view.View.GONE
+            list.visibility = android.view.View.VISIBLE
+            setBlocked(lang, word, blocked = true)
+        }
+    }
+
+    private fun setBlocked(lang: String, word: String, blocked: Boolean) {
+        val now = System.currentTimeMillis()
+        io.execute {
+            try {
+                val dao = KineticaDb.get(this).blockedWords()
+                if (blocked) dao.block(word, lang, now) else dao.unblock(word, lang)
+            } catch (e: RuntimeException) {
+                toastLater(R.string.dict_db_error)
+                return@execute
+            }
+            main.post {
+                if (isDestroyed) return@post
+                bumpGeneration()
+                refresh()
             }
         }
     }

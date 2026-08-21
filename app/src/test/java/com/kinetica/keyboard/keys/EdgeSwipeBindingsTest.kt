@@ -109,4 +109,64 @@ class EdgeSwipeBindingsTest {
         val b = EdgeSwipeBindings.withImplicitAlternates(es, empty)
         assertEquals("!", b.outputFor("n", Direction.DOWN))
     }
+    // ---- collision warnings -------------------------------------------------
+
+    private fun shadow(key: String, dir: EdgeSwipeBinding.Direction) =
+        EdgeSwipeBindings.shadowedGesture(key, dir)
+
+    @Test
+    fun everyShippedDefaultIsSilent() {
+        // The property that makes the warning worth showing at all: it must never
+        // fire on a binding the app ships, or it is noise from the first launch.
+        for (b in EdgeSwipeBindings.DEFAULTS.bindings) {
+            assertNull(
+                "default ${b.keyId}/${b.direction} flagged as a conflict",
+                shadow(b.keyId, b.direction),
+            )
+        }
+    }
+
+    @Test
+    fun aHorizontalBindingOnALetterShadowsShortTypingSwipes() {
+        // How the engine reads a two-letter word is a short sideways swipe, so a
+        // left/right binding on a letter competes with typing itself.
+        assertEquals(EdgeSwipeBindings.SHADOWS_TYPING_SWIPE,
+            shadow("a", EdgeSwipeBinding.Direction.LEFT))
+        assertEquals(EdgeSwipeBindings.SHADOWS_TYPING_SWIPE,
+            shadow("z", EdgeSwipeBinding.Direction.RIGHT))
+        // Vertical on a letter is the implicit digit/symbol layer and is fine.
+        assertNull(shadow("a", EdgeSwipeBinding.Direction.UP))
+        assertNull(shadow("v", EdgeSwipeBinding.Direction.DOWN))
+    }
+
+    @Test
+    fun theSpecialKeysShadowTheirOwnSlides() {
+        assertEquals(EdgeSwipeBindings.SHADOWS_CURSOR_SLIDE,
+            shadow("space", EdgeSwipeBinding.Direction.LEFT))
+        assertEquals(EdgeSwipeBindings.SHADOWS_STAGED_DELETE,
+            shadow("backspace", EdgeSwipeBinding.Direction.LEFT))
+        assertEquals(EdgeSwipeBindings.SHADOWS_LAYER_SLIDE,
+            shadow("mode", EdgeSwipeBinding.Direction.RIGHT))
+        assertEquals(EdgeSwipeBindings.SHADOWS_ENTER_POPUP,
+            shadow("enter", EdgeSwipeBinding.Direction.LEFT))
+    }
+
+    @Test
+    fun enterUpIsNotFlaggedBecauseItIsTheSameAnswerAsThePopup() {
+        // The shipped default binds enter-up to "?" and the popup's primary is
+        // "?" as well, deliberately. Flagging it would call the app's own design
+        // a conflict.
+        assertNull(shadow("enter", EdgeSwipeBinding.Direction.UP))
+        assertNull(shadow("backspace", EdgeSwipeBinding.Direction.UP))
+    }
+
+    @Test
+    fun anUnknownKeyIsNotGuessedAt() {
+        // Multi-character ids that are not the special keys, and anything from a
+        // layout this build does not know about.
+        assertNull(shadow("apostrophe", EdgeSwipeBinding.Direction.LEFT))
+        assertNull(shadow("comma", EdgeSwipeBinding.Direction.RIGHT))
+        assertNull(shadow("", EdgeSwipeBinding.Direction.LEFT))
+    }
+
 }

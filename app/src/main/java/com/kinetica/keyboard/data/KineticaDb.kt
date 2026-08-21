@@ -8,13 +8,14 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [UserWord::class, ChordShortcut::class],
-    version = 2,
+    entities = [UserWord::class, ChordShortcut::class, BlockedWord::class],
+    version = 3,
     exportSchema = false,
 )
 abstract class KineticaDb : RoomDatabase() {
     abstract fun userWords(): UserWordDao
     abstract fun chordShortcuts(): ChordShortcutDao
+    abstract fun blockedWords(): BlockedWordDao
 
     companion object {
         @Volatile
@@ -43,13 +44,30 @@ abstract class KineticaDb : RoomDatabase() {
             }
         }
 
+        /**
+         * v2 -> v3: the block list arrives as a new table, so nothing existing
+         * is read, rewritten or dropped. Learned words and chords are untouched
+         * by construction, which is the whole reason to add a table rather than
+         * a column on user_words.
+         */
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS blocked_words (" +
+                        "word TEXT NOT NULL, lang TEXT NOT NULL, " +
+                        "addedAt INTEGER NOT NULL, " +
+                        "PRIMARY KEY(word, lang))",
+                )
+            }
+        }
+
         fun get(context: Context): KineticaDb =
             instance ?: synchronized(this) {
                 instance ?: Room.databaseBuilder(
                     context.applicationContext,
                     KineticaDb::class.java,
                     "user_dict.db",
-                ).addMigrations(MIGRATION_1_2).build().also { instance = it }
+                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build().also { instance = it }
             }
     }
 }

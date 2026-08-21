@@ -19,7 +19,11 @@ data class KeyboardConfig(
     /** Draw the resize handle strip above the suggestion bar. */
     val dragHandle: Boolean,
     val layoutMode: LayoutMode,
+    /** Letter arrangement: qwerty | qwertz | qzerty. */
+    val keyArrangement: String,
     val autospace: Boolean,
+    /** Capitalize the first word of a sentence. */
+    val autoCapitalize: Boolean,
     val autospaceDelayMs: Long,
     val zenMode: Boolean,
     val vibration: Boolean,
@@ -79,7 +83,13 @@ data class KeyboardConfig(
             layoutMode = LayoutMode.fromPref(
                 prefs.getString(Prefs.LAYOUT_MODE, "full"),
             ),
+            keyArrangement = prefs.getString(
+                Prefs.KEY_ARRANGEMENT, Prefs.DEFAULT_KEY_ARRANGEMENT,
+            ) ?: Prefs.DEFAULT_KEY_ARRANGEMENT,
             autospace = prefs.getBoolean(Prefs.AUTOSPACE, Prefs.DEFAULT_AUTOSPACE),
+            autoCapitalize = prefs.getBoolean(
+                Prefs.AUTO_CAPITALIZE, Prefs.DEFAULT_AUTO_CAPITALIZE,
+            ),
             autospaceDelayMs = prefs.getInt(
                 Prefs.AUTOSPACE_DELAY_MS, Prefs.DEFAULT_AUTOSPACE_DELAY_MS,
             ).coerceIn(100, 800).toLong(),

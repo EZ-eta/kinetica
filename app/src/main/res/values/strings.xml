@@ -28,7 +28,11 @@
     <string name="pref_suggestion_bar_summary">The word text and its badges scale with the bar, so a thinner bar means smaller text too</string>
     <string name="pref_drag_handle_title">Show the resize handle</string>
     <string name="pref_drag_handle_summary">The grip strip above the suggestion bar. Turning it off reclaims 20dp; the keyboard can still be resized with the height slider above</string>
+    <string name="pref_key_arrangement_title">Letter arrangement</string>
+    <string name="pref_key_arrangement_summary">Which letter sits on which key. Accents, digits and symbols stay where they are</string>
     <string name="pref_layout_mode_title">Layout mode</string>
+    <string name="pref_auto_capitalize_title">Capitalize sentences</string>
+    <string name="pref_auto_capitalize_summary">Shift the first letter after a full stop. Off means the keyboard never capitalizes for you</string>
     <string name="pref_autospace_title">Autospace after swipe</string>
     <string name="pref_autospace_delay_title">Autospace delay (ms)</string>
     <string name="pref_zen_title">Zen mode (no animations)</string>
@@ -88,6 +92,11 @@
     <string name="dict_import_base">Import improved dictionary (wordlist.combined)…</string>
     <string name="dict_remove_base">Remove imported dictionary (revert to bundled)</string>
     <string name="dict_remove_base_confirm">Remove the imported %1$s dictionary and revert to the bundled wordlist?</string>
+    <string name="dict_manage_blocked">Blocked words (%1$d)…</string>
+    <string name="dict_blocked_title">Blocked words — %1$s</string>
+    <string name="dict_blocked_add_hint">Word to block</string>
+    <string name="dict_blocked_add">Block</string>
+    <string name="dict_blocked_empty">Nothing blocked. A blocked word is removed from the dictionary, so it stops being suggested at all — unlike sliding a suggestion down, which only lowers its priority.</string>
     <string name="dict_export_personal">Export personal dictionary…</string>
     <string name="dict_import_personal">Import personal dictionary…</string>
     <string name="dict_manage_personal">Review learned words (%1$d)…</string>
@@ -134,6 +143,12 @@
     <string name="edge_swipe_add">Add edge swipe</string>
     <string name="edge_swipe_reset">Reset to defaults</string>
     <string name="edge_swipe_reset_confirm">Replace all edge-swipe bindings with the original five defaults?</string>
+    <string name="edge_swipe_shadow_note">Takes over %1$s</string>
+    <string name="edge_swipe_shadow_cursor">sliding the spacebar to move the cursor</string>
+    <string name="edge_swipe_shadow_delete">sliding backspace to delete words</string>
+    <string name="edge_swipe_shadow_layer">sliding ?123 to reach the number pad</string>
+    <string name="edge_swipe_shadow_enter">sliding enter for its symbols</string>
+    <string name="edge_swipe_shadow_typing">short typing swipes on that letter</string>
     <string name="edge_swipe_row">%1$s %2$s  →  %3$s</string>
     <string name="edge_swipe_key_label">Key</string>
     <string name="edge_swipe_direction_label">Direction</string>

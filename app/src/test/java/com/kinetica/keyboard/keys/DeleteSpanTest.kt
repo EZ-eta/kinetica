@@ -1,6 +1,7 @@
 package com.kinetica.keyboard.keys
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DeleteSpanTest {
@@ -118,6 +119,28 @@ class DeleteSpanTest {
         // And a zero-unit slide stages nothing even with a selection up: the
         // slide must stay retractable to a no-op.
         assertEquals(0, DeleteSpan.staged(4, "abc", 0, charMode = false))
+    }
+
+    @Test
+    fun theSpanNeverShrinksAsTheSlideGrows() {
+        // What the backspace slide's highlight rests on: the staged span is
+        // recomputed from a snapshot on every threshold crossing, so retracting
+        // from four units to three has to give back a SMALLER span. If this were
+        // not monotone the highlight would grow on a retraction.
+        val before = "the quick brown fox jumps over"
+        for (sel in listOf(0, 5)) {
+            for (charMode in listOf(false, true)) {
+                var last = 0
+                for (units in 0..8) {
+                    val span = DeleteSpan.staged(sel, before, units, charMode)
+                    assertTrue(
+                        "span shrank at units=$units (sel=$sel char=$charMode)",
+                        span >= last,
+                    )
+                    last = span
+                }
+            }
+        }
     }
 
     // ---- the two granularities are the same gesture ------------------------

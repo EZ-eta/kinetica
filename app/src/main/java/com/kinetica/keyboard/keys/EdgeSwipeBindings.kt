@@ -58,6 +58,50 @@ class EdgeSwipeBindings(val bindings: List<EdgeSwipeBinding>) {
         private const val BOTTOM_ROW_Y_MAX = 0.6f
 
         /**
+         * Which built-in gesture a binding on [keyId] in [direction] would
+         * shadow, or null when it is safe. Pure so the settings screen and the
+         * tests agree on the rule rather than each spelling it out.
+         *
+         * The three collisions are all real and all silent today. The shipped
+         * defaults avoid every one of them, so this only bites someone who
+         * customises - which is exactly the person with no way to find out.
+         *
+         * Returns an identifier for the shadowed gesture, not a message: the
+         * strings live with the screen that shows them.
+         */
+        fun shadowedGesture(keyId: String, direction: EdgeSwipeBinding.Direction): String? {
+            val horizontal = direction == EdgeSwipeBinding.Direction.LEFT ||
+                direction == EdgeSwipeBinding.Direction.RIGHT
+            return when {
+                // The spacebar slides to move the cursor; a horizontal binding on
+                // it competes with every cursor move.
+                keyId == "space" && horizontal -> SHADOWS_CURSOR_SLIDE
+                // Backspace slides left to stage a deletion, which is the gesture
+                // most likely to be triggered by accident.
+                keyId == "backspace" && horizontal -> SHADOWS_STAGED_DELETE
+                // ?123 slides sideways to reach the numpad and back. The key's
+                // id is "mode"; its TYPE is mode_symbols.
+                keyId == "mode" && horizontal -> SHADOWS_LAYER_SLIDE
+                // Enter slides left for its alternates popup. UP is deliberately
+                // NOT flagged: the shipped default binds enter-up to "?", which is
+                // the popup's own primary, so the two are the same answer rather
+                // than a collision.
+                keyId == "enter" && horizontal -> SHADOWS_ENTER_POPUP
+                // A horizontal binding on a letter key competes with short typing
+                // swipes, which is how the engine reads a two-letter word.
+                keyId.length == 1 && keyId[0] in 'a'..'z' && horizontal ->
+                    SHADOWS_TYPING_SWIPE
+                else -> null
+            }
+        }
+
+        const val SHADOWS_CURSOR_SLIDE = "cursor_slide"
+        const val SHADOWS_STAGED_DELETE = "staged_delete"
+        const val SHADOWS_LAYER_SLIDE = "layer_slide"
+        const val SHADOWS_ENTER_POPUP = "enter_popup"
+        const val SHADOWS_TYPING_SWIPE = "typing_swipe"
+
+        /**
          * Synthesizes the implicit alternate-swipe layer from
          * [layout] and layers [explicit] on top so user/built-in bindings win:
          * a swipe UP on a top-row letter key inserts that key's first

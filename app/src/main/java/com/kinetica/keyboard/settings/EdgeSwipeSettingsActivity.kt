@@ -111,6 +111,21 @@ class EdgeSwipeSettingsActivity : AppCompatActivity() {
             "\"$output\""
         }
 
+    /** Message for a binding that shadows a built-in gesture, or null. */
+    private fun shadowNote(row: EdgeSwipeBinding): String? {
+        val id = EdgeSwipeBindings.shadowedGesture(row.keyId, row.direction) ?: return null
+        val what = getString(
+            when (id) {
+                EdgeSwipeBindings.SHADOWS_CURSOR_SLIDE -> R.string.edge_swipe_shadow_cursor
+                EdgeSwipeBindings.SHADOWS_STAGED_DELETE -> R.string.edge_swipe_shadow_delete
+                EdgeSwipeBindings.SHADOWS_LAYER_SLIDE -> R.string.edge_swipe_shadow_layer
+                EdgeSwipeBindings.SHADOWS_ENTER_POPUP -> R.string.edge_swipe_shadow_enter
+                else -> R.string.edge_swipe_shadow_typing
+            },
+        )
+        return getString(R.string.edge_swipe_shadow_note, what)
+    }
+
     private fun render() {
         listContainer.removeAllViews()
         val rows = current().sortedWith(compareBy({ it.keyId }, { it.direction }))
@@ -119,6 +134,12 @@ class EdgeSwipeSettingsActivity : AppCompatActivity() {
         )
         val pad = (8 * resources.displayMetrics.density).toInt()
         for (row in rows) {
+            // A row is a two-line block when it shadows a built-in gesture: the
+            // binding itself, then the note under it. Same shape the chord editor
+            // uses for its reserved-letter collision.
+            val block = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+            }
             val line = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
@@ -148,7 +169,20 @@ class EdgeSwipeSettingsActivity : AppCompatActivity() {
                     }
                 },
             )
-            listContainer.addView(line)
+            block.addView(line)
+            // Informs, never forbids - the same call the chord editor makes: the
+            // binding still works, it just wins over something the user may not
+            // realise they were using.
+            shadowNote(row)?.let { note ->
+                block.addView(
+                    TextView(this).apply {
+                        text = note
+                        textSize = 13f
+                        setPadding(0, 0, 0, pad)
+                    },
+                )
+            }
+            listContainer.addView(block)
         }
     }
 

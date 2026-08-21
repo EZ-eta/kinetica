@@ -18,7 +18,22 @@ object Prefs {
      */
     const val DRAG_HANDLE = "pref_drag_handle"
     const val LAYOUT_MODE = "pref_layout_mode"
+
+    /**
+     * Letter arrangement: qwerty | qwertz | qzerty. Distinct from
+     * [LAYOUT_MODE], which is where the keys sit on screen (full, split,
+     * one-handed); this is which letter is on which key.
+     */
+    const val KEY_ARRANGEMENT = "pref_key_arrangement"
     const val AUTOSPACE = "pref_autospace"
+
+    /**
+     * Capitalize the first word of a sentence. On by default; the editor still has
+     * to ask for it (TYPE_TEXT_FLAG_CAP_SENTENCES), this only lets the user say no.
+     * Unrelated to the lone English "i", which is a spelling rule in
+     * AutoCapitalization and stays on.
+     */
+    const val AUTO_CAPITALIZE = "pref_auto_capitalize"
     const val AUTOSPACE_DELAY_MS = "pref_autospace_delay_ms"
     const val ZEN_MODE = "pref_zen_mode"
     const val VIBRATION = "pref_vibration"
@@ -141,12 +156,14 @@ object Prefs {
     const val MIN_HEIGHT_PCT = 10
     const val MAX_HEIGHT_PCT = 50
     const val DEFAULT_AUTOSPACE = true
+    const val DEFAULT_AUTO_CAPITALIZE = true
     const val DEFAULT_AUTOSPACE_DELAY_MS = 300
     const val DEFAULT_ZEN = false
     const val DEFAULT_VIBRATION = true
     const val DEFAULT_VIBRATION_INTENSITY = 2
     const val DEFAULT_TRAIL_COLOR = "rainbow"
     const val DEFAULT_LANGUAGE = "en"
+    const val DEFAULT_KEY_ARRANGEMENT = "qwerty"
     const val DEFAULT_LONG_PRESS_MS = 500
     const val DEFAULT_AUTOCORRECT_LEVEL = "normal"
     const val DEFAULT_REINFORCE_INCREMENT = "medium"

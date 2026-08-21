@@ -24,6 +24,14 @@ class InputConnectionHelper(private val connection: () -> InputConnection?) {
     fun selectedText(): CharSequence? = connection()?.getSelectedText(0)
 
     /**
+     * Moves the selection to [start]..[end] in absolute offsets. Used to show a
+     * staged backspace span as a real highlight in the editor rather than only as
+     * a chip on the keyboard; [start] == [end] collapses it back to a cursor.
+     */
+    fun setSelection(start: Int, end: Int): Boolean =
+        connection()?.setSelection(start, end) ?: false
+
+    /**
      * Batch-edit deletion of [count] characters ending at absolute offset [end],
      * used to remove a selection.
      *
@@ -59,7 +67,4 @@ class InputConnectionHelper(private val connection: () -> InputConnection?) {
     /** Context-menu editor actions (android.R.id.paste / selectAll / ...). */
     fun performContextMenuAction(id: Int): Boolean =
         connection()?.performContextMenuAction(id) ?: false
-
-    fun cursorCapsMode(inputType: Int): Int =
-        connection()?.getCursorCapsMode(inputType) ?: 0
 }

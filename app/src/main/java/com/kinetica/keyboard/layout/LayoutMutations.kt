@@ -206,6 +206,74 @@ object LayoutMutations {
     }
 
     /**
+     * Non-QWERTY letter arrangements, as a swap of ONE pair of letters:
+     * QWERTZ (German, Swiss) exchanges Y and Z, QZERTY (the Italian typewriter
+     * arrangement) exchanges Z and W.
+     */
+    const val ARRANGEMENT_QWERTY = "qwerty"
+    const val ARRANGEMENT_QWERTZ = "qwertz"
+    const val ARRANGEMENT_QZERTY = "qzerty"
+
+    /**
+     * Rearranges two letters without touching the geometry, so the swipe
+     * decoder simply sees the keyboard the user is looking at.
+     *
+     * Done here rather than as a second set of layout JSON files because a
+     * qwertz_it.json would have to duplicate every accent Italian carries, and
+     * the pair that moves is the only difference. One mutation covers every
+     * bundled language and every language added later.
+     *
+     * What travels with the LETTER: its id, label, output and its accented
+     * alternates - "y" keeps "ý" and "ÿ" wherever it lands.
+     * What stays with the POSITION: x/y/w/h and the non-letter alternates.
+     * That second half is deliberate and it keeps two shipped features honest:
+     * [EdgeSwipeBindings.withImplicitAlternates] reads the first non-letter
+     * alternate per key, so the top row stays 1-0 in every arrangement instead
+     * of offering an apostrophe where the 6 belongs; and [Key.hintChar] is the
+     * first alternate, so rebuilding accents-first keeps every corner hint as
+     * authored.
+     *
+     * AZERTY is deliberately absent. It moves M to the home row and changes
+     * both row lengths, so it is a different layout rather than a swap and
+     * needs its own JSON.
+     */
+    fun withLetterArrangement(layout: KeyboardLayout, arrangement: String): KeyboardLayout {
+        val pair = when (arrangement) {
+            ARRANGEMENT_QWERTZ -> "y" to "z"
+            ARRANGEMENT_QZERTY -> "z" to "w"
+            else -> return layout
+        }
+        val first = layout.keys.firstOrNull { it.isLetter && it.output == pair.first }
+        val second = layout.keys.firstOrNull { it.isLetter && it.output == pair.second }
+        if (first == null || second == null) return layout
+
+        fun swapped(host: Key, incoming: Key): Key {
+            val letters = incoming.alternates.filter { it.firstOrNull()?.isLetter() == true }
+            val symbols = host.alternates.filter { it.firstOrNull()?.isLetter() != true }
+            return host.copy(
+                id = incoming.id,
+                label = incoming.label,
+                output = incoming.output,
+                alternates = letters + symbols,
+                // An explicit hint belongs to the position's own authored
+                // character, so it is dropped rather than carried onto a letter
+                // it was never written for; hintChar then falls back to the
+                // first alternate exactly as on an unmutated layout.
+                hint = null,
+            )
+        }
+
+        val keys = layout.keys.map { k ->
+            when {
+                k === first -> swapped(first, second)
+                k === second -> swapped(second, first)
+                else -> k
+            }
+        }
+        return layout.copy(keys = keys)
+    }
+
+    /**
      * Drops accented letters from every key's long-press alternates, keeping the
      * digits and symbols. In the English layout "a" offers
      * `à á â ä ã å æ ā @` — eight forms of a letter English does not accent

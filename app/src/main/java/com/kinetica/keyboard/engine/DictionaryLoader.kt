@@ -23,10 +23,20 @@ class LoadedDictionary(
  */
 object DictionaryLoader {
 
-    /** Lines of "word&lt;TAB&gt;count". Invalid lines are skipped, not fatal. */
+    /**
+     * Lines of "word&lt;TAB&gt;count". Invalid lines are skipped, not fatal.
+     *
+     * [blocked] holds lower-cased spellings the user never wants offered. They
+     * are dropped here, before folding and before the trie is built, so a
+     * blocked word leaves no node behind and cannot be decoded, completed or
+     * suggested. Filtering the corpus alone would not be enough - a word typed
+     * often enough comes back through [extraWords] - so the block applies to
+     * both sources.
+     */
     fun load(
         reader: BufferedReader,
         extraWords: List<Pair<String, Int>> = emptyList(),
+        blocked: Set<String> = emptySet(),
     ): LoadedDictionary {
         // Duplicate displays (corpus word also in the user dictionary) merge
         // by summing counts, so personal use adds to corpus evidence.
@@ -36,9 +46,11 @@ object DictionaryLoader {
             if (tab <= 0) return@forEachLine
             val count = line.substring(tab + 1).trim().toIntOrNull() ?: return@forEachLine
             val word = line.substring(0, tab)
+            if (word.lowercase() in blocked) return@forEachLine
             countByDisplay[word] = (countByDisplay[word] ?: 0) + count
         }
         for ((word, count) in extraWords) {
+            if (word.lowercase() in blocked) continue
             countByDisplay[word] = (countByDisplay[word] ?: 0) + count
         }
 
@@ -84,7 +96,8 @@ object DictionaryLoader {
     fun loadWordlist(
         reader: BufferedReader,
         extraWords: List<Pair<String, Int>> = emptyList(),
-    ): Trie = load(reader, extraWords).trie
+        blocked: Set<String> = emptySet(),
+    ): Trie = load(reader, extraWords, blocked).trie
 
     /**
      * Lines of "w1&lt;TAB&gt;w2&lt;TAB&gt;count". Counts exceed Int range ("of the" in a

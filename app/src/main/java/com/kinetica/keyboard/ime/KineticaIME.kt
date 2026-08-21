@@ -15,6 +15,7 @@ import android.util.TypedValue
 import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.preference.PreferenceManager
 import com.kinetica.keyboard.data.DictionaryStore
 import com.kinetica.keyboard.data.KineticaDb
@@ -49,6 +50,7 @@ import com.kinetica.keyboard.settings.Prefs
 import com.kinetica.keyboard.settings.SettingsActivity
 import com.kinetica.keyboard.ui.EmojiPickerView
 import com.kinetica.keyboard.ui.InputContainerView
+import com.kinetica.keyboard.ui.Hsv
 import com.kinetica.keyboard.ui.KeyboardTheme
 import com.kinetica.keyboard.ui.KeyboardView
 import com.kinetica.keyboard.ui.SuggestionBarView
@@ -134,6 +136,10 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     private var lastCandidates: List<WordCandidate> = emptyList()
     private var lastLiteral = ""
     private var expectedSelectionUpdates = 0
+    // The word reloadWordUnderCursor seeded back from the editor, if any. Read
+    // once at commit to keep a re-commit of unchanged text from being learned
+    // twice; see learnsOnCommit.
+    private var reloadedWord: String? = null
 
     // The editor's selection, normalized so start <= end; equal means a plain
     // cursor. Insertions need none of this - commitText replaces a selection by
@@ -152,6 +158,11 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     private var lastCommitWord: String? = null
     private var lastCommitTrailing = ""
 
+    // True while the space directly before the cursor is one autospace put there,
+    // not one the user typed. Only an automatic space is taken back by punctuation:
+    // a deliberate space before a dash is the user's own and stays.
+    private var autospaceInserted = false
+
     private var autospacePending = false
     private val autospaceRunnable = Runnable {
         autospacePending = false
@@ -159,6 +170,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             if (finalizePendingWord()) {
                 commitTracked(" ")
                 lastCommitTrailing = " "
+                autospaceInserted = true
                 updateAutoShift()
             }
         }
@@ -204,7 +216,8 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
                 // Stored dictionary data changed, or the secondary-language
                 // predictor must be loaded or dropped: reload in place.
                 loadDictionaryAsync()
-            } else if (config.emojiKey != previous.emojiKey ||
+            } else if (config.keyArrangement != previous.keyArrangement ||
+                config.emojiKey != previous.emojiKey ||
                 config.numberPriority != previous.numberPriority ||
                 config.plainLetterAlternates != previous.plainLetterAlternates ||
                 config.commaMode != previous.commaMode ||
@@ -256,8 +269,11 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
                 }
                 val userWords =
                     DictionaryLoader.userWordsForMerge(userRows.map { it.word to it.frequency })
+                // Words the user has blocked never reach the trie, so they
+                // cannot be decoded, completed or suggested.
+                val blocked = blockedWords(lang)
                 val dict = openWordlist(lang).bufferedReader().use {
-                    DictionaryLoader.load(it, userWords)
+                    DictionaryLoader.load(it, userWords, blocked)
                 }
                 val bigrams = assets.open(bigramsAsset(lang)).bufferedReader().use {
                     DictionaryLoader.loadBigrams(it, dict.trie)
@@ -284,6 +300,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
                                 DictionaryLoader.userWordsForMerge(
                                     altRows.map { r -> r.word to r.frequency },
                                 ),
+                                blockedWords(other),
                             )
                         }
                         val b = assets.open(bigramsAsset(other)).bufferedReader().use {
@@ -333,6 +350,19 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         }, "kinetica-dict-load").start()
     }
 
+    /**
+     * Blocked spellings for [lang], lower-cased to match the loader's test. An
+     * unavailable table is an empty block list rather than a failed load: the
+     * keyboard has to come up either way.
+     */
+    private fun blockedWords(lang: String): Set<String> = try {
+        KineticaDb.get(this).blockedWords().wordsForLanguage(lang)
+            .mapTo(HashSet()) { it.lowercase() }
+    } catch (e: RuntimeException) {
+        Log.w(TAG, "blocked words unavailable for $lang", e)
+        emptySet()
+    }
+
     /** Imported (AOSP-merged) wordlist overrides the bundled asset. */
     private fun openWordlist(lang: String): java.io.InputStream {
         val override = DictionaryStore.wordlistOverride(this, lang)
@@ -358,6 +388,9 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     /** Alpha layout with settings-driven mutations applied. */
     private fun alphaLayout(): KeyboardLayout {
         var l = layoutFor(alphaLayoutName())
+        // First in the chain: every mutation below matches keys by output or
+        // by id, so they must see the letters where the user will.
+        l = LayoutMutations.withLetterArrangement(l, config.keyArrangement)
         // Enter's held/slide-up alternate popup is always on; the
         // symbols are settings-configurable (first is the primary).
         l = LayoutMutations.withEnterAlternates(l, config.enterAlternates)
@@ -424,6 +457,10 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             onBackspace = { onBackspace() },
             onClose = { closeEmojiPicker() },
         ).also { emojiPicker = it }
+        // Built lazily, so it misses the applyViewConfig that ran at startup.
+        picker.theme = KeyboardTheme.resolve(
+            this, config.themeMode, config.themeColor, config.themeBrightness,
+        )
         container.showEmojiPicker(picker)
     }
 
@@ -464,6 +501,8 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         kv.theme = theme
         suggestionBar?.theme = theme
         containerView?.applyTheme(theme)
+        emojiPicker?.theme = theme
+        applyNavigationBarColor(theme)
         kv.trailBaseHue =
             if (config.trailColorMode == "theme") theme.accentHue else config.trailBaseHue
         kv.longPressMs = config.longPressMs
@@ -488,6 +527,28 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             lp.height = targetH
             kv.requestLayout()
         }
+    }
+
+    /**
+     * Paints the system navigation bar to match the keyboard.
+     *
+     * Nothing here used to touch the IME's window, so the strip below the keyboard
+     * kept the platform default - a black band under a themed keyboard, which is
+     * what it looked like.
+     *
+     * Icon contrast comes from the background's own luminance rather than a new
+     * flag, so it stays right for a custom hue as well as for the two bundled
+     * palettes. navigationBarColor is deprecated once a target of 35 enforces
+     * edge-to-edge; at targetSdk 34 it still applies, and raising the target is a
+     * reproducible-build change that has to be measured on its own.
+     */
+    private fun applyNavigationBarColor(theme: KeyboardTheme) {
+        val w = window?.window ?: return
+        @Suppress("DEPRECATION")
+        w.navigationBarColor = theme.background
+        val lightBackground = Hsv.luminance(theme.background) > 0.5
+        WindowInsetsControllerCompat(w, w.decorView)
+            .isAppearanceLightNavigationBars = lightBackground
     }
 
     /**
@@ -939,7 +1000,23 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         return true
     }
 
+    /**
+     * Removes an automatically inserted space when [text] is punctuation that hugs
+     * the word before it. No-op for a space the user typed, and no-op once anything
+     * else has been committed since - the flag is cleared by every other path
+     * through commitTracked.
+     */
+    private fun eatAutospaceBefore(text: String) {
+        if (!autospaceInserted || !hugsPreviousWord(text)) return
+        if (ich.textBeforeCursor(1)?.toString() != " ") return
+        ich.deleteBeforeCursor(1)
+        expectedSelectionUpdates++
+        autospaceInserted = false
+        if (lastCommitTrailing == " ") lastCommitTrailing = ""
+    }
+
     private fun finalizeThenCommitText(text: String) {
+        eatAutospaceBefore(text)
         val committed = finalizePendingWord()
         commitTracked(text)
         if (committed) lastCommitTrailing = text
@@ -998,14 +1075,21 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     // character when the char-slide preference is on.
     private var stagedDeletion = ""
     private var stagedDeletionLength = 0
+    // Cursor offset the staged span is measured back from, captured ONCE when
+    // staging starts. selStart/selEnd follow every programmatic selection made
+    // below, so re-reading them mid-slide would walk this backwards a span at a
+    // time. -1 means nothing is staged.
+    private var stageAnchor = -1
+    // The rest of the snapshot taken when staging starts: the text before the
+    // anchor, and any selection the user already had (its length and its text).
+    private var stageBefore = ""
+    private var stageSelected = 0
+    private var stageSelectedText = ""
+
 
     private fun stageDeletion(units: Int, chars: Boolean) {
         if (units <= 0) {
-            if (stagedDeletionLength > 0) {
-                stagedDeletion = ""
-                stagedDeletionLength = 0
-                keyboardView?.setDeletePreview(null)
-            }
+            if (stagedDeletionLength > 0) clearStagedDeletion(restoreCursor = true)
             return
         }
         cancelAutospace()
@@ -1017,44 +1101,77 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         // and it honours the existing vibration setting rather than adding one.
         vibrateForKeyPress()
         if (composer?.hasPendingWord == true || tentativeLength > 0) abandonWord()
-        // Text before the SELECTION START, which is what getTextBeforeCursor
-        // returns while a selection is up. The selection itself is the first
-        // staged unit; see DeleteSpan.staged.
-        val before = ich.textBeforeCursor(STAGE_FETCH_CHARS) ?: return
-        val selected = selectionLength()
-        val span = DeleteSpan.staged(selected, before, units, chars)
-        stagedDeletionLength = span
-        val tail = (span - selected).coerceIn(0, before.length)
-        // The chip previews what would go, so the selected run has to be shown
-        // too; a null getSelectedText keeps the LENGTH honest with placeholders
-        // rather than desynchronising the preview from what commit will delete.
-        val selectedText = if (selected > 0) {
-            ich.selectedText()?.toString()?.takeIf { it.length == selected } ?: "·".repeat(selected)
-        } else {
-            ""
+
+        // Snapshot the editor ONCE, when staging starts. Everything after this
+        // reads the snapshot, because from the first highlight onwards the live
+        // selection is one this method made: getTextBeforeCursor would then return
+        // the text before that highlight and selectionLength() would report it as
+        // the user's own, so the span would grow by a whole unit per crossing and
+        // a retraction would grow it too.
+        if (stagedDeletionLength == 0) {
+            stageAnchor = selEnd
+            // A selection the USER had when the slide began is the first staged
+            // unit (DeleteSpan.staged); its text is captured for the chip while it
+            // is still readable.
+            stageSelected = selectionLength()
+            stageBefore = ich.textBeforeCursor(STAGE_FETCH_CHARS)?.toString() ?: ""
+            stageSelectedText = if (stageSelected > 0) {
+                ich.selectedText()?.toString()?.takeIf { it.length == stageSelected }
+                    ?: "\u00b7".repeat(stageSelected)
+            } else {
+                ""
+            }
         }
+        val before = stageBefore
+        val span = DeleteSpan.staged(stageSelected, before, units, chars)
+        stagedDeletionLength = span
+        val tail = (span - stageSelected).coerceIn(0, before.length)
         stagedDeletion =
-            before.subSequence(before.length - tail, before.length).toString() + selectedText
+            before.substring(before.length - tail) + stageSelectedText
+        // Highlight what would go, so it is visible in the text itself and not only
+        // as a chip - the chip stays, because the text may have scrolled out of
+        // view or be a password field. Presentation only: the span deleted on lift
+        // is the same number of characters either way.
+        if (stageAnchor >= span) {
+            ich.setSelection(stageAnchor - span, stageAnchor)
+            expectedSelectionUpdates++
+        }
         keyboardView?.setDeletePreview(
             when {
                 span <= 0 -> null
                 // Never echo password characters into the preview chip.
-                editorState.privateMode -> "•".repeat(span.coerceAtMost(24))
+                editorState.privateMode -> "\u2022".repeat(span.coerceAtMost(24))
                 else -> stagedDeletion
             },
         )
     }
 
-    private fun commitStagedDeletion() {
-        val span = stagedDeletionLength
+    /** Drops the staged span, optionally putting the cursor back where it was. */
+    private fun clearStagedDeletion(restoreCursor: Boolean) {
+        if (restoreCursor && stageAnchor >= 0) {
+            ich.setSelection(stageAnchor, stageAnchor)
+            expectedSelectionUpdates++
+        }
         stagedDeletion = ""
         stagedDeletionLength = 0
+        stageAnchor = -1
+        stageSelected = 0
+        stageBefore = ""
+        stageSelectedText = ""
         keyboardView?.setDeletePreview(null)
+    }
+
+    private fun commitStagedDeletion() {
+        val span = stagedDeletionLength
+        val anchor = stageAnchor
+        // Do NOT restore the cursor here: the span is about to go, and collapsing
+        // the selection first would only make the delete flicker.
+        clearStagedDeletion(restoreCursor = false)
         if (span <= 0) return
-        // Relative delete unless a selection has to be collapsed first: an
-        // absolute setSelection is only as good as the cached offsets, so the
-        // no-selection path stays on the same relative call it always used.
-        if (selectionLength() > 0) ich.deleteEndingAt(selEnd, span) else ich.deleteBeforeCursor(span)
+        // The span is highlighted by now, so collapse to the anchor and delete
+        // back from it. Falls back to the relative call when there is no anchor,
+        // which is the path a staged span without a captured cursor would take.
+        if (anchor >= span) ich.deleteEndingAt(anchor, span) else ich.deleteBeforeCursor(span)
         expectedSelectionUpdates++
         abandonWord()
         updateAutoShift()
@@ -1089,6 +1206,8 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         cancelAutospace()
         // Reserved action outputs never reach the editor as text.
         if (performIfAction(text)) return
+        // "Hi" + autospace + "!" should read "Hi!", not "Hi !".
+        eatAutospaceBefore(text)
         val committed = finalizePendingWord()
         commitTracked(text)
         if (committed) lastCommitTrailing = text
@@ -1156,6 +1275,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         }
         tentativeLength = fragment.length
         tentativeWord = fragment
+        reloadedWord = fragment
         comp.seed(taps)
     }
 
@@ -1180,6 +1300,10 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         commitWordInternal(word)
         commitTracked(" ")
         lastCommitTrailing = " "
+        // A picked word's space is the keyboard's own, exactly like the idle
+        // autospace, so punctuation takes it back the same way. commitTracked
+        // clears the flag, so this has to come after it.
+        autospaceInserted = true
         updateAutoShift()
     }
 
@@ -1367,7 +1491,9 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             // full-buffer decode produced no auto-committable word: what is on
             // screen is then a stale partial decode, not what the gesture
             // produced.
-            if (!swipeDecodeEmpty) learnWord(word, lang = lang)
+            if (!swipeDecodeEmpty && learnsOnCommit(word, reloadedWord)) {
+                learnWord(word, lang = lang)
+            }
             lastCommitWord = word
             lastCommitTrailing = ""
             suggestionBar?.showCorrection(
@@ -1376,10 +1502,12 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             )
         }
         swipeDecodeEmpty = false
+        reloadedWord = null
     }
 
     private fun abandonWord() {
         composer?.clear()
+        reloadedWord = null
         tentativeLength = 0
         tentativeWord = ""
         lastCandidates = emptyList()
@@ -1408,6 +1536,10 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     private fun commitTracked(text: String) {
         ich.commitText(text)
         expectedSelectionUpdates++
+        // Cleared here so the flag can only ever describe the space written last.
+        // The two callers that write an automatic space - the autospace runnable
+        // and a suggestion-bar pick - set it again immediately after.
+        autospaceInserted = false
     }
 
     /**
@@ -1425,10 +1557,22 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     }
 
     private fun updateAutoShift() {
+        if (!config.autoCapitalize) {
+            // Drop out of any auto-shift already applied, or turning the setting
+            // off mid-sentence leaves the keyboard stuck in the shifted state it
+            // happened to be in.
+            if (shift.state == ShiftState.State.SHIFT) {
+                shift.autoShift(false)
+                keyboardView?.setShiftUppercase(shift.isShifted)
+            }
+            return
+        }
         if (!editorState.capSentences) return
-        val info = currentInputEditorInfo ?: return
-        val caps = ich.cursorCapsMode(info.inputType) != 0
-        shift.autoShift(caps)
+        // Decided from the text rather than asked of the editor - see
+        // startsNewSentence. A null read is a connection that cannot answer, not
+        // an empty field, so the shift state is left as it stands.
+        val before = ich.textBeforeCursor(CAPS_LOOKBACK_CHARS) ?: return
+        shift.autoShift(startsNewSentence(before))
         keyboardView?.setShiftUppercase(shift.isShifted)
     }
 
@@ -1437,6 +1581,9 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         const val USER_DICT_LIMIT = 5000
         // Backspace slide: how much text to fetch for word-span staging.
         const val STAGE_FETCH_CHARS = 256
+        // Sentence caps: enough tail to skip closing punctuation and walk one
+        // word back for the abbreviation check.
+        const val CAPS_LOOKBACK_CHARS = 48
         // Any-letter (accented Italian included) with internal apostrophes.
         val WORD_RE = Regex("^\\p{L}+(?:'\\p{L}+)*$")
     }
@@ -1449,6 +1596,104 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
  * a pure top-level function so the JVM suite can lock the contract
  * (CompletionTest); callers pass an empty literal for swipe-bearing buffers.
  */
+/**
+ * Whether committing [word] should add a unit of personal weight, given the word
+ * [reloadedFrom] that was seeded back into the composer from text already in the
+ * editor (null when the word was typed from nothing).
+ *
+ * The case this exists for: commit "hello", then delete only the trailing space.
+ * That backspace reloads "hello" as tap anchors so continued typing corrects it,
+ * and the next delimiter commits it a second time - so one authored word earned
+ * two units. Personal weight is the lever the merge floor and the fade both had to
+ * be tuned against, and silent inflation is exactly the self-reinforcing drift
+ * those exist to prevent.
+ *
+ * An EDIT still learns. Backspacing into "hell" and typing "hello" seeds "hell"
+ * and commits "hello", which differs, so it counts - the rule suppresses the
+ * re-commit of an unchanged word and nothing else. Pure and top-level for the same
+ * reason as [suggestionZoneWords]: the learn path itself has no JVM reach.
+ */
+/**
+ * Whether [text] is punctuation that sits directly against the word before it, so
+ * an automatically inserted space in front of it should go.
+ *
+ * Sentence and clause punctuation and closing brackets hug: "Hi" + "!" is "Hi!".
+ * An opening bracket, a dash, a digit or a letter do not - "one - two" and
+ * "a (b)" both want the space that is already there. Kept pure and listed
+ * explicitly rather than derived from a character class, because "is this
+ * punctuation" and "does it hug" are different questions: an em dash is
+ * punctuation and takes a space, an apostrophe hugs but never arrives here.
+ */
+internal fun hugsPreviousWord(text: String): Boolean =
+    text.length == 1 && text[0] in HUGGING_PUNCTUATION
+
+/**
+ * Whether the text immediately before the cursor ends a sentence, so the next
+ * letter should be capitalized. [before] is the tail of the editor's text - at
+ * most `CAPS_LOOKBACK_CHARS` characters - and empty means the cursor is at the
+ * start of the field.
+ *
+ * This exists because `InputConnection.getCursorCapsMode` cannot answer the
+ * question this keyboard asks, which is why autocapitalization did nothing on
+ * device. `TextUtils.getCapsMode`, what editors implement it with, reports
+ * CAP_MODE_SENTENCES only once whitespace separates the cursor from the
+ * terminator, and at the start of a paragraph it reports CAP_MODE_WORDS, which a
+ * field asking for CAP_SENTENCES alone masks away. Both are exactly the moments
+ * this keyboard reads it: punctuation is committed with nothing after it, and the
+ * space before the next word is written as part of that word's commit, so the
+ * cursor is never sitting after ". " when the question is asked.
+ *
+ * Deciding it here also costs nothing: it replaces one query to the editor with
+ * another.
+ *
+ * A newline starts a paragraph and so a sentence. Closing punctuation is skipped,
+ * so 'he said "hi."' still ends one. A lone period inside its own word is an
+ * abbreviation rather than a terminator, which is the platform's own rule and is
+ * what keeps "e.g. " lower-case; a RUN of marks is a terminator, so "Wait..." is
+ * not read as an abbreviation for the period it just gained.
+ *
+ * Accepted cost: a period typed inside a word in a prose field capitalizes what
+ * follows, so "example.com" reads "example.Com". Stock keyboards do the same, and
+ * a URL field asks for no sentence caps in the first place.
+ */
+internal fun startsNewSentence(before: CharSequence): Boolean {
+    var i = before.length
+    while (i > 0 && (before[i - 1] == ' ' || before[i - 1] == '\t')) i--
+    if (i == 0) return true
+    if (before[i - 1] == '\n') return true
+    while (i > 0 && before[i - 1] in SENTENCE_CLOSERS) i--
+    if (i == 0) return true
+    val last = before[i - 1]
+    if (last in SENTENCE_OPENERS) return true
+    if (last !in SENTENCE_TERMINATORS) return false
+    var run = i
+    while (run > 0 && before[run - 1] in SENTENCE_TERMINATORS) run--
+    if (i - run > 1 || last != '.') return true
+    var j = run
+    while (j > 0) {
+        val c = before[j - 1]
+        if (c == ' ' || c == '\t' || c == '\n') break
+        if (c == '.') return false
+        j--
+    }
+    return true
+}
+
+private const val SENTENCE_TERMINATORS = ".!?\u2026"
+
+/** Skipped before looking for a terminator: quotes and closing brackets. */
+private const val SENTENCE_CLOSERS = ")]}\"'\u00bb\u201d\u2019"
+
+/** Spanish opens a sentence with these, so the word after one begins it. */
+private const val SENTENCE_OPENERS = "\u00bf\u00a1"
+
+private const val HUGGING_PUNCTUATION = ".,!?;:)]}\u00bb\u2026"
+
+internal fun learnsOnCommit(word: String, reloadedFrom: String?): Boolean {
+    if (reloadedFrom == null) return true
+    return !word.equals(reloadedFrom, ignoreCase = true)
+}
+
 internal fun suggestionZoneWords(candidates: List<String>, literal: String): List<String> =
     if (literal.isEmpty() || candidates.contains(literal)) candidates
     else candidates + literal

@@ -44,12 +44,21 @@ Run `python3 tools/generate_assets.py --lang <lang>`. Output (into
 `app/src/main/assets/layouts/qwerty_<lang>.json` — copy `qwerty_it.json`
 (same normalized geometry) and edit:
 - `name`, `locale` (e.g. `es_ES`).
+- `"nativeAccents": true` — **required for any language whose own alphabet uses
+  accented letters**, which is every language that needs a layout of its own.
+  It tells `LayoutMutations.withoutForeignAlternates` to leave the accents alone,
+  so a user who enables "Hide accented letters on long-press" (a setting for
+  English, where every accent on the keyboard is foreign) does not lose `ñ` or
+  `è`. Omitting it makes the language's own letters trimmable.
 - Per-key `alternates` arrays — this is where ALL accents live (there is no
   Kotlin accent table): e.g. Spanish `a → ["á","@"]`, `n → ["ñ","!"]`,
   `?123`-layer additions like `¿ ¡` go in `symbols.json` alternates only if
   wanted. Order freely; `LayoutMutations.withNumberPriority` re-partitions
   letters-vs-symbols generically. `hint` (or first alternate) is the key's
-  hint char.
+  hint char. Keep at least one non-letter alternate on every key that carries
+  accents — the trim above declines to empty a popup, so a key whose alternates
+  are all accents keeps all of them, which is a silent exception rather than a
+  bug but is not what anyone wants.
 
 A non-QWERTY arrangement (e.g. AZERTY for French) is just a different JSON,
 but it changes gesture geometry — its golden decodes must use that layout's

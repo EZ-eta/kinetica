@@ -1,0 +1,9 @@
+Polish language support, contributed by pigmej.
+QWERTZ and QZERTY letter arrangements.
+Words can be blocked out of the dictionary.
+Sentence capitalization now works, and can be turned off.
+Punctuation takes back the space before it.
+The backspace slide highlights what it will delete.
+The emoji picker follows the keyboard theme.
+The navigation bar matches the keyboard.
+Long preference titles wrap instead of being cut off.

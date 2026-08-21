@@ -159,4 +159,15 @@
         <item>light</item>
         <item>system</item>
     </string-array>
+
+    <string-array name="key_arrangement_entries">
+        <item>QWERTY</item>
+        <item>QWERTZ (Y and Z swapped)</item>
+        <item>QZERTY (Z and W swapped)</item>
+    </string-array>
+    <string-array name="key_arrangement_values">
+        <item>qwerty</item>
+        <item>qwertz</item>
+        <item>qzerty</item>
+    </string-array>
 </resources>
