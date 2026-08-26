@@ -66,7 +66,14 @@ bytes, and either can install and update over the other's build.
 - From-scratch swipe decoding: banded dynamic time warping over
   arc-length-resampled paths, an anchored segmental trie search, frequency and
   bigram-context scoring
-- Four languages: 46k-word English plus 49k-word Italian, Spanish, and Polish
+- Four languages bundled, not four supported: the trie, DTW matcher, merge and
+  scoring are locale- and layout-independent, so a language is data plus
+  registration - a wordlist, a layout, and the entries listed in
+  [ADDING_A_LANGUAGE.md](ADDING_A_LANGUAGE.md). Polish arrived that way, as a
+  contributor's pull request. The matching alphabet is a-z plus apostrophe and
+  accented Latin letters fold onto it, so Latin scripts fit; a non-Latin script
+  is a major engine change and out of scope.
+- What ships: 46k-word English plus 49k-word Italian, Spanish, and Polish
   dictionaries with real corpus frequencies; 62k–100k bigrams per language;
   switch languages in Settings without restarting the IME. Accented words
   (perché, città, señal, también, dziękuję, późno) are matched through their
