@@ -49,6 +49,7 @@ import com.kinetica.keyboard.settings.KeyboardHeights
 import com.kinetica.keyboard.settings.Prefs
 import com.kinetica.keyboard.settings.SettingsActivity
 import com.kinetica.keyboard.ui.EmojiPickerView
+import com.kinetica.keyboard.ui.EmojiRecents
 import com.kinetica.keyboard.ui.InputContainerView
 import com.kinetica.keyboard.ui.Hsv
 import com.kinetica.keyboard.ui.KeyboardTheme
@@ -77,6 +78,9 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     private val dbExecutor = Executors.newSingleThreadExecutor { r ->
         Thread(r, "kinetica-db")
     }
+
+    /** Resident emoji pick counts, so the picker fills without touching Room. */
+    private val emojiUses = ConcurrentHashMap<String, EmojiRecents.Use>()
 
     private val ich = InputConnectionHelper { currentInputConnection }
     private val engine = GestureEngine(this)
@@ -193,11 +197,6 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             val previous = config
             config = KeyboardConfig.from(p)
             applyViewConfig()
-            if (config.dragHandle != previous.dragHandle && keyboardView != null) {
-                // The strip is added or omitted when the container is built, so
-                // this one setting cannot be applied in place.
-                setInputView(onCreateInputView())
-            }
             if (config.peckMode != previous.peckMode) {
                 // Entering or leaving literal mode mid-word would leave a
                 // half-tracked tentative; settle it as plain text first.
@@ -440,7 +439,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             minKeyboardPx = minKeyboardPx(),
             maxKeyboardPx = maxKeyboardPx(),
             onHeightCommitted = { px -> persistHeightPct(px) },
-            showHandle = config.dragHandle,
+            handleHeightPx = dpToPx(config.dragHandleDp.toFloat()),
         )
         containerView = container
         applyViewConfig()
@@ -453,7 +452,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         finalizePendingWord()
         val picker = emojiPicker ?: EmojiPickerView(
             this,
-            onEmoji = { commitTracked(it) },
+            onEmoji = { recordEmojiUse(it); commitTracked(it) },
             onBackspace = { onBackspace() },
             onClose = { closeEmojiPicker() },
         ).also { emojiPicker = it }
@@ -461,6 +460,9 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         picker.theme = KeyboardTheme.resolve(
             this, config.themeMode, config.themeColor, config.themeBrightness,
         )
+        // On open, not on every pick: the panel stays up while the user taps, and
+        // re-ordering the first tab under a moving finger would shift the next cell.
+        picker.recents = EmojiRecents.ordered(emojiUses.values)
         container.showEmojiPicker(picker)
     }
 
@@ -521,6 +523,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         }
         suggestionBar?.reinforceIncrement = config.reinforceIncrement
         containerView?.setBarHeight(dpToPx(config.suggestionBarDp.toFloat()))
+        containerView?.setHandleHeight(dpToPx(config.dragHandleDp.toFloat()))
         val targetH = keyboardHeightPx()
         val lp = kv.layoutParams
         if (lp != null && lp.height != targetH) {
@@ -599,6 +602,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         setSelectionCache(s, e)
         updateAutoShift()
         reloadChords()
+        reloadEmojiUses()
     }
 
     private fun reloadChords() {
@@ -1389,6 +1393,41 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
                 KineticaDb.get(this).userWords().upsertAdd(w, lang, amount, now)
             } catch (e: RuntimeException) {
                 Log.w(TAG, "learn failed for $w", e)
+            }
+        }
+    }
+
+    /**
+     * One more pick recorded for [emoji]. Same shape as [learnWord]: the resident
+     * map is updated synchronously so the panel is right the next time it opens,
+     * and Room is written on [dbExecutor].
+     */
+    private fun recordEmojiUse(emoji: String) {
+        // A password field must not populate a visible list, exactly as it must
+        // not teach the dictionary.
+        if (editorState.privateMode || emoji.isEmpty()) return
+        val now = System.currentTimeMillis()
+        emojiUses.compute(emoji) { _, v -> EmojiRecents.Use(emoji, (v?.count ?: 0) + 1, now) }
+        dbExecutor.execute {
+            try {
+                KineticaDb.get(this).emojiUses().upsertAdd(emoji, 1, now)
+            } catch (e: RuntimeException) {
+                Log.w(TAG, "emoji use not recorded", e)
+            }
+        }
+    }
+
+    /** Seeds [emojiUses] once, so opening the picker never reads Room on the main thread. */
+    private fun reloadEmojiUses() {
+        dbExecutor.execute {
+            val rows = try {
+                KineticaDb.get(this).emojiUses().topN(EmojiRecents.MAX)
+            } catch (e: RuntimeException) {
+                Log.w(TAG, "emoji use table unavailable", e)
+                emptyList()
+            }
+            for (row in rows) {
+                emojiUses[row.emoji] = EmojiRecents.Use(row.emoji, row.count, row.updatedAt)
             }
         }
     }

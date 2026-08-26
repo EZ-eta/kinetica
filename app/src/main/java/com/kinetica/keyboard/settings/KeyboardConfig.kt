@@ -17,7 +17,7 @@ data class KeyboardConfig(
     /** Suggestion-strip height in dp; its text and ornaments scale off it. */
     val suggestionBarDp: Int,
     /** Draw the resize handle strip above the suggestion bar. */
-    val dragHandle: Boolean,
+    val dragHandleDp: Int,
     val layoutMode: LayoutMode,
     /** Letter arrangement: qwerty | qwertz | qzerty. */
     val keyArrangement: String,
@@ -79,7 +79,14 @@ data class KeyboardConfig(
             suggestionBarDp = prefs.getInt(
                 Prefs.SUGGESTION_BAR_DP, Prefs.DEFAULT_SUGGESTION_BAR_DP,
             ).coerceIn(BarMetrics.MIN_DP.toInt(), BarMetrics.MAX_DP.toInt()),
-            dragHandle = prefs.getBoolean(Prefs.DRAG_HANDLE, Prefs.DEFAULT_DRAG_HANDLE),
+            dragHandleDp = KeyboardHeights.handleDp(
+                if (prefs.contains(Prefs.DRAG_HANDLE_DP)) {
+                    prefs.getInt(Prefs.DRAG_HANDLE_DP, KeyboardHeights.MAX_HANDLE_DP)
+                } else {
+                    null
+                },
+                legacyHandleOn = prefs.getBoolean(Prefs.DRAG_HANDLE, Prefs.DEFAULT_DRAG_HANDLE),
+            ),
             layoutMode = LayoutMode.fromPref(
                 prefs.getString(Prefs.LAYOUT_MODE, "full"),
             ),

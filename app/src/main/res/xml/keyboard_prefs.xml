@@ -31,12 +31,15 @@
         app:min="24"
         app:showSeekBarValue="true" />
 
-    <SwitchPreferenceCompat
-        android:key="pref_drag_handle"
+    <SeekBarPreference
+        android:key="pref_drag_handle_dp"
         android:title="@string/pref_drag_handle_title"
         app:singleLineTitle="false"
         android:summary="@string/pref_drag_handle_summary"
-        android:defaultValue="true" />
+        android:defaultValue="20"
+        android:max="20"
+        app:min="0"
+        app:showSeekBarValue="true" />
 
     <ListPreference
         android:key="pref_key_arrangement"

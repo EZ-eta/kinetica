@@ -95,4 +95,30 @@ class KeyboardHeightsTest {
         // A zero-height screen is a rotation race, not a reason to divide by it.
         assertEquals(Prefs.DEFAULT_HEIGHT_PCT, KeyboardHeights.pctFor(500, 0))
     }
+
+    // ---------------------------------------------------------- handle height
+
+    @Test
+    fun anUpgradeKeepsTheHandleTheUserAlreadyHad() {
+        // Nothing written yet: the pre-1.0.4 switch decides, both ways.
+        assertEquals(KeyboardHeights.MAX_HANDLE_DP, KeyboardHeights.handleDp(null, legacyHandleOn = true))
+        assertEquals(0, KeyboardHeights.handleDp(null, legacyHandleOn = false))
+    }
+
+    @Test
+    fun aWrittenHeightOverridesTheOldSwitch() {
+        assertEquals(8, KeyboardHeights.handleDp(8, legacyHandleOn = false))
+        assertEquals(8, KeyboardHeights.handleDp(8, legacyHandleOn = true))
+    }
+
+    @Test
+    fun zeroIsTheOffStateAndIsReachable() {
+        assertEquals(0, KeyboardHeights.handleDp(0, legacyHandleOn = true))
+    }
+
+    @Test
+    fun theHeightIsHeldInsideItsBounds() {
+        assertEquals(0, KeyboardHeights.handleDp(-5, legacyHandleOn = true))
+        assertEquals(KeyboardHeights.MAX_HANDLE_DP, KeyboardHeights.handleDp(999, legacyHandleOn = false))
+    }
 }

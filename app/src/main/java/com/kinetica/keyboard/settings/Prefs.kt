@@ -16,7 +16,12 @@ object Prefs {
      * height percentage cannot reach; off, the keyboard is resized from the
      * height slider instead.
      */
+    /**
+     * Superseded by [DRAG_HANDLE_DP] and read only to derive it on upgrade, so a
+     * user who turned the strip off keeps it off. Not shown in Settings any more.
+     */
     const val DRAG_HANDLE = "pref_drag_handle"
+    const val DRAG_HANDLE_DP = "pref_drag_handle_dp"
     const val LAYOUT_MODE = "pref_layout_mode"
 
     /**

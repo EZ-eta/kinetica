@@ -148,7 +148,11 @@ bytes, and either can install and update over the other's build.
   first long-press alternate
 - Emoji: a Settings toggle (default off) makes the picker the first
   long-press option on the comma key; X-key swipe-down always opens the
-  category-tabbed picker regardless of the toggle
+  category-tabbed picker regardless of the toggle. A "frequently used" tab
+  leads the strip once there is something in it, ordered by how often each
+  emoji is picked rather than by recency - one sent daily outranks one sent
+  once yesterday - and it is hidden until then. Picks in a password field are
+  never recorded
 - Dictionary management (Settings > Dictionary): per-language base and
   personal dictionary info; on-device import of an AOSP-format
   `wordlist.combined` merged against the bundled wordlist (no Python
@@ -158,7 +162,9 @@ bytes, and either can install and update over the other's build.
   a full palette derived from one custom primary color; trail color can
   follow the theme accent
 - Five layout modes: full, right-aligned, left-aligned, split, one-handed
-- Adjustable height (drag the handle above the suggestion bar, or Settings)
+- Adjustable height (drag the handle above the suggestion bar, or Settings);
+  the handle's own height is a 0-20dp setting applied live, and zero removes it
+  and reclaims the strip
 - Autospace after swiped words with configurable delay and spacebar indicator
 - Zen mode: disables all animation work for battery/GPU savings
 - On-device learning: every committed word (and any unknown word) feeds a
@@ -182,7 +188,9 @@ Settings and simply hard to find. The ones that come up most:
   instead.
 - **A shorter keyboard.** *Keyboard height* goes down to 10% of the screen.
   *Suggestion bar height* shrinks the strip above it - the word text scales with
-  it - and *Show the resize handle* off reclaims the grip strip as well.
+  it - and *Resize handle height* takes the grip strip from 20dp down to 0,
+  which reclaims it entirely. It applies as you drag, without the keyboard
+  being torn down and rebuilt.
 - **Light theme and your own colour.** *Light or dark* (or follow the system),
   and *Accent hue* is a slider with a preview of the palette underneath it, so
   you can see the change without leaving Settings.

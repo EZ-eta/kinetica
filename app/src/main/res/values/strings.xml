@@ -26,8 +26,8 @@
     <string name="pref_height_title">Keyboard height (% of screen)</string>
     <string name="pref_suggestion_bar_title">Suggestion bar height (dp)</string>
     <string name="pref_suggestion_bar_summary">The word text and its badges scale with the bar, so a thinner bar means smaller text too</string>
-    <string name="pref_drag_handle_title">Show the resize handle</string>
-    <string name="pref_drag_handle_summary">The grip strip above the suggestion bar. Turning it off reclaims 20dp; the keyboard can still be resized with the height slider above</string>
+    <string name="pref_drag_handle_title">Resize handle height</string>
+    <string name="pref_drag_handle_summary">The grip strip above the suggestion bar, in dp. Zero removes it and reclaims the space; the keyboard can still be resized with the height slider above</string>
     <string name="pref_key_arrangement_title">Letter arrangement</string>
     <string name="pref_key_arrangement_summary">Which letter sits on which key. Accents, digits and symbols stay where they are</string>
     <string name="pref_layout_mode_title">Layout mode</string>
@@ -167,6 +167,7 @@
     <string name="pref_comma_custom_title">Comma key custom text</string>
     <string name="pref_comma_custom_summary">Used by the custom character and custom text options above</string>
     <string name="emoji_back_to_letters">ABC</string>
+    <string name="emoji_recent">Frequently used</string>
 
     <string name="pref_theme_mode_title">Keyboard theme</string>
     <string name="pref_theme_brightness_title">Light or dark</string>

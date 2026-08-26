@@ -1,0 +1,3 @@
+Emoji you use often now get their own tab in the picker.
+The resize handle's height is adjustable, and can be set to zero to reclaim the space.
+English contractions like don't and here's are predicted properly.

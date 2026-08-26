@@ -36,9 +36,31 @@ class EmojiPickerView(
     private val gridScroll = ScrollView(context)
     private val grid = LinearLayout(context).apply { orientation = VERTICAL }
     private val density = resources.displayMetrics.density
+    private val tabs = LinearLayout(context).apply { orientation = HORIZONTAL }
     private val tabViews = ArrayList<TextView>()
     private val footerViews = ArrayList<TextView>()
     private var shownCategory = 0
+
+    /** The asset's own entries by character, so a recorded emoji keeps its name. */
+    private val byChar = HashMap<String, Emoji>()
+    private var recentEntries: List<Emoji> = emptyList()
+
+    /**
+     * The emoji this user picks most, best first, from [EmojiRecents].
+     *
+     * Pushed when the panel is opened rather than after every tap, deliberately:
+     * re-ordering the first tab under a finger that is still tapping would move
+     * the next cell out from under it. The tab is absent entirely until there is
+     * something to put in it, so a fresh install sees exactly the shipped panel.
+     */
+    var recents: List<String> = emptyList()
+        set(value) {
+            if (field == value) return
+            field = value
+            recentEntries = value.map { byChar[it] ?: Emoji(it, "", emptyList()) }
+            rebuildTabs()
+            showCategory(shownCategory.coerceIn(0, (panels().size - 1).coerceAtLeast(0)))
+        }
 
     /**
      * Resolved color roles, pushed from the service like [SuggestionBarView.theme]
@@ -60,20 +82,9 @@ class EmojiPickerView(
     init {
         orientation = VERTICAL
         categories = loadCategories()
+        for (cat in categories) for (e in cat.emoji) byChar.putIfAbsent(e.ch, e)
 
-        val tabs = LinearLayout(context).apply { orientation = HORIZONTAL }
-        for ((i, cat) in categories.withIndex()) {
-            val tab = TextView(context).apply {
-                text = cat.icon
-                contentDescription = cat.name
-                textSize = 22f
-                gravity = Gravity.CENTER
-                setPadding(dp(10), dp(6), dp(10), dp(6))
-                setOnClickListener { showCategory(i) }
-            }
-            tabViews.add(tab)
-            tabs.addView(tab)
-        }
+        rebuildTabs()
         addView(
             HorizontalScrollView(context).apply {
                 isHorizontalScrollBarEnabled = false
@@ -101,7 +112,37 @@ class EmojiPickerView(
         addView(bottom, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
 
         applyTheme()
-        if (categories.isNotEmpty()) showCategory(0)
+        if (panels().isNotEmpty()) showCategory(0)
+    }
+
+    /**
+     * What the tab strip addresses: the frequently-used panel when it has
+     * contents, then the asset's categories. Recomputed rather than stored so
+     * the tab index and the panel list can never disagree.
+     */
+    private fun panels(): List<Category> =
+        if (recentEntries.isEmpty()) {
+            categories
+        } else {
+            listOf(Category(context.getString(R.string.emoji_recent), RECENT_ICON, recentEntries)) + categories
+        }
+
+    private fun rebuildTabs() {
+        tabs.removeAllViews()
+        tabViews.clear()
+        for ((i, cat) in panels().withIndex()) {
+            val tab = TextView(context).apply {
+                text = cat.icon
+                contentDescription = cat.name
+                textSize = 22f
+                gravity = Gravity.CENTER
+                setPadding(dp(10), dp(6), dp(10), dp(6))
+                setTextColor(theme.keyText)
+                setOnClickListener { showCategory(i) }
+            }
+            tabViews.add(tab)
+            tabs.addView(tab)
+        }
     }
 
     private fun footerControl(label: String, onTap: () -> Unit): TextView {
@@ -126,7 +167,7 @@ class EmojiPickerView(
             f.setBackgroundColor(theme.keySpecial)
         }
         // The grid is rebuilt per category, so its cells take the colour there.
-        if (categories.isNotEmpty()) showCategory(shownCategory)
+        if (panels().isNotEmpty()) showCategory(shownCategory)
     }
 
     private fun dp(v: Int): Int =
@@ -156,12 +197,13 @@ class EmojiPickerView(
     }
 
     private fun showCategory(index: Int) {
+        val shown = panels().getOrNull(index) ?: return
         shownCategory = index
         grid.removeAllViews()
         gridScroll.scrollTo(0, 0)
         val perRow = COLUMNS
         var row: LinearLayout? = null
-        for ((i, entry) in categories[index].emoji.withIndex()) {
+        for ((i, entry) in shown.emoji.withIndex()) {
             val ch = entry.ch
             if (i % perRow == 0) {
                 row = LinearLayout(context).apply { orientation = HORIZONTAL }
@@ -190,5 +232,9 @@ class EmojiPickerView(
 
     private companion object {
         const val COLUMNS = 8
+
+        /** Marks the frequently-used tab. A star, not a clock: it is ordered by
+         *  how often an emoji is used, not by when it last was. */
+        const val RECENT_ICON = "\u2605"
     }
 }

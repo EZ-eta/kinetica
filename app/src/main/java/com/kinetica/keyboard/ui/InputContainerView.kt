@@ -23,12 +23,16 @@ class InputContainerView(
     barHeightPx: Int,
     keyboardHeightPx: Int,
     /**
-     * Draw the resize handle strip at all. It costs 20dp above the suggestion
-     * bar, which the height percentage cannot reach, and two reporters wanted
-     * that space back. With it off the keyboard is resized from Settings
+     * Height of the resize handle strip, in px, zero for none. It sits above the
+     * suggestion bar where the height percentage cannot reach, and two reporters
+     * wanted that space back; at zero the keyboard is resized from Settings
      * instead, so the capability moves rather than disappearing.
+     *
+     * The strip is added whatever this is, so that a change in it can be applied
+     * to the live view like the bar's height rather than forcing the whole input
+     * view to be rebuilt. At zero the view has no area and so takes no touches.
      */
-    private val showHandle: Boolean,
+    handleHeightPx: Int,
     minKeyboardPx: Int,
     maxKeyboardPx: Int,
     private val onHeightCommitted: (px: Int) -> Unit,
@@ -46,13 +50,10 @@ class InputContainerView(
 
     init {
         orientation = VERTICAL
-        val density = resources.displayMetrics.density
-        if (showHandle) {
-            addView(
-                handle,
-                LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (HANDLE_DP * density).toInt()),
-            )
-        }
+        addView(
+            handle,
+            LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, handleHeightPx.coerceAtLeast(0)),
+        )
         addView(suggestionBar, LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, barHeightPx))
         addView(
             keyboardView,
@@ -61,12 +62,22 @@ class InputContainerView(
                 keyboardHeightPx.coerceIn(minKeyboardPx, maxKeyboardPx),
             ),
         )
-        if (showHandle) wireHandle()
+        wireHandle()
     }
 
     /** Handle strip colors follow the active theme. */
     fun applyTheme(theme: KeyboardTheme) {
         handle.setColors(theme.suggestionBg, theme.keyHint)
+    }
+
+    /** Live resize of the handle strip; zero hides it. */
+    fun setHandleHeight(px: Int) {
+        val lp = handle.layoutParams ?: return
+        val h = px.coerceAtLeast(0)
+        if (lp.height != h) {
+            lp.height = h
+            handle.requestLayout()
+        }
     }
 
     /** Live resize of the suggestion strip, mirroring the keyboard's own path. */
@@ -154,12 +165,6 @@ class InputContainerView(
                 pillH / 2f, pillH / 2f, pillPaint,
             )
         }
-    }
-
-    private companion object {
-        // Unchanged from the first ship; the setting turns the strip off
-        // rather than shrinking it, so nobody's handle moves under them.
-        const val HANDLE_DP = 20f
     }
 
 }

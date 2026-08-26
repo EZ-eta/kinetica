@@ -37,6 +37,27 @@ object KeyboardHeights {
      */
     const val MIN_KEYBOARD_DP = 96f
 
+    /**
+     * Widest the resize handle may be. 20dp is what it has always drawn, and the
+     * strip is pure chrome: the pill inside it is a quarter of its height, so a
+     * narrower strip still shows a grip.
+     */
+    const val MAX_HANDLE_DP = 20
+
+    /**
+     * The handle's height in dp.
+     *
+     * [storedDp] is null until the height setting has ever been written, which is
+     * every install upgrading from a build that only had the on/off switch. Those
+     * users keep exactly what they had - full height when the switch was on, and
+     * zero, meaning no strip at all, when it was off - so nobody's handle moves
+     * under them on upgrade. Zero is the off state rather than a separate flag,
+     * which is what lets the strip always be a child of the container and so be
+     * resized live instead of forcing the input view to be rebuilt.
+     */
+    fun handleDp(storedDp: Int?, legacyHandleOn: Boolean): Int =
+        (storedDp ?: if (legacyHandleOn) MAX_HANDLE_DP else 0).coerceIn(0, MAX_HANDLE_DP)
+
     fun maxPx(screenHeightPx: Int): Int = screenHeightPx * Prefs.MAX_HEIGHT_PCT / 100
 
     /**
