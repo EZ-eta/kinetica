@@ -1,5 +1,6 @@
 # Kinetica
 
+[![F-Droid](https://img.shields.io/f-droid/v/com.kinetica.keyboard?logo=fdroid)](https://f-droid.org/packages/com.kinetica.keyboard/)
 [![Latest release](https://img.shields.io/github/v/release/EZ-eta/kinetica?logo=github)](https://github.com/EZ-eta/kinetica/releases/latest)
 [![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue)](LICENSE)
 [![Support on Ko-fi](https://img.shields.io/badge/support-Ko--fi-FF5A16?logo=kofi&logoColor=white)](https://ko-fi.com/ez_eta)
@@ -31,25 +32,31 @@ https://github.com/user-attachments/assets/220ca042-322f-45df-bbd5-04a6b06d4a66
 
 ## Install
 
-Grab `kinetica-<version>.apk` from the
+[<img src="https://f-droid.org/badge/get-it-on.png" alt="Get it on F-Droid" height="80">](https://f-droid.org/packages/com.kinetica.keyboard/)
+
+F-Droid is the recommended channel: it updates in the background and verifies
+the build for you. New versions reach it a few days after a release is tagged
+here.
+
+Or take `kinetica-<version>.apk` from the
 [latest release](https://github.com/EZ-eta/kinetica/releases/latest):
 
 ```bash
 adb install -r kinetica-*.apk
 ```
 
-Then open the Kinetica icon and follow the three enable steps. If you have been
-running a debug build, uninstall it first - it carries a different signing key,
-so Android will refuse the upgrade. Export your personal dictionary
-(Settings > Dictionary) before you do.
+Either way, open the Kinetica icon afterwards and follow the three enable steps.
+If you have been running a debug build, uninstall it first - it carries a
+different signing key, so Android will refuse the upgrade. Export your personal
+dictionary (Settings > Dictionary) before you do.
 
 Release APKs are signed with the project's own key by the tagged
 [release workflow](.github/workflows/release.yml), so the build behind any given
-APK is public and inspectable. Kinetica is being submitted to F-Droid as a
+APK is public and inspectable. Kinetica ships to F-Droid as a
 [reproducible build](https://f-droid.org/docs/Reproducible_Builds): F-Droid
-rebuilds the tag, verifies its own output against the APK above, and ships this
-same signature - so once the listing is live, either source can install and
-update the other's build.
+rebuilds the tag on its own servers, verifies its output against the APK above,
+and publishes that same signature. The two channels therefore carry the same
+bytes, and either can install and update over the other's build.
 
 ## Features
 
