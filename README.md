@@ -203,6 +203,12 @@ Settings and simply hard to find. The ones that come up most:
   up to prefer it, down to demote it. *Reinforce increment* sets the step size,
   and Settings > Dictionary > *Review learned words* lists everything Kinetica
   has picked up, with a search box and per-word delete.
+- **Get rid of a word for good.** Sliding a suggestion down only lowers its
+  priority; it can still come back. Settings > Dictionary > *Blocked words* takes
+  a spelling and drops it out of the dictionary altogether, so it stops being
+  offered at all. The dialog stays open after each one, since blocking several in
+  a row is the usual case, and tapping a word already in the list lifts the block.
+  Per language, and it takes effect on the next word you type.
 - **A much bigger dictionary.** Settings > Dictionary > *Import improved
   dictionary* takes an AOSP `wordlist.combined` and merges it with the bundled
   list - three to five times the words. Grab one from
