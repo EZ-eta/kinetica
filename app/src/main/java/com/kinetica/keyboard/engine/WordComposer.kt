@@ -51,6 +51,53 @@ class WordComposer(
     private val generation = AtomicInteger()
 
     /**
+     * At most one decode worker is queued at a time. Fast tap sequences can
+     * otherwise enqueue a full dictionary decode for every letter faster than
+     * the single decode thread can consume them. Those intermediate results are
+     * stale before they even start, but they still used to run to completion and
+     * delay the only result the user can see.
+     *
+     * The pending slot is latest-wins: a running worker finishes its current
+     * predictor call (WordPredictor is thread-confined and not interruptible),
+     * then jumps directly to the newest snapshot. This bounds obsolete work to
+     * one in-flight active-language decode instead of an unbounded executor
+     * backlog. The generation checks also avoid starting the optional second-
+     * language decode once the first pass has already gone stale.
+     */
+    private data class DecodeRequest(
+        val tokens: List<InputToken>,
+        val context: List<String>,
+        val generation: Int,
+        val literal: String,
+        val alternate: WordPredictor?,
+    )
+
+    private val decodeLock = Any()
+    private var pendingDecode: DecodeRequest? = null
+    private var decodeWorkerScheduled = false
+    private val decodeWorker = Runnable {
+        try {
+            drainDecodes()
+        } finally {
+            // A predictor/main-executor failure must not strand the composer in
+            // a permanently "scheduled" state. If input arrived while the
+            // failed worker was running, hand that latest snapshot to a fresh
+            // executor task; otherwise simply reopen scheduling for the next
+            // token.
+            val reschedule = synchronized(decodeLock) {
+                decodeWorkerScheduled = false
+                if (pendingDecode != null) {
+                    decodeWorkerScheduled = true
+                    true
+                } else {
+                    false
+                }
+            }
+            if (reschedule) submitDecodeWorker()
+        }
+    }
+
+    /**
      * Second enabled language: when set, swipe-bearing words also decode
      * against it and BOTH lists are ranked together into one (see [merge]).
      * Main thread writes, decode thread reads.
@@ -113,17 +160,56 @@ class WordComposer(
 
     private fun requestDecode() {
         val snapshot = ArrayList(tokens)
-        val ctx = context.toList()
-        val gen = generation.incrementAndGet()
-        val literal = buildLiteral(snapshot)
-        val alternate = alternatePredictor
-        decodeExecutor.execute {
-            val active = predictor.decode(snapshot, ctx)
+        val request = DecodeRequest(
+            tokens = snapshot,
+            context = context.toList(),
+            generation = generation.incrementAndGet(),
+            literal = buildLiteral(snapshot),
+            alternate = alternatePredictor,
+        )
+        val scheduleWorker = synchronized(decodeLock) {
+            pendingDecode = request
+            if (decodeWorkerScheduled) {
+                false
+            } else {
+                decodeWorkerScheduled = true
+                true
+            }
+        }
+        if (scheduleWorker) submitDecodeWorker()
+    }
+
+    private fun submitDecodeWorker() {
+        try {
+            decodeExecutor.execute(decodeWorker)
+        } catch (e: RuntimeException) {
+            synchronized(decodeLock) { decodeWorkerScheduled = false }
+            throw e
+        }
+    }
+
+    private fun drainDecodes() {
+        while (true) {
+            val request = synchronized(decodeLock) {
+                pendingDecode?.also { pendingDecode = null }
+            } ?: return
+            // A clear/commit or newer token can supersede a request before its
+            // queued worker starts. Do not spend any dictionary work on it.
+            if (request.generation != generation.get()) continue
+
+            val active = predictor.decode(request.tokens, request.context)
+            // Auto-detect can double decode cost. If input advanced during the
+            // active-language pass, skip the obsolete second-language pass and
+            // immediately drain the newest snapshot instead.
+            if (request.generation != generation.get()) continue
+
+            val alternate = request.alternate
             // Cross-language ranking applies to swipe-bearing words only (empty
             // literal): all-tap words feed autocorrect, whose isWord semantics
             // are tied to the active language.
-            val merged = if (alternate != null && literal.isEmpty()) {
-                val other = alternate.decode(snapshot, ctx)
+            val merged = if (alternate != null && request.literal.isEmpty()) {
+                val other = alternate.decode(request.tokens, request.context)
+                if (request.generation != generation.get()) continue
                 merge(active, other).also { m ->
                     DecodeTrace.log {
                         val a = active.firstOrNull()
@@ -139,8 +225,11 @@ class WordComposer(
                 Merged(active, active.firstOrNull(), foreignKept = 0, reason = "single")
             }
             mainExecutor.execute {
-                if (gen == generation.get()) {
-                    callbacks.onCandidates(merged.candidates, merged.tentative, literal, gen)
+                if (request.generation == generation.get()) {
+                    callbacks.onCandidates(
+                        merged.candidates, merged.tentative,
+                        request.literal, request.generation,
+                    )
                 }
             }
         }

@@ -121,19 +121,60 @@ class WordComposerTest {
     }
 
     @Test
-    fun staleResultsAreDropped() {
-        // Queue decodes on a manual executor: both tokens arrive before either
-        // decode runs, so the first decode's result is stale by generation.
+    fun aFailedWorkerDoesNotPermanentlyStopFutureDecodes() {
+        val queued = ArrayList<Runnable>()
+        val manual = Executor { queued.add(it) }
+        var failFirst = true
+        var recoveredLiteral = ""
+        val callbacks = object : WordComposer.Callbacks {
+            override fun onCandidates(
+                candidates: List<WordCandidate>,
+                tentative: WordCandidate?,
+                literal: String,
+                generation: Int,
+            ) {
+                if (failFirst) {
+                    failFirst = false
+                    throw IllegalStateException("synthetic callback failure")
+                }
+                recoveredLiteral = literal
+            }
+        }
+        val composer = WordComposer(predictor, manual, direct, callbacks)
+        composer.onToken(TestData.tap('t', g, 0))
+        var failed = false
+        try {
+            queued.removeAt(0).run()
+        } catch (_: IllegalStateException) {
+            failed = true
+        }
+        assertTrue("the synthetic failure must reach the executor", failed)
+
+        composer.onToken(TestData.tap('h', g, 100))
+        assertEquals(1, queued.size)
+        queued.single().run()
+        assertEquals("th", recoveredLiteral)
+    }
+
+    @Test
+    fun pendingDecodesAreCoalescedToTheLatestGeneration() {
+        // Queue the worker without running it, then type several more letters.
+        // Only one executor task should exist: running it must jump directly to
+        // the latest snapshot instead of burning one full decode per stale
+        // prefix first.
         val queued = ArrayList<Runnable>()
         val manual = Executor { queued.add(it) }
         val cap = Capture()
         val composer = WordComposer(predictor, manual, direct, cap)
         composer.onToken(TestData.tap('t', g, 0))
         composer.onToken(TestData.tap('h', g, 100))
-        assertEquals(2, queued.size)
-        queued.forEach { it.run() }
-        // Only the second (current-generation) result may reach the callback.
+        composer.onToken(TestData.tap('e', g, 200))
+        assertEquals(1, queued.size)
+
+        queued.single().run()
+
         assertEquals(1, cap.calls)
-        assertEquals("th", cap.literal)
+        assertEquals("the", cap.literal)
+        assertEquals("the", cap.candidates.first().word)
     }
 }

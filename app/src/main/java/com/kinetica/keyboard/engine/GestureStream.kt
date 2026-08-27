@@ -21,7 +21,7 @@ class GestureStream(
     val streamId: StreamId,
     val pointerId: Int,
     private val geometry: KeyboardGeometry,
-    private val tapDispKw: Float,
+    tapDispKw: Float,
     downXPx: Float,
     downYPx: Float,
     val downTime: Long,
@@ -32,7 +32,8 @@ class GestureStream(
     private val contacts = ArrayList<KeyContact>(16)
     private val downX = downXPx / geometry.keyWidthPx
     private val downY = downYPx / geometry.keyWidthPx
-    private var maxDispKw = 0f
+    private val tapDispSqKw = tapDispKw * tapDispKw
+    private var maxDispSqKw = 0f
     private var currentKey = downCode
     private var currentEnter = downTime
     private var arcLen = 0f
@@ -52,7 +53,7 @@ class GestureStream(
     }
 
     /** True once displacement rules out a tap (the UI uses this to start the trail). */
-    val isSwipeCommitted: Boolean get() = maxDispKw >= tapDispKw
+    val isSwipeCommitted: Boolean get() = maxDispSqKw >= tapDispSqKw
 
     fun addPoint(xPx: Float, yPx: Float, t: Long) {
         val x = xPx / geometry.keyWidthPx
@@ -60,15 +61,18 @@ class GestureStream(
         val last = points[points.size - 1]
         val dxl = x - last.x
         val dyl = y - last.y
-        val stepLen = sqrt(dxl * dxl + dyl * dyl)
-        if (stepLen < 1e-4f && t == last.t) return
+        val stepSq = dxl * dxl + dyl * dyl
+        if (stepSq < MIN_STEP_SQ_KW && t == last.t) return
         points.add(PathPoint(x, y, t))
-        arcLen += stepLen
+        arcLen += sqrt(stepSq)
 
+        // Tap classification and dwell membership only need radius comparisons.
+        // Keeping both sides squared removes two square roots from every raw
+        // touch sample on the UI thread; boundary behavior is locked by tests.
         val dx = x - downX
         val dy = y - downY
-        val disp = sqrt(dx * dx + dy * dy)
-        if (disp > maxDispKw) maxDispKw = disp
+        val dispSq = dx * dx + dy * dy
+        if (dispSq > maxDispSqKw) maxDispSqKw = dispSq
 
         // Before the key-contact early-outs below: a dwell must be seen on every
         // sample, including the ones that change no key.
@@ -94,7 +98,7 @@ class GestureStream(
     private fun trackDwell(idx: Int, x: Float, y: Float, t: Long) {
         val dx = x - runAnchorX
         val dy = y - runAnchorY
-        if (sqrt(dx * dx + dy * dy) <= KineticaConstants.DWELL_RADIUS_KW) {
+        if (dx * dx + dy * dy <= DWELL_RADIUS_SQ_KW) {
             runLastIdx = idx
             runLastT = t
             return
@@ -133,7 +137,7 @@ class GestureStream(
         // must not segment the gesture.
         if (currentKey != -1) contacts.add(KeyContact(currentKey, currentEnter, t))
         val dur = t - downTime
-        if (maxDispKw < tapDispKw) {
+        if (maxDispSqKw < tapDispSqKw) {
             // Spec-literal taps are <150 ms; a stationary dwell decodes exactly
             // like a zero-length swipe would, and the flag is the UI's
             // long-press hook.
@@ -152,6 +156,10 @@ class GestureStream(
     }
 
     private companion object {
+        const val MIN_STEP_SQ_KW = 1e-8f
+        val DWELL_RADIUS_SQ_KW =
+            KineticaConstants.DWELL_RADIUS_KW * KineticaConstants.DWELL_RADIUS_KW
+
         // Resampling touches no DTW row state, so one shared instance is safe
         // here as long as streams are finished on a single (UI) thread.
         val RESAMPLER = DtwMatcher()

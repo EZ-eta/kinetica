@@ -177,6 +177,38 @@ class GestureStreamDwellTest {
     }
 
     @Test
+    fun squaredTapThresholdKeepsBoundaryClassification() {
+        assertTrue(
+            "one ULP below the threshold must remain a tap",
+            tokenAtDisplacement(java.lang.Math.nextDown(TAP_DISP_KW)) is TapToken,
+        )
+        assertTrue(
+            "the threshold itself commits a swipe",
+            tokenAtDisplacement(TAP_DISP_KW) is SwipeToken,
+        )
+        assertTrue(
+            "one ULP above the threshold must remain a swipe",
+            tokenAtDisplacement(java.lang.Math.nextUp(TAP_DISP_KW)) is SwipeToken,
+        )
+    }
+
+    private fun tokenAtDisplacement(distanceKw: Float): InputToken {
+        // Unit key width and a zero origin avoid pixel conversion rounding, so
+        // this pins the exact float boundary used by GestureStream.
+        val geometry = KeyboardGeometry.fromPx(
+            1f, 3f,
+            listOf(floatArrayOf(-1f, -1f, 2f, 2f)),
+            intArrayOf(0),
+        )
+        val stream = GestureStream(
+            StreamId.LEFT, 0, geometry, TAP_DISP_KW,
+            0f, 0f, 0L, 0,
+        ) { }
+        stream.addPoint(distanceKw, 0f, 10L)
+        return stream.finish(10L)
+    }
+
+    @Test
     fun dwellTrackingLeavesTapClassificationAlone() {
         // A long stationary press is still a tap (classification is
         // displacement-only); dwell bookkeeping must not perturb that path.
