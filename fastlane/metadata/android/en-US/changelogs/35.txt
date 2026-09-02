@@ -1,9 +1,10 @@
-Automatic spaces after tapped words, off by default. Words with apostrophes
-(don't, dell'anno) and single letters (a, I) get one too, and a space you
-delete no longer comes back. Three timing sliders.
-The top-row up-swipe types its digit again.
-A forward slash on the symbols page.
-The spacebar's cursor slide has an adjustable speed and can move by word.
-An optional retype button on the suggestion bar.
-Lower input latency, contributed by pigmej.
-Macron o, contributed by lucylouwebart.
+- Autospace now works for tapped words, not just swipes (setting, off by default)
+- Words with apostrophes get their space: don't, it's, dell'anno
+- Single letters too: a, I, Italian e/o/i
+- A space you delete no longer comes back
+- Top-row up-flick types its digit again
+- Forward slash on the symbols page
+- Spacebar slide: adjustable speed, optional move-by-word
+- Optional retype button on the suggestion bar
+- Lower input latency, thanks pigmej
+- Macron o on the o key, thanks lucylouwebart
