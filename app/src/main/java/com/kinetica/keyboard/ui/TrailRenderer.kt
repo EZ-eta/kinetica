@@ -12,10 +12,18 @@ import com.kinetica.keyboard.engine.models.StreamId
  */
 class TrailRenderer(private val density: Float) {
 
-    private class TrailPoint(val x: Float, val y: Float, val t: Long, val hue: Float)
+    private class TrailPoint(
+        var x: Float,
+        var y: Float,
+        var t: Long,
+        var hue: Float,
+        var breakBefore: Boolean,
+    )
 
     private val trails = arrayOf(ArrayDeque<TrailPoint>(), ArrayDeque<TrailPoint>())
+    private val pointPool = ArrayDeque<TrailPoint>()
     private val hues = floatArrayOf(0f, 0f)
+    private val forceNextPoint = BooleanArray(2)
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeCap = Paint.Cap.ROUND
@@ -27,11 +35,43 @@ class TrailRenderer(private val density: Float) {
     var baseHue = 0f
 
     fun startStream(stream: StreamId) {
-        hues[stream.ordinal] = (baseHue + if (stream == StreamId.RIGHT) 60f else 0f) % 360f
+        val i = stream.ordinal
+        hues[i] = (baseHue + if (stream == StreamId.RIGHT) 60f else 0f) % 360f
+        forceNextPoint[i] = true
     }
 
     fun addPoint(stream: StreamId, x: Float, y: Float, t: Long) {
-        trails[stream.ordinal].addLast(TrailPoint(x, y, t, hues[stream.ordinal]))
+        val i = stream.ordinal
+        val trail = trails[i]
+        val hue = hues[i]
+        val last = trail.lastOrNull()
+        // MotionEvent history can deliver several samples per display frame.
+        // The decoder keeps every sample; the visual trail only needs one point
+        // per ~8 ms. Updating the endpoint preserves its current position while
+        // bounding both drawLine work and allocation pressure on high-refresh
+        // devices. Hue transitions remain exact because they force a new point.
+        if (!forceNextPoint[i] && last != null && last.hue == hue &&
+            t >= last.t && t - last.t < MIN_SAMPLE_INTERVAL_MS
+        ) {
+            last.x = x
+            last.y = y
+            last.t = t
+            return
+        }
+        val breakBefore = forceNextPoint[i]
+        forceNextPoint[i] = false
+        val point = if (pointPool.isEmpty()) {
+            TrailPoint(x, y, t, hue, breakBefore)
+        } else {
+            pointPool.removeLast().also {
+                it.x = x
+                it.y = y
+                it.t = t
+                it.hue = hue
+                it.breakBefore = breakBefore
+            }
+        }
+        trail.addLast(point)
     }
 
     fun bumpHue(stream: StreamId) {
@@ -43,7 +83,7 @@ class TrailRenderer(private val density: Float) {
         var alive = false
         for (trail in trails) {
             while (trail.isNotEmpty() && now - trail.first().t > TRAIL_LIFE_MS) {
-                trail.removeFirst()
+                recycle(trail.removeFirst())
             }
             if (trail.isNotEmpty()) alive = true
         }
@@ -51,8 +91,14 @@ class TrailRenderer(private val density: Float) {
     }
 
     fun clear() {
-        trails[0].clear()
-        trails[1].clear()
+        for (trail in trails) {
+            while (trail.isNotEmpty()) recycle(trail.removeFirst())
+        }
+        forceNextPoint.fill(false)
+    }
+
+    private fun recycle(point: TrailPoint) {
+        if (pointPool.size < MAX_POOLED_POINTS) pointPool.addLast(point)
     }
 
     fun draw(canvas: Canvas, now: Long) {
@@ -62,7 +108,7 @@ class TrailRenderer(private val density: Float) {
             for (p in trail) {
                 val a = prev
                 prev = p
-                if (a == null) continue
+                if (a == null || p.breakBefore) continue
                 val age = (now - p.t).coerceAtLeast(0)
                 val f = 1f - age / TRAIL_LIFE_MS.toFloat()
                 if (f <= 0f) continue
@@ -78,6 +124,8 @@ class TrailRenderer(private val density: Float) {
 
     private companion object {
         const val TRAIL_LIFE_MS = 250L
+        const val MIN_SAMPLE_INTERVAL_MS = 8L
+        const val MAX_POOLED_POINTS = 128
         const val HUE_STEP = 30f
     }
 }

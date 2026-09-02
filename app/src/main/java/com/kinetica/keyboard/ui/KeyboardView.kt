@@ -160,6 +160,7 @@ class KeyboardView @JvmOverloads constructor(
 
     private var layout: KeyboardLayout? = null
     private val keyRects = ArrayList<RectF>()
+    private val keyInsets = ArrayList<RectF>()
     private var uppercase = false
     private var staticLayer: Bitmap? = null
     private var engineActive = false
@@ -384,10 +385,13 @@ class KeyboardView @JvmOverloads constructor(
     private fun rebuild() {
         val l = layout ?: return
         keyRects.clear()
+        keyInsets.clear()
         val w = width.toFloat()
         val h = height.toFloat()
         for (k in l.keys) {
-            keyRects.add(LayoutTransforms.apply(layoutMode, k, w, h))
+            val rect = LayoutTransforms.apply(layoutMode, k, w, h)
+            keyRects.add(rect)
+            keyInsets.add(insetRect(rect))
         }
         buildGeometry(l)
         renderStaticLayer()
@@ -426,12 +430,11 @@ class KeyboardView @JvmOverloads constructor(
         val c = Canvas(bmp)
         c.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bgPaint)
         for (i in l.keys.indices) {
-            drawKey(c, l.keys[i], keyRects[i])
+            drawKey(c, l.keys[i], keyInsets[i])
         }
     }
 
-    private fun drawKey(c: Canvas, key: Key, rect: RectF) {
-        val inset = insetRect(rect)
+    private fun drawKey(c: Canvas, key: Key, inset: RectF) {
         // Chromeless keys (apostrophe) paint no background - just the glyph on
         // the keyboard surface, so they blend in Nintype-style.
         if (!key.chromeless) {
@@ -486,7 +489,9 @@ class KeyboardView @JvmOverloads constructor(
                 if (idx !in l.keys.indices) continue
                 val key = l.keys[idx]
                 if (key.chromeless) continue
-                val inset = insetRect(keyRects[idx])
+                // Insets are immutable between rebuilds; reusing them avoids a
+                // RectF allocation on every animation frame while a key is held.
+                val inset = keyInsets[idx]
                 canvas.drawRoundRect(inset, cornerPx, cornerPx, pressedPaint)
                 val label = if (key.isLetter && uppercase) key.label.uppercase() else key.label
                 if (label.isNotEmpty() && key.type == KeyType.CHAR) {
