@@ -30,8 +30,8 @@ android {
         applicationId "com.kinetica.keyboard"
         minSdk 26
         targetSdk 34
-        versionCode 14
-        versionName "1.0.4"
+        versionCode 35
+        versionName "1.0.5"
     }
 
     sourceSets {
@@ -66,6 +66,15 @@ android {
             if (keystorePropsFile.exists()) {
                 signingConfig signingConfigs.release
             }
+        }
+        // A second application id so the developer build installs BESIDE the real
+        // app rather than replacing it: two keyboards in the system picker, two
+        // data directories, and no way for a development build to be mistaken for
+        // a published one. It is also the only build that can produce a decode
+        // trace at all - see TraceRecorder.
+        debug {
+            applicationIdSuffix '.dev'
+            versionNameSuffix '-dev'
         }
     }
 

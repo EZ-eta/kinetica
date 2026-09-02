@@ -2,7 +2,9 @@ package com.kinetica.keyboard.settings
 
 import android.content.SharedPreferences
 import com.kinetica.keyboard.engine.KineticaConstants
+import com.kinetica.keyboard.ime.singleLetterDelayMs
 import com.kinetica.keyboard.keys.EdgeSwipeBindings
+import com.kinetica.keyboard.keys.SpacebarCursorController
 import com.kinetica.keyboard.layout.LayoutMode
 import com.kinetica.keyboard.ui.BarMetrics
 import com.kinetica.keyboard.ui.KeyboardTheme
@@ -25,6 +27,16 @@ data class KeyboardConfig(
     /** Capitalize the first word of a sentence. */
     val autoCapitalize: Boolean,
     val autospaceDelayMs: Long,
+    val autospaceTapDelayMs: Long,
+    /** The tap delay, floored so one letter never spaces quicker than a whole word. */
+    val autospaceSingleLetterDelayMs: Long,
+    val autospaceRetractMs: Long,
+
+    /** The word ends at a delimiter only, never on the autospace timer. */
+    val wordEndsOnSpace: Boolean,
+
+    /** Autospace an all-tap word whose letters spell a dictionary word. */
+    val autospaceTappedWords: Boolean,
     val zenMode: Boolean,
     val vibration: Boolean,
     val vibrationIntensity: Int,
@@ -42,6 +54,12 @@ data class KeyboardConfig(
     val alternateSwipes: Boolean,
     /** Backspace slide stages single characters instead of whole words. */
     val backspaceCharSlide: Boolean,
+    /** Suggestion bar reserves its right edge for a retype button. */
+    val retypeButton: Boolean,
+    /** Travel that moves the spacebar's cursor slide one step; lower is faster. */
+    val spacebarStepDp: Float,
+    /** Spacebar cursor slide moves whole words instead of single characters. */
+    val spacebarWordSlide: Boolean,
     /** Enter popup symbols; first is the primary. Never empty. */
     val enterAlternates: List<String>,
     /** Period long-press alternates; EMPTY keeps the layout's own list. */
@@ -73,7 +91,13 @@ data class KeyboardConfig(
     val peckChordKeyCode: Int,
 ) {
     companion object {
-        fun from(prefs: SharedPreferences): KeyboardConfig = KeyboardConfig(
+        fun from(prefs: SharedPreferences): KeyboardConfig {
+            // Read once: the tap delay defaults to it and the retraction window to twice
+            // the tap delay, so an untouched keyboard is unchanged by the split.
+            val swipeDelay = prefs.getInt(
+                Prefs.AUTOSPACE_DELAY_MS, Prefs.DEFAULT_AUTOSPACE_DELAY_MS,
+            ).coerceIn(100, 800).toLong()
+            return KeyboardConfig(
             heightPct = prefs.getInt(Prefs.KEYBOARD_HEIGHT_PCT, Prefs.DEFAULT_HEIGHT_PCT)
                 .coerceIn(Prefs.MIN_HEIGHT_PCT, Prefs.MAX_HEIGHT_PCT),
             suggestionBarDp = prefs.getInt(
@@ -97,9 +121,34 @@ data class KeyboardConfig(
             autoCapitalize = prefs.getBoolean(
                 Prefs.AUTO_CAPITALIZE, Prefs.DEFAULT_AUTO_CAPITALIZE,
             ),
-            autospaceDelayMs = prefs.getInt(
-                Prefs.AUTOSPACE_DELAY_MS, Prefs.DEFAULT_AUTOSPACE_DELAY_MS,
+            autospaceDelayMs = swipeDelay,
+            // Defaults to the swipe delay rather than to a literal, so a keyboard whose
+            // owner moved the old single slider and never touches the new one keeps
+            // behaving exactly as it did.
+            autospaceTapDelayMs = prefs.getInt(
+                Prefs.AUTOSPACE_TAP_DELAY_MS, swipeDelay.toInt(),
             ).coerceIn(100, 800).toLong(),
+            autospaceSingleLetterDelayMs = singleLetterDelayMs(
+                prefs.getInt(Prefs.AUTOSPACE_TAP_DELAY_MS, swipeDelay.toInt())
+                    .coerceIn(100, 800).toLong(),
+                Prefs.SINGLE_LETTER_MIN_DELAY_MS.toLong(),
+            ),
+            // Ceiling is above 2 * 800 so the derived default is always reachable.
+            autospaceRetractMs = prefs.getInt(
+                Prefs.AUTOSPACE_RETRACT_MS,
+                Prefs.DEFAULT_AUTOSPACE_RETRACT_MULTIPLE * prefs.getInt(
+                    Prefs.AUTOSPACE_TAP_DELAY_MS,
+                    prefs.getInt(Prefs.AUTOSPACE_DELAY_MS, Prefs.DEFAULT_AUTOSPACE_DELAY_MS),
+                ),
+            ).coerceIn(100, 2000).toLong(),
+            wordEndsOnSpace = prefs.getBoolean(
+                Prefs.WORD_ENDS_ON_SPACE,
+                Prefs.DEFAULT_WORD_ENDS_ON_SPACE,
+            ),
+            autospaceTappedWords = prefs.getBoolean(
+                Prefs.AUTOSPACE_TAPPED_WORDS,
+                Prefs.DEFAULT_AUTOSPACE_TAPPED_WORDS,
+            ),
             zenMode = prefs.getBoolean(Prefs.ZEN_MODE, Prefs.DEFAULT_ZEN),
             vibration = prefs.getBoolean(Prefs.VIBRATION, Prefs.DEFAULT_VIBRATION),
             vibrationIntensity = prefs.getInt(
@@ -137,6 +186,18 @@ data class KeyboardConfig(
             backspaceCharSlide = prefs.getBoolean(
                 Prefs.BACKSPACE_CHAR_SLIDE, Prefs.DEFAULT_BACKSPACE_CHAR_SLIDE,
             ),
+            retypeButton = prefs.getBoolean(Prefs.RETYPE_BUTTON, Prefs.DEFAULT_RETYPE_BUTTON),
+            // Clamped here as well as in the controller: the slider's own bounds are the
+            // contract a user sees, and this is the value the view is handed.
+            spacebarStepDp = prefs.getInt(
+                Prefs.SPACEBAR_STEP_DP, Prefs.DEFAULT_SPACEBAR_STEP_DP,
+            ).coerceIn(
+                SpacebarCursorController.ENTER_SLIDE_DP.toInt(),
+                SpacebarCursorController.MAX_STEP_DP.toInt(),
+            ).toFloat(),
+            spacebarWordSlide = prefs.getBoolean(
+                Prefs.SPACEBAR_WORD_SLIDE, Prefs.DEFAULT_SPACEBAR_WORD_SLIDE,
+            ),
             enterAlternates = parseEnterAlternates(
                 prefs.getString(Prefs.ENTER_ALTERNATES, Prefs.DEFAULT_ENTER_ALTERNATES),
             ),
@@ -171,6 +232,7 @@ data class KeyboardConfig(
                 prefs, Prefs.PECK_CHORD_KEY, Prefs.DEFAULT_PECK_CHORD_KEY,
             ),
         )
+        }
 
         private val COMMA_MODES =
             setOf("keep", "remove", "char", "text", "paste", "select_all")

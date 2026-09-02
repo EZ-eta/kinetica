@@ -224,10 +224,34 @@ object KineticaConstants {
     const val FREQ_WEIGHT_FLOOR = 0.25f
 
     // Bigram context boost: BigramTable.multiplier returns
-    // 1 + BIGRAM_BOOST_MAX * byte/255, so the range is [1.0, 2.5]. The value
-    // itself is unchanged since the first ship; what changed later is that the
-    // boost is CONDITIONED ON THE FIT, the way the personal boost is - both go
-    // through appliedBoost below.
+    // 1 + BIGRAM_BOOST_MAX * byte/255, so the range is [1.0, 2.0]. Two things
+    // changed after the first ship: the boost became CONDITIONED ON THE FIT, the
+    // way the personal boost is - both go through appliedBoost below - and the
+    // cap came down from 1.5.
+    //
+    // Lowered 2026-08-18, and the measurement is why it is 1.0 and not something
+    // between. Over 219 final-buffer rows from the three captures taken under the
+    // current formula, EVERY cap in [0.5, 1.0] moves exactly one top-1 - the
+    // `her`/`here` row that item 16 had left open, where `here` fits 0.31 against
+    // `her`'s 0.54 and loses to a bigram of 2.19 raw. The plateau is twice as wide
+    // as the change, so this is not a knife edge; 1.0 is its top, i.e. the least
+    // change that reaches the fix. Below 0.5 real regressions start (3 rows at
+    // 0.25, 5 at 0.0) and above 1.0 the fix is not reached at all.
+    //
+    // Two rows that also move at 1.0 are NOT costs, and checking that mechanically
+    // rather than by eye is what made the result readable: `decode out` fires once
+    // per pointer lift, so a row whose token list is a strict prefix of the next
+    // row's is a word still being drawn. Both were - one grows a second swipe and
+    // becomes `solte`, the other grows two taps and becomes `held`. The surviving
+    // row's intent is proved outright: the next decode is tap[h] tap[e] tap[r]
+    // tap[e], the word being re-typed by hand.
+    //
+    // The population is those three captures alone, deliberately. Six of the
+    // eleven predate the score formula that ships today and four predate the fit
+    // conditioning, so their printed boosts came from rules that no longer exist;
+    // recovering raw values from them means inverting three superseded rules in
+    // sequence, which is exactly the step that once credited a change with fixes
+    // that had already been made.
     //
     // Why it needed conditioning at all. The byte is normalized per previous
     // word against that word's own maximum (BigramTable.build), so the argmax
@@ -293,7 +317,7 @@ object KineticaConstants {
     // again. In between, the compression is monotone in the fit, so the rule
     // still can never move a contest away from the better fit
     // (ScoreWeightingTest.theBigramConditionNeverFavoursTheWorseFit).
-    const val BIGRAM_BOOST_MAX = 1.5f
+    const val BIGRAM_BOOST_MAX = 1.0f
 
     // Geometric term of the candidate score:
     //   score = fw * geometricTerm(dTotal) * bigram * personalBoost

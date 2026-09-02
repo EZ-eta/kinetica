@@ -243,4 +243,94 @@ class RealDictionaryTest {
         val perDecodeMs = (System.nanoTime() - t0) / 20 / 1_000_000.0
         assertTrue("merged decode took $perDecodeMs ms", perDecodeMs < 100.0)
     }
+
+    /**
+     * The retraction's dictionary gate, on the buffers that made it necessary.
+     *
+     * Every pair here is verbatim from the 2026-08-29 capture: the developer typed the
+     * first word, the automatic space arrived, and the next word's first letter decided
+     * whether the space survived. `isLivePrefix` is what now decides it.
+     */
+    @Test
+    fun theRetractionGateSeparatesAFinishedWordFromAnUnfinishedOne() {
+        val p = assetPath("it_wordlist.txt")
+        assumeTrue("it_wordlist asset not found", Files.exists(p))
+        val dict = Files.newBufferedReader(p).use { DictionaryLoader.load(it) }
+        val pred = WordPredictor(dict.trie, BigramTable.EMPTY, TestData.qwertyGeometry(), dict.forms)
+
+        // Finished words swallowing the next one - the reported bug. Each of these
+        // decoded to nothing on device once the space had been taken back.
+        for (fused in listOf("automaticop", "automaticope", "cadettod", "cadettodi")) {
+            assertTrue("$fused must not look like a word in waiting", !pred.isLivePrefix(fused))
+        }
+
+        // What the retraction exists for, and it must survive: a premature space inside a
+        // word the developer was still typing.
+        for (fused in listOf("autom", "automatic", "mangian", "mangiano", "prov", "praticam")) {
+            assertTrue("$fused is a real continuation", pred.isLivePrefix(fused))
+        }
+
+        // Accents fold, because a prefix has not chosen them yet: `perche` reaches the
+        // `perché` node exactly as the decoder's own accent handling does.
+        assertTrue("perch", pred.isLivePrefix("perch"))
+        assertTrue("case is folded", pred.isLivePrefix("AUTOM"))
+
+        // An empty base never retracts: there is nothing to fuse into.
+        assertTrue("empty", !pred.isLivePrefix(""))
+    }
+
+    /**
+     * What the autospace's joined-token lookup actually finds, per language.
+     *
+     * The rule is the same in both; the outcomes differ because the data does, and that is
+     * worth pinning rather than believing. English contractions are in the wordlist with
+     * large counts, so `don't` spaces. Italian elisions are NOT in it at all - ten
+     * apostrophe entries, every one corpus junk - so the lookup cannot find `d'accordo` and
+     * no logic change can alter THAT.
+     *
+     * What did change is what the absence costs. `autospacesTappedWord` no longer waits on
+     * this lookup for an apostrophe joiner: when it answers no it judges the piece after
+     * the apostrophe instead, and the last block below is why that works - the second half
+     * of every elision is an ordinary entry. So the Italian assertion here still stands and
+     * is still the one WP38 flips; it just no longer decides whether the space arrives.
+     */
+    @Test
+    fun theJoinedTokenLookupIsDecidedByWhatEachWordlistHolds() {
+        val enPath = assetPath("en_wordlist.txt")
+        val itPath = assetPath("it_wordlist.txt")
+        assumeTrue("wordlists not found", Files.exists(enPath) && Files.exists(itPath))
+        val g = TestData.qwertyGeometry()
+        val enDict = Files.newBufferedReader(enPath).use { DictionaryLoader.load(it) }
+        val itDict = Files.newBufferedReader(itPath).use { DictionaryLoader.load(it) }
+        val en = WordPredictor(enDict.trie, BigramTable.EMPTY, g, enDict.forms)
+        val it = WordPredictor(itDict.trie, BigramTable.EMPTY, g, itDict.forms)
+
+        // English contractions: the whole token is a word, so the space is earned.
+        for (w in listOf("don't", "it's", "can't")) {
+            assertTrue("$w should be an English word", en.isWord(w))
+        }
+        // Not words, so a token like this stays refused - the reported behaviour to keep.
+        for (w in listOf("log-12.com", "example.com", "session_notes")) {
+            assertTrue("$w must not be a word", !en.isWord(w) && !it.isWord(w))
+        }
+        // The Italian gap, stated as a fact. When the elided forms are generated into the
+        // wordlist this assertion is the one that flips, and it should be flipped
+        // deliberately rather than discovered.
+        for (w in listOf("d'accordo", "l'altro", "un'ora", "dell'anno")) {
+            assertTrue("$w is absent from it_wordlist; see item 45", !it.isWord(w))
+        }
+        // ...and what the fallback rests on: the piece AFTER the apostrophe is an ordinary
+        // Italian word in every one of them, which is why judging it on its own is a real
+        // answer rather than a shrug. `ora` is the shortest at three letters, so the
+        // two-letter length rule never bites on the forms that matter.
+        for (w in listOf("accordo", "altro", "ora", "anno", "immagine")) {
+            assertTrue("$w should be an Italian word", it.isWord(w))
+            assertTrue("$w is long enough for the length rule", w.length >= 2)
+        }
+        // The retraction's second question, on real data: `dell'anno` is unreachable as a
+        // whole and `anno` is reachable, which is the entire reason the fusion is asked of
+        // the tail as well.
+        assertTrue("dell'anno is not a live prefix", !it.isLivePrefix("dell'anno"))
+        assertTrue("anno is", it.isLivePrefix("anno"))
+    }
 }

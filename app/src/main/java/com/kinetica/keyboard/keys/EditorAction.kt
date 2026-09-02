@@ -22,6 +22,16 @@ enum class EditorAction(val output: String) {
     COPY("${ACTION_PREFIX}copy"),
     CUT("${ACTION_PREFIX}cut"),
     SELECT_ALL("${ACTION_PREFIX}select_all"),
+
+    /**
+     * Delete the word in progress - or the one just committed - and start it again in
+     * place. Nintype's "re-type", asked for twice, and the only entry here that is not a
+     * platform context-menu action: it acts ON the pending word rather than after it, so
+     * the caller must not settle the word first. Living here anyway is the point - the
+     * suggestion bar's button and a `?123` chord are then two triggers for one
+     * implementation rather than two implementations.
+     */
+    RETYPE("${ACTION_PREFIX}retype"),
     ;
 
     companion object {

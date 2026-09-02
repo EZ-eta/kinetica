@@ -57,8 +57,11 @@ class KeyboardView @JvmOverloads constructor(
         /** Letter-key geometry changed (size or layout swap). */
         fun onGeometryChanged(geometry: KeyboardGeometry)
 
-        /** Spacebar slide: one cursor step left (-1) or right (+1). */
-        fun onCursorMove(direction: Int)
+        /**
+         * Spacebar slide: one cursor step left (-1) or right (+1), a whole word at a
+         * time when [byWord] is set rather than a single character.
+         */
+        fun onCursorMove(direction: Int, byWord: Boolean)
 
         fun onDeleteChar()
 
@@ -117,6 +120,16 @@ class KeyboardView @JvmOverloads constructor(
     var backspaceCharSlide: Boolean
         get() = backspaceController.charMode
         set(value) { backspaceController.charMode = value }
+
+    /** Travel that advances the spacebar's cursor slide by one step; lower is faster. */
+    var spacebarStepDp: Float
+        get() = spaceController.stepDp
+        set(value) { spaceController.stepDp = value }
+
+    /** Spacebar slide moves whole words instead of single characters. */
+    var spacebarWordSlide: Boolean
+        get() = spaceController.wordMode
+        set(value) { spaceController.wordMode = value }
 
     /** Active edge-swipe shortcut set; swapped live on preference changes. */
     var edgeSwipeBindings: EdgeSwipeBindings = EdgeSwipeBindings.DEFAULTS
@@ -188,8 +201,8 @@ class KeyboardView @JvmOverloads constructor(
     private val letterCenterX = FloatArray(Alphabet.LETTERS)
     private val letterCenterY = FloatArray(Alphabet.LETTERS)
 
-    private val spaceController = SpacebarCursorController(density) { dir ->
-        listener?.onCursorMove(dir)
+    private val spaceController = SpacebarCursorController(density) { dir, byWord ->
+        listener?.onCursorMove(dir, byWord)
     }
     private val backspaceController = BackspaceController(
         density,
@@ -237,6 +250,11 @@ class KeyboardView @JvmOverloads constructor(
     private val downKeyByPointer = IntArray(MAX_POINTERS) { -1 }
     private val downXByPointer = FloatArray(MAX_POINTERS)
     private val downYByPointer = FloatArray(MAX_POINTERS)
+    // Displacement at the furthest sample from the down point, per pointer. Read
+    // only by EdgeSwipeDetector, which needs it because a directional flick off
+    // the top row is short and curves back before the lift - see its KDoc.
+    private val peakDxByPointer = FloatArray(MAX_POINTERS)
+    private val peakDyByPointer = FloatArray(MAX_POINTERS)
     private val downTimeByPointer = LongArray(MAX_POINTERS)
     private val pressedKeys = LinkedHashSet<Int>()
 
@@ -599,6 +617,8 @@ class KeyboardView @JvmOverloads constructor(
         downKeyByPointer[pid] = keyIdx
         downXByPointer[pid] = x
         downYByPointer[pid] = y
+        peakDxByPointer[pid] = 0f
+        peakDyByPointer[pid] = 0f
         downTimeByPointer[pid] = t
         val key = if (keyIdx != -1) l.keys[keyIdx] else null
 
@@ -845,6 +865,7 @@ class KeyboardView @JvmOverloads constructor(
             if (pid !in 0 until MAX_POINTERS) continue
             val x = ev.getX(p)
             val y = ev.getY(p)
+            trackPeak(pid, x, y)
             if (pid == pendingHoldPid || (pid == modeHoldPointer && !modeHoldMoved)) {
                 val dx = x - downXByPointer[pid]
                 val dy = y - downYByPointer[pid]
@@ -867,6 +888,22 @@ class KeyboardView @JvmOverloads constructor(
         }
     }
 
+    /**
+     * Keeps the displacement at this pointer's furthest sample from its down
+     * point. Radial, so one pair of values serves all four directions, and the
+     * comparison is on the squared distance - no roots on the move path.
+     */
+    private fun trackPeak(pid: Int, x: Float, y: Float) {
+        val dx = x - downXByPointer[pid]
+        val dy = y - downYByPointer[pid]
+        val px = peakDxByPointer[pid]
+        val py = peakDyByPointer[pid]
+        if (dx * dx + dy * dy > px * px + py * py) {
+            peakDxByPointer[pid] = dx
+            peakDyByPointer[pid] = dy
+        }
+    }
+
     private fun addTrailPoint(e: GestureEngine, pid: Int, x: Float, y: Float, t: Long) {
         if (zenMode || !trailsEnabled) return
         if (!e.isSwipeCommitted(pid)) return
@@ -880,7 +917,12 @@ class KeyboardView @JvmOverloads constructor(
         val key = keyAtDown(pid)
         val dx = x - downXByPointer[pid]
         val dy = y - downYByPointer[pid]
-        val shortcut = key?.let { EdgeSwipeDetector.detect(it, dx, dy, density, edgeSwipeBindings) }
+        trackPeak(pid, x, y)
+        val shortcut = key?.let {
+            EdgeSwipeDetector.detect(
+                it, dx, dy, peakDxByPointer[pid], peakDyByPointer[pid], density, edgeSwipeBindings,
+            )
+        }
 
         when (routeByPointer[pid]) {
             ROUTE_ENGINE -> {

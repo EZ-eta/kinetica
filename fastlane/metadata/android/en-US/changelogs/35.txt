@@ -1,0 +1,9 @@
+Automatic spaces after tapped words, off by default. Words with apostrophes
+(don't, dell'anno) and single letters (a, I) get one too, and a space you
+delete no longer comes back. Three timing sliders.
+The top-row up-swipe types its digit again.
+A forward slash on the symbols page.
+The spacebar's cursor slide has an adjustable speed and can move by word.
+An optional retype button on the suggestion bar.
+Lower input latency, contributed by pigmej.
+Macron o, contributed by lucylouwebart.

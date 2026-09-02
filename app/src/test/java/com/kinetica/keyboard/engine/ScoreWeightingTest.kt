@@ -162,6 +162,46 @@ class ScoreWeightingTest {
     }
 
     @Test
+    fun aBetterFitIsNoLongerOvertakenByAMaxedBigram() {
+        // Row :612 of the 2026-08-09 capture, ctx [how, held]: the developer swiped
+        // `here`, got `her`, and then typed h-e-r-e letter by letter - which is what
+        // makes the intent provable here rather than inferred, and why this row is
+        // pinnable at all where the mo/no one is not.
+        //
+        // `here` fits at 0.31 against `her`'s 0.54 and lost anyway, to a bigram sitting
+        // near the top of the table. The fade could not reach it: re-swept, the shipped
+        // width is the unique optimum, and every width that wins this row loses two
+        // `sempre` reps and `sarei`. The lever that reaches it is the cap.
+        //
+        // The bigram is carried as its BYTE SHARE and the table value derived from
+        // BIGRAM_BOOST_MAX, because that value IS 1 + cap * byte/255. A literal here
+        // would pass at every cap and pin nothing.
+        val herShare = 0.792f
+        assertTrue(
+            "the better fit must lead at the shipped cap",
+            rowScore(0.90f, 0.31f, 0f, 1.20f, KineticaConstants.BIGRAM_BOOST_MAX) >
+                rowScore(0.88f, 0.54f, herShare, 1.21f, KineticaConstants.BIGRAM_BOOST_MAX),
+        )
+        // ...and the previous cap is load-bearing, not incidental: at 1.5 the row goes
+        // the other way, which is the whole reason the constant moved. A revert must
+        // fail here.
+        assertTrue(
+            "at the old cap this row must still go to the worse fit",
+            rowScore(0.88f, 0.54f, herShare, 1.21f, 1.5f) >
+                rowScore(0.90f, 0.31f, 0f, 1.20f, 1.5f),
+        )
+    }
+
+    /**
+     * A candidate's score from the parts a capture prints, with the bigram's table
+     * value rebuilt at [cap]. [appliedPb] is the personal boost as printed, i.e.
+     * already conditioned, so it is not passed through appliedBoost a second time.
+     */
+    private fun rowScore(fw: Float, d: Float, bmShare: Float, appliedPb: Float, cap: Float): Float =
+        fw * KineticaConstants.geometricTerm(d) *
+            KineticaConstants.appliedBoost(1f + bmShare * cap, d) * appliedPb
+
+    @Test
     fun sempreKeepsItsBigramJustPastTheCap() {
         // The bigram rule's binding constraint, and the mirror of the sarei row
         // one term to the right: a word whose own fit has saturated but which the CONTEXT is

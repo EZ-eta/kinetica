@@ -1,7 +1,10 @@
 package com.kinetica.keyboard.settings
 
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.preference.ListPreference
+import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.SeekBarPreference
 import com.kinetica.keyboard.R
@@ -12,6 +15,33 @@ class KeyboardPrefsFragment : PreferenceFragmentCompat() {
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         setPreferencesFromResource(R.xml.keyboard_prefs, rootKey)
         wireThemePreview()
+        showVersion()
+    }
+
+    /**
+     * The version of the build that is actually running.
+     *
+     * Read from the installed package rather than from a compile-time constant, so
+     * the line answers the question it exists for - which APK is on this phone -
+     * rather than what some build once intended. The developer build reports its own
+     * `-dev` suffix, so the row also tells the two installed apps apart.
+     */
+    private fun showVersion() {
+        val pref = findPreference<Preference>(VERSION_KEY) ?: return
+        val ctx = context ?: return
+        pref.summary = try {
+            val info = ctx.packageManager.getPackageInfo(ctx.packageName, 0)
+            val code = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                info.longVersionCode
+            } else {
+                @Suppress("DEPRECATION")
+                info.versionCode.toLong()
+            }
+            "${info.versionName} ($code)"
+        } catch (e: PackageManager.NameNotFoundException) {
+            // Cannot happen for our own package; a blank row is better than a crash.
+            ""
+        }
     }
 
     /**
@@ -74,5 +104,6 @@ class KeyboardPrefsFragment : PreferenceFragmentCompat() {
 
     private companion object {
         const val PREVIEW_KEY = "pref_theme_preview"
+        const val VERSION_KEY = "pref_version"
     }
 }

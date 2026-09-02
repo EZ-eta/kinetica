@@ -61,6 +61,34 @@ object DeleteSpan {
     }
 
     /**
+     * Length of the head of [text] holding the first [units] whitespace-delimited words,
+     * leading whitespace included - the forward mirror of [words].
+     *
+     * Written for the spacebar's word-wise cursor slide, which needs the same walk in the
+     * other direction. Kept beside [words] so both agree on what a word is - punctuation
+     * belongs to it, so `word,` is one step either way.
+     *
+     * The two are NOT inverses and must not be made so. This one takes the whitespace
+     * BEFORE the word, so moving right lands after a word; [words] takes the whitespace
+     * after it, so moving left lands before one. That asymmetry is the ordinary editor
+     * convention - ctrl-right stops at word ends, ctrl-left at word starts - and it also
+     * happens to be exactly what [words] needs for deletion, where the trailing space has
+     * to go with the word it followed. A round trip therefore does not return to its
+     * starting offset, which DeleteSpanTest asserts on purpose.
+     */
+    fun wordsForward(text: CharSequence, units: Int): Int {
+        if (units <= 0) return 0
+        var i = 0
+        var n = 0
+        while (n < units && i < text.length) {
+            while (i < text.length && text[i].isWhitespace()) i++
+            while (i < text.length && !text[i].isWhitespace()) i++
+            n++
+        }
+        return i
+    }
+
+    /**
      * Length of the tail of [text] holding the last [units] characters, counting
      * a surrogate pair as ONE - so a slide step removes a whole emoji rather than
      * half of one and leaving an unpaired surrogate behind.

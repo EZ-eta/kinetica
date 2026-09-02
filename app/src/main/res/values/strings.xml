@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Kinetica</string>
+    <!-- The application id, as a resource so the settings sub-screen intents below
+         follow the build they are running in. The developer build overrides it. -->
+    <string name="app_pkg" translatable="false">com.kinetica.keyboard</string>
     <string name="ime_name">Kinetica Keyboard</string>
     <string name="subtype_en_us">English (US)</string>
     <string name="subtype_it_it">Italiano</string>
@@ -8,6 +11,7 @@
     <string name="subtype_pl_pl">Polski</string>
     <string name="settings_title">Kinetica Settings</string>
     <string name="licenses_title">Open-source licenses</string>
+    <string name="pref_version_title">Version</string>
     <string name="pref_licenses_summary">Data sources and their licenses (GPL-3.0 app; MIT and CC BY 2.0 FR data)</string>
     <string name="licenses_missing">License notices missing from this build.</string>
 
@@ -34,7 +38,16 @@
     <string name="pref_auto_capitalize_title">Capitalize sentences</string>
     <string name="pref_auto_capitalize_summary">Shift the first letter after a full stop. Off means the keyboard never capitalizes for you</string>
     <string name="pref_autospace_title">Autospace after swipe</string>
-    <string name="pref_autospace_delay_title">Autospace delay (ms)</string>
+    <string name="pref_word_ends_on_space_title">Word ends only when you type a space</string>
+    <string name="pref_word_ends_on_space_summary">No timer: taps and swipes keep building the same word however long you take, and a space, punctuation or enter ends it. Helps with long words assembled in pieces</string>
+    <string name="pref_autospace_tapped_words_title">Autospace tapped words too</string>
+    <string name="pref_autospace_tapped_words_summary">A word you tapped out gets a space once you pause, if its letters spell a word. Roughly one space in five arrives before you meant it, so if you keep typing letters the space is taken back again</string>
+    <string name="pref_autospace_delay_title">Autospace delay after a swipe (ms)</string>
+    <string name="pref_autospace_delay_summary">How long a swiped word waits before its space arrives. A long or awkward word leaves bigger gaps mid-gesture, so this is the one to raise if spaces land inside words you are still drawing</string>
+    <string name="pref_autospace_tap_delay_title">Autospace delay after tapping (ms)</string>
+    <string name="pref_autospace_tap_delay_summary">The same, for a word you tapped out. Tapping runs at a steadier speed than swiping, so this can usually be shorter</string>
+    <string name="pref_autospace_retract_title">Take the space back within (ms)</string>
+    <string name="pref_autospace_retract_summary">After an automatic space, how long a letter still cancels it and rejoins the word. Lower it if starting a new word too soon glues it to the previous one; raise it if a space arrives while you are still typing and you have to delete it yourself</string>
     <string name="pref_zen_title">Zen mode (no animations)</string>
     <string name="pref_zen_summary">Disables trails and effects to save battery</string>
     <string name="pref_trail_custom_hue_title">Custom trail hue (degrees)</string>
@@ -125,6 +138,12 @@
 
     <string name="pref_backspace_char_slide_title">Backspace slide deletes letters</string>
     <string name="pref_backspace_char_slide_summary">Sliding left from backspace stages one letter at a time instead of one word. Nothing is deleted until you lift, and sliding back right still undoes it.</string>
+    <string name="pref_retype_button_title">Retype button on the suggestion bar</string>
+    <string name="pref_retype_button_summary">Reserves the right edge of the suggestion bar for a \u21bb button. One tap throws away the word you are writing, or the one just finished, so you can swipe it again in its place. The words get a little less room.</string>
+    <string name="pref_spacebar_word_slide_title">Spacebar slide moves by word</string>
+    <string name="pref_spacebar_word_slide_summary">Sliding along the spacebar moves the cursor a whole word at a time instead of one letter, the way the backspace slide does. Punctuation goes with the word.</string>
+    <string name="pref_spacebar_step_title">Spacebar slide distance</string>
+    <string name="pref_spacebar_step_summary">How far you slide along the spacebar to move the cursor one step. Lower is faster.</string>
 
     <string name="pref_alternate_swipes_title">Directional number/symbol swipes</string>
     <string name="pref_alternate_swipes_summary">Swipe up on a top-row letter for its number, down on a bottom-row letter for its symbol. Your edge-swipe bindings take precedence.</string>

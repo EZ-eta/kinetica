@@ -8,6 +8,8 @@ class DeleteSpanTest {
 
     private fun tailOf(text: String, len: Int) = text.substring(text.length - len)
 
+    private fun headOf(text: String, len: Int) = text.substring(0, len)
+
     // ---- word granularity: the shipped behavior, now under test -------------
 
     @Test
@@ -157,5 +159,66 @@ class DeleteSpanTest {
         // screen and a half of travel.
         org.junit.Assert.assertTrue("char step must clear the touch slop: $char", char >= 16f)
         org.junit.Assert.assertTrue("char step must stay a fraction of a word: $char", char < word / 2f)
+    }
+
+    // ---- the forward mirror, for the spacebar's word slide -----------------
+
+    @Test
+    fun oneWordForwardTakesItsLeadingSpaceWithIt() {
+        val t = " world again"
+        assertEquals(" world", headOf(t, DeleteSpan.wordsForward(t, 1)))
+        assertEquals(" world again", headOf(t, DeleteSpan.wordsForward(t, 2)))
+    }
+
+    @Test
+    fun punctuationBelongsToTheWordForwardsToo() {
+        // The same rule in both directions, or a slide right then left would not land
+        // back where it started.
+        val t = "world, again"
+        assertEquals("world,", headOf(t, DeleteSpan.wordsForward(t, 1)))
+    }
+
+    @Test
+    fun theForwardSpanSaturatesAtTheEndOfTheText() {
+        val t = "one two"
+        assertEquals(t.length, DeleteSpan.wordsForward(t, 2))
+        assertEquals(t.length, DeleteSpan.wordsForward(t, 9))
+    }
+
+    @Test
+    fun zeroUnitsAndAnEmptyTextMoveNothingEitherWay() {
+        assertEquals(0, DeleteSpan.wordsForward("one two", 0))
+        assertEquals(0, DeleteSpan.wordsForward("", 3))
+        assertEquals(0, DeleteSpan.words("", 3))
+    }
+
+    @Test
+    fun rightStopsAtWordEndsAndLeftAtWordStarts() {
+        // The asymmetry, asserted rather than left to be discovered - it was written down
+        // as a symmetry first and this test is what refuted it. Forward takes the
+        // whitespace BEFORE a word so it lands after one; backward takes the whitespace
+        // after it so it lands before one. That is the ordinary editor convention, and it
+        // is also what `words` needs for deletion, where the trailing space goes with the
+        // word it followed. The double space is deliberate: a run of whitespace is one
+        // boundary, not two.
+        val t = "one two, three  four"
+        val forward = ArrayList<Int>()
+        var i = 0
+        while (i < t.length) {
+            i += DeleteSpan.wordsForward(t.substring(i), 1)
+            forward.add(i)
+        }
+        val back = ArrayList<Int>()
+        var j = t.length
+        while (j > 0) {
+            j -= DeleteSpan.words(t.substring(0, j), 1)
+            back.add(j)
+        }
+        assertEquals(listOf(3, 8, 14, 20), forward)
+        assertEquals(listOf(16, 9, 4, 0), back)
+        // Every forward stop is the end of a word and every backward stop the start of
+        // one, which is the invariant the offsets above are an instance of.
+        for (n in forward) assertTrue("$n ends a word", n == t.length || t[n].isWhitespace())
+        for (n in back) assertTrue("$n starts a word", n == 0 || !t[n].isWhitespace())
     }
 }

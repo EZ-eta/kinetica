@@ -9,11 +9,13 @@ data class EditorState(
     val multiline: Boolean,
     val actionId: Int,
     val capSentences: Boolean,
+    val addressField: Boolean,
 ) {
     companion object {
         val DEFAULT = EditorState(
             privateMode = false, multiline = false,
             actionId = EditorInfo.IME_ACTION_NONE, capSentences = false,
+            addressField = false,
         )
 
         fun from(info: EditorInfo?): EditorState {
@@ -35,6 +37,17 @@ data class EditorState(
             val noLearning =
                 info.imeOptions and EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING != 0
 
+            // A field whose whole value is one unbroken token: an email address or a
+            // URL. Every automatic space is wrong there, and the cost of one is not a
+            // stray character but an unusable field - the space lands between the local
+            // part and the '@', deleting it re-arms the timer, and the address cannot be
+            // finished. Read once here rather than at each arming site.
+            val address = cls == InputType.TYPE_CLASS_TEXT && (
+                variation == InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS ||
+                    variation == InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS ||
+                    variation == InputType.TYPE_TEXT_VARIATION_URI
+                )
+
             return EditorState(
                 privateMode = password || noLearning,
                 multiline = cls == InputType.TYPE_CLASS_TEXT &&
@@ -42,6 +55,7 @@ data class EditorState(
                 actionId = info.imeOptions and EditorInfo.IME_MASK_ACTION,
                 capSentences = cls == InputType.TYPE_CLASS_TEXT &&
                     inputType and InputType.TYPE_TEXT_FLAG_CAP_SENTENCES != 0,
+                addressField = address,
             )
         }
     }

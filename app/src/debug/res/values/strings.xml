@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Overrides for the developer build. The system keyboard picker is where the two
+      builds have to be told apart - that list shows ime_name, so a shared name there
+      would make switching between them guesswork.
+    -->
+    <string name="app_name">Kinetica DEV</string>
+    <string name="ime_name">Kinetica DEV Keyboard</string>
+    <string name="app_pkg" translatable="false">com.kinetica.keyboard.dev</string>
+
+    <string name="trace_title">Kinetica DEV trace</string>
+    <string name="trace_recording">Recording decode traces</string>
+    <string name="trace_explain">Every gesture decoded by the DEV keyboard is written to a file on this device, including the words it produces. Nothing leaves the device and nothing is sent anywhere. This build exists to capture that file; the normal Kinetica build records nothing.</string>
+    <string name="trace_export">Export</string>
+    <string name="trace_clear">Clear</string>
+    <string name="trace_empty">Nothing recorded yet.</string>
+    <string name="trace_export_done">Trace exported</string>
+    <string name="trace_export_failed">Export failed</string>
+    <string name="trace_cleared">Trace cleared</string>
+
+    <plurals name="trace_stats">
+        <item quantity="one">%1$d line, %2$s</item>
+        <item quantity="other">%1$d lines, %2$s</item>
+    </plurals>
+</resources>

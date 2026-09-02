@@ -75,12 +75,50 @@
     <SeekBarPreference
         android:key="pref_autospace_delay_ms"
         android:title="@string/pref_autospace_delay_title"
+        android:summary="@string/pref_autospace_delay_summary"
         app:singleLineTitle="false"
         android:defaultValue="300"
         android:max="800"
         app:min="100"
         app:showSeekBarValue="true"
         android:dependency="pref_autospace" />
+
+    <SeekBarPreference
+        android:key="pref_autospace_tap_delay_ms"
+        android:title="@string/pref_autospace_tap_delay_title"
+        android:summary="@string/pref_autospace_tap_delay_summary"
+        app:singleLineTitle="false"
+        android:defaultValue="300"
+        android:max="800"
+        app:min="100"
+        app:showSeekBarValue="true"
+        android:dependency="pref_autospace" />
+
+    <SeekBarPreference
+        android:key="pref_autospace_retract_ms"
+        android:title="@string/pref_autospace_retract_title"
+        android:summary="@string/pref_autospace_retract_summary"
+        app:singleLineTitle="false"
+        android:defaultValue="600"
+        android:max="2000"
+        app:min="100"
+        app:showSeekBarValue="true"
+        android:dependency="pref_autospace" />
+
+    <SwitchPreferenceCompat
+        android:key="pref_word_ends_on_space"
+        android:title="@string/pref_word_ends_on_space_title"
+        app:singleLineTitle="false"
+        android:summary="@string/pref_word_ends_on_space_summary"
+        android:defaultValue="false" />
+
+    <SwitchPreferenceCompat
+        android:key="pref_autospace_tapped_words"
+        android:title="@string/pref_autospace_tapped_words_title"
+        app:singleLineTitle="false"
+        android:summary="@string/pref_autospace_tapped_words_summary"
+        android:dependency="pref_autospace"
+        android:defaultValue="false" />
 
     <SwitchPreferenceCompat
         android:key="pref_zen_mode"
@@ -288,7 +326,7 @@
         app:singleLineTitle="false"
         android:summary="@string/pref_chords_summary">
         <intent
-            android:targetPackage="com.kinetica.keyboard"
+            android:targetPackage="@string/app_pkg"
             android:targetClass="com.kinetica.keyboard.settings.ChordSettingsActivity" />
     </Preference>
 
@@ -305,6 +343,30 @@
         app:singleLineTitle="false"
         android:summary="@string/pref_backspace_char_slide_summary"
         android:defaultValue="false" />
+
+    <SwitchPreferenceCompat
+        android:key="pref_retype_button"
+        android:title="@string/pref_retype_button_title"
+        app:singleLineTitle="false"
+        android:summary="@string/pref_retype_button_summary"
+        android:defaultValue="false" />
+
+    <SwitchPreferenceCompat
+        android:key="pref_spacebar_word_slide"
+        android:title="@string/pref_spacebar_word_slide_title"
+        app:singleLineTitle="false"
+        android:summary="@string/pref_spacebar_word_slide_summary"
+        android:defaultValue="false" />
+
+    <SeekBarPreference
+        android:key="pref_spacebar_step_dp"
+        android:title="@string/pref_spacebar_step_title"
+        android:summary="@string/pref_spacebar_step_summary"
+        app:singleLineTitle="false"
+        android:defaultValue="20"
+        android:max="60"
+        app:min="8"
+        app:showSeekBarValue="true" />
 
     <EditTextPreference
         android:key="pref_enter_alternates"
@@ -326,7 +388,7 @@
         app:singleLineTitle="false"
         android:summary="@string/pref_edge_swipes_summary">
         <intent
-            android:targetPackage="com.kinetica.keyboard"
+            android:targetPackage="@string/app_pkg"
             android:targetClass="com.kinetica.keyboard.settings.EdgeSwipeSettingsActivity" />
     </Preference>
 
@@ -336,7 +398,7 @@
         app:singleLineTitle="false"
         android:summary="@string/pref_dictionary_summary">
         <intent
-            android:targetPackage="com.kinetica.keyboard"
+            android:targetPackage="@string/app_pkg"
             android:targetClass="com.kinetica.keyboard.settings.DictionarySettingsActivity" />
     </Preference>
 
@@ -346,8 +408,15 @@
         app:singleLineTitle="false"
         android:summary="@string/pref_licenses_summary">
         <intent
-            android:targetPackage="com.kinetica.keyboard"
+            android:targetPackage="@string/app_pkg"
             android:targetClass="com.kinetica.keyboard.settings.LicensesActivity" />
     </Preference>
+
+    <!-- Summary is filled at runtime from the installed package. -->
+    <Preference
+        android:key="pref_version"
+        android:title="@string/pref_version_title"
+        app:singleLineTitle="false"
+        android:selectable="false" />
 
 </PreferenceScreen>

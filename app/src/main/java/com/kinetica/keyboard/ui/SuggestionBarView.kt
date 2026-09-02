@@ -54,6 +54,9 @@ class SuggestionBarView @JvmOverloads constructor(
 
         /** One tier step crossed during a weight-adjust slide (haptic hook). */
         fun onReinforceStep()
+
+        /** The reserved right-edge button: throw the current word away and start again. */
+        fun onRetype()
     }
 
     /**
@@ -76,6 +79,21 @@ class SuggestionBarView @JvmOverloads constructor(
     /** Configured manual boost magnitude; one slide step applies +/- this. */
     var reinforceIncrement = 1
 
+    /**
+     * Reserve the bar's right edge for a retype button.
+     *
+     * The placement is the reporter's: "the one place it would fit on the interface would
+     * be the last (rightmost) space on the word suggestion bar, and it could even be
+     * small, like just a restart arrow". Off by default, because it costs the words some
+     * width and not everyone wants the trade.
+     */
+    var retypeButton = false
+        set(value) {
+            if (field == value) return
+            field = value
+            invalidate()
+        }
+
     private var words: List<Suggestion> = emptyList()
     private var correctionMode = false
     private var selectedIndex = -1
@@ -95,7 +113,7 @@ class SuggestionBarView @JvmOverloads constructor(
     private val longPressHandler = Handler(Looper.getMainLooper())
     private val reinforceRunnable = Runnable {
         val zone = downZone
-        if (zone != -1 && wordAt(zone) != null) {
+        if (zone >= 0 && wordAt(zone) != null) {
             // Arm adjustment; the touch is consumed either way (lifting must
             // not also commit). The delta is applied on lift, not here.
             adjustArmed = true
@@ -204,8 +222,6 @@ class SuggestionBarView @JvmOverloads constructor(
         val h = height.toFloat()
         canvas.drawRect(0f, 0f, w, h, bgPaint)
         val vis = visible()
-        if (vis.isEmpty()) return
-
         // Ornaments scale with the bar so a user-thinned bar shrinks its
         // furniture rather than overlapping the word; 1.0 at BarMetrics
         // .REFERENCE_DP, so the shipped 44dp look is unchanged.
@@ -213,7 +229,15 @@ class SuggestionBarView @JvmOverloads constructor(
         textPaint.textSize = BarMetrics.textSize(h)
         primaryPaint.textSize = BarMetrics.textSize(h)
         val baseY = h / 2f - (textPaint.descent() + textPaint.ascent()) / 2f
-        val zoneW = w / vis.size
+        // Drawn before the early return, so the button is there to be pressed on an empty
+        // bar as well - which is exactly when a botched word most needs restarting.
+        if (retypeButton) {
+            val bw = retypeWidth()
+            canvas.drawText(RETYPE_GLYPH, w - bw / 2f, baseY, textPaint)
+            canvas.drawRect(w - bw - 1f, h * 0.2f, w - bw + 1f, h * 0.8f, dividerPaint)
+        }
+        if (vis.isEmpty()) return
+        val zoneW = wordsWidth() / vis.size
 
         for (i in vis.indices) {
             val s = vis[i]
@@ -257,7 +281,7 @@ class SuggestionBarView @JvmOverloads constructor(
         if (pages > 1) {
             val spacing = 8f * density * orn
             val cy = h - 3.5f * density * orn
-            val startX = w / 2f - (pages - 1) * spacing / 2f
+            val startX = wordsWidth() / 2f - (pages - 1) * spacing / 2f
             for (p in 0 until pages) {
                 badgePaint.alpha = if (p == page) 255 else 90
                 canvas.drawCircle(startX + p * spacing, cy, 1.5f * density * orn, badgePaint)
@@ -305,13 +329,15 @@ class SuggestionBarView @JvmOverloads constructor(
                 resetAdjust()
                 // A leftward swipe is a page flip only when it starts at the
                 // bar's right edge and there is a page to go to.
-                pageSwipeCandidate =
-                    pageCount() > 1 && ev.x >= width - PAGE_EDGE_START_DP * density
+                // Measured from the words' right edge rather than the bar's, so the
+                // button does not sit on top of the page-flip start zone.
+                pageSwipeCandidate = pageCount() > 1 && downZone != ZONE_RETYPE &&
+                    ev.x >= wordsWidth() - PAGE_EDGE_START_DP * density
                 pageSwipeConsumed = false
-                if (downZone != -1) {
+                if (downZone >= 0) {
                     longPressHandler.postDelayed(reinforceRunnable, REINFORCE_HOLD_MS)
                 }
-                if (flickEnabled && !correctionMode) {
+                if (flickEnabled && !correctionMode && downZone != ZONE_RETYPE) {
                     velocityTracker?.recycle()
                     velocityTracker = VelocityTracker.obtain().also { it.addMovement(ev) }
                 }
@@ -340,7 +366,7 @@ class SuggestionBarView @JvmOverloads constructor(
                     return true
                 }
                 velocityTracker?.addMovement(ev)
-                if (flickEnabled && !correctionMode && downZone != -1) {
+                if (flickEnabled && !correctionMode && downZone >= 0) {
                     val vt = velocityTracker
                     if (vt != null) {
                         vt.computeCurrentVelocity(1000)
@@ -373,7 +399,14 @@ class SuggestionBarView @JvmOverloads constructor(
                 }
                 velocityTracker?.addMovement(ev)
                 val zone = zoneAt(ev.x)
-                if (zone != -1 && zone == downZone) {
+                if (zone == ZONE_RETYPE && downZone == ZONE_RETYPE) {
+                    listener?.onRetype()
+                    performClick()
+                    downZone = -1
+                    recycleTracker()
+                    return true
+                }
+                if (zone >= 0 && zone == downZone) {
                     wordAt(zone)?.let { s ->
                         val fullIdx = page * MAX_ZONES + zone
                         if (correctionMode) {
@@ -419,10 +452,26 @@ class SuggestionBarView @JvmOverloads constructor(
         velocityTracker = null
     }
 
+    /**
+     * Width the retype button takes off the right edge, or 0 when it is off.
+     *
+     * Capped at a quarter of the bar so a very narrow keyboard cannot end up with a button
+     * and no room for a word.
+     */
+    private fun retypeWidth(): Float =
+        if (retypeButton) (RETYPE_ZONE_DP * density).coerceAtMost(width / 4f) else 0f
+
+    /** Width the word zones divide between them. */
+    private fun wordsWidth(): Float = width - retypeWidth()
+
     private fun zoneAt(x: Float): Int {
         val vis = visible()
-        if (vis.isEmpty() || width <= 0) return -1
-        return (x / (width.toFloat() / vis.size)).toInt().coerceIn(0, vis.size - 1)
+        if (width <= 0) return -1
+        // The button is not a word zone: it is outside the paging arithmetic, so
+        // MAX_ZONES, visible() and pageCount() are all unchanged by it.
+        if (retypeButton && x >= wordsWidth()) return ZONE_RETYPE
+        if (vis.isEmpty()) return -1
+        return (x / (wordsWidth() / vis.size)).toInt().coerceIn(0, vis.size - 1)
     }
 
     private companion object {
@@ -443,5 +492,13 @@ class SuggestionBarView @JvmOverloads constructor(
         // feel like one family.
         const val PAGE_EDGE_START_DP = 36f
         const val PAGE_SWIPE_TRAVEL_DP = 30f
+        // Retype button: narrow, because the reporter asked for small and because every dp
+        // here is taken from the words. Wide enough for a thumb at the bar's own scale.
+        const val RETYPE_ZONE_DP = 34f
+        // Not a word zone, so it cannot be an index into one.
+        const val ZONE_RETYPE = -2
+        // U+21BB. A symbol rather than an icon: it themes with the text, scales with the
+        // bar, and needs no drawable.
+        const val RETYPE_GLYPH = "\u21bb"
     }
 }

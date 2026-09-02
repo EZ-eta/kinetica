@@ -75,6 +75,17 @@ class WordPredictor(
         return variants.any { it.display == w }
     }
 
+    /**
+     * Whether [s] can still be extended into a word - i.e. the folded form reaches any
+     * node at all, word or not.
+     *
+     * Deliberately weaker than [isWord]: `autom` is not a word and must answer true here,
+     * because that is exactly the state a half-typed word is in. Spelling variants are not
+     * consulted for the same reason - a prefix has not chosen its accents yet.
+     */
+    fun isLivePrefix(s: String): Boolean =
+        s.isNotEmpty() && trie.prefixNode(AccentFolder.fold(s.lowercase())) != -1
+
     /** [context] = last committed words, oldest first (window of 2). */
     fun decode(tokens: List<InputToken>, context: List<String>): List<WordCandidate> {
         val g = geometry ?: return emptyList()

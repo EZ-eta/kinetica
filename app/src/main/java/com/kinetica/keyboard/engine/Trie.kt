@@ -60,6 +60,24 @@ class Trie private constructor(
 
     fun contains(word: CharSequence): Boolean = nodeFor(word) != -1
 
+    /**
+     * The node [prefix] reaches, word or not, or -1 if the path runs out.
+     *
+     * [nodeFor] cannot answer this: it ends on `if (isWord(node)) node else -1`, so it
+     * says no to every half-typed word. That distinction is the whole of the autospace
+     * retraction gate - `autom` has to answer yes and `automaticop` no.
+     */
+    fun prefixNode(prefix: CharSequence): Int {
+        var node = root
+        for (ch in prefix) {
+            val code = Alphabet.codeOf(ch)
+            if (code < 0) return -1
+            node = child(node, code)
+            if (node == -1) return -1
+        }
+        return node
+    }
+
     /** Approximate retained size for the memory-budget test. */
     fun sizeBytes(): Int = nodes.size * 4
 

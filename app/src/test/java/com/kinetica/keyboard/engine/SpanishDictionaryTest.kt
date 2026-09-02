@@ -53,7 +53,12 @@ class SpanishDictionaryTest {
         assertTrue("bigram count ${table.size}", table.size > 50_000)
         assertTrue("table bytes ${table.sizeBytes()}", table.sizeBytes() < 4 * 1024 * 1024)
         val boost = table.multiplier(dict.trie.nodeFor("de"), dict.trie.nodeFor("la"))
-        assertTrue("de->la boost $boost", boost > 1.5f)
+        // Stated as a share of the available boost rather than as a literal: what is
+        // being asserted is that the table gives a very common pair most of what it
+        // has to give, which is a property of the asset. A literal here just pins
+        // whatever BIGRAM_BOOST_MAX happened to be when it was written.
+        val share = (boost - 1f) / KineticaConstants.BIGRAM_BOOST_MAX
+        assertTrue("de->la boost $boost, share $share of the cap", share > 0.3f)
     }
 
     @Test

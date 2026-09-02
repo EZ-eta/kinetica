@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+      Developer build only. Merged into the debug variant's manifest and into no other,
+      so the released app has no trace screen and no second launcher entry.
+    -->
+    <application>
+        <activity
+            android:name=".ime.TraceActivity"
+            android:exported="true"
+            android:label="@string/trace_title">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>

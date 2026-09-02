@@ -165,7 +165,10 @@ bytes, and either can install and update over the other's build.
 - Adjustable height (drag the handle above the suggestion bar, or Settings);
   the handle's own height is a 0-20dp setting applied live, and zero removes it
   and reclaims the strip
-- Autospace after swiped words with configurable delay and spacebar indicator
+- Autospace after swiped words with configurable delay and spacebar indicator.
+  Optionally after tapped words too, including words with an apostrophe (`don't`,
+  `dell'anno`) and single letters (`a`, `I`); a space that arrives early is taken
+  back by the next letter, and one you delete does not come back
 - Zen mode: disables all animation work for battery/GPU savings
 - On-device learning: every committed word (and any unknown word) feeds a
   private user dictionary that merges into predictions
@@ -209,6 +212,24 @@ Settings and simply hard to find. The ones that come up most:
   offered at all. The dialog stays open after each one, since blocking several in
   a row is the usual case, and tapping a word already in the list lifts the block.
   Per language, and it takes effect on the next word you type.
+- **Automatic spaces while tapping, not only while swiping.** *Autospace tapped
+  words too* is off by default, because tapping says less about whether a word is
+  over than a finished gesture does: every letter looks like the middle of a longer
+  word. With it on, a word your dictionary holds gets its space after a pause, and
+  the next letter you type takes the space back if the word was not over after all.
+  Words with an apostrophe are read as one token, so `don't` and `dell'anno` space
+  correctly, and single letters that are words on their own (`a` and `I` in English,
+  `a`, `e`, `i`, `o` in Italian) wait a little longer than a whole word does before
+  spacing. Three sliders set the delays: one for swipes, one for taps, one for how
+  long a space stays retractable.
+- **A retype button.** *Retype button on the suggestion bar* reserves the bar's
+  right edge for a small restart arrow. One tap throws away the word you are
+  writing, or the one just finished, so a gesture that came out wrong can be redone
+  in place without hunting for the delete key.
+- **The spacebar's cursor slide, faster or by word.** Sliding along the spacebar
+  moves the cursor; *Spacebar slide distance* sets how far you travel per step, and
+  *Spacebar slide moves by word* steps a whole word at a time the way the backspace
+  slide does.
 - **A much bigger dictionary.** Settings > Dictionary > *Import improved
   dictionary* takes an AOSP `wordlist.combined` and merges it with the bundled
   list - three to five times the words. Grab one from
