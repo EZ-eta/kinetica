@@ -103,7 +103,8 @@ object DictionaryLoader {
      * Lines of "w1&lt;TAB&gt;w2&lt;TAB&gt;count". Counts exceed Int range ("of the" in a
      * web corpus), hence Long. Pairs with endpoints missing from [trie] are
      * dropped: the table is keyed on trie node ids. Endpoints fold like
-     * wordlist entries so accented Italian bigrams resolve.
+     * wordlist entries so accented Italian bigrams resolve; [BigramTable]
+     * combines counts for spellings that resolve to the same pair.
      */
     fun loadBigrams(reader: BufferedReader, trie: Trie): BigramTable {
         val entries = ArrayList<Triple<Int, Int, Long>>(100_000)
