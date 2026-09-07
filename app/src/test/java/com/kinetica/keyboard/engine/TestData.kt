@@ -7,7 +7,7 @@ import com.kinetica.keyboard.engine.models.SwipeToken
 import com.kinetica.keyboard.engine.models.TapToken
 import kotlin.math.sqrt
 
-/** Shared fixtures: a synthetic QWERTY geometry and hand-built tokens. */
+/** Shared fixtures: synthetic keyboard geometries and hand-built tokens. */
 object TestData {
     const val KEY_W = 100f
 
@@ -15,12 +15,24 @@ object TestData {
      * Standard QWERTY grid, 1000px wide, 150px row height (kw: keys 1.0 wide,
      * rows 1.5 tall) - same proportions as assets/layouts/qwerty.json.
      */
-    fun qwertyGeometry(): KeyboardGeometry {
-        val rows = listOf(
+    fun qwertyGeometry(): KeyboardGeometry = letterGeometry(
+        listOf(
             "qwertyuiop" to 0.0f,
             "asdfghjkl" to 0.5f,
             "zxcvbnm" to 1.5f,
-        )
+        ),
+    )
+
+    /** The same grid with Y and Z exchanged, as in the QWERTZ setting. */
+    fun qwertzGeometry(): KeyboardGeometry = letterGeometry(
+        listOf(
+            "qwertzuiop" to 0.0f,
+            "asdfghjkl" to 0.5f,
+            "yxcvbnm" to 1.5f,
+        ),
+    )
+
+    private fun letterGeometry(rows: List<Pair<String, Float>>): KeyboardGeometry {
         val rects = ArrayList<FloatArray>()
         val codes = ArrayList<Int>()
         for ((rowIdx, row) in rows.withIndex()) {

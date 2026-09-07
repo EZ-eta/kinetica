@@ -260,7 +260,7 @@ class WordComposer(
      *
      * Ranking them together needs no such answer, and no threshold. Scores are
      * already comparable across the bundled dictionaries: Trie.freqByteFor
-     * normalizes each asset against its OWN maximum count, and all four
+     * normalizes each asset against its OWN maximum count, and all five
      * assets are the same construction (FrequencyWords top-50k), so fw at
      * matched rank percentiles agrees to within 1.04-1.07x - worth under
      * 0.025 kw of distance against a geometric term that moves 1.335x between

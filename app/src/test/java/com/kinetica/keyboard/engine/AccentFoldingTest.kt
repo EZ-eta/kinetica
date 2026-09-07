@@ -22,6 +22,10 @@ class AccentFoldingTest {
         assertEquals("perche", AccentFolder.fold("perché"))
         assertEquals("citta", AccentFolder.fold("città"))
         assertEquals("zazolc gesla jazn", AccentFolder.fold("zażółć gęślą jaźń"))
+        assertEquals(
+            "prilis zlutoucky kun dabelske ody mesto",
+            AccentFolder.fold("příliš žluťoučký kůň ďábelské ódy město"),
+        )
         assertEquals("strasse", AccentFolder.fold("straße"))
         val plain = "already plain"
         assertTrue(plain === AccentFolder.fold(plain))
@@ -79,6 +83,8 @@ class AccentFoldingTest {
         assertEquals('e' - 'a', AccentFolder.accentedLetterCode("ę"))
         assertEquals('c' - 'a', AccentFolder.accentedLetterCode("Ç"))
         assertEquals('e' - 'a', AccentFolder.accentedLetterCode("É"))
+        assertEquals('r' - 'a', AccentFolder.accentedLetterCode("Ř"))
+        assertEquals('t' - 'a', AccentFolder.accentedLetterCode("ť"))
         // The popup's own base cell is a letter but not an accented one: it keeps
         // the shipped commit-then-insert path, deliberately.
         assertEquals(-1, AccentFolder.accentedLetterCode("o"))

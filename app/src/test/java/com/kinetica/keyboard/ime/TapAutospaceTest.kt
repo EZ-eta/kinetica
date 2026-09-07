@@ -1,5 +1,6 @@
 package com.kinetica.keyboard.ime
 
+import com.kinetica.keyboard.keys.StandaloneLetters
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -57,6 +58,23 @@ class TapAutospaceTest {
         assertTrue(fires(literal = "a", literalIsWord = true, literalIsStandaloneLetter = true))
         // `t` is in en_wordlist at 72 881 and is not a word anyone types alone.
         assertFalse(fires(literal = "t", literalIsWord = true, literalIsStandaloneLetter = false))
+    }
+
+    @Test
+    fun czechSingleLetterWordsAutospaceWithoutAdmittingDictionaryNoise() {
+        // The English fallback only spaces a/i, losing Czech k/o/s/u/v/z.
+        // Dictionary membership cannot distinguish these words from initials.
+        for (letter in 'a'..'z') {
+            assertEquals(
+                "Czech '$letter' autospace",
+                letter in "aikosuvz",
+                fires(
+                    literal = letter.toString(),
+                    literalIsWord = true,
+                    literalIsStandaloneLetter = StandaloneLetters.isWord(letter, "cs"),
+                ),
+            )
+        }
     }
 
     @Test

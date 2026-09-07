@@ -60,8 +60,13 @@ Run `python3 tools/generate_assets.py --lang <lang>`. Output (into
   are all accents keeps all of them, which is a silent exception rather than a
   bug but is not what anyone wants.
 
-A non-QWERTY arrangement (e.g. AZERTY for French) is just a different JSON,
-but it changes gesture geometry — its golden decodes must use that layout's
+QWERTZ and QZERTY use the shared **Letter arrangement** setting; author the
+base QWERTY JSON once. Accents follow their letters through the swap, and
+the setting applies to every language. Cover the expected arrangements in
+the language's golden tests (`TestData.qwertzGeometry()` is available).
+
+An arrangement with different rows (e.g. AZERTY for French) needs a different
+JSON and gesture geometry — its golden decodes must use that layout's
 geometry, not `TestData.qwertyGeometry()`.
 
 ## 4. Register the language
@@ -76,6 +81,9 @@ geometry, not `TestData.qwertyGeometry()`.
 - `engine/DictionaryMerger.kt` — add the language's regex to the
   `WORD_RES` table (mirrors the generator's `WORD_RE`); without it an AOSP
   import silently filters the language's accented words.
+- `keys/StandaloneLetters.kt` — register the language's one-letter function
+  words and test tapped-word autospace. Unregistered languages use the English
+  set; dictionary membership cannot distinguish these words from initials.
 - `DictionarySettingsActivity` and `alphaLayoutName()` pick the language up
   automatically from `ALL_LANGUAGES` and the bundled layout list.
 
