@@ -11,15 +11,18 @@ object AccentFolder {
 
     private val FOLD = HashMap<Char, Char>().apply {
         "àáâäãåą".forEach { put(it, 'a') }
-        "èéêëę".forEach { put(it, 'e') }
+        "èéêëęě".forEach { put(it, 'e') }
         "ìíîï".forEach { put(it, 'i') }
         "òóôöõ".forEach { put(it, 'o') }
-        "ùúûü".forEach { put(it, 'u') }
-        put('ç', 'c'); put('ć', 'c')
-        put('ñ', 'n'); put('ń', 'n')
+        "ùúûüů".forEach { put(it, 'u') }
+        put('ç', 'c'); put('ć', 'c'); put('č', 'c')
+        put('ď', 'd')
+        put('ñ', 'n'); put('ń', 'n'); put('ň', 'n')
         put('ý', 'y')
         put('ł', 'l')
-        put('ś', 's')
+        put('ř', 'r')
+        put('ś', 's'); put('š', 's')
+        put('ť', 't')
         put('ž', 'z'); put('ź', 'z'); put('ż', 'z')
     }
 

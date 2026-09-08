@@ -44,15 +44,18 @@ object StandaloneLetters {
      *  - `it` - `a` (to), `e` (and), `i` (the, masculine plural), `o` (or). `è` (is) folds
      *    onto `e`.
      *  - `es` - `a` (to), `e` and `y` (and), `o` (or).
-     *  - `pl` - `a`, `i` (and), `o` (about), `u` (at), `w` (in), `z` (with). The largest
-     *    set and the only one with no capture behind it: `w` and `z` are also common word
-     *    starts in Polish, so this is the language most likely to want a longer delay.
-     *    Unmeasured, and said so.
+     *  - `pl` - `a`, `i` (and), `o` (about), `u` (at), `w` (in), `z` (with). No capture
+     *    behind it: `w` and `z` are also common word starts in Polish, so it may want a
+     *    longer delay. Unmeasured, and said so.
+     *  - `cs` - conjunctions `a`, `i` and prepositions `k`, `o`, `s`, `u`, `v`, `z`.
+     *    These are the one-letter function words listed by ÚJČ:
+     *    https://prirucka.ujc.cas.cz/?id=880. Timing is unmeasured, as for Polish.
      */
     private fun setFor(lang: String): Set<Char> = when (lang) {
         "it" -> IT
         "es" -> ES
         "pl" -> PL
+        "cs" -> CS
         else -> EN
     }
 
@@ -60,4 +63,5 @@ object StandaloneLetters {
     private val IT = setOf('a', 'e', 'i', 'o')
     private val ES = setOf('a', 'e', 'o', 'y')
     private val PL = setOf('a', 'i', 'o', 'u', 'w', 'z')
+    private val CS = setOf('a', 'i', 'k', 'o', 's', 'u', 'v', 'z')
 }

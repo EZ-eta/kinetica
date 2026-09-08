@@ -102,6 +102,23 @@ class DictionaryMergerTest {
     }
 
     @Test
+    fun czechPatternAdmitsAccentedWords() {
+        val aosp = """
+             word=příliš,f=200
+             word=žluťoučký,f=180
+             word=kůň,f=170
+             word=zażółć,f=150
+        """.trimIndent()
+        val result = DictionaryMerger.merge(primary, reader(aosp), "cs")
+        val words = result.rows.map { it.first }
+        assertTrue(words.contains("příliš"))
+        assertTrue(words.contains("žluťoučký"))
+        assertTrue(words.contains("kůň"))
+        // Polish-only letters are not Czech orthography: filtered on import.
+        assertFalse(words.contains("zażółć"))
+    }
+
+    @Test
     fun readPrimaryParsesTabSeparatedRows() {
         val rows = DictionaryMerger.readPrimary(reader("the\t1000\nbroken line\nof\t500\n"))
         assertEquals(listOf("the" to 1000, "of" to 500), rows)
