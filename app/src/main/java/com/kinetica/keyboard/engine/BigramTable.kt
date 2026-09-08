@@ -31,26 +31,35 @@ class BigramTable private constructor(
         private fun pack(prev: Int, next: Int): Long =
             (prev.toLong() shl 32) or (next.toLong() and 0xFFFFFFFFL)
 
-        /** Entries are (prevWordId, nextWordId, rawCount). */
+        /** Entries are (prevWordId, nextWordId, rawCount); equal pairs sum their counts. */
         fun build(entries: List<Triple<Int, Int, Long>>): BigramTable {
             if (entries.isEmpty()) return EMPTY
             val keys = LongArray(entries.size)
             val counts = LongArray(entries.size)
             val idx = entries.indices.sortedBy { pack(entries[it].first, entries[it].second) }
-            for (i in idx.indices) {
-                val e = entries[idx[i]]
-                keys[i] = pack(e.first, e.second)
-                counts[i] = e.third
+            var uniqueCount = 0
+            for (i in idx) {
+                val e = entries[i]
+                val key = pack(e.first, e.second)
+                // Accent folding can make distinct spellings share a pair. Combine
+                // their evidence before finding the context maximum or quantizing.
+                if (uniqueCount > 0 && keys[uniqueCount - 1] == key) {
+                    counts[uniqueCount - 1] += e.third
+                } else {
+                    keys[uniqueCount] = key
+                    counts[uniqueCount] = e.third
+                    uniqueCount++
+                }
             }
             // Same-prev entries are contiguous after sorting; normalize each group
             // against its own maximum so every context uses the full byte range.
-            val boosts = ByteArray(entries.size)
+            val boosts = ByteArray(uniqueCount)
             var start = 0
-            while (start < keys.size) {
+            while (start < uniqueCount) {
                 val prev = keys[start] ushr 32
                 var end = start
                 var maxCount = 1L
-                while (end < keys.size && (keys[end] ushr 32) == prev) {
+                while (end < uniqueCount && (keys[end] ushr 32) == prev) {
                     maxCount = max(maxCount, counts[end])
                     end++
                 }
@@ -61,7 +70,7 @@ class BigramTable private constructor(
                 }
                 start = end
             }
-            return BigramTable(keys, boosts)
+            return BigramTable(keys.copyOf(uniqueCount), boosts)
         }
     }
 }
