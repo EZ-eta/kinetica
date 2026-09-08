@@ -141,6 +141,8 @@ object Prefs {
     const val TRAIL_COLOR = "pref_trail_color"
     const val TRAIL_COLOR_CUSTOM_HUE = "pref_trail_color_custom_hue"
     const val LANGUAGE = "pref_language"
+    /** Last language agreed with Android; detects Settings edits while the IME is inactive. */
+    const val SYNCED_LANGUAGE = "pref_synced_language"
     const val LONG_PRESS_MS = "pref_long_press_ms"
     const val AUTOCORRECT_LEVEL = "pref_autocorrect_level"
     const val REINFORCE_INCREMENT = "pref_reinforce_increment"

@@ -4,16 +4,20 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.content.res.Configuration
 import android.inputmethodservice.InputMethodService
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.os.VibrationEffect
 import android.os.Vibrator
+import android.provider.Settings
 import android.util.Log
 import android.util.TypedValue
 import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
+import android.view.inputmethod.InputMethodSubtype
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.preference.PreferenceManager
 import com.kinetica.keyboard.data.DictionaryStore
@@ -71,6 +75,10 @@ import java.util.concurrent.Executors
 class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.Callbacks {
 
     private val mainHandler = Handler(Looper.getMainLooper())
+    private val inputMethodManager by lazy { getSystemService(InputMethodManager::class.java) }
+    private val inputMethodInfo by lazy {
+        inputMethodManager.inputMethodList.first { it.packageName == packageName }
+    }
     private val mainExecutor = Executor { mainHandler.post(it) }
     private val decodeExecutor = Executors.newSingleThreadExecutor { r ->
         Thread(r, "kinetica-decode").apply { priority = Thread.NORM_PRIORITY + 1 }
@@ -266,6 +274,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
                 abandonWord()
                 keyboardView?.setKeyboardLayout(alphaLayout())
                 loadDictionaryAsync()
+                requestLanguageSubtype(config.language)
             } else if (config.dictionaryGeneration != previous.dictionaryGeneration ||
                 config.autoDetectLanguage != previous.autoDetectLanguage ||
                 config.enabledLanguages != previous.enabledLanguages
@@ -651,6 +660,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
 
     override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
         super.onStartInput(attribute, restarting)
+        synchronizeLanguageOnStart()
         editorState = EditorState.from(attribute)
         abandonWord()
         composer?.reset()
@@ -1845,6 +1855,59 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             .edit().putBoolean(Prefs.PECK_MODE, !config.peckMode).apply()
     }
 
+    @Suppress("DEPRECATION") // method.xml declares legacy imeSubtypeLocale values.
+    private fun subtypeLanguage(subtype: InputMethodSubtype?): String? =
+        subtype?.locale?.substringBefore('_')
+
+    override fun onCurrentInputMethodSubtypeChanged(newSubtype: InputMethodSubtype?) {
+        val language = subtypeLanguage(newSubtype) ?: return
+        acceptSubtypeLanguage(language)
+    }
+
+    private fun acceptSubtypeLanguage(language: String) {
+        PreferenceManager.getDefaultSharedPreferences(this).edit()
+            .putString(Prefs.LANGUAGE, language)
+            .putString(Prefs.SYNCED_LANGUAGE, language)
+            .apply()
+    }
+
+    private fun synchronizeLanguageOnStart() {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+        val systemLanguage = subtypeLanguage(inputMethodManager.currentInputMethodSubtype)
+        val language = languageOnInputStart(
+            prefs.getString(Prefs.LANGUAGE, null),
+            prefs.getString(Prefs.SYNCED_LANGUAGE, null),
+            systemLanguage,
+        )
+        if (language == systemLanguage) {
+            acceptSubtypeLanguage(language)
+        } else {
+            requestLanguageSubtype(language)
+        }
+    }
+
+    private fun requestLanguageSubtype(language: String) {
+        // A Settings edit can arrive while another IME is selected. Keep the
+        // local choice unacknowledged until this IME is active again.
+        if (Settings.Secure.getString(contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD) !=
+            inputMethodInfo.id
+        ) return
+        val subtype = (0 until inputMethodInfo.subtypeCount).asSequence()
+            .map { inputMethodInfo.getSubtypeAt(it) }
+            .firstOrNull { subtypeLanguage(it) == language } ?: return
+        if (subtype == inputMethodManager.currentInputMethodSubtype) {
+            acceptSubtypeLanguage(language)
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            switchInputMethod(inputMethodInfo.id, subtype)
+        } else {
+            // The service overload was added in API 28; the IME token supplies
+            // the same authority through InputMethodManager on Android 8.
+            val token = window.window?.attributes?.token ?: return
+            @Suppress("DEPRECATION")
+            inputMethodManager.setInputMethodAndSubtype(token, inputMethodInfo.id, subtype)
+        }
+    }
+
     /** ?123-chord language switch: next enabled language in canonical order. */
     private fun cycleLanguage() {
         val langs = config.enabledLanguages
@@ -2030,6 +2093,20 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         // Any-letter (accented Italian included) with internal apostrophes.
         val WORD_RE = Regex("^\\p{L}+(?:'\\p{L}+)*$")
     }
+}
+
+/**
+ * Choose the initial language without losing Settings edits made while the
+ * service was absent. An existing preference also wins on the first sync;
+ * once acknowledged, Android can select a different subtype on a cold start.
+ */
+internal fun languageOnInputStart(
+    storedLanguage: String?,
+    syncedLanguage: String?,
+    subtypeLanguage: String?,
+): String {
+    if (storedLanguage != null && storedLanguage != syncedLanguage) return storedLanguage
+    return subtypeLanguage ?: storedLanguage ?: Prefs.DEFAULT_LANGUAGE
 }
 
 /**
