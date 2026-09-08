@@ -25,6 +25,16 @@ object LayoutMutations {
      */
     val ENTER_ALTERNATES = listOf("?", "!", ",")
 
+    /**
+     * Shift's alternate-popup cells: the case to put the word in hand into (R34).
+     *
+     * Labels rather than outputs, unlike every other alternate list here, because the IME
+     * discriminates on `KeyType.SHIFT` and never lets these strings reach the editor. That
+     * is why they need no reserved prefix: the key is the command, the cell is the
+     * argument, and the order is [WordCase]'s.
+     */
+    val SHIFT_CASE_CELLS = listOf("abc", "Abc", "ABC")
+
     /** Id of the optional apostrophe key. */
     const val APOSTROPHE_KEY_ID = "apostrophe"
 
@@ -78,6 +88,28 @@ object LayoutMutations {
         if (alts.isEmpty()) return layout
         val keys = layout.keys.map { k ->
             if (k.type == KeyType.ENTER) k.copy(alternates = alts) else k
+        }
+        return layout.copy(keys = keys)
+    }
+
+    /**
+     * Gives the shift key its [SHIFT_CASE_CELLS] popup (R34).
+     *
+     * Applied unconditionally in the alpha-layout chain: no layout JSON gives shift
+     * alternates, so before this the hold timer never even started on it, and nothing can
+     * regress by starting it now.
+     *
+     * `hint = ""` is load-bearing. `Key.hintChar` falls back to the first alternate, so
+     * without it every keyboard would grow a permanent `abc` in the corner of its shift
+     * key to advertise a feature most people will not use.
+     */
+    fun withShiftCaseCells(
+        layout: KeyboardLayout,
+        cells: List<String> = SHIFT_CASE_CELLS,
+    ): KeyboardLayout {
+        if (cells.isEmpty()) return layout
+        val keys = layout.keys.map { k ->
+            if (k.type == KeyType.SHIFT) k.copy(alternates = cells, hint = "") else k
         }
         return layout.copy(keys = keys)
     }
@@ -216,7 +248,7 @@ object LayoutMutations {
 
     /**
      * Rearranges two letters without touching the geometry, so the swipe
-     * decoder simply sees the keyboard the user is looking at.
+     * decoder sees the keyboard the user is looking at.
      *
      * Done here rather than as a second set of layout JSON files because a
      * qwertz_it.json would have to duplicate every accent Italian carries, and
@@ -274,24 +306,19 @@ object LayoutMutations {
     }
 
     /**
-     * Drops accented letters from every key's long-press alternates, keeping the
-     * digits and symbols. In the English layout "a" offers
-     * `à á â ä ã å æ ā @` — eight forms of a letter English does not accent
-     * before the one character the key is really there for — and "o" carries
-     * seven; a user who writes only English can reach neither `@` nor a digit
-     * without walking past them.
+     * Drops accented letters from every key's long-press alternates, keeping the digits and
+     * symbols. English "a" offers `à á â ä ã å æ ā @`, so a user who writes only English
+     * walks past eight accents to reach the one character the key is there for, and "o"
+     * carries seven.
      *
-     * A no-op for a layout that declares [KeyboardLayout.nativeAccents], which is
-     * what keeps this from taking "ñ" away from a Spanish writer, "ą" from a
-     * Polish writer, or "ř" from a Czech writer: the layout, not
-     * this function, knows whether its accents belong to its language.
+     * A no-op for a layout that declares [KeyboardLayout.nativeAccents]. That is what keeps
+     * "ñ" from a Spanish writer, "ą" from a Polish one and "ř" from a Czech one: the layout
+     * knows whether its accents belong to its language, and this function does not.
      *
-     * Safe to run before [withNumberPriority] (which then finds nothing to
-     * reorder): measured against all five bundled layouts, every
-     * accent-carrying key has at least one non-letter alternate — `e`→`3`,
-     * `a`→`@`, `s`→`#`, `l`→`)`, `z`→`'`, `c`→`;`, `n`→`!`, `y`→`6`, `u`→`7`,
-     * `i`→`8`, `o`→`9` — so no key is left with an empty popup or without the
-     * [Key.hintChar] its corner hint derives from.
+     * Safe to run before [withNumberPriority], which then finds nothing to reorder. Across
+     * all five bundled layouts every accent-carrying key keeps at least one non-letter
+     * alternate, so no key is left with an empty popup or without the [Key.hintChar] its
+     * corner hint derives from.
      */
     fun withoutForeignAlternates(layout: KeyboardLayout): KeyboardLayout {
         if (layout.nativeAccents) return layout

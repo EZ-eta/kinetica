@@ -3,6 +3,7 @@ package com.kinetica.keyboard.ime
 import com.kinetica.keyboard.keys.EditorAction
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -140,5 +141,33 @@ class RetypeTest {
         // them one implementation.
         assertNotNull(EditorAction.of("action:retype"))
         assertEquals(EditorAction.RETYPE, EditorAction.of(EditorAction.RETYPE.output))
+    }
+
+    @Test
+    fun onlyTheCommitCaseHasAWordToTakeBack() {
+        // A retype is the user saying the last commit was wrong, and until 2026-09-06 the
+        // word kept the personal weight that commit earned - so a word being fought got
+        // STRONGER with every attempt. `biologa` was measured climbing pb 1.10 -> 1.24
+        // across one capture while being retyped over and over.
+        //
+        // Only the commit case names a word. The tentative case has nothing committed yet,
+        // and the cursor case is a run of letters the keyboard has no record of deciding,
+        // so neither may guess at what to unlearn.
+        assertEquals("commit", retypeSource(tentativeLength = 0, lastCommitWord = "biologa"))
+        assertEquals("tentative", retypeSource(tentativeLength = 7, lastCommitWord = "biologa"))
+        assertEquals("cursor", retypeSource(tentativeLength = 0, lastCommitWord = null))
+    }
+
+    @Test
+    fun everyActionRoundTripsThroughItsOwnName() {
+        // The chord picker builds its list from EditorAction.entries and dispatches the
+        // selected entry's output, so an action whose name does not survive `of` would be
+        // offered in settings and then inserted as text. Retype was missing from that list
+        // for three releases; the list is enum-driven now and this is the floor under it.
+        for (a in EditorAction.entries) {
+            assertEquals("$a does not survive its own name", a, EditorAction.of(a.output))
+            assertTrue("${a.output} must start with the reserved prefix", a.output.startsWith(EditorAction.PREFIX))
+        }
+        assertEquals(EditorAction.entries.size, EditorAction.entries.map { it.output }.toSet().size)
     }
 }

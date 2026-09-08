@@ -144,6 +144,8 @@ object Prefs {
     /** Last language agreed with Android; detects Settings edits while the IME is inactive. */
     const val SYNCED_LANGUAGE = "pref_synced_language"
     const val LONG_PRESS_MS = "pref_long_press_ms"
+    const val CHORD_ARM_MS = "pref_chord_arm_ms"
+    const val RETYPE_AVOIDS_REJECTED = "pref_retype_avoids_rejected"
     const val AUTOCORRECT_LEVEL = "pref_autocorrect_level"
     const val REINFORCE_INCREMENT = "pref_reinforce_increment"
     const val EMOJI_KEY = "pref_emoji_key"
@@ -211,6 +213,25 @@ object Prefs {
      * compose, so a word-wise slide can also be given a shorter step.
      */
     const val SPACEBAR_WORD_SLIDE = "pref_spacebar_word_slide"
+
+    /**
+     * Left 30% of the spacebar ends the word and writes no space.
+     *
+     * Asked for by name (R35): it is how a compound the dictionary does not hold gets
+     * swiped in two halves instead of pecked. Off by default because it spends a third of
+     * the spacebar's tap area, which is a cost paid by everyone and wanted by few.
+     */
+    const val SPACELESS_SPACE = "pref_spaceless_space"
+
+    /**
+     * Learn which word tends to follow which, from this user's own typing.
+     *
+     * Opt-in and off by default, unlike the single-word learning beside it. A pair is a
+     * fragment of a sentence and is more revealing than a word count, so it is switched on
+     * deliberately or not at all. Everything about it is on-device: a Room table, no
+     * network, no permission, and it is not part of the personal-dictionary export.
+     */
+    const val LEARN_PHRASES = "pref_learn_phrases"
 
     /**
      * Enter's slide-up/hold popup symbols: a space-separated list;
@@ -305,16 +326,20 @@ object Prefs {
     const val DEFAULT_LANGUAGE = "en"
     const val DEFAULT_KEY_ARRANGEMENT = "qwerty"
     const val DEFAULT_LONG_PRESS_MS = 500
+    const val DEFAULT_CHORD_ARM_MS = 150
+    const val DEFAULT_RETYPE_AVOIDS_REJECTED = false
     const val DEFAULT_AUTOCORRECT_LEVEL = "normal"
     const val DEFAULT_REINFORCE_INCREMENT = "medium"
     const val DEFAULT_EMOJI_KEY = false
     const val DEFAULT_NUMBER_PRIORITY = false
     const val DEFAULT_PLAIN_LETTER_ALTERNATES = false
-    const val DEFAULT_ALTERNATE_SWIPES = false
+    const val DEFAULT_ALTERNATE_SWIPES = true
     const val DEFAULT_BACKSPACE_CHAR_SLIDE = false
     const val DEFAULT_RETYPE_BUTTON = false
     const val DEFAULT_SPACEBAR_STEP_DP = 20
     const val DEFAULT_SPACEBAR_WORD_SLIDE = false
+    const val DEFAULT_SPACELESS_SPACE = false
+    const val DEFAULT_LEARN_PHRASES = false
     const val DEFAULT_ENTER_ALTERNATES = "? ! ,"
     const val DEFAULT_APOSTROPHE_KEY = false
     const val DEFAULT_COMMA_MODE = "keep"

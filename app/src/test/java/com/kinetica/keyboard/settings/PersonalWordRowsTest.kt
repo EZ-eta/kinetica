@@ -3,6 +3,7 @@ package com.kinetica.keyboard.settings
 import com.kinetica.keyboard.engine.KineticaConstants
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -134,5 +135,67 @@ class PersonalWordRowsTest {
         // The failure mode of a badly-written filter: fall through to
         // "everything" on no match, which would put 4,266 rows back on screen.
         assertEquals(emptyList<Pair<String, Int>>(), PersonalWordRows.filtered(dictionary, "zzz"))
+    }
+
+    // ------------------------------------------------- batch selection
+    //
+    // Deleting one word at a time closed and moved the dialog on every press, which a user
+    // reported as unusable at speed. The multi-select that replaced it inherits the
+    // screen's one real hazard: a tick is a position in the FILTERED list.
+
+    @Test
+    fun aCheckedWordSurvivesAFilterChange() {
+        // "meno" sits at a different index in the full list and in the "me" view, and the
+        // tick has to follow the word through both.
+        val checked = setOf("meno")
+        val narrowed = PersonalWordRows.filtered(dictionary, "me")
+        assertEquals(
+            listOf("meno"),
+            PersonalWordRows.checkedPositions(dictionary, checked).map { dictionary[it].first },
+        )
+        assertEquals(
+            listOf("meno"),
+            PersonalWordRows.checkedPositions(narrowed, checked).map { narrowed[it].first },
+        )
+        assertNotEquals(
+            PersonalWordRows.checkedPositions(dictionary, checked),
+            PersonalWordRows.checkedPositions(narrowed, checked),
+        )
+    }
+
+    @Test
+    fun checkedRowsResolveToWordsNotPositions() {
+        // The defect this pins: index 0 of the "me" view is "come", index 0 of the full
+        // list is "che", so a position-keyed selection deletes the wrong word.
+        val narrowed = PersonalWordRows.filtered(dictionary, "me")
+        val firstShown = narrowed.first().first
+        val positions = PersonalWordRows.checkedPositions(narrowed, setOf(firstShown))
+        assertEquals(listOf(firstShown), positions.map { narrowed[it].first })
+        assertNotEquals(firstShown, dictionary[positions.first()].first)
+    }
+
+    @Test
+    fun aBatchDeleteRemovesEveryCheckedWordAndNothingElse() {
+        val checked = setOf(dictionary[0].first, dictionary[2].first)
+        assertEquals(
+            listOf(dictionary[0].first, dictionary[2].first),
+            PersonalWordRows.wordsToDelete(dictionary, checked),
+        )
+    }
+
+    @Test
+    fun aCheckedWordThatIsNoLongerARowIsNotDeleted() {
+        // A tick outlives its row: the list is rebuilt after each batch, so the set can
+        // still name something already gone.
+        assertEquals(
+            emptyList<String>(),
+            PersonalWordRows.wordsToDelete(dictionary, setOf("notinthelist")),
+        )
+    }
+
+    @Test
+    fun nothingCheckedDeletesNothing() {
+        assertEquals(emptyList<String>(), PersonalWordRows.wordsToDelete(dictionary, emptySet()))
+        assertEquals(emptyList<Int>(), PersonalWordRows.checkedPositions(dictionary, emptySet()))
     }
 }

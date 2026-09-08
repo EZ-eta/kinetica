@@ -96,6 +96,14 @@ class KeyboardView @JvmOverloads constructor(
 
         /** Any key-down; the service decides whether to vibrate. */
         fun onKeyPressFeedback()
+
+        /**
+         * Spacebar tapped inside its spaceless zone: end the word, write no space.
+         *
+         * Separate from [onKeyTap] rather than a flag on it, because the key is the same
+         * key and only the service knows what ending a word means.
+         */
+        fun onSpacelessSpace()
     }
 
     var listener: Listener? = null
@@ -131,11 +139,25 @@ class KeyboardView @JvmOverloads constructor(
         get() = spaceController.wordMode
         set(value) { spaceController.wordMode = value }
 
+    /** Left 30% of the spacebar ends the word without writing a space. */
+    var spacelessSpace: Boolean
+        get() = spaceController.spacelessZone
+        set(value) {
+            if (spaceController.spacelessZone != value) {
+                spaceController.spacelessZone = value
+                renderStaticLayer()
+                invalidate()
+            }
+        }
+
     /** Active edge-swipe shortcut set; swapped live on preference changes. */
     var edgeSwipeBindings: EdgeSwipeBindings = EdgeSwipeBindings.DEFAULTS
 
     /** Threshold for long-press alternates on tap-dispatched keys. */
     var longPressMs = 500L
+
+    /** ?123 lead-in before a letter tap counts as a chord. See the interaction table. */
+    var chordArmMs = CHORD_ARM_MS_DEFAULT
 
     var layoutMode: LayoutMode = LayoutMode.FULL
         set(value) {
@@ -321,12 +343,15 @@ class KeyboardView @JvmOverloads constructor(
     //  slide      >=30dp travel, dominant horizontal           -> numpad
     //  hold       >=longPressMs stationary, no other key       -> gear popup
     //  chord      held >=CHORD_ARM_MS AND a letter key tapped  -> expansion
-    // CHORD_ARM_MS (150ms) exists so a two-thumb typist brushing ?123 in the
-    // same instant as a letter cannot fire a chord by accident; a deliberate
-    // chord (press, then tap) clears 150ms without ever noticing it. A chord
-    // consumes both touches: the letter never reaches the gesture engine and
-    // the ?123 lift stops switching layers. Chords fire only for letters the
-    // user has assigned (default: none), everything else types normally.
+    // chordArmMs (150ms by default, user-settable 0-300) exists so a two-thumb
+    // typist brushing ?123 in the same instant as a letter cannot fire a chord
+    // by accident. It is a lead-in the user pays on every chord, and a letter
+    // that lands inside it types normally rather than waiting, which is how a
+    // reporter met the default as a delay. Not a measured value, so it is a
+    // floor they can move rather than one this file decides. A chord consumes
+    // both touches: the letter never reaches the gesture engine and the ?123
+    // lift stops switching layers. Chords fire only for letters the user has
+    // assigned (default: none), everything else types normally.
     private var modeHoldPointer = -1
     private var modeHoldDownTime = 0L
     private var modeHoldMoved = false
@@ -476,6 +501,14 @@ class KeyboardView @JvmOverloads constructor(
             hintPaint.alpha = 102
             hintPaint.textSize = inset.height() * 0.24f
             c.drawText(it, inset.right - 3f * density, inset.top + hintPaint.textSize + 2f * density, hintPaint)
+        }
+        // Left edge of the spaceless zone, so the boundary itself is what is marked
+        // rather than the middle of a region with no other visible edge. Ambient alpha,
+        // not the dot's, because it is a standing affordance and not a state.
+        if (key.type == KeyType.SPACE && spaceController.spacelessZone) {
+            hintPaint.alpha = 102
+            val edge = inset.left + inset.width() * SpacebarCursorController.SPACELESS_FRACTION
+            c.drawLine(edge, inset.top + inset.height() * 0.30f, edge, inset.bottom - inset.height() * 0.30f, hintPaint)
         }
         if (key.type == KeyType.SPACE && autospaceDot) {
             hintPaint.alpha = 255
@@ -648,7 +681,8 @@ class KeyboardView @JvmOverloads constructor(
             }
             key?.type == KeyType.SPACE && spacePointer == -1 -> {
                 spacePointer = pid
-                spaceController.onDown(x)
+                val r = keyRects.getOrNull(keyIdx)
+                spaceController.onDown(x, r?.left ?: 0f, r?.width() ?: 0f)
                 ROUTE_SPACE
             }
             key?.type == KeyType.BACKSPACE && backspacePointer == -1 -> {
@@ -669,10 +703,13 @@ class KeyboardView @JvmOverloads constructor(
         }
     }
 
-    /** Chords arm only while ?123 rests in place past CHORD_ARM_MS. */
-    private fun chordArmed(t: Long): Boolean =
-        modeHoldPointer != -1 && !modeHoldMoved &&
-            t - modeHoldDownTime >= CHORD_ARM_MS
+    /** Chords arm only while ?123 rests in place past [chordArmMs]. */
+    private fun chordArmed(t: Long): Boolean = chordArms(
+        modeHeld = modeHoldPointer != -1,
+        modeMoved = modeHoldMoved,
+        heldMs = t - modeHoldDownTime,
+        armMs = chordArmMs,
+    )
 
     private fun scheduleHold(pid: Int, keyIdx: Int) {
         pendingHoldPid = pid
@@ -716,6 +753,23 @@ class KeyboardView @JvmOverloads constructor(
                     keyIdx, cells, selected = cells.lastIndex,
                     requireInside = false, originX = downXByPointer[pid],
                     anchorRightCell = true,
+                )
+            }
+            key.type == KeyType.SHIFT && key.alternates.isNotEmpty() && route == ROUTE_SPECIAL -> {
+                // Shift's popup shows its cells ALONE, like enter's: the base glyph would
+                // be a fourth cell reading "⇧" and committing it as text. Centre-anchored
+                // rather than right-anchored, because shift is the leftmost key and a
+                // strip hung off its right edge clamps against the screen.
+                //
+                // Nothing is pre-selected here. The three cells are a CHOICE about text
+                // that already exists, so a hold that lifts without sliding should leave
+                // the word as it is; enter's pre-selection is right for the opposite
+                // reason, that its popup has a primary the key already advertises.
+                routeByPointer[pid] = ROUTE_ALT_POPUP
+                popupPointer = pid
+                showPopup(
+                    keyIdx, key.alternates, selected = -1,
+                    requireInside = false, originX = downXByPointer[pid],
                 )
             }
             key.alternates.isNotEmpty() && (route == ROUTE_ENGINE || route == ROUTE_SPECIAL) -> {
@@ -935,8 +989,10 @@ class KeyboardView @JvmOverloads constructor(
                 }
             }
             ROUTE_SPACE -> {
-                if (spaceController.onUp()) {
-                    dispatchTap(pid, t)
+                when (spaceController.onUp()) {
+                    SpacebarCursorController.Lift.SPACE -> dispatchTap(pid, t)
+                    SpacebarCursorController.Lift.SPACELESS -> listener?.onSpacelessSpace()
+                    SpacebarCursorController.Lift.SLIDE -> Unit
                 }
                 spacePointer = -1
             }
@@ -1091,7 +1147,28 @@ class KeyboardView @JvmOverloads constructor(
         const val ROUTE_CHORD = 7
         const val GEAR_GLYPH = "⚙"
 
-        /** See the ?123 interaction table above. */
-        const val CHORD_ARM_MS = 150L
     }
 }
+
+/**
+ * Whether a letter tapped now counts as a chord rather than a letter.
+ *
+ * A free function because the view around it has no JVM test harness at all, and this is
+ * the one decision on the chord path worth pinning: it is evaluated ONCE at the letter's
+ * down, so a letter that arrives early is never promoted later however long it is held.
+ *
+ * [heldMs] is how long `?123` has been down. [modeMoved] latches for the whole hold once
+ * the mode key travels past the slop, so a slide to the numpad cannot also fire a chord.
+ */
+/**
+ * Default `?123` lead-in, in ms. Mirrors `Prefs.DEFAULT_CHORD_ARM_MS`, which is what a
+ * fresh install actually gets; `ChordArmTest` holds the two together.
+ */
+internal const val CHORD_ARM_MS_DEFAULT = 150L
+
+internal fun chordArms(
+    modeHeld: Boolean,
+    modeMoved: Boolean,
+    heldMs: Long,
+    armMs: Long,
+): Boolean = modeHeld && !modeMoved && heldMs >= armMs

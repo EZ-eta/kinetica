@@ -6,6 +6,7 @@ import com.kinetica.keyboard.layout.KeyType
 import com.kinetica.keyboard.layout.KeyboardLayout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -33,8 +34,10 @@ class EdgeSwipeBindingsTest {
             charKey("e", 0.00f, listOf("è", "é", "ê", "ë", "ē", "3")),
             charKey("u", 0.00f, listOf("ù", "ú", "û", "ü", "ū", "7")),
             charKey("p", 0.00f, listOf("0")),
-            // A top-row key with no non-letter alternate must be skipped.
+            // A key whose only alternate is a letter. It draws that letter, so it types it.
             charKey("w", 0.00f, listOf("ω")),
+            // A key with no alternates at all draws nothing and stays unbound.
+            charKey("k", 0.00f, emptyList()),
             // Home row (y = 0.25): never bound.
             charKey("a", 0.25f, listOf("à", "@")),
             // Bottom letter row (y = 0.50): symbols.
@@ -52,24 +55,29 @@ class EdgeSwipeBindingsTest {
     private val empty = EdgeSwipeBindings(emptyList())
 
     @Test
-    fun topRowUpYieldsFirstNonLetterAlternate() {
+    fun topRowUpYieldsTheHintItShows() {
         val b = EdgeSwipeBindings.withImplicitAlternates(layout(), empty)
         assertEquals("1", b.outputFor("q", Direction.UP))
         assertEquals("0", b.outputFor("p", Direction.UP))
         // Vowels list accents before the digit; the predicate skips the accents.
-        assertEquals("3", b.outputFor("e", Direction.UP))
-        assertEquals("7", b.outputFor("u", Direction.UP))
+        // A vowel listing accents first DRAWS the accent, so that is what it types. Turning
+        // on "Prioritize numbers over accents" moves the hint and the swipe together.
+        assertEquals("è", b.outputFor("e", Direction.UP))
+        assertEquals("ù", b.outputFor("u", Direction.UP))
         // Top-row keys get no DOWN binding.
         assertNull(b.outputFor("q", Direction.DOWN))
     }
 
     @Test
-    fun bottomRowDownYieldsFirstNonLetterAlternate() {
+    fun bottomRowDownYieldsTheHintItShows() {
+        // The report this answers: the swipe used to insert the first NON-LETTER alternate
+        // while the key drew its first alternate, so "z" showed ž and typed \'.
         val b = EdgeSwipeBindings.withImplicitAlternates(layout(), empty)
-        assertEquals("'", b.outputFor("z", Direction.DOWN))
-        assertEquals(";", b.outputFor("c", Direction.DOWN))
-        assertEquals("!", b.outputFor("n", Direction.DOWN))
+        assertEquals("ž", b.outputFor("z", Direction.DOWN))
+        assertEquals("ç", b.outputFor("c", Direction.DOWN))
+        assertEquals("ñ", b.outputFor("n", Direction.DOWN))
         assertEquals("?", b.outputFor("m", Direction.DOWN))
+        assertEquals(":", b.outputFor("v", Direction.DOWN))
         // Bottom-row keys get no UP binding.
         assertNull(b.outputFor("z", Direction.UP))
     }
@@ -82,32 +90,57 @@ class EdgeSwipeBindingsTest {
         assertNull(b.outputFor("shift", Direction.DOWN))
         assertNull(b.outputFor("enter", Direction.UP))
         // Top-row key whose only alternate is a letter yields nothing.
-        assertNull(b.outputFor("w", Direction.UP))
+        // No alternates at all means no hint and nothing to type.
+        assertNull(b.outputFor("k", Direction.UP))
+        // But a letter hint is still a hint: what it draws is what it types.
+        assertEquals("ω", b.outputFor("w", Direction.UP))
     }
 
     @Test
     fun explicitBindingsShadowImplicitOnes() {
-        val b = EdgeSwipeBindings.withImplicitAlternates(layout(), EdgeSwipeBindings.DEFAULTS)
-        // v-down "," (a DEFAULT) shadows the implicit ":".
-        assertEquals(",", b.outputFor("v", Direction.DOWN))
-        // x/b defaults likewise win where they exist; keys without a default
-        // keep the implicit symbol.
-        assertEquals("?", b.outputFor("m", Direction.DOWN))
-        // Explicit enter-up "?" survives (enter is not a synthesized key).
-        assertEquals("?", b.outputFor("enter", Direction.UP))
-        // Implicit still present where no explicit binding collides.
+        // A binding the USER set still wins over the hint. No shipped default does any more.
+        val mine = EdgeSwipeBindings(
+            listOf(EdgeSwipeBinding("z", Direction.DOWN, "@")),
+        )
+        val b = EdgeSwipeBindings.withImplicitAlternates(layout(), mine)
+        assertEquals("@", b.outputFor("z", Direction.DOWN))
+        // Keys the user has not bound keep the glyph they show.
+        assertEquals("ç", b.outputFor("c", Direction.DOWN))
         assertEquals("1", b.outputFor("q", Direction.UP))
     }
 
     @Test
-    fun spanishNKeyYieldsBang() {
-        // qwerty_es "n" = ["ñ","!","¡"]: first non-letter alternate is "!".
+    fun theShippedDefaultsNoLongerContradictAKeysLabel() {
+        // v drew ":" and typed ",", b drew "/" and typed ".", x drew a quote and opened the
+        // emoji picker. All three are gone so the rule has no exceptions to explain; the
+        // picker keeps its comma long-press route.
+        val d = EdgeSwipeBindings.DEFAULTS
+        assertNull(d.outputFor("v", Direction.DOWN))
+        assertNull(d.outputFor("b", Direction.DOWN))
+        assertNull(d.outputFor("x", Direction.DOWN))
+        assertEquals("!", d.outputFor("backspace", Direction.UP))
+        assertEquals("?", d.outputFor("enter", Direction.UP))
+    }
+
+    @Test
+    fun theEmojiGestureIsNoLongerADefault() {
+        assertTrue(
+            "no shipped default may open the picker",
+            EdgeSwipeBindings.DEFAULTS.bindings.none { it.output == EdgeSwipeBindings.ACTION_EMOJI },
+        )
+    }
+
+    @Test
+    fun spanishNKeyYieldsTheAccentItDraws() {
+        // qwerty_es "n" = ["ñ","!","¡"] draws ñ, so it types ñ. A Spanish writer swiping
+        // down on n wants the letter far more often than the bang, and turning on
+        // "Prioritize numbers over accents" moves the hint and the swipe together.
         val es = KeyboardLayout(
             name = "qwerty_es", locale = "es_ES",
             keys = listOf(charKey("n", 0.50f, listOf("ñ", "!", "¡"))),
         )
         val b = EdgeSwipeBindings.withImplicitAlternates(es, empty)
-        assertEquals("!", b.outputFor("n", Direction.DOWN))
+        assertEquals("ñ", b.outputFor("n", Direction.DOWN))
     }
     // ---- collision warnings -------------------------------------------------
 

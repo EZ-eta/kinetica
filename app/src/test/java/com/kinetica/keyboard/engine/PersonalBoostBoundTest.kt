@@ -48,7 +48,7 @@ class PersonalBoostBoundTest {
         code: String = "",
     ): WordPredictor {
         val (dict, bigrams) = lang
-        return WordPredictor(dict.trie, bigrams, g, dict.forms, counts, code)
+        return WordPredictor(dict.trie, bigrams, g, dict.forms, counts, language = code)
     }
 
     private fun swipe(keys: String, stream: StreamId = StreamId.RIGHT): List<InputToken> =

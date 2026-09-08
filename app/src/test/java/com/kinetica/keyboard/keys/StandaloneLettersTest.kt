@@ -35,6 +35,9 @@ class StandaloneLettersTest {
         assertFalse("y alone is not Italian", StandaloneLetters.isWord('y', "it"))
         assertTrue("w is Polish for in", StandaloneLetters.isWord('w', "pl"))
         assertFalse("w alone is not Spanish", StandaloneLetters.isWord('w', "es"))
+        // Added on a Polish speaker's report. Colloquial rather than a function word, and
+        // the whole Polish set is still unmeasured.
+        assertTrue("e is a Polish interjection", StandaloneLetters.isWord('e', "pl"))
     }
 
     @Test
@@ -42,7 +45,7 @@ class StandaloneLettersTest {
         assertEqualsSet("ai", "en")
         assertEqualsSet("aeio", "it")
         assertEqualsSet("aeoy", "es")
-        assertEqualsSet("aiouwz", "pl")
+        assertEqualsSet("aeiouwz", "pl")
     }
 
     @Test

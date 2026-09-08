@@ -42,6 +42,8 @@ data class KeyboardConfig(
     val vibrationIntensity: Int,
     val trailBaseHue: Float,
     val longPressMs: Long,
+    val chordArmMs: Long,
+    val retypeAvoidsRejected: Boolean,
     val autocorrectConfidence: Float?,   // null = autocorrect off
     val language: String,
     val reinforceIncrement: Int,
@@ -60,6 +62,10 @@ data class KeyboardConfig(
     val spacebarStepDp: Float,
     /** Spacebar cursor slide moves whole words instead of single characters. */
     val spacebarWordSlide: Boolean,
+    /** Left 30% of the spacebar ends the word without writing a space. */
+    val spacelessSpace: Boolean,
+    /** Learn word pairs from this user's own typing; opt-in, on-device only. */
+    val learnPhrases: Boolean,
     /** Enter popup symbols; first is the primary. Never empty. */
     val enterAlternates: List<String>,
     /** Period long-press alternates; EMPTY keeps the layout's own list. */
@@ -157,6 +163,11 @@ data class KeyboardConfig(
             trailBaseHue = trailHue(prefs),
             longPressMs = prefs.getInt(Prefs.LONG_PRESS_MS, Prefs.DEFAULT_LONG_PRESS_MS)
                 .coerceIn(300, 700).toLong(),
+            chordArmMs = prefs.getInt(Prefs.CHORD_ARM_MS, Prefs.DEFAULT_CHORD_ARM_MS)
+                .coerceIn(0, 300).toLong(),
+            retypeAvoidsRejected = prefs.getBoolean(
+                Prefs.RETYPE_AVOIDS_REJECTED, Prefs.DEFAULT_RETYPE_AVOIDS_REJECTED,
+            ),
             autocorrectConfidence = when (
                 prefs.getString(Prefs.AUTOCORRECT_LEVEL, Prefs.DEFAULT_AUTOCORRECT_LEVEL)
             ) {
@@ -197,6 +208,12 @@ data class KeyboardConfig(
             ).toFloat(),
             spacebarWordSlide = prefs.getBoolean(
                 Prefs.SPACEBAR_WORD_SLIDE, Prefs.DEFAULT_SPACEBAR_WORD_SLIDE,
+            ),
+            spacelessSpace = prefs.getBoolean(
+                Prefs.SPACELESS_SPACE, Prefs.DEFAULT_SPACELESS_SPACE,
+            ),
+            learnPhrases = prefs.getBoolean(
+                Prefs.LEARN_PHRASES, Prefs.DEFAULT_LEARN_PHRASES,
             ),
             enterAlternates = parseEnterAlternates(
                 prefs.getString(Prefs.ENTER_ALTERNATES, Prefs.DEFAULT_ENTER_ALTERNATES),

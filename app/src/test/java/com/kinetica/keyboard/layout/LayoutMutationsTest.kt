@@ -1,5 +1,6 @@
 package com.kinetica.keyboard.layout
 
+import com.kinetica.keyboard.keys.WordCase
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -21,6 +22,7 @@ class LayoutMutationsTest {
             Key("q", KeyType.CHAR, "q", "q", 0f, 0.0f, 0.1f, 0.25f, alternates = listOf("1")),
             Key("comma", KeyType.CHAR, ",", ",", 0.15f, 0.75f, 0.1f, 0.25f),
             Key("enter", KeyType.ENTER, "⏎", "", 0.85f, 0.75f, 0.15f, 0.25f),
+            Key("shift", KeyType.SHIFT, "⇧", "", 0f, 0.5f, 0.15f, 0.25f),
         ),
     )
 
@@ -40,8 +42,59 @@ class LayoutMutationsTest {
         assertEquals(listOf("1"), q.alternates)
         assertTrue(comma.alternates.isEmpty())
         // Structure preserved (same key count, name, locale).
-        assertEquals(3, out.keys.size)
+        assertEquals(4, out.keys.size)
         assertEquals("qwerty", out.name)
+    }
+
+    @Test
+    fun withShiftCaseCellsSetsThePopupCells() {
+        val out = LayoutMutations.withShiftCaseCells(layout())
+        val shift = out.keys.first { it.type == KeyType.SHIFT }
+        assertEquals(listOf("abc", "Abc", "ABC"), shift.alternates)
+        assertEquals(LayoutMutations.SHIFT_CASE_CELLS, shift.alternates)
+    }
+
+    @Test
+    fun withShiftCaseCellsPaintsNoHintOnTheKey() {
+        // hintChar falls back to the first alternate, so without an explicit empty hint
+        // every keyboard grows a permanent "abc" in the corner of its shift key.
+        val out = LayoutMutations.withShiftCaseCells(layout())
+        val shift = out.keys.first { it.type == KeyType.SHIFT }
+        assertEquals("", shift.hintChar)
+    }
+
+    @Test
+    fun withShiftCaseCellsLeavesOtherKeysUntouched() {
+        val out = LayoutMutations.withShiftCaseCells(layout())
+        assertEquals(listOf("1"), out.keys.first { it.id == "q" }.alternates)
+        assertTrue(out.keys.first { it.type == KeyType.ENTER }.alternates.isEmpty())
+        assertEquals(4, out.keys.size)
+        assertEquals("qwerty", out.name)
+    }
+
+    @Test
+    fun eachShiftCellIsWrittenInTheCaseItSelects() {
+        // The one genuinely new coupling in R34: the popup hands back a cell string and
+        // the service maps it to WordCase BY INDEX, so the two lists have to agree and
+        // nothing else in the tree would notice if they stopped.
+        val cells = LayoutMutations.SHIFT_CASE_CELLS
+        assertEquals(WordCase.entries.size, cells.size)
+        for ((i, cell) in cells.withIndex()) {
+            assertEquals("cell $cell is not written in ${WordCase.entries[i]}", cell, WordCase.entries[i].applyTo(cell))
+            assertEquals("cell $cell does not read as ${WordCase.entries[i]}", WordCase.entries[i], WordCase.of(cell))
+        }
+    }
+
+    @Test
+    fun withShiftCaseCellsIsANoopWhenThereIsNoShiftKey() {
+        val bare = layout().let { it.copy(keys = it.keys.filter { k -> k.type != KeyType.SHIFT }) }
+        assertEquals(bare, LayoutMutations.withShiftCaseCells(bare))
+    }
+
+    @Test
+    fun anEmptyCellListLeavesShiftUnchanged() {
+        val out = LayoutMutations.withShiftCaseCells(layout(), emptyList())
+        assertTrue(out.keys.first { it.type == KeyType.SHIFT }.alternates.isEmpty())
     }
 
     @Test

@@ -91,6 +91,15 @@ class LanguageDetectGoldenTest {
     fun sareiGestureStaysItalianEndToEnd() {
         // Trace lines 81-85: LEFT swipe s,e,r,t,r,e with a simultaneous RIGHT
         // tap of "i" 78 ms in, intending "sarei" (developer-confirmed).
+        //
+        // This asserted top-1 = "sarei" until 2026-08-23, and that assertion was an
+        // accident of the fixture's own clock rather than a behaviour: swept against the
+        // unmodified engine, the tap at 40/60/78/79/80 ms gives "sarei" and at 81 ms
+        // gives "siete", because SPLIT_MARGIN_MS is 80 and the mid-swipe split only fires
+        // above it. The same gesture three milliseconds later already lost. What this
+        // test was built for survives the whole sweep and is what it asserts now - the
+        // editor never takes a Spanish word, and "sarei" stays pickable - and the
+        // sarei/siete contest itself is KNOWN_ISSUES item 39.
         // "sergei" committed - a word BOTH dictionaries hold at the same
         // distance, so the swap could not add information. Pre-fix the Spanish
         // head "odette" (d=0.334) beat the Italian head "sarei" (d=0.804) and
@@ -103,11 +112,37 @@ class LanguageDetectGoldenTest {
         composer.onToken(TestData.swipe("sertre", g, 0, 700, StreamId.LEFT))
         composer.onToken(TestData.tap('i', g, 78, StreamId.RIGHT))
         assertEquals("the editor must not take a Spanish word", "it", cap.tentative?.language)
-        assertEquals(
-            "top-1 lost to ${cap.candidates.take(3).map { it.word }}",
-            "sarei",
-            cap.tentative?.word,
+        assertTrue(
+            "sarei must stay reachable: ${cap.candidates.map { it.word }}",
+            cap.candidates.any { it.word == "sarei" },
         )
+    }
+
+    @Test
+    fun theSareiBufferHoldsItsInvariantsAtEveryTapOffset() {
+        // The guard that keeps the edge above from being re-hidden by a constant. Only
+        // the two claims that are true of the gesture, asserted across the whole range a
+        // thumb can land in: the reading may change with the offset - measured
+        // 2026-08-23 as sarei to 80 ms, siete from 81, serie from 300 - but the language
+        // must not, and the word the developer meant must stay reachable so a pick can
+        // teach it.
+        for (offset in listOf(40L, 60L, 78L, 81L, 90L, 200L, 300L, 500L)) {
+            val cap = Capture()
+            val composer = WordComposer(italian(), direct, direct, cap)
+            composer.alternatePredictor = spanish()
+            composer.commitWord("sudare")
+            composer.onToken(TestData.swipe("sertre", g, 0, 700, StreamId.LEFT))
+            composer.onToken(TestData.tap('i', g, offset, StreamId.RIGHT))
+            assertEquals(
+                "tap@$offset handed the editor a Spanish word",
+                "it",
+                cap.tentative?.language,
+            )
+            assertTrue(
+                "tap@$offset lost sarei entirely: ${cap.candidates.map { it.word }}",
+                cap.candidates.any { it.word == "sarei" },
+            )
+        }
     }
 
     @Test

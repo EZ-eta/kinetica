@@ -1,6 +1,8 @@
 package com.kinetica.keyboard.ui
 
 import android.content.Context
+import android.graphics.Paint
+import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
 import android.widget.HorizontalScrollView
@@ -8,6 +10,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import com.kinetica.keyboard.R
+import java.io.IOException
 import org.json.JSONObject
 
 /**
@@ -41,6 +44,23 @@ class EmojiPickerView(
     private val footerViews = ArrayList<TextView>()
     private var shownCategory = 0
 
+    /**
+     * Whether this device's font can actually draw [ch].
+     *
+     * The asset carries emoji up to Unicode 15 and the system emoji font is fixed per OS
+     * version, so an Android 8 phone cannot draw what an Android 14 one can. Without this
+     * the difference shows as a tofu box, which is worse than the emoji being absent. One
+     * Paint is reused because this runs once per entry at load.
+     *
+     * **This has to stay above the `init` block and it is not a style preference.** Property
+     * initializers run in declaration order, so declared below `init` it is still null when
+     * `init` calls [loadCategories], and `hasGlyph` throws out of the constructor: the
+     * picker showed for an instant and the whole keyboard died. KNOWN_ISSUES item 64.
+     */
+    private val glyphPaint = Paint()
+
+    private fun canDraw(ch: String): Boolean = glyphPaint.hasGlyph(ch)
+
     /** The asset's own entries by character, so a recorded emoji keeps its name. */
     private val byChar = HashMap<String, Emoji>()
     private var recentEntries: List<Emoji> = emptyList()
@@ -57,7 +77,10 @@ class EmojiPickerView(
         set(value) {
             if (field == value) return
             field = value
-            recentEntries = value.map { byChar[it] ?: Emoji(it, "", emptyList()) }
+            // Filtered like the asset is: a recent picked on another device, or before a
+            // system update removed a font, must not come back as a tofu box.
+            recentEntries = value.filter { canDraw(it) }
+                .map { byChar[it] ?: Emoji(it, "", emptyList()) }
             rebuildTabs()
             showCategory(shownCategory.coerceIn(0, (panels().size - 1).coerceAtLeast(0)))
         }
@@ -173,7 +196,24 @@ class EmojiPickerView(
     private fun dp(v: Int): Int =
         TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, v.toFloat(), resources.displayMetrics).toInt()
 
-    private fun loadCategories(): List<Category> {
+    /**
+     * The shipped set, minus anything this device cannot draw.
+     *
+     * Never throws. A keyboard is the one app that must not die: an empty picker is a bad
+     * day, a dead IME means the user cannot type at all. Before this the method had no
+     * handling of any kind, so a malformed asset could take the service down.
+     */
+    private fun loadCategories(): List<Category> = try {
+        parseCategories()
+    } catch (e: RuntimeException) {
+        Log.w(TAG, "emoji asset unusable", e)
+        emptyList()
+    } catch (e: IOException) {
+        Log.w(TAG, "emoji asset unreadable", e)
+        emptyList()
+    }
+
+    private fun parseCategories(): List<Category> {
         val json = context.assets.open("emoji_data.json").bufferedReader().use { it.readText() }
         val root = JSONObject(json).getJSONArray("categories")
         val out = ArrayList<Category>(root.length())
@@ -189,9 +229,15 @@ class EmojiPickerView(
                 } else {
                     List(kwArr.length()) { kwArr.getString(it) }
                 }
-                entries.add(Emoji(e.getString("ch"), e.optString("name", ""), kw))
+                val ch = e.getString("ch")
+                if (canDraw(ch)) entries.add(Emoji(ch, e.optString("name", ""), kw))
             }
-            out.add(Category(c.getString("name"), c.getString("icon"), entries))
+            // A category the font cannot draw at all is dropped rather than left as an empty
+            // tab, and its own icon has to be drawable or the tab itself is a tofu box.
+            val icon = c.getString("icon")
+            if (entries.isNotEmpty() && canDraw(icon)) {
+                out.add(Category(c.getString("name"), icon, entries))
+            }
         }
         return out
     }
@@ -231,6 +277,7 @@ class EmojiPickerView(
     }
 
     private companion object {
+        const val TAG = "EmojiPickerView"
         const val COLUMNS = 8
 
         /** Marks the frequently-used tab. A star, not a clock: it is ordered by

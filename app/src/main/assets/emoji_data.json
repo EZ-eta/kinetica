@@ -781,6 +781,46 @@
       "cat",
       "angry"
      ]
+    },
+    {
+     "ch": "🫢",
+     "name": "face with open eyes and hand over mouth",
+     "kw": [
+      "shock",
+      "oops"
+     ]
+    },
+    {
+     "ch": "🫣",
+     "name": "face with peeking eye",
+     "kw": [
+      "peek",
+      "shy"
+     ]
+    },
+    {
+     "ch": "🫥",
+     "name": "dotted line face",
+     "kw": [
+      "invisible",
+      "hidden"
+     ]
+    },
+    {
+     "ch": "🫤",
+     "name": "face with diagonal mouth",
+     "kw": [
+      "skeptical",
+      "unsure"
+     ]
+    },
+    {
+     "ch": "🫨",
+     "name": "shaking face",
+     "kw": [
+      "shock",
+      "vibrate"
+     ]
     }
    ]
   },
@@ -1109,6 +1149,78 @@
      "kw": [
       "love",
       "heart"
+     ]
+    },
+    {
+     "ch": "🫱",
+     "name": "rightwards hand",
+     "kw": [
+      "shake",
+      "offer"
+     ]
+    },
+    {
+     "ch": "🫲",
+     "name": "leftwards hand",
+     "kw": [
+      "shake",
+      "offer"
+     ]
+    },
+    {
+     "ch": "🫳",
+     "name": "palm down hand",
+     "kw": [
+      "gesture",
+      "hand"
+     ]
+    },
+    {
+     "ch": "🫴",
+     "name": "palm up hand",
+     "kw": [
+      "gesture",
+      "hand"
+     ]
+    },
+    {
+     "ch": "🫷",
+     "name": "leftwards pushing hand",
+     "kw": [
+      "push",
+      "high five"
+     ]
+    },
+    {
+     "ch": "🫸",
+     "name": "rightwards pushing hand",
+     "kw": [
+      "push",
+      "high five"
+     ]
+    },
+    {
+     "ch": "🫃",
+     "name": "pregnant man",
+     "kw": [
+      "expecting",
+      "belly"
+     ]
+    },
+    {
+     "ch": "🫄",
+     "name": "pregnant person",
+     "kw": [
+      "expecting",
+      "belly"
+     ]
+    },
+    {
+     "ch": "🫅",
+     "name": "person with crown",
+     "kw": [
+      "royal",
+      "regal"
      ]
     }
    ]
@@ -1477,6 +1589,86 @@
       "raccoon",
       "trash"
      ]
+    },
+    {
+     "ch": "🪸",
+     "name": "coral",
+     "kw": [
+      "reef",
+      "sea"
+     ]
+    },
+    {
+     "ch": "🪹",
+     "name": "empty nest",
+     "kw": [
+      "bird",
+      "home"
+     ]
+    },
+    {
+     "ch": "🪺",
+     "name": "nest with eggs",
+     "kw": [
+      "bird",
+      "home"
+     ]
+    },
+    {
+     "ch": "🪿",
+     "name": "goose",
+     "kw": [
+      "bird",
+      "honk"
+     ]
+    },
+    {
+     "ch": "🫎",
+     "name": "moose",
+     "kw": [
+      "antlers",
+      "elk"
+     ]
+    },
+    {
+     "ch": "🫏",
+     "name": "donkey",
+     "kw": [
+      "mule",
+      "farm"
+     ]
+    },
+    {
+     "ch": "🪼",
+     "name": "jellyfish",
+     "kw": [
+      "sea",
+      "sting"
+     ]
+    },
+    {
+     "ch": "🪽",
+     "name": "wing",
+     "kw": [
+      "fly",
+      "bird"
+     ]
+    },
+    {
+     "ch": "🪻",
+     "name": "hyacinth",
+     "kw": [
+      "flower",
+      "spring"
+     ]
+    },
+    {
+     "ch": "🪷",
+     "name": "lotus",
+     "kw": [
+      "flower",
+      "zen"
+     ]
     }
    ]
   },
@@ -1823,6 +2015,78 @@
       "cheers",
       "celebrate"
      ]
+    },
+    {
+     "ch": "🫘",
+     "name": "beans",
+     "kw": [
+      "legume",
+      "food"
+     ]
+    },
+    {
+     "ch": "🫚",
+     "name": "ginger root",
+     "kw": [
+      "spice",
+      "root"
+     ]
+    },
+    {
+     "ch": "🫛",
+     "name": "pea pod",
+     "kw": [
+      "vegetable",
+      "green"
+     ]
+    },
+    {
+     "ch": "🫗",
+     "name": "pouring liquid",
+     "kw": [
+      "pour",
+      "drink"
+     ]
+    },
+    {
+     "ch": "🫙",
+     "name": "jar",
+     "kw": [
+      "container",
+      "preserve"
+     ]
+    },
+    {
+     "ch": "🫕",
+     "name": "fondue",
+     "kw": [
+      "cheese",
+      "pot"
+     ]
+    },
+    {
+     "ch": "🫓",
+     "name": "flatbread",
+     "kw": [
+      "bread",
+      "pita"
+     ]
+    },
+    {
+     "ch": "🫔",
+     "name": "tamale",
+     "kw": [
+      "food",
+      "mexican"
+     ]
+    },
+    {
+     "ch": "🫖",
+     "name": "teapot",
+     "kw": [
+      "tea",
+      "brew"
+     ]
     }
    ]
   },
@@ -2116,6 +2380,46 @@
      "kw": [
       "theater"
      ]
+    },
+    {
+     "ch": "🪇",
+     "name": "maracas",
+     "kw": [
+      "music",
+      "shake"
+     ]
+    },
+    {
+     "ch": "🪈",
+     "name": "flute",
+     "kw": [
+      "music",
+      "wind"
+     ]
+    },
+    {
+     "ch": "🪅",
+     "name": "hair pick",
+     "kw": [
+      "comb",
+      "hair"
+     ]
+    },
+    {
+     "ch": "🪆",
+     "name": "folding hand fan",
+     "kw": [
+      "fan",
+      "cool"
+     ]
+    },
+    {
+     "ch": "🪟",
+     "name": "window",
+     "kw": [
+      "view",
+      "house"
+     ]
     }
    ]
   },
@@ -2391,6 +2695,38 @@
      "name": "bridge at night",
      "kw": [
       "bridge"
+     ]
+    },
+    {
+     "ch": "🛝",
+     "name": "playground slide",
+     "kw": [
+      "park",
+      "play"
+     ]
+    },
+    {
+     "ch": "🛞",
+     "name": "wheel",
+     "kw": [
+      "tyre",
+      "drive"
+     ]
+    },
+    {
+     "ch": "🛟",
+     "name": "ring buoy",
+     "kw": [
+      "rescue",
+      "float"
+     ]
+    },
+    {
+     "ch": "🛗",
+     "name": "elevator",
+     "kw": [
+      "lift",
+      "building"
      ]
     }
    ]
@@ -2711,6 +3047,70 @@
      "ch": "🎊",
      "name": "confetti ball",
      "kw": [
+      "party"
+     ]
+    },
+    {
+     "ch": "🪫",
+     "name": "low battery",
+     "kw": [
+      "power",
+      "empty"
+     ]
+    },
+    {
+     "ch": "🩼",
+     "name": "crutch",
+     "kw": [
+      "injury",
+      "walk"
+     ]
+    },
+    {
+     "ch": "🩻",
+     "name": "x-ray",
+     "kw": [
+      "bones",
+      "medical"
+     ]
+    },
+    {
+     "ch": "🪪",
+     "name": "identification card",
+     "kw": [
+      "id",
+      "card"
+     ]
+    },
+    {
+     "ch": "🪬",
+     "name": "hamsa",
+     "kw": [
+      "hand",
+      "amulet"
+     ]
+    },
+    {
+     "ch": "🪭",
+     "name": "folding fan",
+     "kw": [
+      "fan",
+      "cool"
+     ]
+    },
+    {
+     "ch": "🪮",
+     "name": "hair comb",
+     "kw": [
+      "comb",
+      "groom"
+     ]
+    },
+    {
+     "ch": "🪩",
+     "name": "mirror ball",
+     "kw": [
+      "disco",
       "party"
      ]
     }
@@ -3117,6 +3517,46 @@
      "kw": [
       "heart",
       "cards"
+     ]
+    },
+    {
+     "ch": "🩷",
+     "name": "pink heart",
+     "kw": [
+      "love",
+      "heart"
+     ]
+    },
+    {
+     "ch": "🩵",
+     "name": "light blue heart",
+     "kw": [
+      "love",
+      "heart"
+     ]
+    },
+    {
+     "ch": "🩶",
+     "name": "grey heart",
+     "kw": [
+      "love",
+      "heart"
+     ]
+    },
+    {
+     "ch": "🛜",
+     "name": "wireless",
+     "kw": [
+      "wifi",
+      "signal"
+     ]
+    },
+    {
+     "ch": "🪯",
+     "name": "khanda",
+     "kw": [
+      "sikh",
+      "symbol"
      ]
     }
    ]

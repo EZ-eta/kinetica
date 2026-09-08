@@ -8,8 +8,11 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [UserWord::class, ChordShortcut::class, BlockedWord::class, EmojiUse::class],
-    version = 4,
+    entities = [
+        UserWord::class, ChordShortcut::class, BlockedWord::class, EmojiUse::class,
+        UserBigram::class,
+    ],
+    version = 5,
     exportSchema = false,
 )
 abstract class KineticaDb : RoomDatabase() {
@@ -17,6 +20,7 @@ abstract class KineticaDb : RoomDatabase() {
     abstract fun chordShortcuts(): ChordShortcutDao
     abstract fun blockedWords(): BlockedWordDao
     abstract fun emojiUses(): EmojiUseDao
+    abstract fun userBigrams(): UserBigramDao
 
     companion object {
         @Volatile
@@ -77,13 +81,29 @@ abstract class KineticaDb : RoomDatabase() {
             }
         }
 
+        /**
+         * v4 -> v5: learned word pairs arrive as a new table, the same shape as v2 -> v3
+         * and v3 -> v4. Nothing existing is read, rewritten or dropped, so learned words
+         * and chords survive by construction.
+         */
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS user_bigrams (" +
+                        "prev TEXT NOT NULL, next TEXT NOT NULL, lang TEXT NOT NULL, " +
+                        "count INTEGER NOT NULL, updatedAt INTEGER NOT NULL, " +
+                        "PRIMARY KEY(prev, next, lang))",
+                )
+            }
+        }
+
         fun get(context: Context): KineticaDb =
             instance ?: synchronized(this) {
                 instance ?: Room.databaseBuilder(
                     context.applicationContext,
                     KineticaDb::class.java,
                     "user_dict.db",
-                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4).build().also { instance = it }
+                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5).build().also { instance = it }
             }
     }
 }

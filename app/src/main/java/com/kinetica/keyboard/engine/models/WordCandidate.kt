@@ -47,6 +47,28 @@ data class WordCandidate(
      * show.
      */
     val personalBoost: Float = 1f,
+    /**
+     * The uncontacted-letter charge AS APPLIED to [score]:
+     * `UNCONTACTED_LETTER_KEEP` once per letter this reading takes from a segment
+     * whose own key contacts do not include it, so 1.0 means every letter was
+     * measurably touched (or the tokens carry no contacts at all, which charges
+     * nothing).
+     *
+     * A field for the reason the two boosts are: without it the score is a product of
+     * five factors and a capture prints four, so establishing that the charge fired at
+     * all means dividing by hand - which is exactly what happened when the developer
+     * reported `happens` decoding as `happiness`, and the division is where a reading
+     * error gets introduced.
+     */
+    val contactKeep: Float = 1f,
+    /**
+     * The personal PAIR boost as applied: what this word earned for having followed the
+     * previous one in this user's own typing. 1.0 when phrase learning is off.
+     *
+     * A field for the reason every other factor is one: the score is a product and a
+     * captured row has to close by hand.
+     */
+    val personalBigram: Float = 1f,
 ) {
     enum class Source {
         EXACT_TAP, SWIPE, MERGED, FUZZY_TAP,

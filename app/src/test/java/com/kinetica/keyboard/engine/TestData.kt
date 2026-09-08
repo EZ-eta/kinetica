@@ -1,6 +1,7 @@
 package com.kinetica.keyboard.engine
 
 import com.kinetica.keyboard.engine.models.Dwell
+import com.kinetica.keyboard.engine.models.KeyContact
 import com.kinetica.keyboard.engine.models.PathPoint
 import com.kinetica.keyboard.engine.models.StreamId
 import com.kinetica.keyboard.engine.models.SwipeToken
@@ -15,12 +16,25 @@ object TestData {
      * Standard QWERTY grid, 1000px wide, 150px row height (kw: keys 1.0 wide,
      * rows 1.5 tall) - same proportions as assets/layouts/qwerty.json.
      */
-    fun qwertyGeometry(): KeyboardGeometry = letterGeometry(
+    fun qwertyGeometry(): KeyboardGeometry = qwertyGeometry(DEFAULT_ROW_PITCH_KW)
+
+    /**
+     * The same grid at an arbitrary row pitch, because `kw` is derived from key
+     * WIDTH alone: rows are 1.5 kw apart on this fixture, 1.94 on a Pixel 7 at 35%
+     * height, and near 0.5 on an unfolded foldable at the height floor, where two
+     * vertically adjacent keys are CLOSER than two horizontally adjacent ones.
+     *
+     * Swept once already (KNOWN_ISSUES item 14, 1.94 down to 0.31) and it moved no
+     * word off the top: what it compresses is the MARGIN to the nearest wrong word.
+     * The overload exists so that stays a measurement rather than a memory.
+     */
+    fun qwertyGeometry(rowPitchKw: Float): KeyboardGeometry = letterGeometry(
         listOf(
             "qwertyuiop" to 0.0f,
             "asdfghjkl" to 0.5f,
             "zxcvbnm" to 1.5f,
         ),
+        rowPitchKw,
     )
 
     /** The same grid with Y and Z exchanged, as in the QWERTZ setting. */
@@ -30,22 +44,29 @@ object TestData {
             "asdfghjkl" to 0.5f,
             "yxcvbnm" to 1.5f,
         ),
+        DEFAULT_ROW_PITCH_KW,
     )
 
-    private fun letterGeometry(rows: List<Pair<String, Float>>): KeyboardGeometry {
+    private fun letterGeometry(
+        rows: List<Pair<String, Float>>,
+        rowPitchKw: Float,
+    ): KeyboardGeometry {
+        val rowH = rowPitchKw * KEY_W
         val rects = ArrayList<FloatArray>()
         val codes = ArrayList<Int>()
         for ((rowIdx, row) in rows.withIndex()) {
             val (letters, offsetKeys) = row
-            val top = rowIdx * 150f
+            val top = rowIdx * rowH
             for ((i, ch) in letters.withIndex()) {
                 val left = (offsetKeys + i) * KEY_W
-                rects.add(floatArrayOf(left, top, left + KEY_W, top + 150f))
+                rects.add(floatArrayOf(left, top, left + KEY_W, top + rowH))
                 codes.add(ch - 'a')
             }
         }
         return KeyboardGeometry.fromPx(KEY_W, 1000f, rects, codes.toIntArray())
     }
+
+    const val DEFAULT_ROW_PITCH_KW = 1.5f
 
     fun smallDictionary(): Trie = Trie.build(
         listOf(
@@ -116,7 +137,7 @@ object TestData {
         }
         val resampled = FloatArray(2 * KineticaConstants.RESAMPLE_N)
         DtwMatcher().resample(path, resampled)
-        return SwipeToken(stream, path, resampled, emptyList(), arc, t0, t0 + durMs)
+        return SwipeToken(stream, path, resampled, contactsAlong(path, g), arc, t0, t0 + durMs)
     }
 
     /**
@@ -176,7 +197,7 @@ object TestData {
         }
         val resampled = FloatArray(2 * KineticaConstants.RESAMPLE_N)
         DtwMatcher().resample(path, resampled)
-        return SwipeToken(stream, path, resampled, emptyList(), arc, t0, t0 + durMs)
+        return SwipeToken(stream, path, resampled, contactsAlong(path, g), arc, t0, t0 + durMs)
     }
 
     /**
@@ -245,12 +266,37 @@ object TestData {
             emptyList()
         }
         return SwipeToken(
-            stream, path, resampled, emptyList(), arc, t0, restEnd + resumeMs,
+            stream, path, resampled, contactsAlong(path, g), arc, t0, restEnd + resumeMs,
             dwells = dwells,
         )
     }
 
     /** Key centers for a string, dropping consecutive duplicates. */
+    /**
+     * Key contacts along [path], the way a real gesture carries them.
+     *
+     * A device token gets these from GestureStream, which applies hysteresis; a
+     * fixture had none at all, so anything reading them was untestable. This is the
+     * simpler approximation - nearest key per sample, consecutive samples on the same
+     * key grouped into one contact - which is close enough for the merge, whose only
+     * use of a contact is the moment it began.
+     */
+    fun contactsAlong(path: List<PathPoint>, g: KeyboardGeometry): List<KeyContact> {
+        val out = ArrayList<KeyContact>()
+        var code = -1
+        var enter = 0L
+        for (p in path) {
+            val k = g.nearestKey(p.x, p.y)
+            if (k != code) {
+                if (code >= 0) out.add(KeyContact(code, enter, p.t))
+                code = k
+                enter = p.t
+            }
+        }
+        if (code >= 0 && path.isNotEmpty()) out.add(KeyContact(code, enter, path.last().t))
+        return out
+    }
+
     private fun uniqueCenters(letters: String, g: KeyboardGeometry): List<Pair<Float, Float>> {
         val out = ArrayList<Pair<Float, Float>>()
         var prev = -1

@@ -1,0 +1,11 @@
+Reworked engine
+Settings grouped into submenus
+Swipe a key to type the glyph printed on it. Reset edge swipes to get it.
+Words you teach the keyboard now work as gestures after the second time.
+Suggestions work again in apps that ask keyboard not to learn.
+Every chord setting is on one screen, with a lead-in you can set.
+55 more emoji, none your font cannot draw
+Delete several learned words at once.
+Czech and two fixes, thanks to dkoukola.
+Full backup system
+A space key on the number pad.

@@ -102,24 +102,22 @@ class EdgeSwipeBindings(val bindings: List<EdgeSwipeBinding>) {
         const val SHADOWS_TYPING_SWIPE = "typing_swipe"
 
         /**
-         * Synthesizes the implicit alternate-swipe layer from
-         * [layout] and layers [explicit] on top so user/built-in bindings win:
-         * a swipe UP on a top-row letter key inserts that key's first
-         * non-letter alternate (its digit); a swipe DOWN on a bottom-row letter
-         * key inserts its first non-letter alternate (its symbol). Home-row and
+         * Synthesizes the implicit alternate-swipe layer from [layout] and layers [explicit]
+         * on top so user bindings win: a swipe UP on a top-row letter key, or DOWN on a
+         * bottom-row one, inserts **the glyph that key draws in its corner**. Home-row and
          * non-letter keys get nothing.
          *
-         * "First non-letter alternate" is the same predicate as
-         * [LayoutMutations.withNumberPriority][com.kinetica.keyboard.layout.LayoutMutations.withNumberPriority]:
-         * a vowel that lists accents before its digit (e = [è,é,ê,ë,ē,3]) still
-         * yields the digit, and qwerty_es "n" = [ñ,!,¡] yields "!".
+         * **The output is [Key.hintChar], which is what makes this predictable.** It used to
+         * be the first NON-LETTER alternate, which disagrees with the corner hint whenever a
+         * key lists an accent first: stock qwerty "z" draws `ž` and typed `'`. A user
+         * reported the swipes as inserting "other things", and that was it. Tying the two
+         * together means the two long-press settings move both at once, so what a key shows
+         * is what it types under every combination of them.
          *
-         * Explicit precedence is achieved by ordering, not a second lookup: the
-         * implicit entries come first in the list, so an explicit
-         * "keyId/direction" appended after overwrites it in [byKeyAndDir]
-         * (the built-in v-down "," / b-down "." / x-down emoji keep their keys).
-         * The result is a runtime-only set; it is never serialized, so the
-         * implicit rows never reach the persisted binding preference.
+         * Explicit precedence is achieved by ordering, not a second lookup: the implicit
+         * entries come first in the list, so an explicit "keyId/direction" appended after
+         * overwrites it in [byKeyAndDir]. The result is runtime-only and never serialized,
+         * so the implicit rows never reach the persisted binding preference.
          */
         fun withImplicitAlternates(
             layout: KeyboardLayout,
@@ -133,21 +131,27 @@ class EdgeSwipeBindings(val bindings: List<EdgeSwipeBinding>) {
                     k.y in BOTTOM_ROW_Y_MIN..BOTTOM_ROW_Y_MAX -> EdgeSwipeBinding.Direction.DOWN
                     else -> continue
                 }
-                val symbol = k.alternates.firstOrNull { it.firstOrNull()?.isLetter() != true }
-                    ?: continue
+                val symbol = k.hintChar ?: continue
                 implicit.add(EdgeSwipeBinding(k.id, direction, symbol))
             }
             return EdgeSwipeBindings(implicit + explicit.bindings)
         }
 
-        /** The original five built-in shortcuts. */
+        /**
+         * The built-in shortcuts, and there are only two of them on purpose.
+         *
+         * `v` down typed `,` while showing `:`, `b` down typed `.` while showing `/`, and
+         * `x` down opened the emoji picker while showing `"`. Three keys contradicting their
+         * own labels was the other half of the report [withImplicitAlternates] answers, so
+         * they are gone and the hint wins everywhere. **The emoji picker keeps its comma
+         * long-press route and loses the `x` swipe.**
+         *
+         * These two survive because neither key draws a hint to contradict.
+         */
         val DEFAULTS = EdgeSwipeBindings(
             listOf(
                 EdgeSwipeBinding("backspace", EdgeSwipeBinding.Direction.UP, "!"),
                 EdgeSwipeBinding("enter", EdgeSwipeBinding.Direction.UP, "?"),
-                EdgeSwipeBinding("v", EdgeSwipeBinding.Direction.DOWN, ","),
-                EdgeSwipeBinding("b", EdgeSwipeBinding.Direction.DOWN, "."),
-                EdgeSwipeBinding("x", EdgeSwipeBinding.Direction.DOWN, ACTION_EMOJI),
             ),
         )
 

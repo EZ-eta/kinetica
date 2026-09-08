@@ -63,4 +63,31 @@ object PersonalWordRows {
         if (q.isEmpty()) return rows
         return rows.filter { AccentFolder.fold(it.first.lowercase()).contains(q) }
     }
+
+    /**
+     * Which of [shown] carry a tick, given the set of ticked WORDS.
+     *
+     * The selection is held as words rather than list positions, and that is the whole
+     * point. A tick is a position in the FILTERED list, so after the query changes,
+     * position 0 is a different word: reading positions back would delete whatever had
+     * moved under the tick. It is the same defect
+     * [tappingAFilteredRowResolvesToTheWordUnderTheFinger] pins for a single tap, one
+     * multi-select wider.
+     *
+     * Ticks on words the query currently hides are kept, not dropped, so a user can filter,
+     * tick, filter again, tick more, and delete the lot in one action.
+     */
+    fun checkedPositions(shown: List<Pair<String, Int>>, checked: Set<String>): List<Int> =
+        shown.indices.filter { shown[it].first in checked }
+
+    /**
+     * The words a batch delete should remove: everything ticked, in the order [rows] holds,
+     * and nothing that is not a row.
+     *
+     * Filtered through [rows] rather than returned as the raw tick set because a tick can
+     * outlive its row - the list is rebuilt after every delete - and asking the DAO to drop
+     * a word that is no longer there would be a silent no-op rather than an error.
+     */
+    fun wordsToDelete(rows: List<Pair<String, Int>>, checked: Set<String>): List<String> =
+        rows.map { it.first }.filter { it in checked }
 }

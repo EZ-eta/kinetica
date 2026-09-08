@@ -223,6 +223,59 @@ class RealDictionaryTest {
     }
 
     @Test
+    fun dualThumbDecodeLatencyIsBounded() {
+        // Two overlapping cross-stream swipes, which is what two thumbs typing at
+        // once actually produce and which NONE of the other latency bounds covers -
+        // the worst case they reach is one swipe with two anchors. Cutting both
+        // swipes multiplies the piece count rather than adding to it, so this is
+        // where MAX_SPLIT_ANCHORS and MAX_ALT_SEQUENCES have to hold, and the bound
+        // has to exist before the merge learns to cut the second swipe rather than
+        // after.
+        //
+        // Shaped on the device buffer for "keys": right thumb k..y, left thumb e..s,
+        // the left starting inside the right and ending with it.
+        val trie = loadTrie()
+        val g = TestData.qwertyGeometry()
+        val predictor = WordPredictor(trie, BigramTable.EMPTY, g)
+        val tokens = listOf(
+            TestData.sloppySwipe("kjhy", g, t0 = 0, durMs = 420, stream = StreamId.RIGHT),
+            TestData.sloppySwipe("res", g, t0 = 70, durMs = 360, stream = StreamId.LEFT),
+        )
+        predictor.decode(tokens, emptyList()) // warmup
+        val t0 = System.nanoTime()
+        repeat(20) { predictor.decode(tokens, emptyList()) }
+        val perDecodeMs = (System.nanoTime() - t0) / 20 / 1_000_000.0
+        assertTrue("dual-thumb decode took $perDecodeMs ms", perDecodeMs < 100.0)
+    }
+
+    @Test
+    fun contactCutDecodeLatencyIsBounded() {
+        // The bound above is two synthetic swipes, which DO carry contacts (TestData.
+        // contactsAlong derives them from the path) and so do reach this generator - a
+        // KDoc two files over said otherwise and was out of date. What it does not reach
+        // is the worst shape: three swipes, all three cuttable, where the pair
+        // enumeration has three pairs to spend MAX_ALT_SEQUENCES on rather than one.
+        //
+        // Replayed from the device so the contacts are the ones a thumb produced.
+        // Measured at 1.08 ms per decode against the 100 ms ceiling, 2026-08-22.
+        val trie = loadTrie()
+        val g = TestData.qwertyGeometry()
+        val predictor = WordPredictor(trie, BigramTable.EMPTY, g)
+        val tokens = TraceReplay.tokens(
+            "decode in[en]: swipe[LEFT,t=4635556..4636808," +
+                "keys=w@0-226,e@226-281,d@281-547,e@547-703,r@703-970,f@970-1024,g@1024-1252] " +
+                "swipe[RIGHT,t=4635672..4635999,keys=o@0-126,k@126-186,j@186-236,n@236-327] " +
+                "swipe[RIGHT,t=4636383..4636677,keys=i@0-110,j@110-236,n@236-294] ctx=[]",
+            g,
+        )
+        predictor.decode(tokens, emptyList()) // warmup
+        val t0 = System.nanoTime()
+        repeat(20) { predictor.decode(tokens, emptyList()) }
+        val perDecodeMs = (System.nanoTime() - t0) / 20 / 1_000_000.0
+        assertTrue("contact-cut decode took $perDecodeMs ms", perDecodeMs < 100.0)
+    }
+
+    @Test
     fun mergedDecodeLatencyIsBounded() {
         // The split-variant fan-out (V1/V2/V3 per (tap, swipe) pair, capped by
         // MAX_ALT_SEQUENCES=12) multiplies pattern count for merged buffers -

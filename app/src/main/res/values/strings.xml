@@ -27,7 +27,7 @@
     <string name="onboarding_step_done">%1$s  (done)</string>
 
     <string name="pref_tips_title">Gestures you may not have found</string>
-    <string name="pref_tips_summary">Slide along the spacebar to move the cursor. Long-press a suggestion and slide up or down to change how strongly it is preferred. Dictionary → Import improved dictionary adds three to five times more words.</string>
+    <string name="pref_tips_summary">Slide along the spacebar to move the cursor. Swipe left from the right-hand end of the suggestion bar for a second page of words. Long-press shift to change a word\'s case. Long-press a suggestion and slide to change how strongly it is preferred.</string>
     <string name="pref_height_title">Keyboard height (% of screen)</string>
     <string name="pref_suggestion_bar_title">Suggestion bar height (dp)</string>
     <string name="pref_suggestion_bar_summary">The word text and its badges scale with the bar, so a thinner bar means smaller text too</string>
@@ -42,13 +42,13 @@
     <string name="pref_word_ends_on_space_title">Word ends only when you type a space</string>
     <string name="pref_word_ends_on_space_summary">No timer: taps and swipes keep building the same word however long you take, and a space, punctuation or enter ends it. Helps with long words assembled in pieces</string>
     <string name="pref_autospace_tapped_words_title">Autospace tapped words too</string>
-    <string name="pref_autospace_tapped_words_summary">A word you tapped out gets a space once you pause, if its letters spell a word. Roughly one space in five arrives before you meant it, so if you keep typing letters the space is taken back again</string>
+    <string name="pref_autospace_tapped_words_summary">A word you tapped out gets a space once you pause, if its letters spell a word. Typing another letter takes the space back.</string>
     <string name="pref_autospace_delay_title">Autospace delay after a swipe (ms)</string>
-    <string name="pref_autospace_delay_summary">How long a swiped word waits before its space arrives. A long or awkward word leaves bigger gaps mid-gesture, so this is the one to raise if spaces land inside words you are still drawing</string>
+    <string name="pref_autospace_delay_summary">How long a swiped word waits before its space arrives. Raise it if spaces land inside words you are still drawing.</string>
     <string name="pref_autospace_tap_delay_title">Autospace delay after tapping (ms)</string>
     <string name="pref_autospace_tap_delay_summary">The same, for a word you tapped out. Tapping runs at a steadier speed than swiping, so this can usually be shorter</string>
     <string name="pref_autospace_retract_title">Take the space back within (ms)</string>
-    <string name="pref_autospace_retract_summary">After an automatic space, how long a letter still cancels it and rejoins the word. Lower it if starting a new word too soon glues it to the previous one; raise it if a space arrives while you are still typing and you have to delete it yourself</string>
+    <string name="pref_autospace_retract_summary">After an automatic space, how long a letter still cancels it and rejoins the word.</string>
     <string name="pref_zen_title">Zen mode (no animations)</string>
     <string name="pref_zen_summary">Disables trails and effects to save battery</string>
     <string name="pref_trail_custom_hue_title">Custom trail hue (degrees)</string>
@@ -71,8 +71,27 @@
     <string name="pref_reinforce_title">Suggestion reinforcement boost</string>
     <string name="pref_reinforce_summary">Weight added when long-pressing a suggestion</string>
 
+    <string name="pref_retype_avoids_title">Retype offers a different word</string>
+    <string name="pref_retype_avoids_summary">After the retype button, the word you rejected drops to the end of the bar instead of leading again. It stays pickable.</string>
+    <string name="pref_group_look_title">Look and feel</string>
+    <string name="pref_group_look_summary">Theme, colours, trail, vibration</string>
+    <string name="pref_group_size_title">Size and keys</string>
+    <string name="pref_group_size_summary">Heights, letter arrangement, what each key does on a long press</string>
+    <string name="pref_group_spacing_title">Spacing</string>
+    <string name="pref_group_spacing_summary">When an automatic space arrives and when it is taken back</string>
+    <string name="pref_group_typing_title">Typing and predictions</string>
+    <string name="pref_group_typing_summary">Autocorrect, languages, what the keyboard learns</string>
+    <string name="pref_group_gestures_title">Gestures and chords</string>
+    <string name="pref_group_gestures_summary">Chords, key swipes, spacebar and backspace slides</string>
+    <string name="pref_chord_arm_title">Chord lead-in (ms)</string>
+    <string name="pref_chord_arm_summary">How long ?123 must be held before a letter tap counts as a chord. Lower it if chords feel slow; raise it if one fires by accident.</string>
     <string name="chord_settings_title">Chord shortcuts</string>
-    <string name="pref_chords_summary">Hold ?123 and tap a letter to insert its expansion</string>
+    <string name="chord_reserved_heading">Reserved keys</string>
+    <string name="chord_lead_in_value">%1$d ms</string>
+    <string name="chord_sort_key_asc">Sorted by key (A to Z)</string>
+    <string name="chord_sort_key_desc">Sorted by key (Z to A)</string>
+    <string name="chord_sort_function">Sorted by what it does</string>
+    <string name="pref_chords_summary">Hold ?123 and tap a letter: expansions, editor commands, the language switch and the peck-type toggle</string>
     <string name="chord_add">Add chord</string>
     <string name="chord_edit">Edit</string>
     <string name="chord_delete">Delete</string>
@@ -83,6 +102,7 @@
     <string name="chord_kind_copy">Copies the selection</string>
     <string name="chord_kind_cut">Cuts the selection</string>
     <string name="chord_kind_select_all">Selects all</string>
+    <string name="chord_kind_retype">Retypes the word</string>
     <string name="chord_expansion_hint">Expansion text</string>
     <string name="chord_empty_hint">No chords assigned. The feature stays off until you add one.</string>
     <string name="chord_list_hint">Hold ?123, then tap the letter.</string>
@@ -107,20 +127,27 @@
     <string name="dict_remove_base">Remove imported dictionary (revert to bundled)</string>
     <string name="dict_remove_base_confirm">Remove the imported %1$s dictionary and revert to the bundled wordlist?</string>
     <string name="dict_manage_blocked">Blocked words (%1$d)…</string>
-    <string name="dict_blocked_title">Blocked words — %1$s</string>
+    <string name="dict_blocked_title">Blocked words: %1$s</string>
     <string name="dict_blocked_add_hint">Word to block</string>
     <string name="dict_blocked_add">Block</string>
-    <string name="dict_blocked_empty">Nothing blocked. A blocked word is removed from the dictionary, so it stops being suggested at all — unlike sliding a suggestion down, which only lowers its priority.</string>
+    <string name="dict_blocked_empty">Nothing blocked. A blocked word leaves the dictionary and stops being suggested. Sliding a suggestion down only lowers its priority.</string>
     <string name="dict_export_personal">Export personal dictionary…</string>
     <string name="dict_import_personal">Import personal dictionary…</string>
     <string name="dict_manage_personal">Review learned words (%1$d)…</string>
-    <string name="dict_manage_personal_title">Learned words — %1$s</string>
-    <string name="dict_word_row_active">%1$s — %2$d, used in predictions</string>
-    <string name="dict_word_row_inactive">%1$s — %2$d, below the merge floor</string>
+    <string name="dict_manage_personal_title">Learned words: %1$s</string>
+    <string name="dict_word_row_active">%1$s · %2$d, used in predictions</string>
+    <string name="dict_word_row_inactive">%1$s · %2$d, below the merge floor</string>
     <string name="dict_word_search_hint">Search learned words</string>
     <string name="dict_word_search_empty">No learned word matches that.</string>
-    <string name="dict_word_delete_confirm">Delete the learned word \"%1$s\" and its weight? Typing it again will learn it back.</string>
-    <string name="dict_word_deleted">Deleted \"%1$s\"</string>
+    <string name="dict_word_delete_checked">Delete ticked</string>
+    <plurals name="dict_words_delete_confirm">
+        <item quantity="one">Delete %1$d learned word and its weight? Typing it again will learn it back.</item>
+        <item quantity="other">Delete %1$d learned words and their weight? Typing them again will learn them back.</item>
+    </plurals>
+    <plurals name="dict_words_deleted">
+        <item quantity="one">%1$d learned word deleted</item>
+        <item quantity="other">%1$d learned words deleted</item>
+    </plurals>
     <string name="dict_reset_personal">Reset personal dictionary</string>
     <string name="dict_reset_confirm">Delete all learned words and personal weights for %1$s? This cannot be undone.</string>
     <string name="dict_import_done">Merged dictionary imported: %1$d new words added</string>
@@ -140,14 +167,33 @@
     <string name="pref_backspace_char_slide_title">Backspace slide deletes letters</string>
     <string name="pref_backspace_char_slide_summary">Sliding left from backspace stages one letter at a time instead of one word. Nothing is deleted until you lift, and sliding back right still undoes it.</string>
     <string name="pref_retype_button_title">Retype button on the suggestion bar</string>
-    <string name="pref_retype_button_summary">Reserves the right edge of the suggestion bar for a \u21bb button. One tap throws away the word you are writing, or the one just finished, so you can swipe it again in its place. The words get a little less room.</string>
+    <string name="pref_retype_button_summary">Reserves the right edge of the suggestion bar for a \u21bb button. One tap throws away the word you are writing, or the one just finished, so you can swipe it again in its place.</string>
     <string name="pref_spacebar_word_slide_title">Spacebar slide moves by word</string>
     <string name="pref_spacebar_word_slide_summary">Sliding along the spacebar moves the cursor a whole word at a time instead of one letter, the way the backspace slide does. Punctuation goes with the word.</string>
+    <string name="backup_heading">Backup everything</string>
+    <string name="backup_note">Carries every setting, your learned words in all languages, the blocked words, your chord shortcuts and your edge-swipe shortcuts, as one text file you can move to another phone. Imported base dictionaries are not carried. Re-import those from the file you used the first time.</string>
+    <string name="backup_export">Export a backup\u2026</string>
+    <string name="backup_import">Restore a backup\u2026</string>
+    <string name="backup_include_phrases">Include %1$d learned phrases</string>
+    <string name="backup_export_done">Backup written: %1$d entries</string>
+    <string name="backup_export_partial">Backup written: %1$d entries, %2$d skipped</string>
+    <string name="backup_export_failed">Backup failed: could not write the file</string>
+    <string name="backup_import_message">Merge keeps what is already on this phone and adds to it. Replace clears the learned words and phrases first. Settings and shortcuts are overwritten either way.</string>
+    <string name="backup_import_not_backup">Not a Kinetica backup file</string>
+    <string name="backup_import_too_new">This backup was made by a newer version of Kinetica</string>
+    <string name="backup_import_done">Restored: %1$d words, %2$d settings</string>
+    <string name="backup_import_done_missing_base">Restored. Re-import the improved dictionary for: %1$s</string>
+    <string name="dict_clear_phrases">Clear learned phrases</string>
+    <string name="dict_clear_phrases_confirm">Forget every word pair Kinetica has learned for %1$s? The learned words themselves are kept.</string>
+    <string name="pref_learn_phrases_title">Learn phrases you type</string>
+    <string name="pref_learn_phrases_summary">Remembers which word you tend to type after which, so the next one is guessed better. Stored on this device only and never included in a dictionary export.</string>
+    <string name="pref_spaceless_space_title">Spaceless space on the left of the spacebar</string>
+    <string name="pref_spaceless_space_summary">Tapping the left third of the spacebar ends the word without adding a space, so a compound the dictionary does not hold can be swiped in two halves. That third stops working as a normal space.</string>
     <string name="pref_spacebar_step_title">Spacebar slide distance</string>
     <string name="pref_spacebar_step_summary">How far you slide along the spacebar to move the cursor one step. Lower is faster.</string>
 
     <string name="pref_alternate_swipes_title">Directional number/symbol swipes</string>
-    <string name="pref_alternate_swipes_summary">Swipe up on a top-row letter for its number, down on a bottom-row letter for its symbol. Your edge-swipe bindings take precedence.</string>
+    <string name="pref_alternate_swipes_summary">Swipe up on a top-row letter, or down on a bottom-row one, to type the small glyph printed on that key. Your own edge-swipe bindings take precedence.</string>
 
     <string name="pref_enter_alternates_title">Enter slide-up symbols</string>
     <string name="pref_enter_alternates_summary">Up to three symbols, space-separated (default \"? ! ,\"). The first sits above Enter and is inserted by a quick up-slide; slide left for the others.</string>
@@ -191,8 +237,8 @@
 
     <string name="pref_theme_mode_title">Keyboard theme</string>
     <string name="pref_theme_brightness_title">Light or dark</string>
-    <string name="theme_preview_note_custom">Preview — drag the hue above to change it</string>
-    <string name="theme_preview_note_fixed">Preview — this palette ignores the hue; choose Custom colour above to use it</string>
+    <string name="theme_preview_note_custom">Preview: drag the hue above to change it</string>
+    <string name="theme_preview_note_fixed">Preview: this palette ignores the hue. Choose Custom colour to use it.</string>
     <string name="pref_theme_hue_title">Accent hue</string>
     <string name="pref_theme_hue_summary">Colour wheel position, 0-360. Used when the theme above is set to a custom colour; every surface is derived from it</string>
     <string name="pref_theme_color_title">Custom theme color</string>

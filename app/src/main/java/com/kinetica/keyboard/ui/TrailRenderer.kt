@@ -3,12 +3,16 @@ package com.kinetica.keyboard.ui
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Path
 import com.kinetica.keyboard.engine.models.StreamId
 
 /**
  * Per-stream swipe trails. Hue starts at the configured base (offset for the
  * right thumb so simultaneous trails are distinguishable) and advances 30 deg
  * on every key transition; points fade and shrink over TRAIL_LIFE_MS.
+ *
+ * One smoothed piece per sample rather than one straight line, so a fast swipe does not
+ * read as facets; the joins are [TrailPath]'s and are tested there.
  */
 class TrailRenderer(private val density: Float) {
 
@@ -30,6 +34,11 @@ class TrailRenderer(private val density: Float) {
         strokeJoin = Paint.Join.ROUND
     }
     private val hsv = FloatArray(3)
+
+    // Both reused every frame: one piece is drawn at a time, so the smoothing costs no
+    // allocation over the straight lines it replaced.
+    private val path = Path()
+    private val quad = FloatArray(TrailPath.SIZE)
 
     /** Base hue in degrees; the right stream starts offset by 60 deg. */
     var baseHue = 0f
@@ -104,11 +113,10 @@ class TrailRenderer(private val density: Float) {
     fun draw(canvas: Canvas, now: Long) {
         for (trail in trails) {
             if (trail.size < 2) continue
-            var prev: TrailPoint? = null
-            for (p in trail) {
-                val a = prev
-                prev = p
-                if (a == null || p.breakBefore) continue
+            for (i in 1 until trail.size) {
+                val p = trail[i]
+                val a = trail[i - 1]
+                if (p.breakBefore) continue
                 val age = (now - p.t).coerceAtLeast(0)
                 val f = 1f - age / TRAIL_LIFE_MS.toFloat()
                 if (f <= 0f) continue
@@ -117,7 +125,20 @@ class TrailRenderer(private val density: Float) {
                 hsv[2] = 1f
                 paint.color = Color.HSVToColor((200 * f).toInt(), hsv)
                 paint.strokeWidth = (3f + 7f * f) * density
-                canvas.drawLine(a.x, a.y, p.x, p.y, paint)
+                // A run ends at a break as well as at the finger, so a lift is still a gap
+                // rather than a curve across the keyboard.
+                val next = trail.getOrNull(i + 1)?.takeIf { !it.breakBefore }
+                TrailPath.quadInto(
+                    quad,
+                    a.x, a.y, p.x, p.y,
+                    next?.x ?: p.x, next?.y ?: p.y,
+                    isFirst = i == 1 || a.breakBefore,
+                    isLast = next == null,
+                )
+                path.rewind()
+                path.moveTo(quad[0], quad[1])
+                path.quadTo(quad[2], quad[3], quad[4], quad[5])
+                canvas.drawPath(path, paint)
             }
         }
     }

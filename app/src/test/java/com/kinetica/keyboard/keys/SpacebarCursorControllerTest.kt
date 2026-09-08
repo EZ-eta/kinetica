@@ -1,8 +1,6 @@
 package com.kinetica.keyboard.keys
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -25,7 +23,11 @@ class SpacebarCursorControllerTest {
         val r = Recorder()
         r.controller.onDown(100f)
         r.controller.onMove(104f)
-        assertTrue("under the enter threshold it stays a tap", r.controller.onUp())
+        assertEquals(
+            "under the enter threshold it stays a tap",
+            SpacebarCursorController.Lift.SPACE,
+            r.controller.onUp(),
+        )
         assertEquals(emptyList<Int>(), r.directions)
     }
 
@@ -36,7 +38,11 @@ class SpacebarCursorControllerTest {
         r.controller.onDown(0f)
         r.controller.onMove(8f)
         r.controller.onMove(48f)
-        assertFalse("cursor mode is not a tap", r.controller.onUp())
+        assertEquals(
+            "cursor mode is not a tap",
+            SpacebarCursorController.Lift.SLIDE,
+            r.controller.onUp(),
+        )
         assertEquals(listOf(1, 1), r.directions)
     }
 
@@ -102,5 +108,53 @@ class SpacebarCursorControllerTest {
         r.controller.onMove(8f)
         r.controller.onMove(28f)
         assertEquals(listOf(1 to false), r.steps)
+    }
+
+    // R35, the spaceless space: the left 30% of the key ends the word and writes no
+    // space. The key here is 100 wide from x=0, so the zone is x < 30.
+
+    @Test
+    fun theZoneIsInertUntilItIsTurnedOn() {
+        val r = Recorder()
+        r.controller.onDown(10f, 0f, 100f)
+        assertEquals(SpacebarCursorController.Lift.SPACE, r.controller.onUp())
+    }
+
+    @Test
+    fun aTapInTheLeftThirdIsASpacelessSpace() {
+        val r = Recorder()
+        r.controller.spacelessZone = true
+        r.controller.onDown(10f, 0f, 100f)
+        assertEquals(SpacebarCursorController.Lift.SPACELESS, r.controller.onUp())
+    }
+
+    @Test
+    fun aTapPastTheZoneIsAnOrdinarySpace() {
+        val r = Recorder()
+        r.controller.spacelessZone = true
+        r.controller.onDown(50f, 0f, 100f)
+        assertEquals(SpacebarCursorController.Lift.SPACE, r.controller.onUp())
+    }
+
+    @Test
+    fun theSlideWinsOverTheZoneItStartedIn() {
+        // The finger made a slide, so it is a slide. Nothing may end a word behind a
+        // gesture whose whole purpose was to move the cursor.
+        val r = Recorder()
+        r.controller.spacelessZone = true
+        r.controller.onDown(10f, 0f, 100f)
+        r.controller.onMove(18f)
+        r.controller.onMove(58f)
+        assertEquals(SpacebarCursorController.Lift.SLIDE, r.controller.onUp())
+        assertEquals(listOf(1, 1), r.directions)
+    }
+
+    @Test
+    fun aCallerThatDoesNotKnowTheKeyRectNeverArmsTheZone() {
+        // The default arguments, i.e. every caller written before the zone existed.
+        val r = Recorder()
+        r.controller.spacelessZone = true
+        r.controller.onDown(10f)
+        assertEquals(SpacebarCursorController.Lift.SPACE, r.controller.onUp())
     }
 }

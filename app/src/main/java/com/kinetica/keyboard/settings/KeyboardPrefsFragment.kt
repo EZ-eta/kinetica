@@ -6,6 +6,7 @@ import android.os.Bundle
 import androidx.preference.ListPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
+import androidx.preference.PreferenceGroup
 import androidx.preference.SeekBarPreference
 import com.kinetica.keyboard.R
 import com.kinetica.keyboard.ui.KeyboardTheme
@@ -14,8 +15,38 @@ class KeyboardPrefsFragment : PreferenceFragmentCompat() {
 
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         setPreferencesFromResource(R.xml.keyboard_prefs, rootKey)
+        dropIconSpace(preferenceScreen)
         wireThemePreview()
         showVersion()
+    }
+
+    /**
+     * Names the screen the user is actually on.
+     *
+     * Taken from the inflated root rather than tracked in the activity, so it survives a
+     * rotation and a Back press without a second copy of the titles existing anywhere.
+     */
+    override fun onResume() {
+        super.onResume()
+        activity?.title = preferenceScreen?.title ?: getString(R.string.settings_title)
+    }
+
+    /**
+     * No preference on this screen has an icon, so none of them should reserve the gutter
+     * one would sit in.
+     *
+     * Walked in code rather than set per element in the XML: there are 52 of them, a new
+     * one would arrive without the attribute, and this also reaches the categories and the
+     * theme preview. Reported by a user on a 21:9 phone, where the reserved space is wide
+     * enough to squeeze the description column.
+     */
+    private fun dropIconSpace(group: PreferenceGroup) {
+        group.isIconSpaceReserved = false
+        for (i in 0 until group.preferenceCount) {
+            val child = group.getPreference(i)
+            child.isIconSpaceReserved = false
+            if (child is PreferenceGroup) dropIconSpace(child)
+        }
     }
 
     /**

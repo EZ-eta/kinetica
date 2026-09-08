@@ -180,9 +180,11 @@ bytes, and either can install and update over the other's build.
 Most of what people have asked for since the first release was already in
 Settings and simply hard to find. The ones that come up most:
 
-- **Chord shortcuts that paste, copy, cut or select all.** Settings > Chords, add
-  a chord and set *This chord* to the action you want. Hold `?123` and tap that
-  letter to fire it. Chords still type text too - a signature, an email address.
+- **Chord shortcuts that paste, copy, cut, select all or retype the word.**
+  Settings > Chords, add a chord and set *This chord* to the action you want.
+  Hold `?123` and tap that letter to fire it. Chords still type text too - a
+  signature, an email address. The same screen holds the language-switch and
+  peck-type keys, and *Chord lead-in* sets how long `?123` must be held first.
 - **Long-press popups without the accents.** *Hide accented letters on
   long-press* leaves only digits and symbols, so `A` gives you `@` instead of
   eight forms of `a` you will never type. Ignored for Italian, Spanish, Polish
@@ -406,11 +408,12 @@ Regenerate the bundled dictionaries with `python3 tools/generate_assets.py
   `count_2w.txt`; that data derives from the LDC-distributed Google Web
   Trillion Word Corpus and carries no explicit redistribution license, so it
   was regenerated from Tatoeba before the public release.)
-- Emoji data: hand-curated `assets/emoji_data.json` (423 plain Unicode emoji
-  with names and search keywords); no external dataset. ZWJ sequences are
-  deliberately excluded (unsupported devices render them as two glyphs, worse
-  than a tofu box); a handful of post-Unicode-13 entries (🥹 🫠 🫡 🫶 🫰 🫵)
-  may show as tofu on Android 8-11 devices without updated emoji fonts.
+- Emoji data: hand-curated `assets/emoji_data.json` (478 plain Unicode emoji
+  with names and search keywords, through Unicode 15); no external dataset. ZWJ
+  sequences are deliberately excluded, which is also why Unicode 15.1 is absent:
+  a device that cannot render one draws its parts, which is worse than a tofu
+  box. The picker checks each entry against the device font at load, so an emoji
+  this Android version cannot draw is left out rather than shown as tofu.
 
 ### Open keyboard dictionaries: licensing survey
 

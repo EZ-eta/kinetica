@@ -12,8 +12,39 @@ object KineticaConstants {
     const val TAP_MAX_MS = 150L
     const val TAP_MAX_DISP_DP = 12f
 
-    // A "swipe" shorter than this decodes as its start key only (flick tolerance).
-    const val MIN_SWIPE_ARC_KW = 1.5f
+    /**
+     * The arc a piece must carry before it is required to spell TWO letters.
+     *
+     * One production use, `Matcher.buildSegment`'s
+     * `minLetters = if (letterArcLen < MIN_SWIPE_ARC_KW) 1 else 2`. The old one-line
+     * description here called it flick tolerance, which is the effect rather than the
+     * rule: a piece under this decodes as a single letter, so a short flick spells its
+     * start key.
+     *
+     * Raised 1.5 -> 1.8 on 2026-08-29 by pricing it against the 570-buffer corpus, since
+     * item 42's table had it as the largest gate still unspent. Corpus top-1, with the
+     * goldens beside it:
+     *
+     *   1.5: 149 (0 fail)   **1.8: 159 (0 fail)**   2.2: 152 (2 fail)   99: 152 (2 fail)
+     *
+     * A peak, not a plateau edge: past 1.8 top-1 falls back AND two goldens break. `present`
+     * moves 175 -> 186 with `top5 == present` throughout, so nothing is buried.
+     *
+     * The churn says the same thing. Over all 9 408 decodes in all eleven captures, 48
+     * leads change (0.51%), **none of them from a word to nothing**. Nineteen of them are
+     * `keys` taking the lead from a name whose letters the finger never touched - `kyra`
+     * x8, `jessy` x6, `kenya` x2, `kites` x2, `least` x1 - which is the developer's oldest
+     * complaint and the thing UNCONTACTED_LETTER_KEEP exists for. One is `holed` -> `held`,
+     * their other standing complaint. Twelve empty decodes become words. The remaining
+     * sixteen are singleton swaps that read either way (`monte` -> `broken`,
+     * `strisce` -> `durare`).
+     *
+     * 1.8 is also exactly R_INNER_KW, which is a tidy reading - a piece shorter than the
+     * radius within which one key is detectable has not shown it holds two letters - but
+     * the value came from the sweep and not from that argument, and it is recorded as a
+     * coincidence rather than a derivation.
+     */
+    const val MIN_SWIPE_ARC_KW = 1.8f
 
     // Path matching.
     const val RESAMPLE_N = 32
@@ -22,6 +53,20 @@ object KineticaConstants {
 
     // Candidate pruning. Endpoint radius covers the key itself plus immediate
     // neighbors; inner radius is looser because mid-gesture accuracy is lower.
+    //
+    // **The endpoint radius is CLOSED. Do not widen it.** Item 42 priced it at +2 buffers of
+    // reachability and item 49 said it wanted a structural change rather than a wider radius;
+    // re-swept 2026-09-05 on the 1 038-row corpus, against 4 722 buffers of lead churn, it is
+    // far worse than merely unhelpful:
+    //
+    //   R_ENDPOINT_KW   **1.4: top-1 246**   1.8: 183   2.2: 165   2.5: 165
+    //   goldens failing        0                  5         5         5
+    //   top5 == present      true              FALSE     FALSE     FALSE
+    //
+    // At 1.8 it converts 149 empty decodes into words and loses 63 top-1 doing it, which is
+    // the exact trap 5a exists to catch: reachability without rank buys competitors, not
+    // words. `top5 == present` going false is the cheap tell firing for the first time in
+    // this project - the intended words are still found and are now buried.
     const val R_ENDPOINT_KW = 1.4f
     const val R_INNER_KW = 1.8f
     // How far the path must leave a key and come back for the return to count
@@ -49,7 +94,49 @@ object KineticaConstants {
     // (broken on perfect-centre paths only) but nearly doubles the added passes,
     // so it was left on the table rather than taken.
     const val PASS_SPLIT_PROMINENCE_KW = 0.7f
-    const val MONOTONE_SLACK = 6
+    // How far BACK along the path a segment's next letter may be found, in
+    // resample indices out of RESAMPLE_N - so it reads as a fraction of the
+    // piece, whatever the piece's length. A segment's lastIdx starts at
+    // -MONOTONE_SLACK, so the first letter is unconstrained and this only ever
+    // governs consecutive letters.
+    //
+    // **Raised 8 -> 18 on 2026-09-05, and the point is that 8 was right when it was
+    // measured.** It was taken as the smallest value capturing `where` on a 570-buffer
+    // corpus, and 16 was refused there at +7 top-1 for 22 changed leads of which about half
+    // read as noise. Two things have moved under it since: the search places its own cuts,
+    // and the corpus is 1 038 labelled rows over nineteen captures. Re-swept on that
+    // population, with the goldens beside it:
+    //
+    //   slack   8: 236   10: 237   12: 241   14: 241   16: 245   17: 245
+    //          **18: 246**   20: 246   24: 246   32: 246
+    //
+    // 18 is the bottom of the plateau, and nothing above it buys a single buffer. `present`
+    // tracks top-1 exactly (306 -> 316) with `top5 == present` throughout, so nothing is
+    // buried, and NO golden moves at any value in the sweep including 32.
+    //
+    // The churn is why it is taken rather than merely allowed: 73 of 4 722 leads change,
+    // ZERO of them from a word to nothing, and the largest groups are `he` -> `here` x18,
+    // `the` -> `there` x11 and `cinque` -> `comunque` x9. Eight empty decodes become words,
+    // among them `probabilmente` and `praticamente`, which are the two hardest words in the
+    // corpus. The costs are two ambiguous Italian swaps (`prevedono` -> `perdendo`,
+    // `prende` -> `presente`) and `byrne` -> `monte`.
+    //
+    // The mechanism is unchanged from item 42's and `here` is its cleanest instance: the
+    // path runs e-r-e, `r` sits 1.0 kw from `e` while R_INNER_KW is 1.8, so the whole path
+    // stays inside `e`'s disc, collectPasses gives `e` one pass at its closest approach, and
+    // the word's second `e` has to be found at an index before `r`'s. Pinned by
+    // DualThumbReplayTest.theSecondEOfHereIsFoundBeforeTheR, where `here` is absent from the
+    // list entirely at 8 and 12 and leads at 16.
+    //
+    // Cost: p99 decode 1.20 -> 1.43 ms and worst 4.13 -> 5.09 ms over all 4 722 corpus
+    // buffers, against the 100 ms bound the *LatencyIsBounded goldens hold.
+    //
+    // The other route to these words stays refused and is now doubly so: lowering
+    // PASS_SPLIT_PROMINENCE_KW so `e` gets two passes breaks
+    // PassRunSplitTest.preciseShortReversalKeepsOnePassPerVisit at every value from 0.5
+    // down. It costs a golden, so it stays off the table; a future attempt has to make the
+    // prominence rule scale-aware rather than merely smaller.
+    const val MONOTONE_SLACK = 18
     const val MAX_WORD_LEN = 24
     // Candidate budget per Search pass: counts words that actually reach the
     // heap, and feeds the root-fairness slicing in WordPredictor.descend (the
@@ -157,13 +244,24 @@ object KineticaConstants {
     // close the half even with a sparse extra sample, yet at least a real key
     // hop so DTW still sees an approach direction rather than a point.
     const val SPLIT_RESUME_TAIL_KW = 1.2f
-    // 12: a (tap, swipe) pair now emits up to three split variants (V1
-    // cut-resume, V2 endpoint-trimmed tail, V3 apex-snapped cut) instead of
-    // one, so the old cap of 8 could truncate the variant that carries the
-    // word in dense buffers. Wrong variants find no words and cost
-    // microseconds, but the cap bounds worst-case decode work -
-    // decodeLatencyIsBounded must be re-verified whenever it changes.
-    const val MAX_ALT_SEQUENCES = 12
+    // Sequence budget for one buffer. A (tap, swipe) pair emits up to three split variants,
+    // so a cap of 8 could truncate the one carrying the word in a dense buffer. Wrong
+    // variants find no words and cost microseconds; the cap is what bounds worst-case
+    // decode work, so decodeLatencyIsBounded must be re-verified whenever it moves.
+    //
+    // 14 is the bottom of a plateau, not a preference: swipe+taps empty decodes read
+    // 20/405 at 14, 16, 20 and 24 alike over the 1,361-buffer corpus, and 23/405 at 12.
+    // Worst decode 1.32 ms against the 100 ms bound.
+    //
+    // **Do not reallocate it per generator.** Generators fill sequentially and each returns
+    // on the cap in turn, so the budget lands wherever runs first. Seven formulations were
+    // swept (round robin, reservations of 1/2/3, per-generator ceilings at three caps) and
+    // every one buys two or three multi-swipe buffers and loses four to seven swipes-only
+    // ones: the cross-swipe generator genuinely needs most of the budget on a swipes-only
+    // buffer. The readings a starved generator would build are refused afterwards by the
+    // segment gates, which is where the work is. KNOWN_ISSUES item 41 has the table.
+    const val MAX_ALT_SEQUENCES = 14
+
     // Cross-stream boundaries one swipe may be cut at simultaneously:
     // 3 cuts = 4 path pieces, which covers an 8-letter word typed
     // with letters alternating between thumbs. The shipped tap-split generator
@@ -174,6 +272,54 @@ object KineticaConstants {
     // the fan-out alongside MAX_ALT_SEQUENCES; the *LatencyIsBounded goldens are
     // the gate whenever it changes.
     const val MAX_SPLIT_ANCHORS = 3
+
+    /**
+     * Cuts one search branch may hold open at once, when the search places its own.
+     *
+     * Distinct from MAX_SPLIT_ANCHORS, which bounds what MergeAlternatives builds before
+     * anything knows the word.
+     *
+     * **Re-swept 2026-09-05, after a tail became cuttable.** Until then offerCuts ran only
+     * from the pattern-segment dispatch and never for a resumed tail, so a swipe could be cut
+     * once and never again and a THIRD piece of one gesture was unreachable at any budget.
+     * That is why the previous table read 3 as buying nothing: it was unreachable, not
+     * unhelpful. On the 1 038-row corpus with tails cuttable:
+     *
+     *   cuts  1: top-1 236 (and it buys nothing - with one cut open only one swipe in a
+     *            buffer can be read in two pieces, and these words need both)
+     *         **2: 247**   3: 247   4: 247
+     *
+     * 3 is refused on its churn rather than its score: identical top-1, six changed leads
+     * instead of two, and one of them turns an empty decode into the proper noun
+     * `couwenberg`, which is worse than the empty it replaces.
+     *
+     * **The five-token band is NOT this bound, and the plan that predicted it was wrong.**
+     * Empty decodes at five tokens read 81% at cuts 2, 3 and 4 alike. The device capture put
+     * four tokens at 46.6% against five at 75.0% and it was tempting to read the gap as the
+     * two-cut ceiling; it is not. Every empty decode in seven captures reports `attempts=0`
+     * on every search line, so what stops those readings is admissibility, and no cut budget
+     * reaches it.
+     *
+     * Cost of the tail cut itself: top-1 246 -> 247, `present` unchanged at 316, and exactly
+     * two leads move in 4 722 - `processo` -> `provando` and `within` -> `writing`. No golden
+     * moves. p99 decode 1.29 ms at 2 and 1.39 at 3, against a 100 ms bound. Pinned by
+     * DualThumbReplayTest.oneSwipeReadInThreePiecesStillSpellsProvando.
+     */
+    const val MAX_SEARCH_CUTS = 2
+
+    /**
+     * Cut times offered per swipe when the search places its own cuts.
+     *
+     * Candidates are the other stream's events inside this swipe, which is where every
+     * shipped generator looks too, so on a two-thumb buffer this is one per contact the other
+     * thumb made. A tail is offered the same list, filtered to the span it actually owns.
+     *
+     * Every one is a branch walked, so it is the latency knob of the pair, and it is flat
+     * well before it binds. Re-swept with tails cuttable:
+     *
+     *   times  4: top-1 245, and one golden fails   **8: 247**   12: 247
+     */
+    const val MAX_SEARCH_CUT_TIMES = 8
 
     // Key-contact extraction hysteresis: the current key keeps ownership until
     // the pointer leaves its bounds inflated by this much (kills border jitter).
@@ -374,6 +520,42 @@ object KineticaConstants {
     // term's own floor as the normalizer. The two boosts used to have separate
     // rules here, each with a discontinuity at the cap; see appliedBoost for
     // why they became one.
+    /**
+     * Score kept per letter a swipe segment consumed that the finger was never
+     * measurably on.
+     *
+     * A segment admits any key whose centre is within R_INNER_KW of the path, and
+     * adjacent keys are 1.0 kw apart while rows are 1.5-1.9 kw - so every neighbour of
+     * every key crossed is admissible, and a candidate may be built almost entirely
+     * from keys the gesture never touched. Measured over 447 swipe-bearing device
+     * decodes: 48% of WINNERS require at least one such letter, and in 29% a
+     * lower-ranked candidate invents fewer than the winner does.
+     *
+     * The two worked cases. "keys" - k, e, y, s, every one of them a real contact -
+     * lost to "kyra", which takes `r` from the `e` contact and `a` from the `s`, both
+     * exactly one key away. "held" lost to "bleed", which additionally invents a `b`
+     * a row and a half below the nearest thing the thumb touched.
+     *
+     * A charge and not a veto, and "held" is the reason: its own `l` was never
+     * contacted either, because the thumb stopped on `k`. Contact detection is
+     * hysteresis-gated and misses fast crossings, so an uncontacted letter is evidence
+     * against a reading, never proof.
+     *
+     * It multiplies the score rather than adding to dTotal, which was tried first and
+     * cannot work: geometricTerm saturates at GEO_SATURATION_KW, both of these
+     * contests are at or past it, and appliedBoost reads geoFit - so a distance charge
+     * moves neither the geometric term nor the boost.
+     *
+     * **0.85 is the plateau top, not the value the device rows want.** Swept against
+     * the whole suite, which carries every device-verified ranking contest this project
+     * has: green at 1.0, 0.95, 0.90 and 0.85, and at 0.80 it loses `sarei`, whose own
+     * `a` the developer never crossed either (that gesture ran s-e-r-t-r-e). The device
+     * arithmetic for "keys" wants 0.80 or below. So the charge is set where it costs
+     * nothing already proven, and the residue is recorded rather than bought by
+     * breaking a golden - the trade is real and no value wins both.
+     */
+    const val UNCONTACTED_LETTER_KEEP = 0.85f
+
     const val GEO_EXPONENT = 3.75f
     const val GEO_SATURATION_KW = 0.5f
 
@@ -469,7 +651,7 @@ object KineticaConstants {
     // fw ~0.66) is ~1.4x, so the boost must reach ~1.4x within a realistic
     // number of picks: 20 picks give 1 + 0.15*ln(21) = 1.46 (rank flip, e.g.
     // "thou" over "you"), 5 picks give 1.27 (visible climb in the strip). The
-    // log keeps heavy reinforcement bounded so bigram context (max 1.5x)
+    // log keeps heavy reinforcement bounded so bigram context (max 2.0x)
     // stays competitive and one obsessively-typed word cannot swallow the
     // whole strip.
     //
@@ -599,6 +781,25 @@ object KineticaConstants {
     // no longer buys rank for a poor fit.
     const val PERSONAL_BOOST = 0.15f
 
+    /**
+     * Personal PAIR weighting: `1 + PERSONAL_BIGRAM_BOOST * ln(1 + pairCount)`, applied
+     * through the same fade as every other boost.
+     *
+     * Starts at PERSONAL_BOOST's value because it is the same shape over the same kind of
+     * evidence - a count of times the user did this - and because the two compose
+     * multiplicatively on a word that is both frequent for this user AND frequent after
+     * this particular predecessor, which is exactly the case worth backing.
+     */
+    const val PERSONAL_BIGRAM_BOOST = 0.15f
+
+    // A learned PAIR has to be seen this many times before it boosts anything, the same
+    // floor and the same reason as PERSONAL_MERGE_MIN_COUNT for single words: a commit is
+    // not proof the decode was right. Measured on a live capture, where the developer typed
+    // "i don't oboe know", left the wrong word in, and typed the next one - so `don't ->
+    // oboe` was learned in full from one commit. The retype button takes the last pair back
+    // out, but only for an error the user actually retypes, and that was the hole.
+    const val PERSONAL_PAIR_MIN_COUNT = 2
+
     // Personal words merge into the active language's trie at dictionary
     // load, scaled by USER_FREQ_SCALE so a handful of real uses competes
     // with corpus counts spanning millions - but only once the word has
@@ -634,6 +835,18 @@ object KineticaConstants {
         }
         return tier
     }
+
+    // How long after a buffer is abandoned its letters may still be labelled by the
+    // next committed word, for the commit-time miss line only. Nothing in the decode
+    // path reads it.
+    //
+    // 6 000 ms is deliberately loose: the pairing it enables is a diagnostic and the
+    // line prints its own gap, so an unrelated pair is filtered when the capture is read
+    // rather than by a constant guessed here. The measured shape it has to cover is a
+    // delete-and-retype at 1 456 and 1 651 ms against a 170 ms median typing gap, plus
+    // whatever the developer spends looking at a wrong word before reaching for the
+    // retype button, which was 5.7 s on the one instance ever captured.
+    const val MAX_RETYPE_GAP_MS = 6000L
 
     // Autocorrect: geometric confidence 1/(1+dTotal) must exceed this. The
     // selectable levels are off / normal / aggressive (arrays.xml,

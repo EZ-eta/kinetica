@@ -36,6 +36,24 @@ sealed class Matcher {
         private val isEndNeighbor: BooleanArray,     // [26]
         val nearPath: BooleanArray,                  // [26] center within R_INNER of path
         /**
+         * [26] keys this gesture was measurably ON, from the token's own key
+         * contacts - as opposed to [nearPath], which is every key whose centre came
+         * within R_INNER_KW of the path and therefore includes every neighbour of
+         * every key crossed.
+         *
+         * The two differ by more than they look. Adjacent keys are 1.0 kw apart and
+         * rows 1.5-1.9 kw, both well inside R_INNER_KW = 1.8, so a swipe through
+         * `e` then `s` reads just as well as one through `r` then `a`. That is how
+         * "keys" - every one of whose letters the finger actually touched - lost to
+         * "kyra", which invents two of its four.
+         *
+         * Empty for a token that carries no contacts, which is every synthetic
+         * fixture built before TestData.contactsAlong existed and every path a
+         * device did not produce. An empty array charges nothing, so a missing
+         * contact list is treated as no evidence rather than as evidence against.
+         */
+        val contacted: BooleanArray,                 // [26] a real key contact
+        /**
          * [26] ascending resample indices, one local distance minimum per
          * distinct pass of the path near the key. A single "nearest index" per
          * letter cannot represent revisited letters (the second e of "however")
@@ -100,6 +118,19 @@ sealed class Matcher {
 
             val isStart = BooleanArray(Alphabet.LETTERS)
             val isEnd = BooleanArray(Alphabet.LETTERS)
+            // Which keys the gesture was measurably on, straight from the token.
+            // GestureStream applies hysteresis before recording one, so this is the
+            // conservative half of the evidence: a fast crossing can be missed, but
+            // a key listed here was genuinely under the finger.
+            val contacted = if (t.keyContacts.isEmpty()) {
+                NO_CONTACTS
+            } else {
+                BooleanArray(Alphabet.LETTERS).also { a ->
+                    for (c in t.keyContacts) {
+                        if (c.code in 0 until Alphabet.LETTERS) a[c.code] = true
+                    }
+                }
+            }
             val nearPath = BooleanArray(Alphabet.LETTERS)
             val passIdx = Array(Alphabet.LETTERS) { EMPTY_PASSES }
             val passScratch = IntArray(MAX_PASSES)
@@ -157,7 +188,7 @@ sealed class Matcher {
                 min(MAX_SEGMENT_LETTERS, ceil(t.arcLen / KW_PER_LETTER).toInt() + 2),
             )
             return Segment(
-                r, t.arcLen, letterArcLen, minLetters, maxLetters, isStart, isEnd, nearPath,
+                r, t.arcLen, letterArcLen, minLetters, maxLetters, isStart, isEnd, nearPath, contacted,
                 passIdx, t.softStart, t.softEnd,
             )
         }
@@ -237,5 +268,8 @@ sealed class Matcher {
         // worked out, and paths with 9 flyover runs already lost their last one.
         private const val MAX_PASSES = KineticaConstants.RESAMPLE_N / 2
         private val EMPTY_PASSES = IntArray(0)
+
+        /** Sweep point: an empty array is what WordPredictor's first branch tests for. */
+        private val NO_CONTACTS = BooleanArray(0)
     }
 }

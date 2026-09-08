@@ -84,4 +84,30 @@ class SymbolsLayoutTest {
             assertTrue("$d must be tappable", tappable(both, d.toString()))
         }
     }
+
+    @Test
+    fun theNumpadCanTypeASpace() {
+        // Reported: the numeric panel was the one layer with no way to type a space, so a
+        // number with a space in it had to be finished on another page. It was the only
+        // layout of the three without a space key.
+        val numpad = read("numpad.json")
+        assertTrue("the numpad needs a space key", numpad.contains("\"type\": \"space\""))
+    }
+
+    @Test
+    fun theNumpadStillCarriesItsInventory() {
+        // The space took a new row rather than a neighbour's cell, so nothing here should
+        // have moved. Asserted because a layout edit that drops a key is invisible
+        // otherwise: the JSON still parses and the keyboard still comes up.
+        val numpad = read("numpad.json")
+        for (d in '0'..'9') {
+            assertTrue("$d must stay tappable on the numpad", tappable(numpad, d.toString()))
+        }
+        for (ch in listOf("-", ".", ",")) {
+            assertTrue("$ch must stay tappable on the numpad", tappable(numpad, ch))
+        }
+        for (t in listOf("backspace", "enter", "mode_alpha")) {
+            assertTrue("the numpad needs its $t key", numpad.contains("\"type\": \"$t\""))
+        }
+    }
 }

@@ -106,4 +106,54 @@ class MergeAlternativesTest {
         assertEquals(StreamId.LEFT, s[2].streamId)
         assertTrue("resumed half must be softStart", s[2].softStart)
     }
+
+    /**
+     * The budget accounting, on the buffer that made it necessary.
+     *
+     * `provando` typed with both thumbs, verbatim from the 2026-08-28 capture: the
+     * right thumb sweeps p-o-i-j, lifts, sweeps b-n-j-k-o, while the left taps r
+     * into the first sweep and d into the second. Both cross-stream taps land past
+     * SPLIT_MARGIN_MS, so the mid-swipe split is obliged to examine both, and in
+     * the capture it examined neither - the cap was spent before it ran, and a
+     * generator that was never reached looked exactly like a generator that
+     * rejected every cut.
+     *
+     * This asserts the accounting rather than a word, because the reading IS built
+     * here and is then refused by the segment gates (item 41): the piece that must
+     * spell the second `o` overshoots to `i` and `j`, so `isEnd` is [h, j, k], and
+     * the final piece carries letterArc 2.00 kw against MIN_SWIPE_ARC_KW 1.8, so
+     * minLetters is 2 where the word needs one letter.
+     */
+    @Test
+    fun theBudgetAccountingNamesTheGeneratorTheCapRefused() {
+        val line =
+            "decode in[it]: swipe[RIGHT,t=1624452..1624768,keys=p@0-131,o@131-251,i@251-306,j@306-316] " +
+                "tap[r,LEFT,t=1624612] tap[v,LEFT,t=1624900] tap[a,LEFT,t=1625009] " +
+                "swipe[RIGHT,t=1625179..1625571,keys=b@0-115,n@115-149,j@149-181,k@181-250,o@250-392] " +
+                "tap[d,LEFT,t=1625306] ctx=[rad, rad]"
+        val lines = ArrayList<String>()
+        DecodeTrace.sink = { lines.add(it) }
+        try {
+            MergeAlternatives.sequences(TraceReplay.tokens(line, g), dtw)
+        } finally {
+            DecodeTrace.sink = null
+        }
+        val seqs = lines.firstOrNull { it.trimStart().startsWith("seqs ") }
+        assertNotNull("no budget accounting was traced: $lines", seqs)
+        // taken/produced per generator, and a non-zero dropped count: this buffer
+        // asks for more sequences than MAX_ALT_SEQUENCES allows, which is the fact
+        // the trace could not previously express.
+        for (name in listOf("anchorIL", "crossIL", "orderSwap", "tapSplit", "swipeAround")) {
+            assertTrue("$name is missing from the accounting: $seqs", seqs!!.contains("$name="))
+        }
+        val dropped = Regex("""dropped=(\d+)""").find(seqs!!)?.groupValues?.get(1)?.toInt()
+        assertNotNull("dropped is not reported: $seqs", dropped)
+        assertTrue("this buffer overspends the budget; dropped was $dropped", dropped!! > 0)
+        // And the generator that can cut both swipes is one of the ones it refused.
+        val tapSplit = Regex("""tapSplit=(\d+)/(\d+)""").find(seqs)!!.groupValues
+        assertTrue(
+            "the mid-swipe split was not starved on this buffer: $seqs",
+            tapSplit[2].toInt() > tapSplit[1].toInt(),
+        )
+    }
 }

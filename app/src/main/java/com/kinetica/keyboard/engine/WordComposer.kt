@@ -82,7 +82,7 @@ class WordComposer(
             // A predictor/main-executor failure must not strand the composer in
             // a permanently "scheduled" state. If input arrived while the
             // failed worker was running, hand that latest snapshot to a fresh
-            // executor task; otherwise simply reopen scheduling for the next
+            // executor task; otherwise reopen scheduling for the next
             // token.
             val reschedule = synchronized(decodeLock) {
                 decodeWorkerScheduled = false
@@ -132,10 +132,62 @@ class WordComposer(
 
     /** Word committed to the editor: becomes bigram context, buffer resets. */
     fun commitWord(word: String) {
+        if (DecodeTrace.enabled) traceCommitMiss(word)
+        previousBuffer = if (tokens.isEmpty()) previousBuffer else ArrayList(tokens)
         context.addLast(word)
         while (context.size > 2) context.removeFirst()
         tokens.clear()
         generation.incrementAndGet()
+    }
+
+    /**
+     * The buffer before the one being committed, which is what makes [commitMissLine]
+     * self-labelling: a failed attempt followed by a retype is the pairing the labelled
+     * corpus is built from, so the word the developer eventually commits is the label for
+     * the buffer that failed. Main thread only, like [tokens].
+     */
+    private var previousBuffer: List<InputToken> = emptyList()
+
+    /**
+     * Emits the commit-time miss line for the committing buffer and for the one before
+     * it, off the decode thread.
+     *
+     * Both are worth a line and they are different populations: the committing buffer is
+     * the control, the previous one is the failure with a label attached. The gap between
+     * them is printed rather than thresholded - a retype after seeing garbage measured
+     * 1 456 and 1 651 ms against a 170 ms median typing gap, so the reader can separate a
+     * real pairing from an unrelated one without a constant being guessed here.
+     */
+    private fun traceCommitMiss(word: String) {
+        val committed = ArrayList(tokens)
+        val previous = previousBuffer
+        decodeExecutor.execute {
+            val g = predictor.geometry ?: return@execute
+            emitCommitMiss(word, committed, g, "commit", -1L)
+            val gap = gapBetween(previous, committed)
+            if (gap in 0..KineticaConstants.MAX_RETYPE_GAP_MS) emitCommitMiss(word, previous, g, "previous", gap)
+        }
+    }
+
+    private fun emitCommitMiss(
+        word: String,
+        buffer: List<InputToken>,
+        g: KeyboardGeometry,
+        src: String,
+        gapMs: Long,
+    ) {
+        if (buffer.isEmpty()) return
+        val sorted = buffer.sortedBy { it.tStart }
+        val pattern = Matcher.buildPattern(sorted, g) ?: return
+        val line = commitMissLine(word, sorted, pattern, g, src, gapMs) ?: return
+        DecodeTrace.log { line }
+    }
+
+    /** Milliseconds between the end of [before] and the start of [after], or -1. */
+    private fun gapBetween(before: List<InputToken>, after: List<InputToken>): Long {
+        val end = before.maxOfOrNull { it.tEnd } ?: return -1L
+        val start = after.minOfOrNull { it.tStart } ?: return -1L
+        return start - end
     }
 
     /** The correction strip swapped the last committed word. */
@@ -146,6 +198,9 @@ class WordComposer(
 
     /** Abandon the pending word (cursor moved, field changed, backspace). */
     fun clear() {
+        // Kept for the commit-time miss line: this is the buffer a retype is about to
+        // replace, and the retyped word is its label.
+        if (tokens.isNotEmpty()) previousBuffer = ArrayList(tokens)
         tokens.clear()
         generation.incrementAndGet()
     }

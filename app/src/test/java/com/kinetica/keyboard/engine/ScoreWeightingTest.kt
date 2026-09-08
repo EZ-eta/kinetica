@@ -138,27 +138,52 @@ class ScoreWeightingTest {
 
     @Test
     fun sareiStillBeatsSergeiWhenItsOwnFitIsPoor() {
-        // The non-negotiable constraint, from a device row.
-        // Here "sarei" is the BAD fit (d=1.06 on device, 0.80 on this
-        // reconstruction) and must still win on Italian frequency against
-        // "sergei" at 0.59. This is what forbids a plain sharpening: on the
-        // device numbers any 1/(1+d)^g needs g < 1.06 here while the sudare row
-        // above needs g >= 1.44. The saturation is what satisfies both: past
-        // GEO_SATURATION_KW the term is flat, so a poor fit stops being
-        // punished for exactly how poor it is and frequency decides.
-        val c = decode(
-            IT,
-            listOf(
-                TestData.swipe("sertre", g, 0, 700, StreamId.LEFT),
-                TestData.tap('i', g, 78, StreamId.RIGHT),
-            ),
-            listOf("ayudarte", "sudare"),
+        // The non-negotiable constraint, from a device row: "sarei" is the BAD fit
+        // (d=1.06 on device) and must still win on Italian frequency against "sergei" at
+        // 0.59. This is what forbids a plain sharpening - on the device numbers any
+        // 1/(1+d)^g needs g < 1.06 here while the sudare row above needs g >= 1.44 - and
+        // the saturation is what satisfies both.
+        //
+        // Asserted on the formula rather than through a decode since 2026-08-23, on the
+        // same reasoning as the five DEVICE_ROWS contests above: the reconstruction could
+        // not carry it. It never really did. The old form ran a `sertre` swipe with the
+        // tap at 78 ms, two milliseconds under SPLIT_MARGIN_MS, so the mid-swipe split
+        // could not fire and the buffer produced exactly the two words the contest needed.
+        // Once early taps were admitted, `sergei` left the list at every offset and the
+        // pairwise claim had nothing to compare. The claim itself is untouched and is now
+        // pinned where it lives.
+        //
+        // Both distances are past GEO_SATURATION_KW, so the geometric term is IDENTICAL
+        // for them - that is precisely "a poor fit stops being punished for exactly how
+        // poor it is" - and the ranking falls to frequency, which the shipped asset must
+        // order the right way round.
+        val geoSarei = KineticaConstants.geometricTerm(1.06f)
+        val geoSergei = KineticaConstants.geometricTerm(0.59f)
+        assertEquals(
+            "the saturation is the whole mechanism: two poor fits must score the same shape",
+            geoSergei,
+            geoSarei,
+            1e-6f,
         )
-        assertBeats(c, "sarei", "sergei", "sarei/sergei, the poor-fit constraint")
-        // atei (d=0.377) is the best geometric fit on this path; a "promote the
-        // best shape" rule would commit it, which is the trap this row exists
-        // to catch.
-        assertEquals("atei must not win on shape: ${words(c).take(3)}", "sarei", words(c).first())
+        val (dict, _) = IT
+        val fwSarei = freqWeight(dict, "sarei")
+        val fwSergei = freqWeight(dict, "sergei")
+        assertTrue(
+            "sergei is not in the shipped Italian asset, so this contest has moved",
+            fwSergei > 0f,
+        )
+        assertTrue(
+            "frequency must decide it: sarei $fwSarei vs sergei $fwSergei",
+            fwSarei * geoSarei > fwSergei * geoSergei,
+        )
+    }
+
+    /** The score's frequency term for [word], read from the shipped asset. */
+    private fun freqWeight(dict: LoadedDictionary, word: String): Float {
+        val node = dict.trie.nodeFor(word)
+        if (node < 0 || !dict.trie.isWord(node)) return 0f
+        return KineticaConstants.FREQ_WEIGHT_FLOOR +
+            (1f - KineticaConstants.FREQ_WEIGHT_FLOOR) * dict.trie.frequency(node) / 255f
     }
 
     @Test
