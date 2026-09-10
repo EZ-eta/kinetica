@@ -149,8 +149,8 @@ class LayoutMutationsTest {
 
     @Test
     fun withoutForeignAlternatesIsANoopForALayoutWhoseAccentsAreItsOwn() {
-        // The whole point of declaring it: Italian, Spanish, Polish and Czech
-        // writers keep "è", "ñ", "ą" and "ř" even with the setting on.
+        // The whole point of declaring it: Italian, Spanish, Polish, Czech and German
+        // writers keep "è", "ñ", "ą","ř" and "ä" even with the setting on.
         val before = accentLayout(nativeAccents = true)
         val out = LayoutMutations.withoutForeignAlternates(before)
         assertEquals(before, out)
@@ -383,9 +383,36 @@ class LayoutMutationsTest {
         assertTrue(lines.any { it.contains("\"nativeAccents\": true") })
     }
 
+    @Test
+    fun germanLayoutExposesEveryNativeLetter() {
+        val p = listOf(
+            java.nio.file.Paths.get("src/main/assets/layouts/qwerty_de.json"),
+            java.nio.file.Paths.get("app/src/main/assets/layouts/qwerty_de.json"),
+        ).firstOrNull { java.nio.file.Files.exists(it) }
+        org.junit.Assume.assumeTrue("German layout asset not found", p != null)
+        val lines = java.nio.file.Files.readAllLines(p!!)
+        val expected = mapOf(
+            "a" to listOf("ä"),
+            "o" to listOf("ö"),
+            "u" to listOf("ü"),
+            "s" to listOf("ß"),
+        )
+        for ((key, letters) in expected) {
+            val line = lines.firstOrNull { it.contains("\"id\": \"$key\"") }
+            assertTrue("qwerty_de is missing key $key", line != null)
+            for (letter in letters) {
+                assertTrue(
+                    "qwerty_de key $key is missing $letter: $line",
+                    line!!.contains("\"$letter\""),
+                )
+            }
+        }
+        assertTrue(lines.any { it.contains("\"nativeAccents\": true") })
+    }
+
     // ---- user-editable punctuation flyouts ---------------------------------
 
-    /** Period and comma with the alternates all five bundled layouts author. */
+    /** Period and comma with the alternates all six bundled layouts author. */
     private fun punctuationLayout(): KeyboardLayout = KeyboardLayout(
         name = "qwerty", locale = "en_US",
         keys = listOf(
