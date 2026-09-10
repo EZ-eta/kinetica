@@ -866,7 +866,7 @@ object KineticaConstants {
     //
     // 1. No cross-dictionary frequency normalization is needed. freqByteFor
     //    already log-quantizes each asset against its OWN maximum count, and
-    //    the five bundled assets are the same construction (hermitdave
+    //    the six bundled assets are the same construction (hermitdave
     //    FrequencyWords top-50k, OpenSubtitles), so fw at matched rank
     //    percentiles agrees to within 1.04-1.07x across en/it/es/pl/cs
     //    (measured: p50 0.5265/0.5265/0.5382/0.5471/0.5441,
