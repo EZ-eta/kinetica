@@ -78,6 +78,22 @@ class TapAutospaceTest {
     }
 
     @Test
+    fun germanSingleLetterWordsDoNotAutospace() {
+        // German has no single-letter function words.
+        // Dictionary membership cannot distinguish these words from initials.
+        for (letter in 'a'..'z') {
+            assertFalse(
+                "German '$letter' should not autospace",
+                fires(
+                    literal = letter.toString(),
+                    literalIsWord = true,
+                    literalIsStandaloneLetter = StandaloneLetters.isWord(letter, "de"),
+                ),
+            )
+        }
+    }
+
+    @Test
     fun aSingleLetterAfterAnApostropheStillRefuses() {
         // Why the joined branch comes first. The `a` of `dell'anno` is preceded by an
         // apostrophe, so it never reaches the one-letter rule - which is what keeps the one

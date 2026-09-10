@@ -118,6 +118,25 @@ class DictionaryMergerTest {
         assertFalse(words.contains("zażółć"))
     }
 
+@Test
+    fun germanPatternAdmitsAccentedWords() {
+        val aosp = """
+            word=schön,f=200
+            word=über,f=180
+            word=groß,f=170
+            word=äpfel,f=150
+            word=zażółć,f=140
+        """.trimIndent()
+        val result = DictionaryMerger.merge(primary, reader(aosp), "de")
+        val words = result.rows.map { it.first }
+        assertTrue(words.contains("schön"))
+        assertTrue(words.contains("über"))
+        assertTrue(words.contains("groß"))
+        assertTrue(words.contains("äpfel"))
+        // Polish-only letters are not German orthography: filtered on import.
+        assertFalse(words.contains("zażółć"))
+    }
+
     @Test
     fun readPrimaryParsesTabSeparatedRows() {
         val rows = DictionaryMerger.readPrimary(reader("the\t1000\nbroken line\nof\t500\n"))

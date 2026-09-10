@@ -57,6 +57,7 @@ object StandaloneLetters {
         "es" -> ES
         "pl" -> PL
         "cs" -> CS
+	"de" -> emptySet()
         else -> EN
     }
 

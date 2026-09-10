@@ -24,9 +24,10 @@ Features
 * Swipe decoding written from scratch: banded dynamic time warping over
   arc-length-resampled paths, an anchored trie search, frequency and
   bigram-context scoring
-* English, Italian, Spanish, Polish and Czech: 46k to 49k words and 40k to 100k
-  bigrams per language, with real corpus frequencies. Accented words are
-  matched through their base-key path and restored on commit (mesto -> město)
+* English, Italian, Spanish, Polish, Czech and German: 46k to 49k words and
+  40k to 100kbigrams per language, with real corpus frequencies. Accented words are
+  matched through their base-key path and restored on commit
+  (mesto -> město, gross -> groß)
 * Tap autocorrect with three aggressiveness levels
 * Live completions while you tap, and the letters you actually typed are
   always a pickable suggestion, so a word the dictionary does not know still

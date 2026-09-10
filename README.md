@@ -66,21 +66,21 @@ bytes, and either can install and update over the other's build.
 - From-scratch swipe decoding: banded dynamic time warping over
   arc-length-resampled paths, an anchored segmental trie search, frequency and
   bigram-context scoring
-- Five languages bundled, not five supported: the trie, DTW matcher, merge and
+- Six languages bundled, not six supported: the trie, DTW matcher, merge and
   scoring are locale- and layout-independent, so a language is data plus
   registration - a wordlist, a layout, and the entries listed in
   [ADDING_A_LANGUAGE.md](ADDING_A_LANGUAGE.md). Polish arrived that way, as a
   contributor's pull request. The matching alphabet is a-z plus apostrophe and
   accented Latin letters fold onto it, so Latin scripts fit; a non-Latin script
   is a major engine change and out of scope.
-- What ships: 46k-word English plus 49k-word Italian, Spanish, Polish, and Czech
-  dictionaries with real corpus frequencies; 40k–100k bigrams per language;
+- What ships: 46k-word English plus 49k-word Italian, Spanish, Polish, Czech and
+  German dictionaries with real corpus frequencies; 40k–100k bigrams per language;
   switch languages in Settings without restarting the IME. Accented words
-  (perché, città, señal, también, dziękuję, późno, přítel, město) are matched
+  (perché, città, señal, también, dziękuję, późno, přítel, město, groß) are matched
   through their base-key gesture path and restored with accents on commit.
 - Tap autocorrect (adjacent-key substitutions and transpositions) with three
   aggressiveness levels; it also restores missing accents
-  (perche -> perché, pozno -> późno, mesto -> město)
+  (perche -> perché, pozno -> późno, mesto -> město, gross -> groß)
 - Suggestion bar of 3-5 equal-width, independently tappable candidate zones,
   best first (bold), with flick-up fast commit; up to 10 candidates are kept
   and a leftward swipe starting at the bar's right edge cycles to the next
@@ -187,8 +187,8 @@ Settings and simply hard to find. The ones that come up most:
   peck-type keys, and *Chord lead-in* sets how long `?123` must be held first.
 - **Long-press popups without the accents.** *Hide accented letters on
   long-press* leaves only digits and symbols, so `A` gives you `@` instead of
-  eight forms of `a` you will never type. Ignored for Italian, Spanish, Polish
-  and Czech, whose own alphabets need theirs. If you would rather keep the accents
+  eight forms of `a` you will never type. Ignored for Italian, Spanish, Polish, Czech
+  and German, whose own alphabets need theirs. If you would rather keep the accents
   but reach the digits first, *Prioritize numbers over accents on long-press* does that
   instead.
 - **A shorter keyboard.** *Keyboard height* goes down to 10% of the screen.
@@ -392,17 +392,17 @@ Source layout (package `com.kinetica.keyboard`):
 ## Data sources
 
 Regenerate the bundled dictionaries with `python3 tools/generate_assets.py
---lang en|it|es|pl|cs` (add `--dry-run` to preview):
+--lang en|it|es|pl|cs|de` (add `--dry-run` to preview):
 
 - Word frequencies (all languages):
   [hermitdave/FrequencyWords](https://github.com/hermitdave/FrequencyWords)
-  `en_50k` / `it_50k` / `es_50k` / `pl_50k` / `cs_50k` (OpenSubtitles
-  2018), MIT License.
+  `en_50k` / `it_50k` / `es_50k` / `pl_50k` / `cs_50k` / `de_50k`
+  (OpenSubtitles2018), MIT License.
 - Bigrams (all languages): counted from the [Tatoeba](https://tatoeba.org)
   per-language sentence corpora (`eng_sentences.tsv` ~2.03M sentences,
   `ita_sentences.tsv` ~975k, `spa_sentences.tsv` ~441k,
-  `pol_sentences.tsv` ~137k, `ces_sentences.tsv` ~90k), licensed
-  [CC BY 2.0 FR](https://creativecommons.org/licenses/by/2.0/fr/),
+  `pol_sentences.tsv` ~137k, `ces_sentences.tsv` ~90, `deu_sentences.tsv`),
+  licensed[CC BY 2.0 FR](https://creativecommons.org/licenses/by/2.0/fr/),
   attribution: tatoeba.org. Conversational register, which matches the
   OpenSubtitles-derived unigrams. (English previously used Peter Norvig's
   `count_2w.txt`; that data derives from the LDC-distributed Google Web
@@ -422,7 +422,7 @@ wordlists (July 2026):
 
 | Project | Code license | Dictionary data | Verdict |
 |---|---|---|---|
-| [HeliBoard](https://github.com/Helium314/HeliBoard) | Apache-2.0 | [Helium314/aosp-dictionaries](https://codeberg.org/Helium314/aosp-dictionaries) (repo LICENSE: GPL-3.0); the `main_*` wordlists are AOSP LatinIME dictionaries (Apache-2.0 at origin) mirrored via OpenBoard; experimental lists CC BY 4.0 | Cleanest import path: raw `wordlist.combined` format with per-word `f=0..255` log frequency, `flags` (abbreviation, possibly_offensive) and per-word next-word bigram ranks; `main_en_US`, `main_it`, `main_pl`, and `main_cs` exist |
+| [HeliBoard](https://github.com/Helium314/HeliBoard) | Apache-2.0 | [Helium314/aosp-dictionaries](https://codeberg.org/Helium314/aosp-dictionaries) (repo LICENSE: GPL-3.0); the `main_*` wordlists are AOSP LatinIME dictionaries (Apache-2.0 at origin) mirrored via OpenBoard; experimental lists CC BY 4.0 | Cleanest import path: raw `wordlist.combined` format with per-word `f=0..255` log frequency, `flags` (abbreviation, possibly_offensive) and per-word next-word bigram ranks; `main_en_US`, `main_it`, `main_pl`,`main_cs`, and `main_de` exist |
 | [FUTO Keyboard](https://github.com/futo-org/android-keyboard) | FUTO Source First 1.1 (non-commercial redistribution limits, not OSI-open) | Same restrictive terms apply to repo contents | Rejected: incompatible with open redistribution |
 | [FlorisBoard](https://github.com/florisboard/florisboard) | Apache-2.0 | Ships no frequency wordlists usable for import | Nothing to import |
 

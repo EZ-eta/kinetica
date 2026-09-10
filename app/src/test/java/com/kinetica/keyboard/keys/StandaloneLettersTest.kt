@@ -60,8 +60,8 @@ class StandaloneLettersTest {
     fun anUnknownLanguageFallsBackToEnglish() {
         // Registration order is ADDING_A_LANGUAGE's business; an unregistered code must
         // still behave, and the smallest set is the safe default.
-        assertTrue(StandaloneLetters.isWord('a', "de"))
-        assertFalse(StandaloneLetters.isWord('e', "de"))
+        assertTrue(StandaloneLetters.isWord('a', "fr"))
+        assertFalse(StandaloneLetters.isWord('e', "fr"))
     }
 
     private fun assertEqualsSet(expected: String, lang: String) {
