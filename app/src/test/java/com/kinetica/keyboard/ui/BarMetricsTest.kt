@@ -107,4 +107,31 @@ class BarMetricsTest {
         assertEquals(24f, BarMetrics.MIN_DP, 1e-6f)
         assertEquals(72f, BarMetrics.MAX_DP, 1e-6f)
     }
+
+    @Test
+    fun retypeDpClampsToTheSettableRange() {
+        assertEquals(BarMetrics.RETYPE_MIN_DP, BarMetrics.retypeDp(0))
+        assertEquals(BarMetrics.RETYPE_MIN_DP, BarMetrics.retypeDp(BarMetrics.RETYPE_MIN_DP - 1))
+        assertEquals(BarMetrics.RETYPE_MAX_DP, BarMetrics.retypeDp(9999))
+        assertEquals(BarMetrics.RETYPE_MAX_DP, BarMetrics.retypeDp(BarMetrics.RETYPE_MAX_DP + 1))
+        assertEquals(34, BarMetrics.retypeDp(34))
+    }
+
+    @Test
+    fun theRetypeDefaultIsTheWidthTheButtonShippedAt() {
+        // The slider must not change anyone's bar until they move it: the user
+        // who asked for the button asked for it small.
+        assertEquals(34, BarMetrics.RETYPE_DEFAULT_DP)
+        assertEquals(BarMetrics.RETYPE_DEFAULT_DP, BarMetrics.retypeDp(BarMetrics.RETYPE_DEFAULT_DP))
+    }
+
+    @Test
+    fun theRetypeRangeStaysInsideTheViewsOwnQuarterWidthCap() {
+        // The view caps the button at a quarter of the bar regardless, so the
+        // ceiling only has to be sane on a narrow phone: 72dp is under a
+        // quarter of any keyboard wider than 288dp.
+        assertTrue(BarMetrics.RETYPE_MAX_DP * 4 <= 288)
+        assertTrue(BarMetrics.RETYPE_MIN_DP < BarMetrics.RETYPE_DEFAULT_DP)
+        assertTrue(BarMetrics.RETYPE_DEFAULT_DP < BarMetrics.RETYPE_MAX_DP)
+    }
 }

@@ -1,0 +1,9 @@
+Four more languages: Dutch, German, French and Norwegian
+French gets its own AZERTY board, applied when you pick the language
+British spelling for English
+Search your settings, including synonyms
+Fixed: re-casing a word or picking a correction after punctuation could eat text
+Remove or rebind the period key, as the comma key already allowed
+Swipe the suggestion bar anywhere, either way, to change pages
+An import can be undone, and exports are named by date
+German support, thanks freak07

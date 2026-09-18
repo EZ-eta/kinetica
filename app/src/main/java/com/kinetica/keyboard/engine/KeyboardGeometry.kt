@@ -10,7 +10,17 @@ import kotlin.math.sqrt
  */
 class KeyboardGeometry private constructor(
     val keyWidthPx: Float,
-    val widthPx: Float,
+    /**
+     * The x that divides the LEFT thumb's half of the board from the RIGHT
+     * one's, in view pixels. Its ONLY consumer is
+     * [GestureEngine.onPointerDown]'s stream assignment.
+     *
+     * The centre of the LETTER BLOCK, not half the view width, and the
+     * difference is load-bearing once the board can be inset: with side
+     * padding the keys no longer span the view, so half the view width would
+     * put the divider off the board's actual centre and misassign a thumb.
+     */
+    val midlinePx: Float,
     private val present: BooleanArray,       // [26]
     private val centersX: FloatArray,        // [26] kw
     private val centersY: FloatArray,        // [26] kw
@@ -76,7 +86,7 @@ class KeyboardGeometry private constructor(
          */
         fun fromPx(
             keyWidthPx: Float,
-            widthPx: Float,
+            midlinePx: Float,
             letterRectsPx: List<FloatArray>,
             codes: IntArray,
         ): KeyboardGeometry {
@@ -99,7 +109,7 @@ class KeyboardGeometry private constructor(
                 cy[code] = (rects[base + 1] + rects[base + 3]) / 2f
                 present[code] = true
             }
-            return KeyboardGeometry(keyWidthPx, widthPx, present, cx, cy, rects)
+            return KeyboardGeometry(keyWidthPx, midlinePx, present, cx, cy, rects)
         }
     }
 }

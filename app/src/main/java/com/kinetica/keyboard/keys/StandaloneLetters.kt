@@ -51,13 +51,26 @@ object StandaloneLetters {
      *  - `cs` - conjunctions `a`, `i` and prepositions `k`, `o`, `s`, `u`, `v`, `z`.
      *    These are the one-letter function words listed by ÚJČ:
      *    https://prirucka.ujc.cas.cz/?id=880. Timing is unmeasured, as for Polish.
+     *  - `nl` - `u`, the formal pronoun. The clitics `'t`, `'s` and `'n` lead with an
+     *    apostrophe, so they are not single letters and the generator's word shape
+     *    rejects them anyway.
+     *  - `de` - deliberately EMPTY. German has no one-letter word, and an unregistered
+     *    language falls back to [EN], which would space and capitalize a lone `a` or `i`
+     *    mid-word. The empty set is the registration.
+     *  - `fr` - `a` (has) and `y` (there). `à` (to) folds onto `a`.
+     *  - `no` - `i` (in), `å` (the infinitive marker, which folds onto `a`) and `o`
+     *    (the dialectal `og`). Norwegian is the one set here with no native-speaker
+     *    report behind it, so it is the narrowest reading of the function words.
      */
     private fun setFor(lang: String): Set<Char> = when (lang) {
         "it" -> IT
         "es" -> ES
         "pl" -> PL
         "cs" -> CS
-	"de" -> emptySet()
+        "nl" -> NL
+        "de" -> DE
+        "fr" -> FR
+        "no" -> NO
         else -> EN
     }
 
@@ -66,4 +79,8 @@ object StandaloneLetters {
     private val ES = setOf('a', 'e', 'o', 'y')
     private val PL = setOf('a', 'e', 'i', 'o', 'u', 'w', 'z')
     private val CS = setOf('a', 'i', 'k', 'o', 's', 'u', 'v', 'z')
+    private val NL = setOf('u')
+    private val DE = emptySet<Char>()
+    private val FR = setOf('a', 'y')
+    private val NO = setOf('a', 'i', 'o')
 }

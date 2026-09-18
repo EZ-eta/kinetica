@@ -47,6 +47,21 @@ object TestData {
         DEFAULT_ROW_PITCH_KW,
     )
 
+    /**
+     * AZERTY, which is not a letter swap: rows run 10/10/6 against QWERTY's
+     * 10/9/7, the home row starts flush left instead of half-indented, and M
+     * sits at its end. Mirrors assets/layouts/azerty_fr.json key for key, so a
+     * French golden decoded here is decoded on the board a French user sees.
+     */
+    fun azertyGeometry(): KeyboardGeometry = letterGeometry(
+        listOf(
+            "azertyuiop" to 0.0f,
+            "qsdfghjklm" to 0.0f,
+            "wxcvbn" to 2.0f,
+        ),
+        DEFAULT_ROW_PITCH_KW,
+    )
+
     private fun letterGeometry(
         rows: List<Pair<String, Float>>,
         rowPitchKw: Float,

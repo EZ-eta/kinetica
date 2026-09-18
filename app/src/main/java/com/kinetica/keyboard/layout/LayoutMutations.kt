@@ -117,14 +117,14 @@ object LayoutMutations {
     /**
      * Replaces the period and comma keys' long-press alternates with the user's
      * own lists. An EMPTY list leaves that key untouched, so the layout JSON stays
-     * the source of truth: all six bundled layouts happen to author the same
+     * the source of truth: all five bundled layouts happen to author the same
      * punctuation (period `... << >>`, comma `_ [ ] en-dash em-dash`), but a
      * future language layout may not, and a global default would have overridden
      * it silently.
      *
      * Applied EARLY in the alpha-layout chain, before [withEmojiOnComma] and
      * [withCommaKey], so a user list still gets the emoji entry prepended and
-     * still survives the comma being repurposed (see [commaFirst]).
+     * still survives the comma being repurposed (see [ownCharFirst]).
      */
     fun withPunctuationAlternates(
         layout: KeyboardLayout,
@@ -151,38 +151,64 @@ object LayoutMutations {
     }
 
     /**
-     * Repurposes the comma key per the comma-key setting. The
-     * emoji long-press option and the comma's punctuation popup are preserved
-     * where a key remains; "," itself becomes the first plain alternate so the
-     * character stays reachable from the same position. On removal the
-     * spacebar absorbs the freed width (the reverse of the old withEmojiKey
-     * spacebar carve) and an emoji alternate hosted on the comma moves to the
-     * period key rather than silently vanishing.
+     * Repurposes the comma key per the comma-key setting.
      *
      * [mode]: "keep" | "remove" | "char" | "text" | "paste" | "select_all";
      * [custom] backs the char/text modes and is ignored otherwise. Callers
      * pass pre-coerced values (KeyboardConfig blanks invalid combinations
      * back to "keep").
      */
-    fun withCommaKey(layout: KeyboardLayout, mode: String, custom: String): KeyboardLayout {
+    fun withCommaKey(layout: KeyboardLayout, mode: String, custom: String): KeyboardLayout =
+        withPunctuationKey(layout, ",", mode, custom, rehomeTo = ".")
+
+    /**
+     * The same for the period key (R70), which had only its long-press list to
+     * configure while the comma had six modes.
+     *
+     * Applied AFTER [withCommaKey], which is what decides the one case neither
+     * function can handle alone: removing the comma rehomes its emoji alternate
+     * onto the period, so removing both drops that alternate. That is the
+     * accepted cost of asking for both keys to be gone, and the emoji key
+     * setting is the way back.
+     */
+    fun withPeriodKey(layout: KeyboardLayout, mode: String, custom: String): KeyboardLayout =
+        withPunctuationKey(layout, ".", mode, custom, rehomeTo = ",")
+
+    /**
+     * Repurposes the punctuation key whose output is [target].
+     *
+     * The emoji long-press option and the key's punctuation popup are preserved
+     * where a key remains; [target] itself becomes the first plain alternate so
+     * the character stays reachable from the same position. On removal the
+     * spacebar absorbs the freed width (the reverse of the old withEmojiKey
+     * spacebar carve) and an emoji alternate hosted here moves to [rehomeTo]
+     * rather than silently vanishing.
+     */
+    private fun withPunctuationKey(
+        layout: KeyboardLayout,
+        target: String,
+        mode: String,
+        custom: String,
+        rehomeTo: String,
+    ): KeyboardLayout {
         if (mode == "keep") return layout
-        val comma = layout.keys.firstOrNull { it.type == KeyType.CHAR && it.output == "," }
+        val key = layout.keys.firstOrNull { it.type == KeyType.CHAR && it.output == target }
             ?: return layout
 
         if (mode == "remove") {
             val keys = ArrayList<Key>(layout.keys.size)
             for (k in layout.keys) {
                 when {
-                    k === comma -> {}
-                    k.type == KeyType.SPACE && sameRow(k, comma) ->
-                        // Absorb the comma's width; covers both the standard
-                        // left-adjacent slot and mirrored layouts.
+                    k === key -> {}
+                    k.type == KeyType.SPACE && sameRow(k, key) ->
+                        // Absorb the freed width; covers both the standard
+                        // adjacent slot and mirrored layouts.
                         k.copy(
-                            x = minOf(k.x, comma.x),
-                            w = k.w + comma.w,
+                            x = minOf(k.x, key.x),
+                            w = k.w + key.w,
                         ).let { keys.add(it) }
-                    k.type == KeyType.CHAR && k.output == "." &&
-                        comma.alternates.contains(EMOJI_ALTERNATE) ->
+                    k.type == KeyType.CHAR && k.output == rehomeTo &&
+                        key.alternates.contains(EMOJI_ALTERNATE) ->
                         keys.add(k.copy(alternates = listOf(EMOJI_ALTERNATE) + k.alternates))
                     else -> keys.add(k)
                 }
@@ -195,14 +221,14 @@ object LayoutMutations {
             "text" -> custom to custom
             // ISO/IEC 9995-7 paste symbol; select-all has no ISO glyph, a
             // short text label shrinks like any multi-char key label.
-            "paste" -> "⎘" to ACTION_PASTE
+            "paste" -> "\u2398" to ACTION_PASTE
             "select_all" -> "ALL" to ACTION_SELECT_ALL
             else -> return layout
         }
         if (output.isEmpty()) return layout
         val keys = layout.keys.map { k ->
-            if (k === comma) {
-                k.copy(label = label, output = output, alternates = commaFirst(k.alternates))
+            if (k === key) {
+                k.copy(label = label, output = output, alternates = ownCharFirst(k.alternates, target))
             } else {
                 k
             }
@@ -210,12 +236,12 @@ object LayoutMutations {
         return layout.copy(keys = keys)
     }
 
-    /** "," joins the popup right after a leading emoji entry, if any. */
-    private fun commaFirst(alternates: List<String>): List<String> =
+    /** [ch] joins the popup right after a leading emoji entry, if any. */
+    private fun ownCharFirst(alternates: List<String>, ch: String): List<String> =
         if (alternates.firstOrNull() == EMOJI_ALTERNATE) {
-            listOf(EMOJI_ALTERNATE, ",") + alternates.drop(1)
+            listOf(EMOJI_ALTERNATE, ch) + alternates.drop(1)
         } else {
-            listOf(",") + alternates
+            listOf(ch) + alternates
         }
 
     private fun sameRow(a: Key, b: Key): Boolean = kotlin.math.abs(a.y - b.y) < 0.01f
@@ -247,6 +273,14 @@ object LayoutMutations {
     const val ARRANGEMENT_QZERTY = "qzerty"
 
     /**
+     * AZERTY is not a swap. It is selected by serving a different layout file
+     * (azerty_fr.json, via KineticaIME.alphaLayoutName) rather than by mutating
+     * one, so this mutation has nothing to do for it and the value exists only
+     * so the setting can carry it.
+     */
+    const val ARRANGEMENT_AZERTY = "azerty"
+
+    /**
      * Rearranges two letters without touching the geometry, so the swipe
      * decoder sees the keyboard the user is looking at.
      *
@@ -265,11 +299,14 @@ object LayoutMutations {
      * first alternate, so rebuilding accents-first keeps every corner hint as
      * authored.
      *
-     * AZERTY is deliberately absent. It moves M to the home row and changes
-     * both row lengths, so it is a different layout rather than a swap and
-     * needs its own JSON.
+     * AZERTY is not expressible here. It moves M to the home row and changes
+     * both row lengths, so it is a different layout rather than a swap and it
+     * ships as its own JSON. A layout that declares
+     * [KeyboardLayout.fixedArrangement] is returned untouched, which is what
+     * stops a QWERTZ or QZERTY setting from permuting an AZERTY board.
      */
     fun withLetterArrangement(layout: KeyboardLayout, arrangement: String): KeyboardLayout {
+        if (layout.fixedArrangement) return layout
         val pair = when (arrangement) {
             ARRANGEMENT_QWERTZ -> "y" to "z"
             ARRANGEMENT_QZERTY -> "z" to "w"
@@ -312,11 +349,11 @@ object LayoutMutations {
      * carries seven.
      *
      * A no-op for a layout that declares [KeyboardLayout.nativeAccents]. That is what keeps
-     * "ñ" from a Spanish writer, "ą" from a Polish one, "ř" from a Czech one and "ä" from a
-     * German one: the layoutknows whether its accents belong to its language, and this function does not.
+     * "ñ" from a Spanish writer, "ą" from a Polish one and "ř" from a Czech one: the layout
+     * knows whether its accents belong to its language, and this function does not.
      *
      * Safe to run before [withNumberPriority], which then finds nothing to reorder. Across
-     * all six bundled layouts every accent-carrying key keeps at least one non-letter
+     * all five bundled layouts every accent-carrying key keeps at least one non-letter
      * alternate, so no key is left with an empty popup or without the [Key.hintChar] its
      * corner hint derives from.
      */

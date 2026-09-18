@@ -46,6 +46,14 @@ class StandaloneLettersTest {
         assertEqualsSet("aeio", "it")
         assertEqualsSet("aeoy", "es")
         assertEqualsSet("aeiouwz", "pl")
+        assertEqualsSet("aikosuvz", "cs")
+        assertEqualsSet("u", "nl")
+        // German has no one-letter word. Asserted as empty rather than left
+        // unregistered, because an unregistered language falls back to the
+        // English set and would space and capitalize a lone "a" or "i".
+        assertEqualsSet("", "de")
+        assertEqualsSet("ay", "fr")
+        assertEqualsSet("aio", "no")
     }
 
     @Test
@@ -59,9 +67,13 @@ class StandaloneLettersTest {
     @Test
     fun anUnknownLanguageFallsBackToEnglish() {
         // Registration order is ADDING_A_LANGUAGE's business; an unregistered code must
-        // still behave, and the smallest set is the safe default.
-        assertTrue(StandaloneLetters.isWord('a', "fr"))
-        assertFalse(StandaloneLetters.isWord('e', "fr"))
+        // still behave, and the smallest set is the safe default. Uses a code that is
+        // not a language rather than a real one: this test read "de" as unregistered
+        // until German shipped, and a registered language is exactly what it must not
+        // assert about.
+        assertTrue(StandaloneLetters.isWord('a', "zz"))
+        assertFalse(StandaloneLetters.isWord('e', "zz"))
+        assertTrue(StandaloneLetters.isWord('i', ""))
     }
 
     private fun assertEqualsSet(expected: String, lang: String) {

@@ -49,6 +49,10 @@ object LayoutLoader {
             // absent is "these accents are foreign", which is what the English
             // layout and the plain-qwerty fallback both want.
             nativeAccents = root.optBoolean("nativeAccents", false),
+            // Also optional: only a layout whose whole purpose is its letter
+            // arrangement declares it, and every QWERTY-derived layout wants
+            // the swap that absent-means-false leaves enabled.
+            fixedArrangement = root.optBoolean("fixedArrangement", false),
         )
     }
 }

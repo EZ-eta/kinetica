@@ -35,6 +35,7 @@ class InputContainerView(
     handleHeightPx: Int,
     minKeyboardPx: Int,
     maxKeyboardPx: Int,
+    bottomGapPx: Int,
     private val onHeightCommitted: (px: Int) -> Unit,
 ) : LinearLayout(context) {
 
@@ -45,6 +46,9 @@ class InputContainerView(
     private val maxKeyboardPx = maxOf(minKeyboardPx, maxKeyboardPx)
 
     private val handle = HandleView(context)
+    // Plain, themed by the window background behind it: this is empty space
+    // below the keys, not chrome to look at.
+    private val bottomGap = View(context)
     private var dragStartRawY = 0f
     private var dragStartHeight = 0
 
@@ -62,12 +66,35 @@ class InputContainerView(
                 keyboardHeightPx.coerceIn(minKeyboardPx, maxKeyboardPx),
             ),
         )
+        addView(bottomGap, LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, bottomGapPx))
+        bottomGap.visibility = if (bottomGapPx == 0) GONE else VISIBLE
         wireHandle()
     }
 
     /** Handle strip colors follow the active theme. */
     fun applyTheme(theme: KeyboardTheme) {
         handle.setColors(theme.suggestionBg, theme.keyHint)
+    }
+
+    /**
+     * Height of the gap below the keyboard, in pixels.
+     *
+     * ADDS to the container's height rather than taking anything from the
+     * keys, which is what the request asked for: the reporter wanted the keys
+     * lifted off the bottom edge because their thumbs aim high, "not made
+     * smaller". So key rects, `keyWidthPx` and every kw distance are untouched
+     * by this.
+     *
+     * A child view like the handle strip rather than a padding call, for the
+     * same reason the handle is: it can then be resized live instead of
+     * forcing the input view to be rebuilt.
+     */
+    fun setBottomGap(px: Int) {
+        val h = px.coerceAtLeast(0)
+        if (bottomGap.layoutParams?.height == h) return
+        bottomGap.layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, h)
+        bottomGap.visibility = if (h == 0) GONE else VISIBLE
+        requestLayout()
     }
 
     /** Live resize of the handle strip; zero hides it. */

@@ -32,11 +32,22 @@ object DictionaryLoader {
      * suggested. Filtering the corpus alone would not be enough - a word typed
      * often enough comes back through [extraWords] - so the block applies to
      * both sources.
+     *
+     * [spellingSwaps] maps a spelling to the one the user prefers, US to UK for
+     * British English. Both spellings are already in the list, so this exchanges
+     * their two counts rather than adding or removing anything: the preferred
+     * form becomes exactly as frequent as the other was. A swap rather than a
+     * multiplier because the measured ratios run 1.0x to 4.2x, so no single
+     * constant serves both "realise" and "catalogue"; and because exchanging two
+     * counts leaves the language's overall frequency distribution untouched,
+     * which matters when cross-language auto-detect compares confidences between
+     * dictionaries.
      */
     fun load(
         reader: BufferedReader,
         extraWords: List<Pair<String, Int>> = emptyList(),
         blocked: Set<String> = emptySet(),
+        spellingSwaps: Map<String, String> = emptyMap(),
     ): LoadedDictionary {
         // Duplicate displays (corpus word also in the user dictionary) merge
         // by summing counts, so personal use adds to corpus evidence.
@@ -52,6 +63,19 @@ object DictionaryLoader {
         for ((word, count) in extraWords) {
             if (word.lowercase() in blocked) continue
             countByDisplay[word] = (countByDisplay[word] ?: 0) + count
+        }
+
+        // After both sources are counted, so a personal commit of either
+        // spelling is part of what gets exchanged. Guarded on the direction:
+        // four of the generator's candidate pairs already have the preferred
+        // spelling ahead ("dialogue" 5 975 against "dialog" 399), and swapping
+        // those would demote it.
+        for ((from, to) in spellingSwaps) {
+            val fromCount = countByDisplay[from] ?: continue
+            val toCount = countByDisplay[to] ?: continue
+            if (fromCount <= toCount) continue
+            countByDisplay[from] = toCount
+            countByDisplay[to] = fromCount
         }
 
         val byFolded = LinkedHashMap<String, ArrayList<Pair<String, Int>>>(countByDisplay.size)
@@ -80,6 +104,24 @@ object DictionaryLoader {
                 .map { WordForm(it.first, Trie.freqByteFor(it.second, maxCount)) }
         }
         return LoadedDictionary(trie, forms)
+    }
+
+    /**
+     * Lines of "from<TAB>to", the spelling pair list for [load]'s
+     * spellingSwaps. Invalid lines are skipped, not fatal, exactly as in the
+     * wordlist parser.
+     */
+    fun loadSpellingSwaps(reader: BufferedReader): Map<String, String> {
+        val out = LinkedHashMap<String, String>(200)
+        reader.forEachLine { line ->
+            val tab = line.indexOf('\t')
+            if (tab <= 0 || tab == line.length - 1) return@forEachLine
+            val from = line.substring(0, tab).trim()
+            val to = line.substring(tab + 1).trim()
+            if (from.isEmpty() || to.isEmpty() || from == to) return@forEachLine
+            out[from] = to
+        }
+        return out
     }
 
     /**

@@ -2,6 +2,8 @@ package com.kinetica.keyboard.layout
 
 import com.kinetica.keyboard.keys.WordCase
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotSame
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -149,8 +151,8 @@ class LayoutMutationsTest {
 
     @Test
     fun withoutForeignAlternatesIsANoopForALayoutWhoseAccentsAreItsOwn() {
-        // The whole point of declaring it: Italian, Spanish, Polish, Czech and German
-        // writers keep "è", "ñ", "ą","ř" and "ä" even with the setting on.
+        // The whole point of declaring it: Italian, Spanish, Polish and Czech
+        // writers keep "è", "ñ", "ą" and "ř" even with the setting on.
         val before = accentLayout(nativeAccents = true)
         val out = LayoutMutations.withoutForeignAlternates(before)
         assertEquals(before, out)
@@ -180,11 +182,68 @@ class LayoutMutationsTest {
     }
 
     @Test
+    fun aFixedArrangementLayoutIsNotPermuted() {
+        // AZERTY already places its letters, so applying the QWERTZ or QZERTY
+        // swap on top would move keys the arrangement chose and leave a board
+        // that is neither. The flag is what declines the swap.
+        val azerty = KeyboardLayout(
+            name = "azerty_fr",
+            locale = "fr_FR",
+            keys = listOf(
+                Key("a", KeyType.CHAR, "a", "a", 0.0f, 0.0f, 0.1f, 0.25f),
+                Key("z", KeyType.CHAR, "z", "z", 0.1f, 0.0f, 0.1f, 0.25f),
+                Key("y", KeyType.CHAR, "y", "y", 0.5f, 0.0f, 0.1f, 0.25f),
+                Key("w", KeyType.CHAR, "w", "w", 0.2f, 0.5f, 0.1f, 0.25f),
+                Key("m", KeyType.CHAR, "m", "m", 0.9f, 0.25f, 0.1f, 0.25f),
+            ),
+            nativeAccents = true,
+            fixedArrangement = true,
+        )
+        for (arrangement in listOf(
+            LayoutMutations.ARRANGEMENT_QWERTZ,
+            LayoutMutations.ARRANGEMENT_QZERTY,
+            LayoutMutations.ARRANGEMENT_AZERTY,
+        )) {
+            val out = LayoutMutations.withLetterArrangement(azerty, arrangement)
+            assertSame("$arrangement permuted a fixed layout", azerty, out)
+        }
+        // The same swap still applies to an ordinary layout, so the guard is
+        // the flag and not a disabled mutation.
+        val plain = azerty.copy(fixedArrangement = false)
+        val swapped = LayoutMutations.withLetterArrangement(
+            plain, LayoutMutations.ARRANGEMENT_QWERTZ,
+        )
+        assertNotSame(plain, swapped)
+    }
+
+    @Test
+    fun azertyIsNotExpressibleAsASwapOnAPlainLayout() {
+        // AZERTY on a QWERTY-derived layout is a no-op rather than a partial
+        // rearrangement: KineticaIME.alphaLayoutName serves azerty_fr.json
+        // instead, and a language with no such file keeps its own board.
+        val plain = KeyboardLayout(
+            name = "qwerty_en",
+            locale = "en_US",
+            keys = listOf(
+                Key("q", KeyType.CHAR, "q", "q", 0.0f, 0.0f, 0.1f, 0.25f),
+                Key("y", KeyType.CHAR, "y", "y", 0.5f, 0.0f, 0.1f, 0.25f),
+            ),
+        )
+        assertSame(
+            plain,
+            LayoutMutations.withLetterArrangement(plain, LayoutMutations.ARRANGEMENT_AZERTY),
+        )
+    }
+
+    @Test
     fun everyBundledAccentKeyKeepsANonLetterAlternate() {
         // The precondition withoutForeignAlternates rests on, guarded against a
         // future layout edit. Read as text on purpose: the JVM test runtime stubs
         // org.json, so LayoutLoader cannot be used here.
-        for (name in listOf("qwerty", "qwerty_it", "qwerty_es", "qwerty_pl", "qwerty_cs")) {
+        for (name in listOf(
+            "qwerty", "qwerty_it", "qwerty_es", "qwerty_pl", "qwerty_cs",
+            "qwerty_nl", "qwerty_de", "qwerty_fr", "qwerty_no", "azerty_fr",
+        )) {
             val p = listOf(
                 java.nio.file.Paths.get("src/main/assets/layouts/$name.json"),
                 java.nio.file.Paths.get("app/src/main/assets/layouts/$name.json"),
@@ -383,36 +442,9 @@ class LayoutMutationsTest {
         assertTrue(lines.any { it.contains("\"nativeAccents\": true") })
     }
 
-    @Test
-    fun germanLayoutExposesEveryNativeLetter() {
-        val p = listOf(
-            java.nio.file.Paths.get("src/main/assets/layouts/qwerty_de.json"),
-            java.nio.file.Paths.get("app/src/main/assets/layouts/qwerty_de.json"),
-        ).firstOrNull { java.nio.file.Files.exists(it) }
-        org.junit.Assume.assumeTrue("German layout asset not found", p != null)
-        val lines = java.nio.file.Files.readAllLines(p!!)
-        val expected = mapOf(
-            "a" to listOf("ä"),
-            "o" to listOf("ö"),
-            "u" to listOf("ü"),
-            "s" to listOf("ß"),
-        )
-        for ((key, letters) in expected) {
-            val line = lines.firstOrNull { it.contains("\"id\": \"$key\"") }
-            assertTrue("qwerty_de is missing key $key", line != null)
-            for (letter in letters) {
-                assertTrue(
-                    "qwerty_de key $key is missing $letter: $line",
-                    line!!.contains("\"$letter\""),
-                )
-            }
-        }
-        assertTrue(lines.any { it.contains("\"nativeAccents\": true") })
-    }
-
     // ---- user-editable punctuation flyouts ---------------------------------
 
-    /** Period and comma with the alternates all six bundled layouts author. */
+    /** Period and comma with the alternates all five bundled layouts author. */
     private fun punctuationLayout(): KeyboardLayout = KeyboardLayout(
         name = "qwerty", locale = "en_US",
         keys = listOf(
@@ -479,6 +511,74 @@ class LayoutMutationsTest {
         val comma = out.keys.first { it.id == "comma" }
         assertEquals(LayoutMutations.ACTION_PASTE, comma.output)
         assertEquals(listOf(",", ":", "-"), comma.alternates)
+    }
+
+    /** Bottom row with a spacebar between the two punctuation keys, as the boards have. */
+    private fun bottomRowLayout(): KeyboardLayout = KeyboardLayout(
+        name = "qwerty", locale = "en_US",
+        keys = listOf(
+            Key("comma", KeyType.CHAR, ",", ",", 0.15f, 0.75f, 0.1f, 0.25f),
+            Key("space", KeyType.SPACE, "", " ", 0.25f, 0.75f, 0.5f, 0.25f),
+            Key("period", KeyType.CHAR, ".", ".", 0.75f, 0.75f, 0.1f, 0.25f,
+                alternates = listOf("\u2026")),
+        ),
+    )
+
+    @Test
+    fun aRemovedPeriodGivesItsWidthToTheSpacebar() {
+        // R70: the period gets the six modes the comma already had, through the same
+        // function. The spacebar absorbing the freed width is what stops a gap.
+        val out = LayoutMutations.withPeriodKey(bottomRowLayout(), "remove", "")
+        assertEquals(null, out.keys.firstOrNull { it.output == "." })
+        val space = out.keys.first { it.type == KeyType.SPACE }
+        assertEquals(0.25f, space.x, 1e-6f)
+        assertEquals(0.6f, space.w, 1e-6f)
+    }
+
+    @Test
+    fun aRepurposedPeriodKeepsTheDotBehindIt() {
+        // Same rule the comma has: the character stays reachable from the key that used
+        // to be it, as the first entry of its long-press popup.
+        val out = LayoutMutations.withPeriodKey(bottomRowLayout(), "paste", "")
+        val period = out.keys.first { it.id == "period" }
+        assertEquals(LayoutMutations.ACTION_PASTE, period.output)
+        assertEquals(listOf(".", "\u2026"), period.alternates)
+    }
+
+    @Test
+    fun removingTheCommaHandsItsEmojiToThePeriod() {
+        // The rendezvous rule, and the reason the two functions cannot be applied in
+        // either order. Untested until R70 generalised the function.
+        val withEmoji = LayoutMutations.withEmojiOnComma(bottomRowLayout())
+        val out = LayoutMutations.withCommaKey(withEmoji, "remove", "")
+        assertEquals(null, out.keys.firstOrNull { it.output == "," })
+        assertEquals(
+            LayoutMutations.EMOJI_ALTERNATE,
+            out.keys.first { it.id == "period" }.alternates.first(),
+        )
+    }
+
+    @Test
+    fun removingBothKeysDropsTheSharedEmojiAlternate() {
+        // The named accepted cost of R70. The comma hands the emoji to the period, and
+        // the period has nowhere left to hand it on to, so asking for both keys to be
+        // gone costs the long-press they shared. The emoji key setting is the way back.
+        val withEmoji = LayoutMutations.withEmojiOnComma(bottomRowLayout())
+        val noComma = LayoutMutations.withCommaKey(withEmoji, "remove", "")
+        val out = LayoutMutations.withPeriodKey(noComma, "remove", "")
+        assertEquals(1, out.keys.size)
+        assertEquals(KeyType.SPACE, out.keys.first().type)
+        assertTrue(
+            "the emoji alternate should be gone with both keys",
+            out.keys.none { it.alternates.contains(LayoutMutations.EMOJI_ALTERNATE) },
+        )
+    }
+
+    @Test
+    fun keepLeavesBothPunctuationKeysExactlyAsTheyWere() {
+        val before = bottomRowLayout()
+        assertSame(before, LayoutMutations.withPeriodKey(before, "keep", ""))
+        assertSame(before, LayoutMutations.withCommaKey(before, "keep", ""))
     }
 
     /** Home row mirroring the bundled layouts: "l" ends at 0.95, right pad free. */

@@ -19,6 +19,21 @@ object Backup {
 
     const val FORMAT = "kinetica-backup"
 
+    /**
+     * Suggested export filename, stamped with [at] (R80).
+     *
+     * It used to be one constant, so every export offered the same name and the second one
+     * overwrote the first unless the user noticed and renamed it. A backup that silently
+     * replaces the previous backup is one backup, not a history.
+     *
+     * Minutes, not seconds: two exports in the same minute are the same export, and the
+     * name has to stay readable enough to sort by eye in a file picker.
+     */
+    fun filename(at: java.time.LocalDateTime): String =
+        "kinetica_backup_" +
+            at.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HHmm")) +
+            ".txt"
+
     /** Bump when a record type changes meaning. A reader refuses what it does not know. */
     const val VERSION = 1
 

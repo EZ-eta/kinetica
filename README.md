@@ -66,15 +66,16 @@ bytes, and either can install and update over the other's build.
 - From-scratch swipe decoding: banded dynamic time warping over
   arc-length-resampled paths, an anchored segmental trie search, frequency and
   bigram-context scoring
-- Six languages bundled, not six supported: the trie, DTW matcher, merge and
+- Nine languages bundled, not nine supported: the trie, DTW matcher, merge and
   scoring are locale- and layout-independent, so a language is data plus
   registration - a wordlist, a layout, and the entries listed in
   [ADDING_A_LANGUAGE.md](ADDING_A_LANGUAGE.md). Polish arrived that way, as a
   contributor's pull request. The matching alphabet is a-z plus apostrophe and
   accented Latin letters fold onto it, so Latin scripts fit; a non-Latin script
   is a major engine change and out of scope.
-- What ships: 46k-word English plus 49k-word Italian, Spanish, Polish, Czech and
-  German dictionaries with real corpus frequencies; 40k–100k bigrams per language;
+- What ships: 47k-word English plus 49k- to 50k-word Italian, Spanish, Polish,
+  Czech, Dutch, German, French and Norwegian dictionaries with real corpus
+  frequencies; 12k–100k bigrams per language;
   switch languages in Settings without restarting the IME. Accented words
   (perché, città, señal, también, dziękuję, późno, přítel, město, groß) are matched
   through their base-key gesture path and restored with accents on commit.
@@ -187,9 +188,9 @@ Settings and simply hard to find. The ones that come up most:
   peck-type keys, and *Chord lead-in* sets how long `?123` must be held first.
 - **Long-press popups without the accents.** *Hide accented letters on
   long-press* leaves only digits and symbols, so `A` gives you `@` instead of
-  eight forms of `a` you will never type. Ignored for Italian, Spanish, Polish, Czech
-  and German, whose own alphabets need theirs. If you would rather keep the accents
-  but reach the digits first, *Prioritize numbers over accents on long-press* does that
+  eight forms of `a` you will never type. Ignored for Italian, Spanish, Polish,
+  Czech, Dutch, German, French and Norwegian, whose own alphabets need theirs. If
+  you would rather keep the accents but reach the digits first, *Prioritize numbers over accents on long-press* does that
   instead.
 - **A shorter keyboard.** *Keyboard height* goes down to 10% of the screen.
   *Suggestion bar height* shrinks the strip above it - the word text scales with

@@ -20,6 +20,8 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.setPadding
 import androidx.preference.PreferenceManager
+import java.io.File
+import java.time.LocalDateTime
 import com.kinetica.keyboard.R
 import com.kinetica.keyboard.data.DictionaryStore
 import com.kinetica.keyboard.data.KineticaDb
@@ -361,6 +363,23 @@ class DictionarySettingsActivity : AppCompatActivity() {
                 }
             },
         )
+        // Only once there is something to undo. A restore button that is always there and
+        // usually does nothing is the guard-that-looks-broken shape this project has hit
+        // before (KNOWN_ISSUES item 69's two guards).
+        val snapshot = snapshotFile()
+        if (snapshot.exists()) {
+            container.addView(
+                Button(this).apply {
+                    text = getString(
+                        R.string.backup_restore,
+                        java.text.DateFormat.getDateTimeInstance(
+                            java.text.DateFormat.SHORT, java.text.DateFormat.SHORT,
+                        ).format(java.util.Date(snapshot.lastModified())),
+                    )
+                    setOnClickListener { confirmRestoreSnapshot() }
+                },
+            )
+        }
     }
 
     // ------------------------------------------------------- whole-keyboard backup
@@ -384,7 +403,7 @@ class DictionarySettingsActivity : AppCompatActivity() {
                 if (isDestroyed) return@post
                 if (pairs == 0) {
                     includePhrases = false
-                    createBackup.launch(BACKUP_FILENAME)
+                    createBackup.launch(Backup.filename(LocalDateTime.now()))
                     return@post
                 }
                 val checked = booleanArrayOf(false)
@@ -396,7 +415,7 @@ class DictionarySettingsActivity : AppCompatActivity() {
                     ) { _, _, isChecked -> checked[0] = isChecked }
                     .setPositiveButton(android.R.string.ok) { _, _ ->
                         includePhrases = checked[0]
-                        createBackup.launch(BACKUP_FILENAME)
+                        createBackup.launch(Backup.filename(LocalDateTime.now()))
                     }
                     .setNegativeButton(android.R.string.cancel, null)
                     .show()
@@ -487,6 +506,71 @@ class DictionarySettingsActivity : AppCompatActivity() {
             .show()
     }
 
+    /**
+     * Where the pre-import snapshot lives.
+     *
+     * Internal storage rather than a document the user picks: a snapshot nobody chose to
+     * take is a snapshot nobody will be asked to file, and it has to be written without a
+     * picker standing between the user and the import they asked for.
+     */
+    private fun snapshotFile(): File = File(filesDir, SNAPSHOT_FILENAME)
+
+    /**
+     * Writes the keyboard as it stands, before an import replaces it (R80).
+     *
+     * [applyBackup] clears every language's learned words and overwrites every preference,
+     * and until this existed a mistaken replace-import was unrecoverable. Failure is
+     * swallowed on purpose: a snapshot that cannot be written must not stop the import the
+     * user actually asked for, and the restore button simply will not appear.
+     */
+    private fun writeSnapshot() {
+        try {
+            val data = collectBackup(withPhrases = true)
+            snapshotFile().bufferedWriter().use { w ->
+                for (line in Backup.encode(data)) {
+                    w.write(line)
+                    w.write(NEWLINE)
+                }
+            }
+        } catch (e: IOException) {
+            snapshotFile().delete()
+        } catch (e: RuntimeException) {
+            snapshotFile().delete()
+        }
+    }
+
+    private fun confirmRestoreSnapshot() {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.backup_restore_title)
+            .setMessage(R.string.backup_restore_message)
+            .setPositiveButton(android.R.string.ok) { _, _ -> restoreSnapshot() }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun restoreSnapshot() {
+        io.execute {
+            val file = snapshotFile()
+            val result = try {
+                file.bufferedReader().use { Backup.decode(it.lineSequence()) }
+            } catch (e: IOException) {
+                toastLater(R.string.backup_restore_failed)
+                null
+            } catch (e: RuntimeException) {
+                toastLater(R.string.backup_restore_failed)
+                null
+            }
+            // Never snapshots itself: the slot holds the state before the last IMPORT, and
+            // overwriting it here would spend the only undo on the undo.
+            if (result is Backup.Result.Ok) {
+                applyBackup(result, replace = true, snapshot = false)
+                toastLater(R.string.backup_restore_done)
+            } else if (result != null) {
+                toastLater(R.string.backup_restore_failed)
+            }
+        }
+    }
+
     private fun runBackupImport(uri: Uri, replace: Boolean) {
         io.execute {
             val result = try {
@@ -517,7 +601,10 @@ class DictionarySettingsActivity : AppCompatActivity() {
      * [bumpGeneration] goes LAST, because it is the only thing that makes the running
      * keyboard re-read the database, so it has to see finished tables.
      */
-    private fun applyBackup(ok: Backup.Result.Ok, replace: Boolean) {
+    private fun applyBackup(ok: Backup.Result.Ok, replace: Boolean, snapshot: Boolean = true) {
+        // Before anything is cleared, and on the io thread runBackupImport already put us
+        // on, so the undo exists even if the rest of this throws.
+        if (snapshot) writeSnapshot()
         val db = KineticaDb.get(this)
         val now = System.currentTimeMillis()
         if (replace) {
@@ -1033,7 +1120,8 @@ class DictionarySettingsActivity : AppCompatActivity() {
         // Same shape the IME accepts when learning; keeps imports sane.
         val WORD_RE = Regex("^\\p{L}+(?:'\\p{L}+)*$")
         const val MAX_IMPORT_COUNT = 10_000
-        const val BACKUP_FILENAME = "kinetica_backup.txt"
+        /** Where the pre-import snapshot lives. One slot: the last import is what is undoable. */
+        const val SNAPSHOT_FILENAME = "kinetica_pre_import_backup.txt"
         const val NEWLINE = "\n"
     }
 }

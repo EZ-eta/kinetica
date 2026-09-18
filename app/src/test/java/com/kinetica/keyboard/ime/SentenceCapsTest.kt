@@ -96,4 +96,41 @@ class SentenceCapsTest {
         val long = "x".repeat(200) + "."
         assertTrue(startsNewSentence(long))
     }
+
+    // ---- R69: when a double space may become a sentence end -------------------------
+
+    @Test
+    fun aSpaceAfterAWordCanBecomeASentenceEnd() {
+        // The only accepted shape, and the common one: a word, then the space the first
+        // tap wrote.
+        assertTrue(doubleSpaceEndsSentence("ok "))
+        assertTrue(doubleSpaceEndsSentence("hello world "))
+        // A digit closes a sentence as readily as a letter: "costs 12. "
+        assertTrue(doubleSpaceEndsSentence("12 "))
+    }
+
+    @Test
+    fun aRunOfSpacesIsDeliberateWhitespace() {
+        // Someone lining text up with spaces is not asking for a full stop in the middle
+        // of it, and the third tap of three must not produce a second one.
+        assertFalse(doubleSpaceEndsSentence("ok  "))
+        assertFalse(doubleSpaceEndsSentence("  "))
+    }
+
+    @Test
+    fun aSpaceAfterPunctuationIsLeftAlone() {
+        // Without this, "e.g. " plus a second tap gives "e.g.. ", which is worse than
+        // doing nothing. Item 70 is the related capitalization bug and is separate.
+        assertFalse(doubleSpaceEndsSentence("e.g. "))
+        assertFalse(doubleSpaceEndsSentence("done. "))
+        assertFalse(doubleSpaceEndsSentence("really? "))
+    }
+
+    @Test
+    fun thereIsNothingToCloseAtTheStartOfAField() {
+        assertFalse(doubleSpaceEndsSentence(""))
+        assertFalse(doubleSpaceEndsSentence(" "))
+        // And the cursor must actually be after a space; the caller reads two characters.
+        assertFalse(doubleSpaceEndsSentence("ok"))
+    }
 }

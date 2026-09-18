@@ -4,7 +4,9 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.graphics.Rect
 import android.graphics.RectF
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
@@ -104,6 +106,12 @@ class KeyboardView @JvmOverloads constructor(
          * key and only the service knows what ending a word means.
          */
         fun onSpacelessSpace()
+
+        /**
+         * Spacebar tapped twice in quick succession: end the sentence (R69). Only ever
+         * sent while the setting is on.
+         */
+        fun onDoubleSpace()
     }
 
     var listener: Listener? = null
@@ -139,6 +147,11 @@ class KeyboardView @JvmOverloads constructor(
         get() = spaceController.wordMode
         set(value) { spaceController.wordMode = value }
 
+    /** A second spacebar tap inside the double-tap window ends the sentence. */
+    var doubleSpacePeriod: Boolean
+        get() = spaceController.doubleSpacePeriod
+        set(value) { spaceController.doubleSpacePeriod = value }
+
     /** Left 30% of the spacebar ends the word without writing a space. */
     var spacelessSpace: Boolean
         get() = spaceController.spacelessZone
@@ -166,6 +179,23 @@ class KeyboardView @JvmOverloads constructor(
                 cancelActivePointers()
                 if (width > 0 && height > 0) rebuild()
             }
+        }
+
+    /**
+     * Side inset in dp, from the setting. Applied to the key block only: the
+     * background still paints edge to edge, so the inset reads as a margin
+     * around the keys rather than a smaller keyboard on a coloured strip.
+     *
+     * Declared beside [layoutMode] and above the init block on purpose:
+     * InitOrderTest fails a property that a running init block would read as
+     * null, and rebuild() reads this one.
+     */
+    var sidePadDp: Int = 0
+        set(value) {
+            val clamped = value.coerceIn(0, LayoutTransforms.MAX_SIDE_PAD_DP)
+            if (field == clamped) return
+            field = clamped
+            if (width > 0 && height > 0) rebuild()
         }
 
     /** Small dot on the spacebar while autospace is enabled. */
@@ -417,7 +447,32 @@ class KeyboardView @JvmOverloads constructor(
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
-        if (w > 0 && h > 0) rebuild()
+        if (w > 0 && h > 0) {
+            rebuild()
+            claimEdgeGestures(w, h)
+        }
+    }
+
+    /**
+     * Asks the system not to read a swipe starting at this view's left or right
+     * edge as the navigation back gesture.
+     *
+     * This is the real fix for half of the request that brought the side
+     * margin: a user with gesture navigation on has to aim away from both
+     * edges, and the bottom row's outer keys are the ones that suffer. Unlike a
+     * margin it takes no width away from anyone, which is why it is on for
+     * everyone and is not a setting.
+     *
+     * Two things about it are NOT verified here and must not be claimed: the
+     * platform caps the exclusion it will honour per edge (documented as 200dp)
+     * and may therefore honour only part of a tall keyboard, and whether it
+     * applies to an IME window at all has not been observed on a device. Both
+     * are on the device gate. Requesting more than the cap is safe: the system
+     * clamps rather than refusing.
+     */
+    private fun claimEdgeGestures(w: Int, h: Int) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
+        systemGestureExclusionRects = listOf(Rect(0, 0, w, h))
     }
 
     override fun onDetachedFromWindow() {
@@ -431,8 +486,9 @@ class KeyboardView @JvmOverloads constructor(
         keyInsets.clear()
         val w = width.toFloat()
         val h = height.toFloat()
+        val sidePad = LayoutTransforms.sidePadPx(sidePadDp, density, w)
         for (k in l.keys) {
-            val rect = LayoutTransforms.apply(layoutMode, k, w, h)
+            val rect = LayoutTransforms.apply(layoutMode, k, w, h, sidePad)
             keyRects.add(rect)
             keyInsets.add(insetRect(rect))
         }
@@ -458,8 +514,18 @@ class KeyboardView @JvmOverloads constructor(
         }
         engineActive = rects.isNotEmpty()
         if (!engineActive || minLetterW <= 0f) return
+        // The stream-split line is the centre of the LETTER BLOCK, not of the
+        // view. With a side inset the keys no longer span the view, and half
+        // the view width would put the divider off the board's centre and
+        // misassign a thumb.
+        var blockLeft = Float.MAX_VALUE
+        var blockRight = 0f
+        for (r in rects) {
+            if (r[0] < blockLeft) blockLeft = r[0]
+            if (r[2] > blockRight) blockRight = r[2]
+        }
         val g = KeyboardGeometry.fromPx(
-            minLetterW, width.toFloat(), rects, codes.toIntArray(),
+            minLetterW, (blockLeft + blockRight) / 2f, rects, codes.toIntArray(),
         )
         engine?.setGeometry(g, KineticaConstants.TAP_MAX_DISP_DP * density)
         listener?.onGeometryChanged(g)
@@ -989,9 +1055,10 @@ class KeyboardView @JvmOverloads constructor(
                 }
             }
             ROUTE_SPACE -> {
-                when (spaceController.onUp()) {
+                when (spaceController.onUp(t)) {
                     SpacebarCursorController.Lift.SPACE -> dispatchTap(pid, t)
                     SpacebarCursorController.Lift.SPACELESS -> listener?.onSpacelessSpace()
+                    SpacebarCursorController.Lift.DOUBLE -> listener?.onDoubleSpace()
                     SpacebarCursorController.Lift.SLIDE -> Unit
                 }
                 spacePointer = -1

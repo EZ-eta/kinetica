@@ -25,11 +25,19 @@ object Prefs {
     const val LAYOUT_MODE = "pref_layout_mode"
 
     /**
-     * Letter arrangement: qwerty | qwertz | qzerty. Distinct from
+     * Letter arrangement: qwerty | qwertz | qzerty | azerty. Distinct from
      * [LAYOUT_MODE], which is where the keys sit on screen (full, split,
      * one-handed); this is which letter is on which key.
      */
     const val KEY_ARRANGEMENT = "pref_key_arrangement"
+
+    /**
+     * True while the value in [KEY_ARRANGEMENT] is one this keyboard wrote for the active
+     * language rather than one the user chose (R83). Internal bookkeeping with no row in
+     * the settings screen: it exists only so leaving French can hand the arrangement back,
+     * and so a user who picks an arrangement of their own is never overwritten.
+     */
+    const val ARRANGEMENT_AUTO_APPLIED = "pref_arrangement_auto_applied"
     const val AUTOSPACE = "pref_autospace"
 
     /**
@@ -157,7 +165,7 @@ object Prefs {
      * and are what makes a second language writable without switching layout.
      * Has no effect on a layout whose accents are its own language's
      * (KeyboardLayout.nativeAccents), so enabling it cannot cost an Italian,
-     * Spanish, Polish, Czech or German writer their letters.
+     * Spanish, Polish or Czech writer their letters.
      */
     const val PLAIN_LETTER_ALTERNATES = "pref_plain_letter_alternates"
 
@@ -166,6 +174,12 @@ object Prefs {
 
     /** Custom character/text backing the comma-key char and text modes. */
     const val COMMA_CUSTOM = "pref_comma_custom"
+
+    /** Period-key role, the same six values [COMMA_MODE] takes (R70). */
+    const val PERIOD_MODE = "pref_period_mode"
+
+    /** Custom character/text backing the period-key char and text modes. */
+    const val PERIOD_CUSTOM = "pref_period_custom"
     /** JSON array of edge-swipe bindings; absent = built-in defaults. */
     const val EDGE_SWIPES = "pref_edge_swipes"
 
@@ -223,6 +237,9 @@ object Prefs {
      */
     const val SPACELESS_SPACE = "pref_spaceless_space"
 
+    /** A second spacebar tap inside the double-tap window ends the sentence (R69). */
+    const val DOUBLE_SPACE_PERIOD = "pref_double_space_period"
+
     /**
      * Learn which word tends to follow which, from this user's own typing.
      *
@@ -271,6 +288,29 @@ object Prefs {
 
     /** Experimental per-word language auto-detection (swipe words only). */
     const val AUTO_DETECT_LANGUAGE = "pref_auto_detect_language"
+
+    /**
+     * British spelling for English. Both spellings of every pair are already in
+     * the bundled wordlist with the American form the more frequent, so this
+     * exchanges the two counts at load time rather than adding any word. Has no
+     * effect on any other language.
+     */
+    const val BRITISH_SPELLING = "pref_british_spelling"
+
+    /** Width of the retype button in dp; only read when [RETYPE_BUTTON] is on. */
+    const val RETYPE_BUTTON_DP = "pref_retype_button_dp"
+
+    /**
+     * Side inset around the key block, per side, in dp. The keys scale to fit
+     * so every distance in kw is unchanged; see LayoutTransforms.blockScale.
+     */
+    const val SIDE_PAD_DP = "pref_side_pad_dp"
+
+    /**
+     * Gap below the keyboard in dp. ADDS height rather than shrinking keys,
+     * which is what the request asked for.
+     */
+    const val BOTTOM_PAD_DP = "pref_bottom_pad_dp"
 
     /**
      * Peck-type mode: swipes and predictions off, taps commit literally.
@@ -325,6 +365,7 @@ object Prefs {
     const val DEFAULT_TRAIL_COLOR = "rainbow"
     const val DEFAULT_LANGUAGE = "en"
     const val DEFAULT_KEY_ARRANGEMENT = "qwerty"
+    const val DEFAULT_ARRANGEMENT_AUTO_APPLIED = false
     const val DEFAULT_LONG_PRESS_MS = 500
     const val DEFAULT_CHORD_ARM_MS = 150
     const val DEFAULT_RETYPE_AVOIDS_REJECTED = false
@@ -339,19 +380,42 @@ object Prefs {
     const val DEFAULT_SPACEBAR_STEP_DP = 20
     const val DEFAULT_SPACEBAR_WORD_SLIDE = false
     const val DEFAULT_SPACELESS_SPACE = false
+    const val DEFAULT_DOUBLE_SPACE_PERIOD = false
     const val DEFAULT_LEARN_PHRASES = false
     const val DEFAULT_ENTER_ALTERNATES = "? ! ,"
     const val DEFAULT_APOSTROPHE_KEY = false
     const val DEFAULT_COMMA_MODE = "keep"
     const val DEFAULT_COMMA_CUSTOM = ""
+    const val DEFAULT_PERIOD_MODE = "keep"
+    const val DEFAULT_PERIOD_CUSTOM = ""
     const val DEFAULT_THEME_MODE = "default"
     const val DEFAULT_THEME_COLOR = "#5468FF"
     const val DEFAULT_THEME_BRIGHTNESS = "dark"
     const val DEFAULT_LANG_CYCLE_KEY = "l"
     const val DEFAULT_AUTO_DETECT_LANGUAGE = false
+    const val DEFAULT_BRITISH_SPELLING = false
+
+    /**
+     * Retype button width in dp. The default is the width it shipped at, so
+     * turning the button on gives the same bar it always gave; the slider is
+     * for the users who cannot hit it with a case on. Must match
+     * BarMetrics.RETYPE_DEFAULT_DP and the XML's app:min, or the slider cannot
+     * reach its own floor.
+     */
+    const val DEFAULT_RETYPE_BUTTON_DP = 34
+    const val DEFAULT_SIDE_PAD_DP = 0
+    const val DEFAULT_BOTTOM_PAD_DP = 0
     const val DEFAULT_PECK_MODE = false
     const val DEFAULT_PECK_CHORD_KEY = "none"
 
-    /** Canonical order of all bundled languages; cycling follows this order. */
-    val ALL_LANGUAGES = listOf("en", "it", "es", "pl", "cs", "de")
+    /**
+     * Canonical order of all bundled languages; cycling follows this order.
+     *
+     * APPEND new languages, never insert. Auto-detect is pairwise and takes the
+     * first enabled non-active language as its one secondary predictor, so
+     * inserting a code would silently change which language competes for every
+     * existing user's decode.
+     */
+    val ALL_LANGUAGES =
+        listOf("en", "it", "es", "pl", "cs", "nl", "de", "fr", "no")
 }

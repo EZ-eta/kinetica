@@ -27,6 +27,15 @@ class AccentFoldingTest {
             AccentFolder.fold("příliš žluťoučký kůň ďábelské ódy město"),
         )
         assertEquals("strasse", AccentFolder.fold("straße"))
+        // French: ÿ folds like the other y-accents, œ is the second digraph.
+        assertEquals("soeur", AccentFolder.fold("sœur"))
+        assertEquals("moyen", AccentFolder.fold("moÿen"))
+        // Norwegian: æ and å onto "a", ø onto "o". These are alphabet letters
+        // rather than accents, and each folds onto the key it is drawn on.
+        assertEquals("vare", AccentFolder.fold("være"))
+        assertEquals("for", AccentFolder.fold("før"))
+        assertEquals("mate", AccentFolder.fold("måte"))
+        assertEquals("stotte", AccentFolder.fold("støtte"))
         val plain = "already plain"
         assertTrue(plain === AccentFolder.fold(plain))
     }
@@ -99,5 +108,28 @@ class AccentFoldingTest {
     fun englishDictionaryHasNoForms() {
         val d = dict("the" to 12000, "then" to 5000, "don't" to 2200)
         assertTrue(d.forms.isEmpty())
+    }
+
+    @Test
+    fun foldAlsoFoldsCase() {
+        // The trie alphabet has no capitals: Alphabet.codeOf admits only a-z
+        // and an apostrophe, so a capitalized entry would encode to null and be
+        // dropped silently. Case folding here is what lets a wordlist carry a
+        // capitalized display form on a lowercase key.
+        assertEquals("haus", AccentFolder.fold("Haus"))
+        assertEquals("strasse", AccentFolder.fold("Straße"))
+        assertEquals("uber", AccentFolder.fold("Über"))
+        assertEquals("soeur", AccentFolder.fold("Sœur"))
+        // Norwegian's own letters, capitalized as they are at a sentence start.
+        assertEquals("ao", AccentFolder.fold("ÆØ"))
+        assertEquals("vare", AccentFolder.fold("Være"))
+    }
+
+    @Test
+    fun anAllLowercasePlainWordIsStillTheSameInstance() {
+        // The identity optimization the loader relies on, kept across the case
+        // change: every asset that was lowercase before still folds for free.
+        val plain = "already plain"
+        assertTrue(plain === AccentFolder.fold(plain))
     }
 }

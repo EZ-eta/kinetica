@@ -10,7 +10,13 @@
     <string name="subtype_es_es">Español</string>
     <string name="subtype_pl_pl">Polski</string>
     <string name="subtype_cs_cz">Čeština</string>
-    <string name="subtype_de_de">German</string>
+    <string name="subtype_nl_nl">Nederlands</string>
+    <string name="subtype_de_de">Deutsch</string>
+    <string name="subtype_fr_fr">Français</string>
+    <string name="subtype_nb_no">Norsk</string>
+    <string name="settings_search">Search settings</string>
+    <string name="settings_search_hint">Search settings</string>
+    <string name="settings_search_none">No setting matches that</string>
     <string name="settings_title">Kinetica Settings</string>
     <string name="licenses_title">Open-source licenses</string>
     <string name="pref_version_title">Version</string>
@@ -35,7 +41,7 @@
     <string name="pref_drag_handle_title">Resize handle height</string>
     <string name="pref_drag_handle_summary">The grip strip above the suggestion bar, in dp. Zero removes it and reclaims the space; the keyboard can still be resized with the height slider above</string>
     <string name="pref_key_arrangement_title">Letter arrangement</string>
-    <string name="pref_key_arrangement_summary">Which letter sits on which key. Accents, digits and symbols stay where they are</string>
+    <string name="pref_key_arrangement_summary">Which letter sits on which key. Accents, digits and symbols stay where they are. AZERTY applies to French only and also moves M to the home row; selecting French sets it for you unless you have chosen an arrangement here</string>
     <string name="pref_layout_mode_title">Layout mode</string>
     <string name="pref_auto_capitalize_title">Capitalize sentences</string>
     <string name="pref_auto_capitalize_summary">Shift the first letter after a full stop. Off means the keyboard never capitalizes for you</string>
@@ -58,7 +64,15 @@
     <string name="pref_trail_color_title">Swipe trail color</string>
     <string name="pref_language_title">Primary language</string>
     <string name="pref_enabled_languages_title">Enabled languages</string>
-    <string name="pref_enabled_languages_summary">Languages the chord switch cycles through (order: English, Italiano, Español, Polski, Čeština, German)</string>
+    <string name="pref_side_pad_title">Side margin</string>
+    <string name="pref_side_pad_summary">Empty space left and right of the keys. The keys scale to fit, so swipes are unaffected</string>
+    <string name="pref_bottom_pad_title">Bottom margin</string>
+    <string name="pref_bottom_pad_summary">Lifts the keyboard off the bottom edge without making the keys smaller</string>
+    <string name="pref_retype_button_dp_title">Retype button width</string>
+    <string name="pref_retype_button_dp_summary">Wider is easier to hit with a case on. Every dp comes out of the words</string>
+    <string name="pref_british_spelling_title">British spelling</string>
+    <string name="pref_british_spelling_summary">Rank colour, centre and organise above the American spellings. English only</string>
+    <string name="pref_enabled_languages_summary">Languages the chord switch cycles through (order: English, Italiano, Español, Polski, Čeština, Nederlands, Deutsch, Français, Norsk)</string>
     <string name="pref_lang_cycle_key_title">Language switch chord key</string>
     <string name="pref_lang_cycle_key_summary">Hold ?123 and tap this letter to cycle enabled languages mid-typing</string>
     <string name="pref_peck_mode_title">Peck-type mode</string>
@@ -112,7 +126,7 @@
     <string name="chord_reserved_peck">Note: ?123+%1$s is reserved for the peck-type toggle. This text chord will not fire.</string>
 
     <string name="pref_plain_letter_alternates_title">Hide accented letters on long-press</string>
-    <string name="pref_plain_letter_alternates_summary">Letter keys offer only digits and symbols. Ignored for a language whose own alphabet uses accents, such as Italian, Spanish, Polish, Czech or German</string>
+    <string name="pref_plain_letter_alternates_summary">Letter keys offer only digits and symbols. Ignored for a language whose own alphabet uses accents, such as Italian, Spanish, Polish, Czech, German, French or Norwegian</string>
     <string name="pref_number_priority_title">Prioritize numbers over accents on long-press</string>
     <string name="pref_number_priority_summary">Long-press popups and key hints show the digit or symbol first instead of the accent</string>
 
@@ -163,7 +177,7 @@
     <string name="dict_personal_import_mode_message">Merge adds the file\'s counts onto what is already learned. Replace deletes all learned words for this language first.</string>
     <string name="dict_personal_import_merge">Merge</string>
     <string name="dict_personal_import_replace">Replace</string>
-    <string name="dict_import_note">Improved dictionaries use the AOSP wordlist.combined format (e.g. main_en_US, main_it, main_pl, main_cs or main_de from the Helium314/aosp-dictionaries mirror, Apache-2.0). The merge runs on-device against the bundled wordlist; abbreviations and offensive entries are dropped. Bigrams stay bundled.</string>
+    <string name="dict_import_note">Improved dictionaries use the AOSP wordlist.combined format (e.g. main_en_US, main_it, main_pl or main_cs from the Helium314/aosp-dictionaries mirror, Apache-2.0). The merge runs on-device against the bundled wordlist; abbreviations and offensive entries are dropped. Bigrams stay bundled.</string>
 
     <string name="pref_backspace_char_slide_title">Backspace slide deletes letters</string>
     <string name="pref_backspace_char_slide_summary">Sliding left from backspace stages one letter at a time instead of one word. Nothing is deleted until you lift, and sliding back right still undoes it.</string>
@@ -173,13 +187,18 @@
     <string name="pref_spacebar_word_slide_summary">Sliding along the spacebar moves the cursor a whole word at a time instead of one letter, the way the backspace slide does. Punctuation goes with the word.</string>
     <string name="backup_heading">Backup everything</string>
     <string name="backup_note">Carries every setting, your learned words in all languages, the blocked words, your chord shortcuts and your edge-swipe shortcuts, as one text file you can move to another phone. Imported base dictionaries are not carried. Re-import those from the file you used the first time.</string>
+    <string name="backup_restore">Undo the last import (%1$s)</string>
+    <string name="backup_restore_title">Undo the last import</string>
+    <string name="backup_restore_message">Put the keyboard back as it was just before the last import. Words learned since then are lost.</string>
+    <string name="backup_restore_done">Keyboard put back</string>
+    <string name="backup_restore_failed">Could not read the saved copy</string>
     <string name="backup_export">Export a backup\u2026</string>
     <string name="backup_import">Restore a backup\u2026</string>
     <string name="backup_include_phrases">Include %1$d learned phrases</string>
     <string name="backup_export_done">Backup written: %1$d entries</string>
     <string name="backup_export_partial">Backup written: %1$d entries, %2$d skipped</string>
     <string name="backup_export_failed">Backup failed: could not write the file</string>
-    <string name="backup_import_message">Merge keeps what is already on this phone and adds to it. Replace clears the learned words and phrases first. Settings and shortcuts are overwritten either way.</string>
+    <string name="backup_import_message">Merge keeps what is already on this phone and adds to it. Replace clears the learned words and phrases first. Settings and shortcuts are overwritten either way. A copy of your current keyboard is saved first, so this can be undone.</string>
     <string name="backup_import_not_backup">Not a Kinetica backup file</string>
     <string name="backup_import_too_new">This backup was made by a newer version of Kinetica</string>
     <string name="backup_import_done">Restored: %1$d words, %2$d settings</string>
@@ -188,6 +207,8 @@
     <string name="dict_clear_phrases_confirm">Forget every word pair Kinetica has learned for %1$s? The learned words themselves are kept.</string>
     <string name="pref_learn_phrases_title">Learn phrases you type</string>
     <string name="pref_learn_phrases_summary">Remembers which word you tend to type after which, so the next one is guessed better. Stored on this device only and never included in a dictionary export.</string>
+    <string name="pref_double_space_period_title">Double-tap space for a full stop</string>
+    <string name="pref_double_space_period_summary">Two quick taps on the spacebar end the sentence instead of leaving two spaces. Off at the start of a line and after punctuation</string>
     <string name="pref_spaceless_space_title">Spaceless space on the left of the spacebar</string>
     <string name="pref_spaceless_space_summary">Tapping the left third of the spacebar ends the word without adding a space, so a compound the dictionary does not hold can be swiped in two halves. That third stops working as a normal space.</string>
     <string name="pref_spacebar_step_title">Spacebar slide distance</string>
@@ -231,6 +252,10 @@
     <string name="pref_period_alternates_title">Period long-press symbols</string>
     <string name="pref_comma_alternates_title">Comma long-press symbols</string>
     <string name="pref_punctuation_alternates_summary">Space-separated, up to eight. Leave blank to keep the built-in list</string>
+    <string name="pref_period_mode_title">Period key</string>
+    <string name="pref_period_mode_summary">The same six options as the comma key, for the period. Removing both keys drops the emoji long-press they share</string>
+    <string name="pref_period_custom_title">Period key custom text</string>
+    <string name="pref_period_custom_summary">Used by the custom character and custom text options above</string>
     <string name="pref_comma_custom_title">Comma key custom text</string>
     <string name="pref_comma_custom_summary">Used by the custom character and custom text options above</string>
     <string name="emoji_back_to_letters">ABC</string>

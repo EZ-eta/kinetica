@@ -157,4 +157,62 @@ class SpacebarCursorControllerTest {
         r.controller.onDown(10f)
         assertEquals(SpacebarCursorController.Lift.SPACE, r.controller.onUp())
     }
+
+    // ---- R69: the double-space window ------------------------------------------------
+
+    private fun tapper(): SpacebarCursorController =
+        SpacebarCursorController(density = 1f) { _, _ -> }.apply { doubleSpacePeriod = true }
+
+    @Test
+    fun twoTapsInsideTheWindowAreASentenceEnd() {
+        val c = tapper()
+        c.onDown(0f)
+        assertEquals(SpacebarCursorController.Lift.SPACE, c.onUp(1_000L))
+        c.onDown(0f)
+        assertEquals(SpacebarCursorController.Lift.DOUBLE, c.onUp(1_200L))
+    }
+
+    @Test
+    fun aSlowSecondTapIsJustASpace() {
+        val c = tapper()
+        c.onDown(0f)
+        c.onUp(1_000L)
+        c.onDown(0f)
+        assertEquals(
+            SpacebarCursorController.Lift.SPACE,
+            c.onUp(1_000L + SpacebarCursorController.DOUBLE_TAP_MS + 1),
+        )
+    }
+
+    @Test
+    fun theSettingOffMeansTheWindowNeverOpens() {
+        // Default off, and the whole feature has to be invisible until asked for.
+        val c = SpacebarCursorController(density = 1f) { _, _ -> }
+        c.onDown(0f)
+        c.onUp(1_000L)
+        c.onDown(0f)
+        assertEquals(SpacebarCursorController.Lift.SPACE, c.onUp(1_050L))
+    }
+
+    @Test
+    fun aDoubleConsumesTheWindowSoThreeTapsAreNotTwoFullStops() {
+        val c = tapper()
+        c.onDown(0f)
+        c.onUp(1_000L)
+        c.onDown(0f)
+        assertEquals(SpacebarCursorController.Lift.DOUBLE, c.onUp(1_100L))
+        c.onDown(0f)
+        assertEquals(SpacebarCursorController.Lift.SPACE, c.onUp(1_200L))
+    }
+
+    @Test
+    fun aSlideDoesNotArmTheWindow() {
+        // A cursor slide wrote no space, so there is nothing for a period to replace.
+        val c = tapper()
+        c.onDown(0f)
+        c.onMove(100f)
+        assertEquals(SpacebarCursorController.Lift.SLIDE, c.onUp(1_000L))
+        c.onDown(0f)
+        assertEquals(SpacebarCursorController.Lift.SPACE, c.onUp(1_050L))
+    }
 }

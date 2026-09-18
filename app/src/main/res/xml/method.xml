@@ -28,8 +28,23 @@
         android:imeSubtypeMode="keyboard"
         android:isAsciiCapable="true" />
     <subtype
+        android:label="@string/subtype_nl_nl"
+        android:imeSubtypeLocale="nl_NL"
+        android:imeSubtypeMode="keyboard"
+        android:isAsciiCapable="true" />
+    <subtype
         android:label="@string/subtype_de_de"
         android:imeSubtypeLocale="de_DE"
+        android:imeSubtypeMode="keyboard"
+        android:isAsciiCapable="true" />
+    <subtype
+        android:label="@string/subtype_fr_fr"
+        android:imeSubtypeLocale="fr_FR"
+        android:imeSubtypeMode="keyboard"
+        android:isAsciiCapable="true" />
+    <subtype
+        android:label="@string/subtype_nb_no"
+        android:imeSubtypeLocale="nb_NO"
         android:imeSubtypeMode="keyboard"
         android:isAsciiCapable="true" />
 </input-method>

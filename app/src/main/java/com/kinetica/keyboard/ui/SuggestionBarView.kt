@@ -16,8 +16,8 @@ import com.kinetica.keyboard.engine.KineticaConstants
 /**
  * Suggestion strip: one row of up to [MAX_ZONES] equal-width zones, each an
  * independently tappable full candidate word. Candidates beyond one row live
- * on further pages: a leftward swipe that starts at the bar's right edge
- * cycles pages, with position dots at the bottom center while
+ * on further pages: a horizontal drag anywhere across the words cycles pages
+ * in either direction, with position dots at the bottom center while
  * more than one page exists. The same layout serves both phases of a word's
  * life:
  *
@@ -57,6 +57,13 @@ class SuggestionBarView @JvmOverloads constructor(
 
         /** The reserved right-edge button: throw the current word away and start again. */
         fun onRetype()
+
+        /**
+         * The weight slide travelled past the bottom of its own scale: never
+         * offer [word] again. Reversible from Dictionary settings, which is
+         * where the block list already lives.
+         */
+        fun onSuggestionBlocked(word: String)
     }
 
     /**
@@ -94,12 +101,26 @@ class SuggestionBarView @JvmOverloads constructor(
             invalidate()
         }
 
+    /**
+     * Configured width of that button in dp, defaulting to the width it
+     * shipped at. Raised on request from users who cannot hit the shipped
+     * width with a phone case on.
+     */
+    var retypeButtonDp = BarMetrics.RETYPE_DEFAULT_DP
+        set(value) {
+            val clamped = BarMetrics.retypeDp(value)
+            if (field == clamped) return
+            field = clamped
+            invalidate()
+        }
+
     private var words: List<Suggestion> = emptyList()
     private var correctionMode = false
     private var selectedIndex = -1
     private var page = 0
     private var downZone = -1
     private var downX = 0f
+    private var downY = 0f
     private var pageSwipeCandidate = false
     private var pageSwipeConsumed = false
     private var lastTouchY = 0f
@@ -258,17 +279,31 @@ class SuggestionBarView @JvmOverloads constructor(
             canvas.drawText(shown, cx, baseY, paint)
             // While a weight-adjust slide is armed on this zone, the badge
             // previews the tier the pending delta would produce.
+            val blockArmed = adjustArmed && i == adjustZone &&
+                BarAdjust.blockArmed(s.count, adjustSteps, reinforceIncrement)
             val tier = if (adjustArmed && i == adjustZone) {
-                KineticaConstants.personalTier((s.count + adjustDelta(adjustSteps)).coerceAtLeast(0))
+                KineticaConstants.personalTier(
+                    BarAdjust.effectiveCount(s.count, adjustSteps, reinforceIncrement),
+                )
             } else {
                 s.tier
             }
-            if (tier > 0) {
-                drawTierBadge(
-                    canvas, tier, orn,
-                    cx + paint.measureText(shown) / 2f + 6f * density * orn,
-                    baseY + paint.ascent() + 3f * density * orn,
+            val badgeX = cx + paint.measureText(shown) / 2f + 6f * density * orn
+            val badgeY = baseY + paint.ascent() + 3f * density * orn
+            if (blockArmed) {
+                // Struck through and marked, so the pending block is legible
+                // under the thumb without a dialog. The bar has no popup
+                // system and the IME shows no toast, so the drawing IS the
+                // confirmation; sliding back up disarms it.
+                val half = paint.measureText(shown) / 2f
+                canvas.drawRect(
+                    cx - half, baseY + paint.ascent() / 2.4f,
+                    cx + half, baseY + paint.ascent() / 2.4f + 1.6f * density * orn,
+                    badgePaint,
                 )
+                drawBlockMark(canvas, orn, badgeX, badgeY)
+            } else if (tier > 0) {
+                drawTierBadge(canvas, tier, orn, badgeX, badgeY)
             }
             if (i > 0) {
                 canvas.drawRect(left - 1f, h * 0.2f, left + 1f, h * 0.8f, dividerPaint)
@@ -276,7 +311,8 @@ class SuggestionBarView @JvmOverloads constructor(
         }
 
         // Page position dots (only when there is something to page to): the
-        // affordance for the right-edge leftward swipe that cycles pages.
+        // affordance for the horizontal drag that cycles pages, and centred
+        // because the drag may start anywhere across the words.
         val pages = pageCount()
         if (pages > 1) {
             val spacing = 8f * density * orn
@@ -294,6 +330,23 @@ class SuggestionBarView @JvmOverloads constructor(
      * Personal-weight badge riding a word's top-right: tier 1 is the center
      * dot, tiers 2..7 fill the six hexagon corners clockwise from the top.
      */
+    /**
+     * The pending-block mark: a ring with a bar through it, drawn where the
+     * tier badge would be. A shape rather than a glyph so it needs no font
+     * metrics and themes with the badge it stands in for.
+     */
+    private fun drawBlockMark(canvas: Canvas, orn: Float, cx: Float, cy: Float) {
+        val r = 3.6f * density * orn
+        val stroke = badgePaint.strokeWidth
+        val style = badgePaint.style
+        badgePaint.style = Paint.Style.STROKE
+        badgePaint.strokeWidth = 1.2f * density * orn
+        canvas.drawCircle(cx, cy, r, badgePaint)
+        canvas.drawLine(cx - r * 0.7f, cy + r * 0.7f, cx + r * 0.7f, cy - r * 0.7f, badgePaint)
+        badgePaint.style = style
+        badgePaint.strokeWidth = stroke
+    }
+
     private fun drawTierBadge(canvas: Canvas, tier: Int, orn: Float, cx: Float, cy: Float) {
         val r = 1.2f * density * orn
         canvas.drawCircle(cx, cy, r, badgePaint)
@@ -325,14 +378,13 @@ class SuggestionBarView @JvmOverloads constructor(
             MotionEvent.ACTION_DOWN -> {
                 downZone = zoneAt(ev.x)
                 downX = ev.x
+                downY = ev.y
                 lastTouchY = ev.y
                 resetAdjust()
-                // A leftward swipe is a page flip only when it starts at the
-                // bar's right edge and there is a page to go to.
-                // Measured from the words' right edge rather than the bar's, so the
-                // button does not sit on top of the page-flip start zone.
-                pageSwipeCandidate = pageCount() > 1 && downZone != ZONE_RETYPE &&
-                    ev.x >= wordsWidth() - PAGE_EDGE_START_DP * density
+                // Anywhere on the words, in either direction, once there is a page to go
+                // to (R54). The retype button is still excluded: it is not a word zone and
+                // a drag off it is not a page.
+                pageSwipeCandidate = pageCount() > 1 && downZone != ZONE_RETYPE
                 pageSwipeConsumed = false
                 if (downZone >= 0) {
                     longPressHandler.postDelayed(reinforceRunnable, REINFORCE_HOLD_MS)
@@ -347,7 +399,13 @@ class SuggestionBarView @JvmOverloads constructor(
                 if (adjustArmed) {
                     // One tier step per fixed travel; truncation toward zero
                     // keeps a small wobble around the start position at step 0.
-                    val steps = ((adjustStartY - ev.y) / (REINFORCE_STEP_DP * density)).toInt()
+                    val raw = ((adjustStartY - ev.y) / (REINFORCE_STEP_DP * density)).toInt()
+                    // Clamped so travel past the blocking step changes nothing:
+                    // the badge stops moving and shows the block instead, which
+                    // is what makes the armed state readable before the lift.
+                    val steps = BarAdjust.clampSteps(
+                        wordAt(adjustZone)?.count ?: 0, raw, reinforceIncrement,
+                    )
                     if (steps != adjustSteps) {
                         adjustSteps = steps
                         listener?.onReinforceStep()
@@ -356,12 +414,24 @@ class SuggestionBarView @JvmOverloads constructor(
                     return true
                 }
                 if (pageSwipeConsumed) return true
-                if (pageSwipeCandidate && downX - ev.x >= PAGE_SWIPE_TRAVEL_DP * density) {
+                // After the armed long press above, which owns the pointer once it fires,
+                // and before the flick below, which is the other gesture this now shares
+                // the whole bar with. BarPaging refuses anything that travels further
+                // vertically than horizontally, which is what keeps the three apart.
+                val next = if (pageSwipeCandidate) {
+                    BarPaging.pageFor(
+                        page, pageCount(), ev.x - downX, ev.y - downY,
+                        PAGE_SWIPE_TRAVEL_DP * density,
+                    )
+                } else {
+                    -1
+                }
+                if (next >= 0) {
                     pageSwipeConsumed = true
                     longPressHandler.removeCallbacks(reinforceRunnable)
                     downZone = -1
                     recycleTracker()
-                    page = (page + 1) % pageCount()
+                    page = next
                     invalidate()
                     return true
                 }
@@ -383,7 +453,11 @@ class SuggestionBarView @JvmOverloads constructor(
                 longPressHandler.removeCallbacks(reinforceRunnable)
                 if (adjustArmed) {
                     wordAt(adjustZone)?.let {
-                        listener?.onSuggestionReinforced(it.word, adjustDelta(adjustSteps))
+                        if (BarAdjust.blockArmed(it.count, adjustSteps, reinforceIncrement)) {
+                            listener?.onSuggestionBlocked(it.word)
+                        } else {
+                            listener?.onSuggestionReinforced(it.word, adjustDelta(adjustSteps))
+                        }
                     }
                     resetAdjust()
                     downZone = -1
@@ -459,7 +533,7 @@ class SuggestionBarView @JvmOverloads constructor(
      * and no room for a word.
      */
     private fun retypeWidth(): Float =
-        if (retypeButton) (RETYPE_ZONE_DP * density).coerceAtMost(width / 4f) else 0f
+        if (retypeButton) (retypeButtonDp * density).coerceAtMost(width / 4f) else 0f
 
     /** Width the word zones divide between them. */
     private fun wordsWidth(): Float = width - retypeWidth()
@@ -486,15 +560,12 @@ class SuggestionBarView @JvmOverloads constructor(
         // without the thumb leaving the keyboard area. May need on-device
         // tuning against real thumb travel.
         const val REINFORCE_STEP_DP = 24f
-        // Page flip: start zone at the bar's right edge (wide enough to hit
-        // blind, narrow enough to keep most of the last zone tappable), travel
-        // mirroring EdgeSwipeDetector's MIN_TRAVEL_DP so the two edge gestures
-        // feel like one family.
-        const val PAGE_EDGE_START_DP = 36f
+        // Page flip: horizontal travel before the drag is a page rather than a
+        // tap that wandered, mirroring EdgeSwipeDetector's MIN_TRAVEL_DP so the
+        // two gestures feel like one family. It is the only discriminator left
+        // now that the start zone is the whole bar (R54), so it also sets how
+        // far a thumb may drift across a word and still commit it.
         const val PAGE_SWIPE_TRAVEL_DP = 30f
-        // Retype button: narrow, because the reporter asked for small and because every dp
-        // here is taken from the words. Wide enough for a thumb at the bar's own scale.
-        const val RETYPE_ZONE_DP = 34f
         // Not a word zone, so it cannot be an index into one.
         const val ZONE_RETYPE = -2
         // U+21BB. A symbol rather than an icon: it themes with the text, scales with the

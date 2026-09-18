@@ -107,6 +107,24 @@
             app:min="24"
             app:showSeekBarValue="true" />
         <SeekBarPreference
+            android:key="pref_side_pad_dp"
+            android:title="@string/pref_side_pad_title"
+            app:singleLineTitle="false"
+            android:summary="@string/pref_side_pad_summary"
+            android:defaultValue="0"
+            android:max="48"
+            app:min="0"
+            app:showSeekBarValue="true" />
+        <SeekBarPreference
+            android:key="pref_bottom_pad_dp"
+            android:title="@string/pref_bottom_pad_title"
+            app:singleLineTitle="false"
+            android:summary="@string/pref_bottom_pad_summary"
+            android:defaultValue="0"
+            android:max="48"
+            app:min="0"
+            app:showSeekBarValue="true" />
+        <SeekBarPreference
             android:key="pref_drag_handle_dp"
             android:title="@string/pref_drag_handle_title"
             app:singleLineTitle="false"
@@ -168,6 +186,19 @@
             android:title="@string/pref_comma_custom_title"
             app:singleLineTitle="false"
             android:summary="@string/pref_comma_custom_summary" />
+        <ListPreference
+            android:key="pref_period_mode"
+            android:title="@string/pref_period_mode_title"
+            app:singleLineTitle="false"
+            android:summary="@string/pref_period_mode_summary"
+            android:entries="@array/comma_mode_entries"
+            android:entryValues="@array/comma_mode_values"
+            android:defaultValue="keep" />
+        <EditTextPreference
+            android:key="pref_period_custom"
+            android:title="@string/pref_period_custom_title"
+            app:singleLineTitle="false"
+            android:summary="@string/pref_period_custom_summary" />
         <EditTextPreference
             android:key="pref_comma_alternates"
             android:title="@string/pref_comma_alternates_title"
@@ -248,6 +279,12 @@
             android:summary="@string/pref_word_ends_on_space_summary"
             android:defaultValue="false" />
         <SwitchPreferenceCompat
+            android:key="pref_double_space_period"
+            android:title="@string/pref_double_space_period_title"
+            app:singleLineTitle="false"
+            android:summary="@string/pref_double_space_period_summary"
+            android:defaultValue="false" />
+        <SwitchPreferenceCompat
             android:key="pref_spaceless_space"
             android:title="@string/pref_spaceless_space_title"
             app:singleLineTitle="false"
@@ -282,6 +319,12 @@
             android:entryValues="@array/language_values"
             android:defaultValue="en"
             app:useSimpleSummaryProvider="true" />
+        <SwitchPreferenceCompat
+            android:key="pref_british_spelling"
+            android:title="@string/pref_british_spelling_title"
+            app:singleLineTitle="false"
+            android:summary="@string/pref_british_spelling_summary"
+            android:defaultValue="false" />
         <MultiSelectListPreference
             android:key="pref_enabled_languages"
             android:title="@string/pref_enabled_languages_title"
@@ -322,6 +365,20 @@
             app:singleLineTitle="false"
             android:summary="@string/pref_retype_button_summary"
             android:defaultValue="false" />
+        <!-- Beside its parent toggle on purpose: PreferenceTreeTest's
+             everyDependencyLivesWithItsParent fails at inflation if a
+             dependency crosses a screen. app:min must match
+             BarMetrics.RETYPE_MIN_DP or the slider cannot reach its floor. -->
+        <SeekBarPreference
+            android:key="pref_retype_button_dp"
+            android:title="@string/pref_retype_button_dp_title"
+            app:singleLineTitle="false"
+            android:summary="@string/pref_retype_button_dp_summary"
+            android:defaultValue="34"
+            android:max="72"
+            app:min="24"
+            app:showSeekBarValue="true"
+            android:dependency="pref_retype_button" />
         <SwitchPreferenceCompat
             android:key="pref_peck_mode"
             android:title="@string/pref_peck_mode_title"

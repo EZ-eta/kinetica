@@ -61,4 +61,32 @@ object BarMetrics {
     /** An ornament authored as [dp] at [REFERENCE_DP], in pixels for this bar. */
     fun ornament(dp: Float, heightPx: Float, density: Float): Float =
         dp * density * scale(heightPx, density)
+
+    /**
+     * Retype button width, in dp.
+     *
+     * Unlike the ornaments above this is NOT a function of the bar's height: it
+     * is a thumb target, and the note at the top of this file about touch
+     * thresholds applies. It lives here anyway because it is the one bar
+     * dimension a user can now set, and this is the file with bounds and a
+     * test.
+     *
+     * [RETYPE_DEFAULT_DP] is the width the button shipped at, and the default
+     * is deliberately unchanged: the reporter who asked for the button asked
+     * for it small, "it could even be small, like just a restart arrow", so a
+     * wider button is an option rather than a new default. The request behind
+     * the slider is the opposite one, a button that can be hit with a case on.
+     *
+     * [RETYPE_MIN_DP] is the shipped width's own lower neighbour rather than
+     * something smaller, because below about 24dp the glyph stops being a
+     * reliable target at any bar height. [RETYPE_MAX_DP] is bounded by the
+     * quarter-width cap the view applies anyway, and is the point past which
+     * the button would start crowding the page-flip start zone on a phone.
+     */
+    const val RETYPE_DEFAULT_DP = 34
+    const val RETYPE_MIN_DP = 24
+    const val RETYPE_MAX_DP = 72
+
+    /** [dp] clamped to the settable range. */
+    fun retypeDp(dp: Int): Int = dp.coerceIn(RETYPE_MIN_DP, RETYPE_MAX_DP)
 }

@@ -15,6 +15,78 @@ object LayoutTransforms {
     private const val SPLIT_HALF = 0.42f
     private const val SPLIT_RIGHT_START = 0.58f
 
+    /** Widest side inset the setting offers, per side. */
+    const val MAX_SIDE_PAD_DP = 48
+
+    /** Tallest bottom gap the setting offers. */
+    const val MAX_BOTTOM_PAD_DP = 48
+
+    /**
+     * Hard ceiling on the side inset as a fraction of the view, per side, so a
+     * narrow phone cannot be inset until the keys are unusable whatever the dp
+     * value says.
+     */
+    private const val MAX_SIDE_PAD_FRACTION = 0.15f
+
+    /** [dp] of side inset in pixels, bounded by both the dp cap and the view. */
+    fun sidePadPx(dp: Int, density: Float, viewW: Float): Float =
+        (dp.coerceIn(0, MAX_SIDE_PAD_DP) * density)
+            .coerceAtMost(viewW * MAX_SIDE_PAD_FRACTION)
+            .coerceAtLeast(0f)
+
+    /**
+     * Uniform scale the key block takes so a side inset preserves its aspect
+     * ratio.
+     *
+     * This is the whole reason the feature is safe. Shrinking width alone would
+     * cut `keyWidthPx` while leaving row height, so row pitch measured in kw
+     * would move - which is item 14e's mechanism, measured, and the reason a
+     * shorter keyboard is a less forgiving one. Scaling BOTH axes by the same
+     * factor divides every rect and every touch sample by the same smaller
+     * `keyWidthPx`, so every distance in kw comes out identical to the unpadded
+     * board and the freed vertical space becomes bottom gap for free.
+     */
+    fun blockScale(sidePadPx: Float, viewW: Float): Float {
+        if (viewW <= 0f) return 1f
+        return ((viewW - 2f * sidePadPx) / viewW).coerceIn(0.5f, 1f)
+    }
+
+    /**
+     * The inset applied to one x coordinate, in pixels.
+     *
+     * Exposed as floats rather than only inside [apply] because RectF is not
+     * available to a JVM unit test - it is stubbed the same way org.json is,
+     * and that is the real reason this file had no test until now. The padding
+     * arithmetic is the part that has to be right, so it lives where it can be
+     * checked.
+     */
+    fun padX(x: Float, sidePadPx: Float, viewW: Float): Float =
+        if (sidePadPx <= 0f) x else sidePadPx + x * blockScale(sidePadPx, viewW)
+
+    /**
+     * The inset applied to one y coordinate. The block is anchored to the TOP,
+     * so the space the aspect-preserving scale frees appears below the keyboard
+     * rather than above it.
+     */
+    fun padY(y: Float, sidePadPx: Float, viewW: Float): Float =
+        if (sidePadPx <= 0f) y else y * blockScale(sidePadPx, viewW)
+
+    /** Pixel rect for [key], inset by [sidePadPx] on each side. */
+    fun apply(
+        mode: LayoutMode,
+        key: Key,
+        viewW: Float,
+        viewH: Float,
+        sidePadPx: Float,
+    ): RectF {
+        val r = apply(mode, key, viewW, viewH)
+        if (sidePadPx <= 0f) return r
+        return RectF(
+            padX(r.left, sidePadPx, viewW), padY(r.top, sidePadPx, viewW),
+            padX(r.right, sidePadPx, viewW), padY(r.bottom, sidePadPx, viewW),
+        )
+    }
+
     fun apply(mode: LayoutMode, key: Key, viewW: Float, viewH: Float): RectF {
         val x0 = key.x
         val x1 = key.x + key.w

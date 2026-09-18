@@ -59,4 +59,58 @@ class LanguageSelectionTest {
         assertTrue(languageSyncNeedsWrite(null, null, "en"))
     }
 
+    // ---- R83: the arrangement the language asks for ---------------------------------
+    //
+    // The setting is global and the AZERTY board is per-language, so a value written for
+    // French and left behind would read "AZERTY" in Settings beside a German QWERTZ board.
+    // Both directions are decided here, and so is the case that must not move.
+
+    @Test
+    fun frenchTakesAzertyFromTheDefault() {
+        val c = arrangementOnLanguageChange("qwerty", autoApplied = false, language = "fr")
+        assertEquals("azerty", c.arrangement)
+        assertTrue(c.autoApplied)
+    }
+
+    @Test
+    fun leavingFrenchHandsTheArrangementBack() {
+        val c = arrangementOnLanguageChange("azerty", autoApplied = true, language = "de")
+        assertEquals("qwerty", c.arrangement)
+        assertFalse(c.autoApplied)
+    }
+
+    @Test
+    fun anArrangementTheUserChoseIsNeverTouched() {
+        // A QWERTZ writer who types some French keeps QWERTZ, and gets a French board that
+        // LayoutMutations then declines to permute because azerty_fr is fixedArrangement.
+        val toFrench = arrangementOnLanguageChange("qwertz", autoApplied = false, language = "fr")
+        assertEquals(null, toFrench.arrangement)
+        assertFalse(toFrench.autoApplied)
+        // And a user who set AZERTY globally keeps it in every language. This is the case
+        // a naive "reset on leaving French" gets wrong.
+        val away = arrangementOnLanguageChange("azerty", autoApplied = false, language = "de")
+        assertEquals(null, away.arrangement)
+        assertFalse(away.autoApplied)
+    }
+
+    @Test
+    fun stayingOnFrenchWritesNothingTwice() {
+        // Already ours and already AZERTY: no write, and the marker stays set so leaving
+        // still hands it back.
+        val c = arrangementOnLanguageChange("azerty", autoApplied = true, language = "fr")
+        assertEquals(null, c.arrangement)
+        assertTrue(c.autoApplied)
+    }
+
+    @Test
+    fun aMarkerIsDroppedOnceTheValueIsNoLongerOurs() {
+        // The user set QWERTZ by hand while French was active. The marker is stale from
+        // then on, and carrying it would hand QWERTZ back to QWERTY on the way out.
+        val c = arrangementOnLanguageChange("qwertz", autoApplied = true, language = "fr")
+        assertEquals(null, c.arrangement)
+        assertFalse(c.autoApplied)
+        val away = arrangementOnLanguageChange("qwertz", autoApplied = true, language = "de")
+        assertEquals(null, away.arrangement)
+        assertFalse(away.autoApplied)
+    }
 }

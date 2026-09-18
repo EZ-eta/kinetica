@@ -41,6 +41,15 @@ class SpacebarCursorController(
      */
     var spacelessZone = false
 
+    /**
+     * Whether a second space tap inside [DOUBLE_TAP_MS] ends the sentence instead (R69).
+     *
+     * Off by default: it spends the second of two deliberate spaces, which anyone who
+     * types a double space on purpose would notice immediately.
+     */
+    var doubleSpacePeriod = false
+
+    private var lastSpaceAt = 0L
     private var startX = 0f
     private var anchorX = 0f
     private var cursorMode = false
@@ -83,14 +92,23 @@ class SpacebarCursorController(
      * past the enter threshold is a cursor slide, because that is the gesture the finger
      * actually made and the zone is only ever a sub-decision of the tap.
      */
-    fun onUp(): Lift = when {
-        cursorMode -> Lift.SLIDE
-        inSpacelessZone -> Lift.SPACELESS
-        else -> Lift.SPACE
+    fun onUp(nowMs: Long = 0L): Lift {
+        val lift = when {
+            cursorMode -> Lift.SLIDE
+            inSpacelessZone -> Lift.SPACELESS
+            doubleSpacePeriod && lastSpaceAt != 0L && nowMs - lastSpaceAt <= DOUBLE_TAP_MS ->
+                Lift.DOUBLE
+            else -> Lift.SPACE
+        }
+        // Only a plain space opens the window and a double closes it, so three taps are a
+        // sentence end followed by a fresh space rather than two sentence ends. A slide or
+        // a spaceless tap closes it too: neither wrote the space a period would replace.
+        lastSpaceAt = if (lift == Lift.SPACE) nowMs else 0L
+        return lift
     }
 
     /** Outcome of a spacebar touch. */
-    enum class Lift { SPACE, SPACELESS, SLIDE }
+    enum class Lift { SPACE, SPACELESS, SLIDE, DOUBLE }
 
     internal fun effectiveStepDp(): Float = stepDp.coerceIn(ENTER_SLIDE_DP, MAX_STEP_DP)
 
@@ -106,5 +124,14 @@ class SpacebarCursorController(
         const val SPACELESS_FRACTION = 0.30f
         const val DEFAULT_STEP_DP = 20f
         const val MAX_STEP_DP = 60f
+
+        /**
+         * Window for the second tap of a double space.
+         *
+         * The same 300 ms ShiftState uses for caps lock, so the two double taps on this
+         * keyboard feel like one gesture. Deliberately a separate constant rather than a
+         * shared one: they are independent gestures and either could be retuned alone.
+         */
+        const val DOUBLE_TAP_MS = 300L
     }
 }

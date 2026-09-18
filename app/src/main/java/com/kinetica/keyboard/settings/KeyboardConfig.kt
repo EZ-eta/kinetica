@@ -6,6 +6,7 @@ import com.kinetica.keyboard.ime.singleLetterDelayMs
 import com.kinetica.keyboard.keys.EdgeSwipeBindings
 import com.kinetica.keyboard.keys.SpacebarCursorController
 import com.kinetica.keyboard.layout.LayoutMode
+import com.kinetica.keyboard.layout.LayoutTransforms
 import com.kinetica.keyboard.ui.BarMetrics
 import com.kinetica.keyboard.ui.KeyboardTheme
 
@@ -58,12 +59,19 @@ data class KeyboardConfig(
     val backspaceCharSlide: Boolean,
     /** Suggestion bar reserves its right edge for a retype button. */
     val retypeButton: Boolean,
+    /** Width of that button in dp, clamped to BarMetrics' settable range. */
+    val retypeButtonDp: Int,
+    /** Side inset around the key block, per side, in dp. */
+    val sidePadDp: Int,
+    /** Gap below the keyboard in dp; added height, not smaller keys. */
+    val bottomPadDp: Int,
     /** Travel that moves the spacebar's cursor slide one step; lower is faster. */
     val spacebarStepDp: Float,
     /** Spacebar cursor slide moves whole words instead of single characters. */
     val spacebarWordSlide: Boolean,
     /** Left 30% of the spacebar ends the word without writing a space. */
     val spacelessSpace: Boolean,
+    val doubleSpacePeriod: Boolean,
     /** Learn word pairs from this user's own typing; opt-in, on-device only. */
     val learnPhrases: Boolean,
     /** Enter popup symbols; first is the primary. Never empty. */
@@ -77,6 +85,8 @@ data class KeyboardConfig(
     /** Comma-key role (pre-coerced: char/text without a custom fall to keep). */
     val commaMode: String,
     val commaCustom: String,
+    val periodMode: String,
+    val periodCustom: String,
     val themeMode: String,
     val themeColor: Int,
     /** dark | light | system; resolved against the configuration at use. */
@@ -91,6 +101,8 @@ data class KeyboardConfig(
     val langCycleKeyCode: Int,
     /** Experimental: per-word language auto-detection for swipe words. */
     val autoDetectLanguage: Boolean,
+    /** Prefer British spellings in English; ignored for every other language. */
+    val britishSpelling: Boolean,
     /** Peck-type mode: swipes/predictions off, taps commit literally. */
     val peckMode: Boolean,
     /** Letter code for the ?123-chord peck toggle, or -1 when disabled. */
@@ -198,6 +210,13 @@ data class KeyboardConfig(
                 Prefs.BACKSPACE_CHAR_SLIDE, Prefs.DEFAULT_BACKSPACE_CHAR_SLIDE,
             ),
             retypeButton = prefs.getBoolean(Prefs.RETYPE_BUTTON, Prefs.DEFAULT_RETYPE_BUTTON),
+            sidePadDp = prefs.getInt(Prefs.SIDE_PAD_DP, Prefs.DEFAULT_SIDE_PAD_DP)
+                .coerceIn(0, LayoutTransforms.MAX_SIDE_PAD_DP),
+            bottomPadDp = prefs.getInt(Prefs.BOTTOM_PAD_DP, Prefs.DEFAULT_BOTTOM_PAD_DP)
+                .coerceIn(0, LayoutTransforms.MAX_BOTTOM_PAD_DP),
+            retypeButtonDp = BarMetrics.retypeDp(
+                prefs.getInt(Prefs.RETYPE_BUTTON_DP, Prefs.DEFAULT_RETYPE_BUTTON_DP),
+            ),
             // Clamped here as well as in the controller: the slider's own bounds are the
             // contract a user sees, and this is the value the view is handed.
             spacebarStepDp = prefs.getInt(
@@ -211,6 +230,9 @@ data class KeyboardConfig(
             ),
             spacelessSpace = prefs.getBoolean(
                 Prefs.SPACELESS_SPACE, Prefs.DEFAULT_SPACELESS_SPACE,
+            ),
+            doubleSpacePeriod = prefs.getBoolean(
+                Prefs.DOUBLE_SPACE_PERIOD, Prefs.DEFAULT_DOUBLE_SPACE_PERIOD,
             ),
             learnPhrases = prefs.getBoolean(
                 Prefs.LEARN_PHRASES, Prefs.DEFAULT_LEARN_PHRASES,
@@ -227,8 +249,10 @@ data class KeyboardConfig(
             apostropheKey = prefs.getBoolean(
                 Prefs.APOSTROPHE_KEY, Prefs.DEFAULT_APOSTROPHE_KEY,
             ),
-            commaMode = commaMode(prefs),
-            commaCustom = commaCustom(prefs),
+            commaMode = punctuationMode(prefs, Prefs.COMMA_MODE, Prefs.COMMA_CUSTOM),
+            commaCustom = punctuationCustom(prefs, Prefs.COMMA_CUSTOM),
+            periodMode = punctuationMode(prefs, Prefs.PERIOD_MODE, Prefs.PERIOD_CUSTOM),
+            periodCustom = punctuationCustom(prefs, Prefs.PERIOD_CUSTOM),
             themeMode = prefs.getString(Prefs.THEME_MODE, Prefs.DEFAULT_THEME_MODE)
                 ?: Prefs.DEFAULT_THEME_MODE,
             themeColor = themePrimary(prefs),
@@ -241,6 +265,9 @@ data class KeyboardConfig(
             dictionaryGeneration = prefs.getInt(Prefs.DICT_GENERATION, 0),
             enabledLanguages = enabledLanguages(prefs),
             langCycleKeyCode = langCycleKeyCode(prefs),
+            britishSpelling = prefs.getBoolean(
+                Prefs.BRITISH_SPELLING, Prefs.DEFAULT_BRITISH_SPELLING,
+            ),
             autoDetectLanguage = prefs.getBoolean(
                 Prefs.AUTO_DETECT_LANGUAGE, Prefs.DEFAULT_AUTO_DETECT_LANGUAGE,
             ),
@@ -251,28 +278,36 @@ data class KeyboardConfig(
         )
         }
 
-        private val COMMA_MODES =
+        private val PUNCTUATION_MODES =
             setOf("keep", "remove", "char", "text", "paste", "select_all")
 
         /**
          * A char/text mode without usable custom content degrades to "keep"
          * (never a blank key), and unknown values from stale prefs do too.
+         *
+         * Shared by the comma and the period since R70 gave the period the same
+         * six modes; both defaults are "keep", so one coercion serves both.
          */
-        private fun commaMode(prefs: SharedPreferences): String {
-            val mode = prefs.getString(Prefs.COMMA_MODE, Prefs.DEFAULT_COMMA_MODE)
-                ?.takeIf { it in COMMA_MODES } ?: Prefs.DEFAULT_COMMA_MODE
+        private fun punctuationMode(
+            prefs: SharedPreferences,
+            modeKey: String,
+            customKey: String,
+        ): String {
+            val mode = prefs.getString(modeKey, Prefs.DEFAULT_COMMA_MODE)
+                ?.takeIf { it in PUNCTUATION_MODES } ?: Prefs.DEFAULT_COMMA_MODE
             return when {
-                (mode == "char" || mode == "text") && commaCustom(prefs).isEmpty() -> "keep"
+                (mode == "char" || mode == "text") &&
+                    punctuationCustom(prefs, customKey).isEmpty() -> "keep"
                 else -> mode
             }
         }
 
-        private fun commaCustom(prefs: SharedPreferences): String =
-            (prefs.getString(Prefs.COMMA_CUSTOM, Prefs.DEFAULT_COMMA_CUSTOM) ?: "")
-                .trim().take(MAX_COMMA_TEXT)
+        private fun punctuationCustom(prefs: SharedPreferences, customKey: String): String =
+            (prefs.getString(customKey, Prefs.DEFAULT_COMMA_CUSTOM) ?: "")
+                .trim().take(MAX_PUNCTUATION_TEXT)
 
         // A short-text insertion, not a chord expansion: keep it key-sized.
-        private const val MAX_COMMA_TEXT = 16
+        private const val MAX_PUNCTUATION_TEXT = 16
 
         /** Enter popup can host at most three cells (see the popup strip). */
         private const val MAX_ENTER_ALTERNATES = 3

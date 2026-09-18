@@ -55,7 +55,10 @@ class GestureEngine(private val listener: Listener) {
         val code = g.keyAt(xPx / g.keyWidthPx, yPx / g.keyWidthPx)
         if (code == -1) return false
 
-        var slot = if (xPx < g.widthPx / 2f) 0 else 1
+        // The letter block's own centre, not half the view: with side padding
+        // the keys do not span the view and half the view width would sit off
+        // the board's centre.
+        var slot = if (xPx < g.midlinePx) 0 else 1
         if (streams[slot] != null) slot = 1 - slot
         if (streams[slot] != null) return false
         val streamId = if (slot == 0) StreamId.LEFT else StreamId.RIGHT

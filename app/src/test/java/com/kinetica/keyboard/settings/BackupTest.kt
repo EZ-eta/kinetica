@@ -164,4 +164,30 @@ class BackupTest {
         assertTrue(ok.data.phrases.isEmpty())
         assertEquals(2, ok.skipped)
     }
+
+    @Test
+    fun anExportFilenameCarriesItsOwnDate() {
+        // R80. It was one constant, so every export offered the same name and the second
+        // one overwrote the first unless the user noticed and renamed it. A backup that
+        // silently replaces the previous backup is one backup, not a history.
+        assertEquals(
+            "kinetica_backup_2026-09-18_0746.txt",
+            Backup.filename(java.time.LocalDateTime.of(2026, 9, 18, 7, 46)),
+        )
+        // Zero-padded throughout, so the names sort by eye in a file picker.
+        assertEquals(
+            "kinetica_backup_2026-01-02_0003.txt",
+            Backup.filename(java.time.LocalDateTime.of(2026, 1, 2, 0, 3)),
+        )
+    }
+
+    @Test
+    fun twoExportsInOneMinuteShareAName() {
+        // Deliberate: seconds would make the name unreadable, and two exports inside one
+        // minute are the same export. The picker's own overwrite prompt covers it.
+        assertEquals(
+            Backup.filename(java.time.LocalDateTime.of(2026, 9, 18, 7, 46, 1)),
+            Backup.filename(java.time.LocalDateTime.of(2026, 9, 18, 7, 46, 59)),
+        )
+    }
 }

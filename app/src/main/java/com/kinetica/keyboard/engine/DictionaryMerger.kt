@@ -21,7 +21,10 @@ object DictionaryMerger {
         "es" to Regex("^[a-záéíóúüñ]+(?:'[a-záéíóúüñ]+)*$"),
         "pl" to Regex("^[a-ząćęłńóśźż]+(?:'[a-ząćęłńóśźż]+)*$"),
         "cs" to Regex("^[a-záčďéěíňóřšťúůýž]+(?:'[a-záčďéěíňóřšťúůýž]+)*$"),
+        "nl" to Regex("^[a-zäëïöüáéíóúè]+(?:'[a-zäëïöüáéíóúè]+)*$"),
         "de" to Regex("^[a-zäöüß]+(?:'[a-zäöüß]+)*$"),
+        "fr" to Regex("^[a-zàâäçéèêëîïôöùûüÿœæ]+(?:'[a-zàâäçéèêëîïôöùûüÿœæ]+)*$"),
+        "no" to Regex("^[a-zæøåé]+(?:'[a-zæøåé]+)*$"),
     )
 
     /** The generator caps at 20 even though the engine trie accepts 24. */

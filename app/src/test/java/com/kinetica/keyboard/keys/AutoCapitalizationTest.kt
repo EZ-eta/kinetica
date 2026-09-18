@@ -21,13 +21,18 @@ class AutoCapitalizationTest {
         assertEquals("i", AutoCapitalization.forWord("i", "es"))
         assertEquals("i", AutoCapitalization.forWord("i", "pl"))
         assertEquals("i", AutoCapitalization.forWord("i", "cs"))
+        assertEquals("i", AutoCapitalization.forWord("i", "nl"))
         assertEquals("i", AutoCapitalization.forWord("i", "de"))
+        assertEquals("i", AutoCapitalization.forWord("i", "fr"))
+        // Norwegian "i" is the preposition "in", and StandaloneLetters treats
+        // it as a word, so the capitalization rule must still leave it alone.
+        assertEquals("i", AutoCapitalization.forWord("i", "no"))
         assertEquals("i", AutoCapitalization.forWord("i", ""))
     }
 
     @Test
     fun everyOtherWordIsUntouched() {
-        for (lang in listOf("en", "it", "es", "pl", "cs", "de")) {
+        for (lang in listOf("en", "it", "es", "pl", "cs", "nl", "de", "fr", "no")) {
             for (w in listOf("in", "if", "is", "it", "ii", "a", "o", "island", "iowa", "")) {
                 assertEquals("$w changed under $lang", w, AutoCapitalization.forWord(w, lang))
             }

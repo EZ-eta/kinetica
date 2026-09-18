@@ -20,7 +20,7 @@ class RetypeTest {
     fun theWordInProgressIsWhatGoes() {
         // The reading the request suggests: "deletes the current word and starts again in
         // its place".
-        assertEquals(5, retypeSpan(tentativeLength = 5, lastCommitWord = null, lastCommitTrailing = "", wordUnderCursor = ""))
+        assertEquals(5, retypeSpan(tentativeLength = 5, commitSpan = -1, wordUnderCursor = ""))
     }
 
     @Test
@@ -29,7 +29,7 @@ class RetypeTest {
         // word is being written - and the one under the thumb is the one meant.
         assertEquals(
             3,
-            retypeSpan(tentativeLength = 3, lastCommitWord = "hello", lastCommitTrailing = " ", wordUnderCursor = ""),
+            retypeSpan(tentativeLength = 3, commitSpan = commitSpan("hello ", "hello", 8), wordUnderCursor = ""),
         )
     }
 
@@ -41,21 +41,39 @@ class RetypeTest {
         // further along.
         assertEquals(
             6,
-            retypeSpan(tentativeLength = 0, lastCommitWord = "hello", lastCommitTrailing = " ", wordUnderCursor = ""),
+            retypeSpan(tentativeLength = 0, commitSpan = commitSpan("hello ", "hello", 8), wordUnderCursor = ""),
         )
     }
 
     @Test
     fun aCommittedWordWithNoTrailingTextIsJustTheWord() {
-        // Punctuation eats the autospace, so the trailing text can be a mark or nothing.
+        // Punctuation eats the autospace, so the trailing text can be a mark or nothing -
+        // and since item 69 the mark is read out of the editor instead of remembered, so
+        // these supply the text the editor actually holds.
         assertEquals(
             5,
-            retypeSpan(tentativeLength = 0, lastCommitWord = "hello", lastCommitTrailing = "", wordUnderCursor = ""),
+            retypeSpan(tentativeLength = 0, commitSpan = commitSpan("hello", "hello", 8), wordUnderCursor = ""),
         )
         assertEquals(
             6,
-            retypeSpan(tentativeLength = 0, lastCommitWord = "hello", lastCommitTrailing = ".", wordUnderCursor = ""),
+            retypeSpan(tentativeLength = 0, commitSpan = commitSpan("hello.", "hello", 8), wordUnderCursor = ""),
         )
+    }
+
+    @Test
+    fun aCommittedWordTheEditorNoLongerHoldsFallsThroughToTheRun() {
+        // The third case of item 69, and it is a behaviour change: the commit case used to
+        // answer with a remembered length whatever the editor held, so a retype at `be?`
+        // deleted `e?` and left `b`. A refused span now hands the question to the run under
+        // the cursor, which re-reads the text.
+        assertEquals(
+            4,
+            retypeSpan(
+                tentativeLength = 0, commitSpan = commitSpan("car pet pimn", "hello", 8),
+                wordUnderCursor = "pimn",
+            ),
+        )
+        assertEquals("cursor", retypeSource(tentativeLength = 0, commitSpan = -1))
     }
 
     @Test
@@ -68,8 +86,7 @@ class RetypeTest {
         assertEquals(
             4,
             retypeSpan(
-                tentativeLength = 0, lastCommitWord = null,
-                lastCommitTrailing = "", wordUnderCursor = "pimn",
+                tentativeLength = 0, commitSpan = -1, wordUnderCursor = "pimn",
             ),
         )
     }
@@ -81,8 +98,7 @@ class RetypeTest {
         assertEquals(
             0,
             retypeSpan(
-                tentativeLength = 0, lastCommitWord = null,
-                lastCommitTrailing = "", wordUnderCursor = "",
+                tentativeLength = 0, commitSpan = -1, wordUnderCursor = "",
             ),
         )
     }
@@ -95,15 +111,14 @@ class RetypeTest {
         assertEquals(
             3,
             retypeSpan(
-                tentativeLength = 3, lastCommitWord = null,
-                lastCommitTrailing = "", wordUnderCursor = "carpet",
+                tentativeLength = 3, commitSpan = -1, wordUnderCursor = "carpet",
             ),
         )
         assertEquals(
             6,
             retypeSpan(
-                tentativeLength = 0, lastCommitWord = "hello",
-                lastCommitTrailing = " ", wordUnderCursor = "hello",
+                tentativeLength = 0, commitSpan = commitSpan("hello ", "hello", 8),
+                wordUnderCursor = "hello",
             ),
         )
     }
@@ -130,9 +145,9 @@ class RetypeTest {
     fun theTraceNamesWhichCaseAnswered() {
         // The reason this defect was invisible in the capture: the retype emitted nothing
         // at all, so the trace could not say that the span had been zero.
-        assertEquals("tentative", retypeSource(tentativeLength = 4, lastCommitWord = null))
-        assertEquals("commit", retypeSource(tentativeLength = 0, lastCommitWord = "hello"))
-        assertEquals("cursor", retypeSource(tentativeLength = 0, lastCommitWord = null))
+        assertEquals("tentative", retypeSource(tentativeLength = 4, commitSpan = -1))
+        assertEquals("commit", retypeSource(tentativeLength = 0, commitSpan = 6))
+        assertEquals("cursor", retypeSource(tentativeLength = 0, commitSpan = -1))
     }
 
     @Test
@@ -153,9 +168,9 @@ class RetypeTest {
         // Only the commit case names a word. The tentative case has nothing committed yet,
         // and the cursor case is a run of letters the keyboard has no record of deciding,
         // so neither may guess at what to unlearn.
-        assertEquals("commit", retypeSource(tentativeLength = 0, lastCommitWord = "biologa"))
-        assertEquals("tentative", retypeSource(tentativeLength = 7, lastCommitWord = "biologa"))
-        assertEquals("cursor", retypeSource(tentativeLength = 0, lastCommitWord = null))
+        assertEquals("commit", retypeSource(tentativeLength = 0, commitSpan = 8))
+        assertEquals("tentative", retypeSource(tentativeLength = 7, commitSpan = 8))
+        assertEquals("cursor", retypeSource(tentativeLength = 0, commitSpan = -1))
     }
 
     @Test

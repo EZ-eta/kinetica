@@ -123,7 +123,10 @@
         <item>Español</item>
         <item>Polski</item>
         <item>Čeština</item>
-        <item>German</item>
+        <item>Nederlands</item>
+        <item>Deutsch</item>
+        <item>Français</item>
+        <item>Norsk</item>
     </string-array>
     <string-array name="language_values">
         <item>en</item>
@@ -131,7 +134,10 @@
         <item>es</item>
         <item>pl</item>
         <item>cs</item>
+        <item>nl</item>
         <item>de</item>
+        <item>fr</item>
+        <item>no</item>
     </string-array>
 
     <string-array name="lang_cycle_key_entries">
@@ -168,10 +174,12 @@
         <item>QWERTY</item>
         <item>QWERTZ (Y and Z swapped)</item>
         <item>QZERTY (Z and W swapped)</item>
+        <item>AZERTY (French layout)</item>
     </string-array>
     <string-array name="key_arrangement_values">
         <item>qwerty</item>
         <item>qwertz</item>
         <item>qzerty</item>
+        <item>azerty</item>
     </string-array>
 </resources>

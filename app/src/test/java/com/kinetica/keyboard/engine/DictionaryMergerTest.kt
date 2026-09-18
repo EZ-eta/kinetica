@@ -118,23 +118,70 @@ class DictionaryMergerTest {
         assertFalse(words.contains("zażółć"))
     }
 
-@Test
-    fun germanPatternAdmitsAccentedWords() {
+    @Test
+    fun dutchPatternAdmitsAccentedWords() {
         val aosp = """
-            word=schön,f=200
-            word=über,f=180
-            word=groß,f=170
-            word=äpfel,f=150
-            word=zażółć,f=140
+             word=efficiënt,f=200
+             word=café,f=180
+             word=žluťoučký,f=150
+        """.trimIndent()
+        val result = DictionaryMerger.merge(primary, reader(aosp), "nl")
+        val words = result.rows.map { it.first }
+        assertTrue(words.contains("efficiënt"))
+        assertTrue(words.contains("café"))
+        // Czech carons are not Dutch orthography: filtered on import.
+        assertFalse(words.contains("žluťoučký"))
+    }
+
+    @Test
+    fun germanPatternAdmitsUmlautsAndEszett() {
+        val aosp = """
+             word=möglich,f=200
+             word=größe,f=180
+             word=während,f=170
+             word=señal,f=150
         """.trimIndent()
         val result = DictionaryMerger.merge(primary, reader(aosp), "de")
         val words = result.rows.map { it.first }
-        assertTrue(words.contains("schön"))
-        assertTrue(words.contains("über"))
-        assertTrue(words.contains("groß"))
-        assertTrue(words.contains("äpfel"))
-        // Polish-only letters are not German orthography: filtered on import.
+        assertTrue(words.contains("möglich"))
+        assertTrue(words.contains("größe"))
+        assertTrue(words.contains("während"))
+        // Ñ is not German orthography: filtered on import.
+        assertFalse(words.contains("señal"))
+    }
+
+    @Test
+    fun frenchPatternAdmitsAccentsAndTheOeLigature() {
+        val aosp = """
+             word=réalité,f=200
+             word=sœur,f=180
+             word=être,f=170
+             word=zażółć,f=150
+        """.trimIndent()
+        val result = DictionaryMerger.merge(primary, reader(aosp), "fr")
+        val words = result.rows.map { it.first }
+        assertTrue(words.contains("réalité"))
+        assertTrue(words.contains("sœur"))
+        assertTrue(words.contains("être"))
+        // Polish letters are not French orthography: filtered on import.
         assertFalse(words.contains("zażółć"))
+    }
+
+    @Test
+    fun norwegianPatternAdmitsItsOwnThreeLetters() {
+        val aosp = """
+             word=være,f=200
+             word=støtte,f=180
+             word=måte,f=170
+             word=größe,f=150
+        """.trimIndent()
+        val result = DictionaryMerger.merge(primary, reader(aosp), "no")
+        val words = result.rows.map { it.first }
+        assertTrue(words.contains("være"))
+        assertTrue(words.contains("støtte"))
+        assertTrue(words.contains("måte"))
+        // Eszett is not Norwegian orthography: filtered on import.
+        assertFalse(words.contains("größe"))
     }
 
     @Test
