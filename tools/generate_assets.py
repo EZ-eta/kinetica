@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate Kinetica dictionary assets.
 
-Produces, per language (--lang en|it|es|pl|cs, default en):
+Produces, per language (--lang en|it|es|pl|cs|de, default en):
   app/src/main/assets/dictionaries/<lang>_wordlist.txt   (word TAB freq)
   app/src/main/assets/dictionaries/<lang>_bigrams.txt    (w1 TAB w2 TAB freq)
 
@@ -63,9 +63,10 @@ WORD_RE = {
     # Czech orthography: acute vowels, caron consonants/vowels, and ring u.
     # The shared apostrophe shape keeps loan forms loadable.
     "cs": re.compile(r"^[a-záčďéěíňóřšťúůýž]+(?:'[a-záčďéěíňóřšťúůýž]+)*$"),
+    "de": re.compile(r"^[a-zäöüß]+(?:'[a-zäöüß]+)*$"),
 }
 TATOEBA_LANG_CODE = {
-    "en": "eng", "it": "ita", "es": "spa", "pl": "pol", "cs": "ces",
+    "en": "eng", "it": "ita", "es": "spa", "pl": "pol", "cs": "ces", "de": "deu",
 }
 
 MAX_WORD_LEN = 20
@@ -354,7 +355,7 @@ def augment_existing(lang: str, out_dir: Path, dry_run: bool, refresh: bool) -> 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--lang", choices=("en", "it", "es", "pl", "cs"), default="en"
+        "--lang", choices=("en", "it", "es", "pl", "cs", "de"), default="en"
     )
     parser.add_argument(
         "--out-dir",

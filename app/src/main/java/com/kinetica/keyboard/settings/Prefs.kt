@@ -157,7 +157,7 @@ object Prefs {
      * and are what makes a second language writable without switching layout.
      * Has no effect on a layout whose accents are its own language's
      * (KeyboardLayout.nativeAccents), so enabling it cannot cost an Italian,
-     * Spanish, Polish or Czech writer their letters.
+     * Spanish, Polish, Czech or German writer their letters.
      */
     const val PLAIN_LETTER_ALTERNATES = "pref_plain_letter_alternates"
 
@@ -353,5 +353,5 @@ object Prefs {
     const val DEFAULT_PECK_CHORD_KEY = "none"
 
     /** Canonical order of all bundled languages; cycling follows this order. */
-    val ALL_LANGUAGES = listOf("en", "it", "es", "pl", "cs")
+    val ALL_LANGUAGES = listOf("en", "it", "es", "pl", "cs", "de")
 }

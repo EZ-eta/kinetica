@@ -117,7 +117,7 @@ object LayoutMutations {
     /**
      * Replaces the period and comma keys' long-press alternates with the user's
      * own lists. An EMPTY list leaves that key untouched, so the layout JSON stays
-     * the source of truth: all five bundled layouts happen to author the same
+     * the source of truth: all six bundled layouts happen to author the same
      * punctuation (period `... << >>`, comma `_ [ ] en-dash em-dash`), but a
      * future language layout may not, and a global default would have overridden
      * it silently.
@@ -312,11 +312,11 @@ object LayoutMutations {
      * carries seven.
      *
      * A no-op for a layout that declares [KeyboardLayout.nativeAccents]. That is what keeps
-     * "ñ" from a Spanish writer, "ą" from a Polish one and "ř" from a Czech one: the layout
-     * knows whether its accents belong to its language, and this function does not.
+     * "ñ" from a Spanish writer, "ą" from a Polish one, "ř" from a Czech one and "ä" from a
+     * German one: the layoutknows whether its accents belong to its language, and this function does not.
      *
      * Safe to run before [withNumberPriority], which then finds nothing to reorder. Across
-     * all five bundled layouts every accent-carrying key keeps at least one non-letter
+     * all six bundled layouts every accent-carrying key keeps at least one non-letter
      * alternate, so no key is left with an empty popup or without the [Key.hintChar] its
      * corner hint derives from.
      */

@@ -21,12 +21,13 @@ class AutoCapitalizationTest {
         assertEquals("i", AutoCapitalization.forWord("i", "es"))
         assertEquals("i", AutoCapitalization.forWord("i", "pl"))
         assertEquals("i", AutoCapitalization.forWord("i", "cs"))
+        assertEquals("i", AutoCapitalization.forWord("i", "de"))
         assertEquals("i", AutoCapitalization.forWord("i", ""))
     }
 
     @Test
     fun everyOtherWordIsUntouched() {
-        for (lang in listOf("en", "it", "es", "pl", "cs")) {
+        for (lang in listOf("en", "it", "es", "pl", "cs", "de")) {
             for (w in listOf("in", "if", "is", "it", "ii", "a", "o", "island", "iowa", "")) {
                 assertEquals("$w changed under $lang", w, AutoCapitalization.forWord(w, lang))
             }
