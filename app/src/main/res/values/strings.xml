@@ -34,7 +34,7 @@
     <string name="onboarding_step_done">%1$s  (done)</string>
 
     <string name="pref_tips_title">Gestures you may not have found</string>
-    <string name="pref_tips_summary">Slide along the spacebar to move the cursor. Swipe left from the right-hand end of the suggestion bar for a second page of words. Long-press shift to change a word\'s case. Long-press a suggestion and slide to change how strongly it is preferred.</string>
+    <string name="pref_tips_summary">Slide along the spacebar to move the cursor. Swipe the suggestion bar sideways for more words. Long-press shift to change a word\'s case. Long-press a suggestion and slide to change how strongly it is preferred. Assign the Expand action to an edge swipe to turn a short trigger into a longer piece of text.</string>
     <string name="pref_height_title">Keyboard height (% of screen)</string>
     <string name="pref_suggestion_bar_title">Suggestion bar height (dp)</string>
     <string name="pref_suggestion_bar_summary">The word text and its badges scale with the bar, so a thinner bar means smaller text too</string>
@@ -79,9 +79,13 @@
     <string name="pref_peck_mode_summary">Turns off swipe typing, suggestions and autocorrect: every tap inserts its letter exactly. For slang and words the dictionary keeps correcting. The spacebar shows TAP while active</string>
     <string name="pref_peck_chord_key_title">Peck-type chord key</string>
     <string name="pref_peck_chord_key_summary">Hold ?123 and tap this letter to toggle peck-type mode from the keyboard</string>
+    <string name="pref_sync_system_language_title">Follow the system keyboard language</string>
+    <string name="pref_sync_system_language_summary">Android decides the language each time the keyboard opens, from the subtype picked in the system keyboard switcher. Turn this off to keep the language you chose here; the switcher still follows when you change it</string>
     <string name="pref_auto_detect_title">Mix enabled languages in suggestions (experimental)</string>
-    <string name="pref_auto_detect_summary">Swiped words decode against the active language and the first enabled non-active language, sharing one suggestion list. That other language is only offered first when it fits the gesture better.</string>
+    <string name="pref_auto_detect_summary">Words decode against the active language and the first other enabled language, in one suggestion list, and are learned into the language they came from. The other language comes first only when it fits better, and for a tapped word only when it is also more common.</string>
     <string name="pref_long_press_title">Long-press duration (ms)</string>
+    <string name="pref_long_press_summary">Below about 150 ms a quick tap can open the long-press menu instead of typing the letter</string>
+    <string name="slider_value_ms">%1$d ms</string>
     <string name="pref_autocorrect_title">Autocorrect</string>
     <string name="pref_reinforce_title">Suggestion reinforcement boost</string>
     <string name="pref_reinforce_summary">Weight added when long-pressing a suggestion</string>
@@ -91,7 +95,7 @@
     <string name="pref_group_look_title">Look and feel</string>
     <string name="pref_group_look_summary">Theme, colours, trail, vibration</string>
     <string name="pref_group_size_title">Size and keys</string>
-    <string name="pref_group_size_summary">Heights, letter arrangement, what each key does on a long press</string>
+    <string name="pref_group_size_summary">Heights, suggestion bar shortcuts, letter arrangement, what each key does on a long press</string>
     <string name="pref_group_spacing_title">Spacing</string>
     <string name="pref_group_spacing_summary">When an automatic space arrives and when it is taken back</string>
     <string name="pref_group_typing_title">Typing and predictions</string>
@@ -118,6 +122,50 @@
     <string name="chord_kind_cut">Cuts the selection</string>
     <string name="chord_kind_select_all">Selects all</string>
     <string name="chord_kind_retype">Retypes the word</string>
+    <string name="chord_kind_expandify">Expands the word into its shortcut</string>
+    <string name="action_undo">Undo</string>
+    <string name="action_redo">Redo</string>
+    <string name="action_settings">Opens Kinetica settings</string>
+    <string name="action_next_language">Switches to the next language</string>
+    <string name="action_toggle_autospace">Turns the automatic space on or off</string>
+    <string name="action_one_handed">One-handed mode on or off</string>
+    <string name="action_date">Writes today\'s date</string>
+    <string name="action_time">Writes the time</string>
+    <string name="action_enter">Presses enter</string>
+    <string name="action_copy_line">Copies the whole line</string>
+    <string name="notice_undo">Undo</string>
+    <string name="notice_redo">Redo</string>
+    <string name="notice_paste">Paste</string>
+    <string name="notice_copy">Copy</string>
+    <string name="notice_cut">Cut</string>
+    <string name="notice_select_all">Select all</string>
+    <string name="notice_retype">Retype</string>
+    <string name="notice_expand">Expand</string>
+    <string name="notice_autospace_on">Autospace on</string>
+    <string name="notice_autospace_off">Autospace off</string>
+    <string name="notice_date">Date</string>
+    <string name="notice_time">Time</string>
+    <string name="notice_enter">Enter</string>
+    <string name="notice_copy_line">Copy line</string>
+    <string name="clip_label_line">Line</string>
+    <string name="pref_bar_actions_title">Shortcuts in the suggestion bar</string>
+    <string name="pref_bar_actions_summary">Shown when there is nothing to suggest. Each is also assignable to a chord or an edge swipe</string>
+    <string name="pref_menu_actions_title">Shortcuts in the ?123 long-press menu</string>
+    <string name="pref_menu_actions_summary">Hold ?123 and slide up onto one. Chosen separately from the bar, so the bar can drop the gear and the menu keep it</string>
+
+    <string name="expansion_settings_title">Text expansions</string>
+    <string name="pref_expansions_summary">Replace a short trigger you have typed with a longer target: a link, an emoji, a block of lines. Fired by the Expand action, which you assign to an edge swipe or a chord</string>
+    <string name="expansion_intro">An expansion fires on the word already at the cursor. Assign the Expand action to an edge swipe or to a ?123 chord to fire it. A target may itself be a trigger, so expansions can chain.</string>
+    <string name="expansion_filter_hint">Filter by trigger or target</string>
+    <string name="expansion_empty">No expansions yet.</string>
+    <string name="expansion_no_match">No expansion matches that.</string>
+    <string name="expansion_add">Add an expansion</string>
+    <string name="expansion_row">%1$s  →  %2$s</string>
+    <string name="expansion_trigger_label">Trigger</string>
+    <string name="expansion_trigger_hint">What you type</string>
+    <string name="expansion_target_label">Target</string>
+    <string name="expansion_target_hint">What replaces it</string>
+    <string name="expansion_bad_trigger">A trigger cannot be blank or contain a space, and is at most 32 characters.</string>
     <string name="chord_expansion_hint">Expansion text</string>
     <string name="chord_empty_hint">No chords assigned. The feature stays off until you add one.</string>
     <string name="chord_list_hint">Hold ?123, then tap the letter.</string>
@@ -127,8 +175,8 @@
 
     <string name="pref_plain_letter_alternates_title">Hide accented letters on long-press</string>
     <string name="pref_plain_letter_alternates_summary">Letter keys offer only digits and symbols. Ignored for a language whose own alphabet uses accents, such as Italian, Spanish, Polish, Czech, German, French or Norwegian</string>
-    <string name="pref_number_priority_title">Prioritize numbers over accents on long-press</string>
-    <string name="pref_number_priority_summary">Long-press popups and key hints show the digit or symbol first instead of the accent</string>
+    <string name="pref_number_priority_title">Numbers before accents on the letter keys</string>
+    <string name="pref_number_priority_summary">The digit or symbol comes first in the long-press popup and becomes the corner hint, so swiping up on the top row types 1 to 0. Turn off to put the accents first</string>
 
     <string name="dict_settings_title">Dictionary</string>
     <string name="pref_dictionary_summary">Base and personal dictionaries per language: info, import, export, reset</string>
@@ -246,7 +294,7 @@
     <string name="edge_swipe_text_hint">Text to insert</string>
 
     <string name="pref_emoji_key_title">Emoji on comma long-press</string>
-    <string name="pref_emoji_key_summary">Makes the emoji picker the first long-press option on the comma key; X-key swipe-down always opens the picker</string>
+    <string name="pref_emoji_key_summary">Makes the emoji picker the first long-press option on the comma key</string>
     <string name="pref_comma_mode_title">Comma key</string>
     <string name="pref_comma_mode_summary">Keep the comma, remove it (spacebar widens), or repurpose it as a custom character, text, or editor action; the comma stays in the key\'s long-press popup when repurposed</string>
     <string name="pref_period_alternates_title">Period long-press symbols</string>

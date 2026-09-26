@@ -3,6 +3,7 @@ package com.kinetica.keyboard.settings
 import android.content.SharedPreferences
 import com.kinetica.keyboard.engine.KineticaConstants
 import com.kinetica.keyboard.ime.singleLetterDelayMs
+import com.kinetica.keyboard.keys.ActionRow
 import com.kinetica.keyboard.keys.EdgeSwipeBindings
 import com.kinetica.keyboard.keys.SpacebarCursorController
 import com.kinetica.keyboard.layout.LayoutMode
@@ -95,12 +96,20 @@ data class KeyboardConfig(
     val trailColorMode: String,
     val edgeSwipes: EdgeSwipeBindings,
     val dictionaryGeneration: Int,
+    /** Bumped by the expansion editor; a change reloads the trigger table. */
+    val expansionGeneration: Int,
+    /** Shortcut actions offered in the suggestion bar, by [EditorAction] name. */
+    val barActions: Set<String>,
+    /** Shortcut actions offered in the ?123 hold menu, by [EditorAction] name. */
+    val menuActions: Set<String>,
     /** Enabled languages in canonical cycle order; always contains [language]. */
     val enabledLanguages: List<String>,
     /** Letter code for the ?123-chord language cycle, or -1 when disabled. */
     val langCycleKeyCode: Int,
-    /** Experimental: per-word language auto-detection for swipe words. */
+    /** "Mix enabled languages": swiped and tapped words also decode against a second one. */
     val autoDetectLanguage: Boolean,
+    /** Android's selected subtype decides the language at input start (R93). */
+    val syncSystemLanguage: Boolean,
     /** Prefer British spellings in English; ignored for every other language. */
     val britishSpelling: Boolean,
     /** Peck-type mode: swipes/predictions off, taps commit literally. */
@@ -114,7 +123,7 @@ data class KeyboardConfig(
             // the tap delay, so an untouched keyboard is unchanged by the split.
             val swipeDelay = prefs.getInt(
                 Prefs.AUTOSPACE_DELAY_MS, Prefs.DEFAULT_AUTOSPACE_DELAY_MS,
-            ).coerceIn(100, 800).toLong()
+            ).coerceIn(Prefs.AUTOSPACE_DELAY_MIN_MS, Prefs.AUTOSPACE_DELAY_MAX_MS).toLong()
             return KeyboardConfig(
             heightPct = prefs.getInt(Prefs.KEYBOARD_HEIGHT_PCT, Prefs.DEFAULT_HEIGHT_PCT)
                 .coerceIn(Prefs.MIN_HEIGHT_PCT, Prefs.MAX_HEIGHT_PCT),
@@ -130,7 +139,7 @@ data class KeyboardConfig(
                 legacyHandleOn = prefs.getBoolean(Prefs.DRAG_HANDLE, Prefs.DEFAULT_DRAG_HANDLE),
             ),
             layoutMode = LayoutMode.fromPref(
-                prefs.getString(Prefs.LAYOUT_MODE, "full"),
+                prefs.getString(Prefs.LAYOUT_MODE, Prefs.DEFAULT_LAYOUT_MODE),
             ),
             keyArrangement = prefs.getString(
                 Prefs.KEY_ARRANGEMENT, Prefs.DEFAULT_KEY_ARRANGEMENT,
@@ -145,10 +154,10 @@ data class KeyboardConfig(
             // behaving exactly as it did.
             autospaceTapDelayMs = prefs.getInt(
                 Prefs.AUTOSPACE_TAP_DELAY_MS, swipeDelay.toInt(),
-            ).coerceIn(100, 800).toLong(),
+            ).coerceIn(Prefs.AUTOSPACE_DELAY_MIN_MS, Prefs.AUTOSPACE_DELAY_MAX_MS).toLong(),
             autospaceSingleLetterDelayMs = singleLetterDelayMs(
                 prefs.getInt(Prefs.AUTOSPACE_TAP_DELAY_MS, swipeDelay.toInt())
-                    .coerceIn(100, 800).toLong(),
+                    .coerceIn(Prefs.AUTOSPACE_DELAY_MIN_MS, Prefs.AUTOSPACE_DELAY_MAX_MS).toLong(),
                 Prefs.SINGLE_LETTER_MIN_DELAY_MS.toLong(),
             ),
             // Ceiling is above 2 * 800 so the derived default is always reachable.
@@ -158,7 +167,7 @@ data class KeyboardConfig(
                     Prefs.AUTOSPACE_TAP_DELAY_MS,
                     prefs.getInt(Prefs.AUTOSPACE_DELAY_MS, Prefs.DEFAULT_AUTOSPACE_DELAY_MS),
                 ),
-            ).coerceIn(100, 2000).toLong(),
+            ).coerceIn(Prefs.AUTOSPACE_RETRACT_MIN_MS, Prefs.AUTOSPACE_RETRACT_MAX_MS).toLong(),
             wordEndsOnSpace = prefs.getBoolean(
                 Prefs.WORD_ENDS_ON_SPACE,
                 Prefs.DEFAULT_WORD_ENDS_ON_SPACE,
@@ -174,7 +183,7 @@ data class KeyboardConfig(
             ).coerceIn(1, 3),
             trailBaseHue = trailHue(prefs),
             longPressMs = prefs.getInt(Prefs.LONG_PRESS_MS, Prefs.DEFAULT_LONG_PRESS_MS)
-                .coerceIn(300, 700).toLong(),
+                .coerceIn(Prefs.LONG_PRESS_MIN_MS, Prefs.LONG_PRESS_MAX_MS).toLong(),
             chordArmMs = prefs.getInt(Prefs.CHORD_ARM_MS, Prefs.DEFAULT_CHORD_ARM_MS)
                 .coerceIn(0, 300).toLong(),
             retypeAvoidsRejected = prefs.getBoolean(
@@ -263,6 +272,9 @@ data class KeyboardConfig(
                 ?: Prefs.DEFAULT_TRAIL_COLOR,
             edgeSwipes = EdgeSwipeBindings.parse(prefs.getString(Prefs.EDGE_SWIPES, null)),
             dictionaryGeneration = prefs.getInt(Prefs.DICT_GENERATION, 0),
+            expansionGeneration = prefs.getInt(Prefs.EXPANSION_GENERATION, 0),
+            barActions = prefs.getStringSet(Prefs.BAR_ACTIONS, null) ?: ActionRow.DEFAULT,
+            menuActions = prefs.getStringSet(Prefs.MENU_ACTIONS, null) ?: ActionRow.DEFAULT,
             enabledLanguages = enabledLanguages(prefs),
             langCycleKeyCode = langCycleKeyCode(prefs),
             britishSpelling = prefs.getBoolean(
@@ -270,6 +282,9 @@ data class KeyboardConfig(
             ),
             autoDetectLanguage = prefs.getBoolean(
                 Prefs.AUTO_DETECT_LANGUAGE, Prefs.DEFAULT_AUTO_DETECT_LANGUAGE,
+            ),
+            syncSystemLanguage = prefs.getBoolean(
+                Prefs.SYNC_SYSTEM_LANGUAGE, Prefs.DEFAULT_SYNC_SYSTEM_LANGUAGE,
             ),
             peckMode = prefs.getBoolean(Prefs.PECK_MODE, Prefs.DEFAULT_PECK_MODE),
             peckChordKeyCode = chordLetterCode(

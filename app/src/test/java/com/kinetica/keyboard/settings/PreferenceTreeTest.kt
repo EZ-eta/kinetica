@@ -116,8 +116,19 @@ class PreferenceTreeTest {
     }
 
     @Test
+    fun theShortcutChoosersShareAScreenWithTheBarHeight() {
+        // It shipped under Typing and predictions, whose summary names autocorrect,
+        // languages and learning, and the developer could not find it there. The bar's
+        // own height row is where anyone looks for a setting about the bar, and the ?123
+        // chooser sits beside the bar's so the two sets read as a pair.
+        val where = screenOf(prefsXml())
+        assertEquals(where["pref_suggestion_bar_dp"], where["pref_bar_actions"])
+        assertEquals(where["pref_bar_actions"], where["pref_menu_actions"])
+    }
+
+    @Test
     fun theTopLevelStaysShortEnoughToScan() {
-        // The whole point of the rework. 52 rows was the complaint.
+        // What the rework was for. 52 rows was the complaint.
         val top = screenOf(prefsXml()).filterValues { it == null }
         assertTrue("top level is ${top.size} rows: ${top.keys}", top.size <= 12)
     }

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The values a SteppedSliderPreference moves over: a string-array of whole
+         milliseconds, strictly increasing. -->
+    <declare-styleable name="SteppedSliderPreference">
+        <attr name="sliderSteps" format="reference" />
+    </declare-styleable>
+</resources>

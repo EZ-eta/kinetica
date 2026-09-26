@@ -58,7 +58,7 @@ class SettingsIndexTest {
 
     @Test
     fun aSynonymReachesARowThatSaysTheWordNowhere() {
-        // The whole point of the synonym half of R82. Nothing in "Keyboard height" or its
+        // What the synonym half of R82 is for. Nothing in "Keyboard height" or its
         // summary contains "size", and "size" is what people type.
         val hits = SettingsIndex.match(tree, "size")
         assertEquals(listOf("pref_keyboard_height_pct"), hits.map { it.key })

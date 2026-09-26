@@ -154,7 +154,7 @@ object KineticaConstants {
     // unspent, and "parlare" - freq 166324, admissible at d=0.000 - was never
     // reached at all. With the two budgets separated the
     // slice is measured in candidates, so it now binds only on patterns that
-    // genuinely produce 800 of them.
+    // produce 800 of them.
     const val MAX_CANDIDATES = 800
     // Companion ceiling on the work the search may do to find those candidates:
     // one unit per emit() call, charged whether or not the word survives the
@@ -257,7 +257,7 @@ object KineticaConstants {
     // on the cap in turn, so the budget lands wherever runs first. Seven formulations were
     // swept (round robin, reservations of 1/2/3, per-generator ceilings at three caps) and
     // every one buys two or three multi-swipe buffers and loses four to seven swipes-only
-    // ones: the cross-swipe generator genuinely needs most of the budget on a swipes-only
+    // ones: the cross-swipe generator needs most of the budget on a swipes-only
     // buffer. The readings a starved generator would build are refused afterwards by the
     // segment gates, which is where the work is. KNOWN_ISSUES item 41 has the table.
     const val MAX_ALT_SEQUENCES = 14
@@ -744,7 +744,7 @@ object KineticaConstants {
     // "mo"(d=0.45, pb=1.29) loses to "no"(d=0.68, pb=1.57). That row is the
     // intent-unverifiable class this file declines to write goldens from (a
     // stray RIGHT-swipe fragment whose contacts never touched "n"), and it is
-    // genuinely decided, not noise. It is the price of restoring the boost at
+    // decided, not noise. It is the price of restoring the boost at
     // d=0.68, which is also what wins "sempre" at 0.60 - the two sit 0.08 kw
     // apart with boosts within 2% of each other, so no width separates them.
     // The same interleaving of populations that ruled out a dwell-duration
@@ -870,7 +870,9 @@ object KineticaConstants {
     //    FrequencyWords top-50k, OpenSubtitles), so fw at matched rank
     //    percentiles agrees to within 1.04-1.07x across en/it/es/pl/cs
     //    (measured: p50 0.5265/0.5265/0.5382/0.5471/0.5441,
-    //    p99 0.4706/0.4706/0.4882/0.5029/0.5000). Against relative corpus frequency
+    //    p99 0.4706/0.4706/0.4882/0.5029/0.5000). Nine assets ship now and the
+    //    spread across all nine is 1.20x at p50, Norwegian the outlier at 0.456;
+    //    that one is not yet priced. Against relative corpus frequency
     //    the spread remains small. geometricTerm moves 1.335x between d=0.25
     //    and d=0.35, so the residual asset bias is worth under 0.025 kw of
     //    distance - an order of

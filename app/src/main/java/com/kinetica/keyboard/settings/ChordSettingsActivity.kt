@@ -302,13 +302,10 @@ class ChordSettingsActivity : AppCompatActivity() {
         // compile error instead of an invisible gap.
         val kinds = listOf<EditorAction?>(null) + EditorAction.entries
         val kindLabels = kinds.map { action ->
-            when (action) {
-                null -> getString(R.string.chord_kind_text)
-                EditorAction.PASTE -> getString(R.string.chord_kind_paste)
-                EditorAction.COPY -> getString(R.string.chord_kind_copy)
-                EditorAction.CUT -> getString(R.string.chord_kind_cut)
-                EditorAction.SELECT_ALL -> getString(R.string.chord_kind_select_all)
-                EditorAction.RETYPE -> getString(R.string.chord_kind_retype)
+            if (action == null) {
+                getString(R.string.chord_kind_text)
+            } else {
+                getString(ActionLabels.labelRes(action))
             }
         }
         val kindSpinner = Spinner(this).apply {
@@ -321,7 +318,7 @@ class ChordSettingsActivity : AppCompatActivity() {
         }
         val expansion = EditText(this).apply {
             hint = getString(R.string.chord_expansion_hint)
-            inputType = InputType.TYPE_CLASS_TEXT
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
             // A command chord has no text, so an existing one leaves this blank
             // rather than showing its reserved output back to the user.
             setText(if (existingAction == null) existing?.expansion.orEmpty() else "")

@@ -120,6 +120,14 @@ class DictionarySettingsActivity : AppCompatActivity() {
         p.edit().putInt(Prefs.DICT_GENERATION, p.getInt(Prefs.DICT_GENERATION, 0) + 1).apply()
     }
 
+    /** The same, for the expansion table, which reloads on its own counter. */
+    private fun bumpExpansionGeneration() {
+        val p = prefs()
+        p.edit()
+            .putInt(Prefs.EXPANSION_GENERATION, p.getInt(Prefs.EXPANSION_GENERATION, 0) + 1)
+            .apply()
+    }
+
     private data class LangState(
         val lang: String,
         val label: String,
@@ -456,7 +464,7 @@ class DictionarySettingsActivity : AppCompatActivity() {
         for ((key, value) in p.all) {
             // A change counter, not a setting: copying it would leave the new device's
             // generation ahead of or behind its own data.
-            if (key == Prefs.DICT_GENERATION) continue
+            if (key == Prefs.DICT_GENERATION || key == Prefs.EXPANSION_GENERATION) continue
             val row = when (value) {
                 is Boolean -> Backup.Pref(key, Backup.PrefType.BOOL, value.toString())
                 is Int -> Backup.Pref(key, Backup.PrefType.INT, value.toString())
@@ -489,7 +497,10 @@ class DictionarySettingsActivity : AppCompatActivity() {
             if (DictionaryStore.readInfo(this, lang) != null) base.add(lang)
         }
         val chords = db.chordShortcuts().all().map { Backup.Chord(it.chord, it.expansion) }
-        return Backup.Data(prefRows, words, blocked, chords, phrases, base)
+        val expansions = db.expansions().all().map {
+            Backup.Expand(it.trigger, it.position, it.target)
+        }
+        return Backup.Data(prefRows, words, blocked, chords, expansions, phrases, base)
     }
 
     private fun importBackup(uri: Uri) {
@@ -521,7 +532,7 @@ class DictionarySettingsActivity : AppCompatActivity() {
      * [applyBackup] clears every language's learned words and overwrites every preference,
      * and until this existed a mistaken replace-import was unrecoverable. Failure is
      * swallowed on purpose: a snapshot that cannot be written must not stop the import the
-     * user actually asked for, and the restore button simply will not appear.
+     * user actually asked for, and the restore button will not appear.
      */
     private fun writeSnapshot() {
         try {
@@ -622,6 +633,11 @@ class DictionarySettingsActivity : AppCompatActivity() {
         }
         for (b in ok.data.blocked) db.blockedWords().block(b.word, b.lang, now)
         for (c in ok.data.chords) db.chordShortcuts().assign(c.chord, c.expansion)
+        // Grouped so one trigger's targets are written as one list, the way the DAO owns
+        // them: a per-row assign would delete the trigger's earlier positions each time.
+        for ((trigger, rows) in ok.data.expansions.groupBy { it.trigger }) {
+            db.expansions().assign(trigger, rows.sortedBy { it.position }.map { it.target })
+        }
         for (p in ok.data.phrases) {
             db.userBigrams().upsertAdd(p.prev, p.next, p.lang, p.count.coerceAtMost(MAX_IMPORT_COUNT), now)
         }
@@ -642,6 +658,9 @@ class DictionarySettingsActivity : AppCompatActivity() {
             }
             e.apply()
             bumpGeneration()
+            // Its own counter, and after the tables are written for the same reason
+            // bumpGeneration is: a restore that signalled first would reload an empty one.
+            bumpExpansionGeneration()
             refresh()
             val msg = if (missing.isEmpty()) {
                 getString(R.string.backup_import_done, ok.data.words.size, ok.data.prefs.size)

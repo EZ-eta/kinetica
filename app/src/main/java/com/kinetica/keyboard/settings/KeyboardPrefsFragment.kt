@@ -217,8 +217,7 @@ class KeyboardPrefsFragment : PreferenceFragmentCompat() {
         val mode = findPreference<ListPreference>(Prefs.THEME_MODE)
         val brightness = findPreference<ListPreference>(Prefs.THEME_BRIGHTNESS)
 
-        // Repaint while the thumb is still moving, which is the whole point of a
-        // preview; without this the swatch only catches up on release.
+        // Repaint while the thumb is still moving, as a preview should; without this the swatch only catches up on release.
         hue?.updatesContinuously = true
 
         fun refresh(newHue: Int? = null, newMode: String? = null, newBrightness: String? = null) {

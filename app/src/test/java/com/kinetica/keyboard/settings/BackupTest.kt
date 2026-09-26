@@ -26,12 +26,27 @@ class BackupTest {
         words = listOf(Backup.Word("en", "keyboard", 12), Backup.Word("it", "biologia", 3)),
         blocked = listOf(Backup.Blocked("en", "teh")),
         chords = listOf(Backup.Chord("v", "action:paste"), Backup.Chord("s", "supercalifragilistic")),
+        expansions = listOf(
+            Backup.Expand("vv", 0, "✅"),
+            Backup.Expand("Today", 0, "Today:\n• \n• "),
+        ),
         phrases = listOf(Backup.Phrase("en", "i", "am", 4)),
         importedBase = listOf("en"),
     )
 
+    /**
+     * Through a file, not through the Sequence.
+     *
+     * The activity writes each line followed by "\n" and reads it back with
+     * lineSequence(), and that split is the whole reason a newline in a value is fatal.
+     * Handing decode() the encoder's own Sequence skips it, so a raw newline would
+     * round-trip in the test and be destroyed on a real device.
+     */
+    private fun viaFile(d: Backup.Data): Sequence<String> =
+        Backup.encode(d).joinToString("\n").lineSequence()
+
     private fun roundTrip(d: Backup.Data): Backup.Data {
-        val res = Backup.decode(Backup.encode(d))
+        val res = Backup.decode(viaFile(d))
         assertTrue("expected a readable backup, got $res", res is Backup.Result.Ok)
         return (res as Backup.Result.Ok).data
     }
@@ -44,6 +59,7 @@ class BackupTest {
         assertEquals(d.words, back.words)
         assertEquals(d.blocked, back.blocked)
         assertEquals(d.chords, back.chords)
+        assertEquals(d.expansions, back.expansions)
         assertEquals(d.phrases, back.phrases)
         assertEquals(d.importedBase, back.importedBase)
     }
@@ -190,4 +206,94 @@ class BackupTest {
             Backup.filename(java.time.LocalDateTime.of(2026, 9, 18, 7, 46, 59)),
         )
     }
+
+    // ---- expansions, the one record whose value may hold the separators ---------------
+    //
+    // A target may be a bullet block. The line format cannot carry a newline, so this one
+    // record escapes rather than refusing - and VERSION stays at 1 deliberately, because
+    // decode() refuses a newer file outright and a bump would make every backup taken
+    // from here unreadable, in full, by every build already installed.
+
+    @Test
+    fun aMultiLineTargetSurvivesTheRoundTrip() {
+        val d = Backup.Data(
+            expansions = listOf(Backup.Expand("Today", 0, "Today:\n• \n• \n")),
+        )
+        assertEquals(d.expansions, roundTrip(d).expansions)
+    }
+
+    @Test
+    fun anActionTargetSurvivesTheRoundTrip() {
+        // Expansions may fire actions now (#19), stored in the same `action:` form chords use.
+        val d = Backup.Data(expansions = listOf(Backup.Expand("v", 0, "action:paste")))
+        assertEquals("action:paste", roundTrip(d).expansions.single().target)
+    }
+
+    @Test
+    fun everySeparatorAndTheEscapeItselfSurvive() {
+        val nasty = "tab\there\nline\r\nback\\slash\\n not a newline"
+        val d = Backup.Data(expansions = listOf(Backup.Expand("t", 0, nasty)))
+        assertEquals(nasty, roundTrip(d).expansions.single().target)
+    }
+
+    @Test
+    fun aMultiLineTargetIsNotCountedAsDropped() {
+        // encodable() still refuses newlines for every other record, so the export's
+        // "N dropped" line would have lied about this one.
+        val d = Backup.Data(expansions = listOf(Backup.Expand("t", 0, "a\nb")))
+        assertEquals(0, Backup.unencodable(d))
+    }
+
+    @Test
+    fun severalTargetsForOneTriggerKeepTheirOrder() {
+        val d = Backup.Data(
+            expansions = listOf(
+                Backup.Expand("heart", 0, "❤"),
+                Backup.Expand("heart", 1, "💚"),
+                Backup.Expand("heart", 2, "💙"),
+            ),
+        )
+        assertEquals(d.expansions, roundTrip(d).expansions)
+    }
+
+    @Test
+    fun theVersionIsUnchangedSoOlderBuildsStillReadWhatWeWrite() {
+        // The whole reason for escaping instead of bumping. An old build skips the
+        // record type it does not know and restores everything else.
+        assertEquals(1, Backup.VERSION)
+        val header = Backup.encode(sample()).first()
+        assertEquals("${Backup.FORMAT}\t1", header)
+    }
+
+    @Test
+    fun aFileFromBeforeExpansionsStillReads() {
+        val res = Backup.decode(
+            sequenceOf(
+                "${Backup.FORMAT}\t1",
+                "chord\tv\taction:paste",
+                "word\ten\thello\t3",
+            ),
+        )
+        assertTrue(res is Backup.Result.Ok)
+        val ok = res as Backup.Result.Ok
+        assertEquals(0, ok.skipped)
+        assertEquals(emptyList<Backup.Expand>(), ok.data.expansions)
+    }
+
+    @Test
+    fun aMalformedExpansionIsSkippedNotFatal() {
+        val res = Backup.decode(
+            sequenceOf(
+                "${Backup.FORMAT}\t1",
+                "expand\tvv",
+                "expand\tvv\tnotanumber\tx",
+                "expand\t\t0\tx",
+                "expand\tok\t0\tgood",
+            ),
+        )
+        val ok = res as Backup.Result.Ok
+        assertEquals(3, ok.skipped)
+        assertEquals(listOf(Backup.Expand("ok", 0, "good")), ok.data.expansions)
+    }
+
 }

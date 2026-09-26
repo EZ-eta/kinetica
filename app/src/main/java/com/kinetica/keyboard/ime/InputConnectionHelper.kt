@@ -61,6 +61,29 @@ class InputConnectionHelper(private val connection: () -> InputConnection?) {
         return true
     }
 
+    /**
+     * Batch-edit replacement of [beforeCount] chars before the cursor and [afterCount] after
+     * it with [head] and [tail], leaving the cursor between the two.
+     *
+     * The cursor is put back by committing [tail] with newCursorPosition 0, which the
+     * framework defines as the start of the inserted text. No absolute offset is needed, so
+     * no cached selection can be stale.
+     */
+    fun replaceAroundCursor(
+        beforeCount: Int,
+        afterCount: Int,
+        head: CharSequence,
+        tail: CharSequence,
+    ): Boolean {
+        val ic = connection() ?: return false
+        ic.beginBatchEdit()
+        ic.deleteSurroundingText(beforeCount, afterCount)
+        ic.commitText(head, 1)
+        ic.commitText(tail, 0)
+        ic.endBatchEdit()
+        return true
+    }
+
     fun performEditorAction(actionId: Int): Boolean =
         connection()?.performEditorAction(actionId) ?: false
 

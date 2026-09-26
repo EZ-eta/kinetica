@@ -55,6 +55,19 @@ class GestureStream(
     /** True once displacement rules out a tap (the UI uses this to start the trail). */
     val isSwipeCommitted: Boolean get() = maxDispSqKw >= tapDispSqKw
 
+    /**
+     * Key contacts so far, including the one under the finger right now.
+     *
+     * [contacts] is appended only when the pointer LEAVES a key, so the current one is not
+     * in it yet; for an engine-owned stream `currentKey` is never -1, since it is seeded
+     * from the down key and a transition never assigns -1. Hence the plus one.
+     *
+     * Counts intervals rather than distinct keys: a path that returns to an earlier key
+     * counts it twice. That is the right way round for the one caller, which is asking
+     * whether this pointer has been travelling rather than which keys it saw.
+     */
+    val contactCount: Int get() = contacts.size + if (currentKey != -1) 1 else 0
+
     fun addPoint(xPx: Float, yPx: Float, t: Long) {
         val x = xPx / geometry.keyWidthPx
         val y = yPx / geometry.keyWidthPx

@@ -106,6 +106,22 @@
             android:max="72"
             app:min="24"
             app:showSeekBarValue="true" />
+        <MultiSelectListPreference
+            android:key="pref_bar_actions"
+            android:title="@string/pref_bar_actions_title"
+            app:singleLineTitle="false"
+            android:summary="@string/pref_bar_actions_summary"
+            android:entries="@array/bar_action_entries"
+            android:entryValues="@array/bar_action_values"
+            android:defaultValue="@array/bar_action_defaults" />
+        <MultiSelectListPreference
+            android:key="pref_menu_actions"
+            android:title="@string/pref_menu_actions_title"
+            app:singleLineTitle="false"
+            android:summary="@string/pref_menu_actions_summary"
+            android:entries="@array/bar_action_entries"
+            android:entryValues="@array/bar_action_values"
+            android:defaultValue="@array/bar_action_defaults" />
         <SeekBarPreference
             android:key="pref_side_pad_dp"
             android:title="@string/pref_side_pad_title"
@@ -160,7 +176,7 @@
             android:title="@string/pref_number_priority_title"
             app:singleLineTitle="false"
             android:summary="@string/pref_number_priority_summary"
-            android:defaultValue="false" />
+            android:defaultValue="true" />
         <SwitchPreferenceCompat
             android:key="pref_emoji_key"
             android:title="@string/pref_emoji_key_title"
@@ -215,14 +231,13 @@
             app:singleLineTitle="false"
             android:summary="@string/pref_enter_alternates_summary"
             android:defaultValue="@string/pref_enter_alternates_default" />
-        <SeekBarPreference
+        <com.kinetica.keyboard.settings.SteppedSliderPreference
             android:key="pref_long_press_ms"
             android:title="@string/pref_long_press_title"
+            android:summary="@string/pref_long_press_summary"
             app:singleLineTitle="false"
             android:defaultValue="500"
-            android:max="700"
-            app:min="300"
-            app:showSeekBarValue="true" />
+            app:sliderSteps="@array/timing_steps_long_press" />
     </PreferenceScreen>
 
     <PreferenceScreen
@@ -235,35 +250,29 @@
             android:title="@string/pref_autospace_title"
             app:singleLineTitle="false"
             android:defaultValue="true" />
-        <SeekBarPreference
+        <com.kinetica.keyboard.settings.SteppedSliderPreference
             android:key="pref_autospace_delay_ms"
             android:title="@string/pref_autospace_delay_title"
             android:summary="@string/pref_autospace_delay_summary"
             app:singleLineTitle="false"
             android:defaultValue="300"
-            android:max="800"
-            app:min="100"
-            app:showSeekBarValue="true"
+            app:sliderSteps="@array/timing_steps_autospace"
             android:dependency="pref_autospace" />
-        <SeekBarPreference
+        <com.kinetica.keyboard.settings.SteppedSliderPreference
             android:key="pref_autospace_tap_delay_ms"
             android:title="@string/pref_autospace_tap_delay_title"
             android:summary="@string/pref_autospace_tap_delay_summary"
             app:singleLineTitle="false"
             android:defaultValue="300"
-            android:max="800"
-            app:min="100"
-            app:showSeekBarValue="true"
+            app:sliderSteps="@array/timing_steps_autospace"
             android:dependency="pref_autospace" />
-        <SeekBarPreference
+        <com.kinetica.keyboard.settings.SteppedSliderPreference
             android:key="pref_autospace_retract_ms"
             android:title="@string/pref_autospace_retract_title"
             android:summary="@string/pref_autospace_retract_summary"
             app:singleLineTitle="false"
             android:defaultValue="600"
-            android:max="2000"
-            app:min="100"
-            app:showSeekBarValue="true"
+            app:sliderSteps="@array/timing_steps_retract"
             android:dependency="pref_autospace" />
         <SwitchPreferenceCompat
             android:key="pref_autospace_tapped_words"
@@ -319,6 +328,12 @@
             android:entryValues="@array/language_values"
             android:defaultValue="en"
             app:useSimpleSummaryProvider="true" />
+        <SwitchPreferenceCompat
+            android:key="pref_sync_system_language"
+            android:title="@string/pref_sync_system_language_title"
+            app:singleLineTitle="false"
+            android:summary="@string/pref_sync_system_language_summary"
+            android:defaultValue="true" />
         <SwitchPreferenceCompat
             android:key="pref_british_spelling"
             android:title="@string/pref_british_spelling_title"
@@ -409,6 +424,15 @@
             <intent
                 android:targetPackage="@string/app_pkg"
                 android:targetClass="com.kinetica.keyboard.settings.EdgeSwipeSettingsActivity" />
+        </Preference>
+        <Preference
+            android:key="pref_expansions_screen"
+            android:title="@string/expansion_settings_title"
+            app:singleLineTitle="false"
+            android:summary="@string/pref_expansions_summary">
+            <intent
+                android:targetPackage="@string/app_pkg"
+                android:targetClass="com.kinetica.keyboard.settings.ExpansionSettingsActivity" />
         </Preference>
         <SwitchPreferenceCompat
             android:key="pref_alternate_swipes"

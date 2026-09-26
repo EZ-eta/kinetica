@@ -9,7 +9,7 @@ import org.junit.Test
  *
  * Swipe "Hi", let autospace add its space, tap "!" and the result read "Hi !".
  * Only the automatic space is taken back - a space the user typed is theirs - and
- * only for punctuation that genuinely sits against the word.
+ * only for punctuation that sits against the word.
  */
 class HugsPreviousWordTest {
 

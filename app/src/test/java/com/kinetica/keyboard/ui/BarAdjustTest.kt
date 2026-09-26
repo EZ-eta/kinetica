@@ -93,4 +93,33 @@ class BarAdjustTest {
         assertEquals(-4, BarAdjust.blockStep(3, 0))
         assertTrue(BarAdjust.blockArmed(0, -2, 0))
     }
+
+    // ---- R88: a deliberate tap on the correction strip was being eaten ---------------
+    //
+    // The arm fires at 450ms for any zone in either mode. A user aiming at a word to
+    // swap in is slower than that, so the lift reinforced the word and left the text
+    // alone. Reported as "nothing happens after a tap".
+
+    @Test
+    fun aHoldThatNeverSlidHandsTheLiftBackInCorrectionMode() {
+        assertFalse(BarAdjust.appliesOnLift(correctionMode = true, steps = 0))
+    }
+
+    @Test
+    fun aSlideStillAdjustsInCorrectionMode() {
+        assertTrue(BarAdjust.appliesOnLift(correctionMode = true, steps = 1))
+        assertTrue(BarAdjust.appliesOnLift(correctionMode = true, steps = -1))
+        // The block step is the far end of a downward slide and must stay reachable
+        // from the strip, which is where a junk word is most obviously junk.
+        assertTrue(BarAdjust.appliesOnLift(correctionMode = true, steps = BarAdjust.MIN_BLOCK_STEPS))
+        assertTrue(BarAdjust.blockArmed(count = 0, steps = BarAdjust.MIN_BLOCK_STEPS, increment = 1))
+    }
+
+    @Test
+    fun compositionModeKeepsThePlainLongPressReinforce() {
+        // The behaviour that shipped first, and the reason this is not just disarmed
+        // in one mode: +1 on release in place, with no slide.
+        assertTrue(BarAdjust.appliesOnLift(correctionMode = false, steps = 0))
+        assertEquals(1, BarAdjust.delta(0, 1))
+    }
 }

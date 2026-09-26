@@ -94,7 +94,7 @@ class RetypeTest {
     @Test
     fun withNoRunEitherItStillDeletesNothing() {
         // A cursor at the start of a field, or after a space or a delimiter: there is no
-        // word anywhere and a retype is a gesture the user will simply repeat.
+        // word anywhere and a retype is a gesture the user will repeat.
         assertEquals(
             0,
             retypeSpan(

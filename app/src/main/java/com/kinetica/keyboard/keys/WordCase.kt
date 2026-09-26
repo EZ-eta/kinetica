@@ -24,6 +24,17 @@ enum class WordCase {
         UPPER -> word.uppercase()
     }
 
+    /**
+     * [applyTo] for a word split at the cursor, one half at a time, so the cursor can go back
+     * between them. Joined, the halves equal [applyTo] on the whole word wherever a case
+     * change keeps each character's length, which is every letter but a few like `ß`.
+     */
+    fun applyAround(head: String, tail: String): Pair<String, String> = when (this) {
+        LOWER -> head.lowercase() to tail.lowercase()
+        TITLE -> TITLE.applyTo(head) to tail.lowercase()
+        UPPER -> head.uppercase() to tail.uppercase()
+    }
+
     companion object {
         /**
          * The case [word] is written in.

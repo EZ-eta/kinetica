@@ -1,5 +1,172 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Step tables for SteppedSliderPreference, in ms. Dense where a few milliseconds
+         are felt, sparse where they are not; each holds its setting's default exactly and
+         ends where the old linear slider ended. TimingStepsTest reads them. -->
+    <string-array name="timing_steps_autospace">
+        <item>10</item>
+        <item>15</item>
+        <item>20</item>
+        <item>25</item>
+        <item>30</item>
+        <item>35</item>
+        <item>40</item>
+        <item>45</item>
+        <item>50</item>
+        <item>60</item>
+        <item>70</item>
+        <item>80</item>
+        <item>90</item>
+        <item>100</item>
+        <item>110</item>
+        <item>120</item>
+        <item>130</item>
+        <item>140</item>
+        <item>150</item>
+        <item>175</item>
+        <item>200</item>
+        <item>225</item>
+        <item>250</item>
+        <item>275</item>
+        <item>300</item>
+        <item>350</item>
+        <item>400</item>
+        <item>450</item>
+        <item>500</item>
+        <item>550</item>
+        <item>600</item>
+        <item>650</item>
+        <item>700</item>
+        <item>750</item>
+        <item>800</item>
+    </string-array>
+    <string-array name="timing_steps_retract">
+        <item>10</item>
+        <item>15</item>
+        <item>20</item>
+        <item>25</item>
+        <item>30</item>
+        <item>35</item>
+        <item>40</item>
+        <item>45</item>
+        <item>50</item>
+        <item>60</item>
+        <item>70</item>
+        <item>80</item>
+        <item>90</item>
+        <item>100</item>
+        <item>110</item>
+        <item>120</item>
+        <item>130</item>
+        <item>140</item>
+        <item>150</item>
+        <item>175</item>
+        <item>200</item>
+        <item>225</item>
+        <item>250</item>
+        <item>275</item>
+        <item>300</item>
+        <item>350</item>
+        <item>400</item>
+        <item>450</item>
+        <item>500</item>
+        <item>550</item>
+        <item>600</item>
+        <item>650</item>
+        <item>700</item>
+        <item>750</item>
+        <item>800</item>
+        <item>900</item>
+        <item>1000</item>
+        <item>1100</item>
+        <item>1200</item>
+        <item>1300</item>
+        <item>1400</item>
+        <item>1500</item>
+        <item>1600</item>
+        <item>1700</item>
+        <item>1800</item>
+        <item>1900</item>
+        <item>2000</item>
+    </string-array>
+    <string-array name="timing_steps_long_press">
+        <item>25</item>
+        <item>30</item>
+        <item>35</item>
+        <item>40</item>
+        <item>45</item>
+        <item>50</item>
+        <item>60</item>
+        <item>70</item>
+        <item>80</item>
+        <item>90</item>
+        <item>100</item>
+        <item>110</item>
+        <item>120</item>
+        <item>130</item>
+        <item>140</item>
+        <item>150</item>
+        <item>175</item>
+        <item>200</item>
+        <item>225</item>
+        <item>250</item>
+        <item>275</item>
+        <item>300</item>
+        <item>325</item>
+        <item>350</item>
+        <item>375</item>
+        <item>400</item>
+        <item>450</item>
+        <item>500</item>
+        <item>550</item>
+        <item>600</item>
+        <item>650</item>
+        <item>700</item>
+    </string-array>
+
+    <string-array name="bar_action_entries">
+        <item>Settings</item>
+        <item>Next language</item>
+        <item>One-handed mode</item>
+        <item>Automatic space on/off</item>
+        <item>Undo</item>
+        <item>Redo</item>
+        <item>Paste</item>
+        <item>Copy</item>
+        <item>Cut</item>
+        <item>Select all</item>
+        <item>Retype the word</item>
+        <item>Expand a shortcut</item>
+        <item>Today\'s date</item>
+        <item>The time</item>
+        <item>Enter</item>
+        <item>Copy the whole line</item>
+    </string-array>
+    <string-array name="bar_action_values">
+        <item>SETTINGS</item>
+        <item>NEXT_LANGUAGE</item>
+        <item>ONE_HANDED</item>
+        <item>TOGGLE_AUTOSPACE</item>
+        <item>UNDO</item>
+        <item>REDO</item>
+        <item>PASTE</item>
+        <item>COPY</item>
+        <item>CUT</item>
+        <item>SELECT_ALL</item>
+        <item>RETYPE</item>
+        <item>EXPANDIFY</item>
+        <item>DATE</item>
+        <item>TIME</item>
+        <item>ENTER</item>
+        <item>COPY_LINE</item>
+    </string-array>
+    <string-array name="bar_action_defaults">
+        <item>SETTINGS</item>
+        <item>NEXT_LANGUAGE</item>
+        <item>ONE_HANDED</item>
+        <item>TOGGLE_AUTOSPACE</item>
+    </string-array>
+
     <string-array name="layout_mode_entries">
         <item>Full width</item>
         <item>Right-aligned</item>

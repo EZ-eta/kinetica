@@ -33,8 +33,8 @@ class WordComposer(
          * has earned the editor: an undecodable gesture, or a word only a
          * non-active language can explain (see [merge]). A null tentative is
          * the bug-1 stale-tentative path, NOT an empty bar: the candidates are
-         * still shown and still pickable, which is the whole point of ranking
-         * the languages together instead of swapping between them.
+         * still shown and still pickable, which is why the languages are ranked
+         * together instead of swapped.
          *
          * Main thread.
          */
@@ -98,9 +98,9 @@ class WordComposer(
     }
 
     /**
-     * Second enabled language: when set, swipe-bearing words also decode
-     * against it and BOTH lists are ranked together into one (see [merge]).
-     * Main thread writes, decode thread reads.
+     * Second enabled language: when set, every word also decodes against it and
+     * BOTH lists are ranked together into one (see [merge]). Main thread writes,
+     * decode thread reads.
      */
     @Volatile
     var alternatePredictor: WordPredictor? = null
@@ -259,13 +259,14 @@ class WordComposer(
             if (request.generation != generation.get()) continue
 
             val alternate = request.alternate
-            // Cross-language ranking applies to swipe-bearing words only (empty
-            // literal): all-tap words feed autocorrect, whose isWord semantics
-            // are tied to the active language.
-            val merged = if (alternate != null && request.literal.isEmpty()) {
+            // Tapped words too (R87/R56). They were skipped because they feed
+            // autocorrect, and a tapped English word with Polish active was then
+            // never found and was learned into Polish. What keeps autocorrect sound
+            // is tapLeadAllowed below and WordPredictor.tapAutocorrect.
+            val merged = if (alternate != null) {
                 val other = alternate.decode(request.tokens, request.context)
                 if (request.generation != generation.get()) continue
-                merge(active, other).also { m ->
+                merge(active, other, tapOnly = request.literal.isNotEmpty()).also { m ->
                     DecodeTrace.log {
                         val a = active.firstOrNull()
                         val o = other.firstOrNull()
@@ -315,11 +316,13 @@ class WordComposer(
      *
      * Ranking them together needs no such answer, and no threshold. Scores are
      * already comparable across the bundled dictionaries: Trie.freqByteFor
-     * normalizes each asset against its OWN maximum count, and all five
+     * normalizes each asset against its OWN maximum count, and the first five
      * assets are the same construction (FrequencyWords top-50k), so fw at
      * matched rank percentiles agrees to within 1.04-1.07x - worth under
      * 0.025 kw of distance against a geometric term that moves 1.335x between
-     * d=0.25 and d=0.35. No cross-dictionary frequency normalization is
+     * d=0.25 and d=0.35. Across the nine that ship now the spread is 1.20x at
+     * p50: Norwegian sits at 0.456 against English 0.527, on a far smaller
+     * source corpus. Not yet priced. No cross-dictionary frequency normalization is
      * applied because none is needed, and any that were would have to be a
      * per-language MULTIPLICATIVE constant: score is a product, so a
      * percentile or z-score remap reorders candidates WITHIN a language and
@@ -359,6 +362,9 @@ class WordComposer(
      *         languages. Measured free: the 110 device rows produce the same
      *         12 promotions with and without it.
      *
+     *      d. for a tapped word ([tapOnly]), it is at least as frequent as the
+     *         active language's lead; see [tapLeadAllowed].
+     *
      * Geometry is the ONLY evidence that a word belongs to another language,
      * so a foreign candidate that offers none has nothing to promote it.
      *
@@ -380,6 +386,7 @@ class WordComposer(
     internal fun merge(
         active: List<WordCandidate>,
         other: List<WordCandidate>,
+        tapOnly: Boolean = false,
     ): Merged {
         // Rule 1. Also the fast path: two Romance dictionaries share most of
         // their top candidates, so this usually empties the foreign list.
@@ -407,7 +414,8 @@ class WordComposer(
         val activeFit = active.minOfOrNull { it.dtwDistance }
             ?: return Merged(ranked, null, foreign.size, "no-native")
         if (head.dtwDistance < KineticaConstants.GEO_SATURATION_KW &&
-            head.dtwDistance < activeFit
+            head.dtwDistance < activeFit &&
+            (!tapOnly || tapLeadAllowed(head, active.first()))
         ) {
             return Merged(ranked, head, foreign.size, "foreign-lead")
         }
@@ -421,13 +429,28 @@ class WordComposer(
         val demoted = ArrayList<WordCandidate>(ranked.size + 1)
         demoted.add(bestActive)
         for (c in ranked) if (c !== bestActive) demoted.add(c)
-        val why = if (head.dtwDistance >= KineticaConstants.GEO_SATURATION_KW) {
-            "demoted-past-cap"
-        } else {
-            "demoted-no-better-fit"
+        val why = when {
+            head.dtwDistance >= KineticaConstants.GEO_SATURATION_KW -> "demoted-past-cap"
+            head.dtwDistance < activeFit -> "demoted-tap-rarer"
+            else -> "demoted-no-better-fit"
         }
         return Merged(demoted.take(KineticaConstants.TOP_K), bestActive, foreign.size, why)
     }
+
+    /**
+     * Whether another language's [head] may lead a tapped word over the active language's
+     * [activeLead]: only when it is at least as frequent, on top of rule c's better fit.
+     *
+     * Frequency weight, not score. Score charges the active reading its tap penalty and the
+     * frequency floor lifts a rank-40 000 word within reach, so on score English `maa` beat
+     * Italian `ama`. Over 2 510 tapped buffers in the captures, rule c alone changed 20
+     * commits, none of them a word meant in the other language: 11 Italian corrections lost
+     * to English-list junk and 9 buffers corrected into English (`comun` to `comin`). With
+     * this, none. The words it exists for still lead: English `add` (rank 1 767) over Polish
+     * `asd` (33 860).
+     */
+    private fun tapLeadAllowed(head: WordCandidate, activeLead: WordCandidate): Boolean =
+        head.frequencyWeight >= activeLead.frequencyWeight
 
     private fun buildLiteral(list: List<InputToken>): String {
         if (list.isEmpty() || list.any { it !is TapToken }) return ""

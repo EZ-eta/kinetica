@@ -76,7 +76,7 @@ class LayoutMutationsTest {
 
     @Test
     fun eachShiftCellIsWrittenInTheCaseItSelects() {
-        // The one genuinely new coupling in R34: the popup hands back a cell string and
+        // The one new coupling in R34: the popup hands back a cell string and
         // the service maps it to WordCase BY INDEX, so the two lists have to agree and
         // nothing else in the tree would notice if they stopped.
         val cells = LayoutMutations.SHIFT_CASE_CELLS
@@ -151,7 +151,7 @@ class LayoutMutationsTest {
 
     @Test
     fun withoutForeignAlternatesIsANoopForALayoutWhoseAccentsAreItsOwn() {
-        // The whole point of declaring it: Italian, Spanish, Polish and Czech
+        // Why it is declared: Italian, Spanish, Polish and Czech
         // writers keep "è", "ñ", "ą" and "ř" even with the setting on.
         val before = accentLayout(nativeAccents = true)
         val out = LayoutMutations.withoutForeignAlternates(before)
@@ -625,4 +625,40 @@ class LayoutMutationsTest {
             1e-6f,
         )
     }
+
+    // ---- R60: the digit is what the corner swipe types ------------------------------
+    //
+    // Reported as "the edge-swipe menu was not pre-populated with numbers". It ships and
+    // is one setting, which nothing in that setting's own wording said, because it talked
+    // about long-press and the swipe reads the same hint. On by default since 2026-09-21.
+
+    @Test
+    fun numberPriorityPutsTheDigitOnTheCornerHint() {
+        // e is the shape the report is about: five accents ahead of the digit, so the
+        // corner drew è and swiping up on it typed è.
+        val before = Key(
+            "e", KeyType.CHAR, "e", "e", 0.2f, 0f, 0.1f, 0.25f,
+            alternates = listOf("è", "é", "ê", "ë", "ē", "3"),
+        )
+        assertEquals("è", before.hintChar)
+        val out = LayoutMutations.withNumberPriority(
+            KeyboardLayout("qwerty", "en_US", listOf(before)),
+        )
+        val after = out.keys.first { it.id == "e" }
+        assertEquals("3", after.hintChar)
+        // The accents are reordered, never dropped: the long-press popup still holds all
+        // five and is the route that keeps them reachable.
+        assertEquals(listOf("3", "è", "é", "ê", "ë", "ē"), after.alternates)
+    }
+
+    @Test
+    fun aKeyWithOnlyADigitIsUntouched() {
+        // q already drew 1, so the mutation has nothing to do and must not copy the key.
+        val layout = KeyboardLayout(
+            "qwerty", "en_US",
+            listOf(Key("q", KeyType.CHAR, "q", "q", 0f, 0f, 0.1f, 0.25f, alternates = listOf("1"))),
+        )
+        assertSame(layout, LayoutMutations.withNumberPriority(layout))
+    }
+
 }

@@ -21,6 +21,21 @@ data class EditorState(
     /** True when nothing about this field may be persisted, for either reason. */
     val teachesNothing: Boolean get() = privateMode || noLearning
 
+    /**
+     * True when a correction may be offered after a commit.
+     *
+     * [privateMode] alone, deliberately. A correction strip is not a record of anything:
+     * it names the word already on screen and the alternatives it beat, and every
+     * learning call behind a pick refuses the field on its own. Folding it into
+     * [teachesNothing] cost the strip in every app that sets
+     * IME_FLAG_NO_PERSONALIZED_LEARNING on an ordinary field, which is the same mistake
+     * that once cost those apps suggestions, autocorrect, autospace and trails.
+     *
+     * A password field still gets nothing, because the strip would put the password back
+     * on screen after it was typed.
+     */
+    val offersCorrections: Boolean get() = !privateMode
+
     companion object {
         val DEFAULT = EditorState(
             privateMode = false, noLearning = false, multiline = false,

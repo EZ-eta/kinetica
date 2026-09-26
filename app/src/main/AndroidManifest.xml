@@ -38,6 +38,11 @@
             android:exported="false" />
 
         <activity
+            android:name=".settings.ExpansionSettingsActivity"
+            android:label="@string/expansion_settings_title"
+            android:exported="false" />
+
+        <activity
             android:name=".settings.DictionarySettingsActivity"
             android:label="@string/dict_settings_title"
             android:exported="false" />

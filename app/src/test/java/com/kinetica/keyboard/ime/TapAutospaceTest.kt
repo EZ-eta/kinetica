@@ -205,7 +205,7 @@ class TapAutospaceTest {
 
     @Test
     fun anOpeningQuoteOrBracketStillSpaces() {
-        // `"hello world"` has to keep its space, which is why this is not simply
+        // `"hello world"` has to keep its space, which is why this is not
         // "anything that is not whitespace".
         assertFalse(joinsPrecedingToken("\""))
         // The straight apostrophe is NOT an opener: Italian elision beats quoting.
@@ -267,7 +267,7 @@ class TapAutospaceTest {
 
     @Test
     fun aShortFirstWordCanStillFuseAndThatIsWhatTheWindowIsFor() {
-        // Honest about the residue. `la` + `g` is `lag`, a live prefix of `lago`, so the
+        // The residue: `la` + `g` is `lag`, a live prefix of `lago`, so the
         // gate passes it and `la gente` can still fuse. Measured over the 2026-08-29
         // capture: nothing of six letters or more still fuses, 2 of 16 at four to five,
         // and most two- and three-letter words do. The window is what bounds the rest.

@@ -22,7 +22,7 @@ import org.junit.Test
  * is what makes a fail-first check here actually run.**
  *
  * **This is a heuristic and the escape is deliberate.** A property never touched from `init`
- * is safe anywhere, so a future case may trip this honestly. The fix is to move the property
+ * is safe anywhere, so a future case may trip this for real. The fix is to move the property
  * above `init` or to make it a function, which has no ordering problem at all. Relaxing the
  * test instead needs a stated reason, because what it prevents is a dead keyboard.
  */

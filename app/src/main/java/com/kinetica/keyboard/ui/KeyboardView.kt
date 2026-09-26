@@ -90,6 +90,12 @@ class KeyboardView @JvmOverloads constructor(
         /** Gear selected in the ?123 hold popup: open the settings screen. */
         fun onSettingsRequested()
 
+        /**
+         * A cell of the ?123 hold menu was chosen, by its index into [modeMenuCells].
+         * The bar's vocabulary, but its own list: the two surfaces hold separate sets.
+         */
+        fun onMenuAction(index: Int)
+
         /** Synchronous query: does this letter have a chord expansion? */
         fun hasChord(letterCode: Int): Boolean
 
@@ -166,6 +172,14 @@ class KeyboardView @JvmOverloads constructor(
     /** Active edge-swipe shortcut set; swapped live on preference changes. */
     var edgeSwipeBindings: EdgeSwipeBindings = EdgeSwipeBindings.DEFAULTS
 
+    /**
+     * Cells for the ?123 hold menu, already ordered and filtered by the service.
+     *
+     * The gear used to be the only one, and it is now just the first entry the service
+     * usually sends. Empty falls back to it, so the hold never becomes a dead gesture.
+     */
+    var modeMenuCells: List<String> = emptyList()
+
     /** Threshold for long-press alternates on tap-dispatched keys. */
     var longPressMs = 500L
 
@@ -215,6 +229,20 @@ class KeyboardView @JvmOverloads constructor(
      * (language is otherwise invisible until cycled).
      */
     var languageLabel: String? = null
+        set(value) {
+            if (field != value) {
+                field = value
+                renderStaticLayer()
+                invalidate()
+            }
+        }
+
+    /**
+     * Transient text across the spacebar after a shortcut, or null. The service owns the
+     * timer and this only draws it: centred at the label size, where the spacebar has no
+     * label of its own, so the dot and the language code keep their places.
+     */
+    var spacebarNotice: String? = null
         set(value) {
             if (field != value) {
                 field = value
@@ -581,6 +609,7 @@ class KeyboardView @JvmOverloads constructor(
             c.drawCircle(inset.centerX(), inset.top + inset.height() * 0.22f, 2.5f * density, hintPaint)
         }
         if (key.type == KeyType.SPACE) {
+            spacebarNotice?.let { drawSpacebarNotice(c, it, inset) }
             languageLabel?.let {
                 // Bottom-center so it coexists with the autospace dot (top) and
                 // never collides with the cursor-slide affordance.
@@ -591,6 +620,20 @@ class KeyboardView @JvmOverloads constructor(
                 hintPaint.textAlign = Paint.Align.RIGHT
             }
         }
+    }
+
+    /**
+     * [text] centred on the spacebar, shrunk to fit its width. Measured here, unlike the key
+     * labels, because a notice can be a language name or a layout mode and nothing bounds
+     * those at three characters.
+     */
+    private fun drawSpacebarNotice(c: Canvas, text: String, inset: RectF) {
+        labelPaint.textSize = inset.height() * 0.32f
+        val maxW = inset.width() * 0.9f
+        val w = labelPaint.measureText(text)
+        if (w > maxW) labelPaint.textSize *= maxW / w
+        val baseline = inset.centerY() - (labelPaint.descent() + labelPaint.ascent()) / 2f
+        c.drawText(text, inset.centerX(), baseline, labelPaint)
     }
 
     private fun insetRect(rect: RectF): RectF = RectF(
@@ -804,7 +847,13 @@ class KeyboardView @JvmOverloads constructor(
             key.type == KeyType.MODE_SYMBOLS && route == ROUTE_SPECIAL -> {
                 routeByPointer[pid] = ROUTE_MODE_HOLD
                 popupPointer = pid
-                showPopup(keyIdx, listOf(GEAR_GLYPH), selected = -1, requireInside = true)
+                // requireInside stays: the strip sits above the key, so the finger has to
+                // travel up into it either way, and a hold that lifts without moving
+                // still does nothing. That is what makes a menu of several safe here.
+                showPopup(
+                    keyIdx, modeMenuCells.ifEmpty { listOf(GEAR_GLYPH) },
+                    selected = -1, requireInside = true,
+                )
             }
             key.type == KeyType.ENTER && key.alternates.isNotEmpty() && route == ROUTE_SPECIAL -> {
                 // Enter's popup shows its alternates ALONE (no base
@@ -1039,8 +1088,11 @@ class KeyboardView @JvmOverloads constructor(
         val dy = y - downYByPointer[pid]
         trackPeak(pid, x, y)
         val shortcut = key?.let {
+            // Read before the stream is cancelled or finished below, which is the only
+            // window where the engine still knows where this pointer has been.
             EdgeSwipeDetector.detect(
-                it, dx, dy, peakDxByPointer[pid], peakDyByPointer[pid], density, edgeSwipeBindings,
+                it, dx, dy, peakDxByPointer[pid], peakDyByPointer[pid], density,
+                edgeSwipeBindings, engine?.contactCount(pid) ?: 1,
             )
         }
 
@@ -1083,9 +1135,18 @@ class KeyboardView @JvmOverloads constructor(
                 }
             }
             ROUTE_MODE_HOLD -> {
-                val selected = popup?.selected ?: -1
+                // Snapshot before dismissing, the way the alternates branch below does:
+                // dismissPopup nulls the state this reads. Every cell but the first used
+                // to be selectable and inert, because the test was `selected == 0`.
+                val p = popup
                 dismissPopup()
-                if (selected == 0 && !modeChordFired) listener?.onSettingsRequested()
+                if (p != null && p.selected in p.cells.indices && !modeChordFired) {
+                    if (modeMenuCells.isEmpty()) {
+                        listener?.onSettingsRequested()
+                    } else {
+                        listener?.onMenuAction(p.selected)
+                    }
+                }
             }
             ROUTE_ALT_POPUP -> {
                 val p = popup

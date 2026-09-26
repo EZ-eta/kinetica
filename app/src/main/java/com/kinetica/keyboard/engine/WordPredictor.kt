@@ -134,7 +134,7 @@ class WordPredictor(
         // This is the one field the trace has been missing for the largest bucket in the
         // engine: 45% of labelled buffers are a gesture that never contacts some letter of
         // its own word, and from a capture alone there is no way to tell a crossing that
-        // hysteresis dropped from a corner the thumb genuinely cut. Contacts are all the
+        // hysteresis dropped from a corner the thumb cut. Contacts are all the
         // trace records, and the contact list is the thing under suspicion.
         //
         // Here the question is answerable, because `nearPath` is computed from the REAL
@@ -346,6 +346,18 @@ class WordPredictor(
         return if (confidence > confidenceThreshold) best else null
     }
 
+    /**
+     * The autocorrection a delimiter applies to a tapped word, or null to keep the letters.
+     *
+     * Only [lead] may correct, the candidate [WordComposer.merge] cleared to lead, and never
+     * the head of the list. They differ in one case: the active language decoded nothing, the
+     * head is a word from the other language the merge refused, and correcting to it would
+     * turn Italian `conquesta` into English `conquests`. With one language they are the same
+     * candidate, so single-language autocorrect is unchanged.
+     */
+    fun tapAutocorrect(literal: String, lead: WordCandidate?, confidenceThreshold: Float): WordCandidate? =
+        autocorrectTarget(literal, listOfNotNull(lead), confidenceThreshold)
+
     private fun transposedPatterns(pattern: List<Matcher>): List<List<Matcher>> {
         val out = ArrayList<List<Matcher>>()
         for (i in 0 until pattern.size - 1) {
@@ -543,7 +555,7 @@ class WordPredictor(
             }
             // A swipe cut open earlier resumes as soon as nothing else started before it.
             // This is the ordering `MergeAlternatives.orderByTime` applies after the fact,
-            // applied here instead, which is the whole point of cutting in the search: the
+            // applied here instead, which is why the search does the cutting: the
             // interesting readings are head, other thumb, tail.
             val due = earliestPending(ti)
             if (due >= 0) {
@@ -1144,7 +1156,7 @@ class CandidateHeap(private val cap: Int) {
  * This is the field the trace has been missing for the largest bucket in the engine. 45%
  * of labelled buffers are a gesture that never contacts some letter of its own word, and
  * from a capture alone a crossing that hysteresis dropped cannot be told apart from a
- * corner the thumb genuinely cut: contacts are all the trace records, and the contact list
+ * corner the thumb cut: contacts are all the trace records, and the contact list
  * is the thing under suspicion. Reconstructing a path through the contact centres cannot
  * settle it either - every neighbour of a touched key sits about 1.0 kw from such a
  * polyline whether the thumb went there or not.

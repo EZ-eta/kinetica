@@ -10,9 +10,9 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 @Database(
     entities = [
         UserWord::class, ChordShortcut::class, BlockedWord::class, EmojiUse::class,
-        UserBigram::class,
+        UserBigram::class, Expansion::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = false,
 )
 abstract class KineticaDb : RoomDatabase() {
@@ -21,6 +21,7 @@ abstract class KineticaDb : RoomDatabase() {
     abstract fun blockedWords(): BlockedWordDao
     abstract fun emojiUses(): EmojiUseDao
     abstract fun userBigrams(): UserBigramDao
+    abstract fun expansions(): ExpansionDao
 
     companion object {
         @Volatile
@@ -97,13 +98,33 @@ abstract class KineticaDb : RoomDatabase() {
             }
         }
 
+        /**
+         * v5 -> v6: text expansions arrive as a new table, the same shape as v2 -> v3,
+         * v3 -> v4 and v4 -> v5. Nothing existing is read, rewritten or dropped, so
+         * learned words, chords and pairs survive by construction.
+         */
+        private val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    // triggerText, not trigger: TRIGGER is a SQL keyword and this SQL
+                    // is hand-written. See the Expansion entity.
+                    "CREATE TABLE IF NOT EXISTS expansions (" +
+                        "triggerText TEXT NOT NULL, position INTEGER NOT NULL, " +
+                        "target TEXT NOT NULL, " +
+                        "PRIMARY KEY(triggerText, position))",
+                )
+            }
+        }
+
         fun get(context: Context): KineticaDb =
             instance ?: synchronized(this) {
                 instance ?: Room.databaseBuilder(
                     context.applicationContext,
                     KineticaDb::class.java,
                     "user_dict.db",
-                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5).build().also { instance = it }
+                ).addMigrations(
+                    MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6,
+                ).build().also { instance = it }
             }
     }
 }

@@ -1,5 +1,7 @@
 package com.kinetica.keyboard.ime
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.res.Configuration
@@ -20,6 +22,7 @@ import android.view.inputmethod.InputMethodManager
 import android.view.inputmethod.InputMethodSubtype
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.preference.PreferenceManager
+import com.kinetica.keyboard.R
 import com.kinetica.keyboard.data.DictionaryStore
 import com.kinetica.keyboard.data.KineticaDb
 import com.kinetica.keyboard.data.UserBigram
@@ -38,6 +41,7 @@ import com.kinetica.keyboard.engine.models.StreamId
 import com.kinetica.keyboard.engine.models.SwipeToken
 import com.kinetica.keyboard.engine.models.TapToken
 import com.kinetica.keyboard.engine.models.WordCandidate
+import com.kinetica.keyboard.keys.ActionRow
 import com.kinetica.keyboard.keys.AutoCapitalization
 import com.kinetica.keyboard.keys.DeleteSpan
 import com.kinetica.keyboard.keys.EditorAction
@@ -50,6 +54,7 @@ import com.kinetica.keyboard.layout.KeyType
 import com.kinetica.keyboard.layout.KeyboardLayout
 import com.kinetica.keyboard.layout.LayoutLoader
 import com.kinetica.keyboard.layout.LayoutMutations
+import com.kinetica.keyboard.settings.ActionLabels
 import com.kinetica.keyboard.settings.KeyboardConfig
 import com.kinetica.keyboard.settings.KeyboardHeights
 import com.kinetica.keyboard.settings.Prefs
@@ -142,6 +147,18 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     @Volatile
     private var chordMap: Map<Int, String> = emptyMap()
 
+    // trigger -> first target, mirrored from `expansions`. Read on the main thread when
+    // the expandify action fires. Unlike chordMap this is NOT re-read at every input
+    // start: the table is expected to hold hundreds of rows, so it reloads on its own
+    // generation counter instead (Prefs.EXPANSION_GENERATION).
+    @Volatile
+    private var expansionMap: Map<String, String> = emptyMap()
+
+    // The shortcut rows, resolved once per config change. Held here rather than re-derived
+    // at each tap so the index a surface reports and the row it drew cannot disagree.
+    private var barActions: List<EditorAction> = emptyList()
+    private var menuActions: List<EditorAction> = emptyList()
+
     private var keyboardView: KeyboardView? = null
     private var suggestionBar: SuggestionBarView? = null
     private var containerView: InputContainerView? = null
@@ -160,6 +177,10 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     private var tentativeWord = ""
     private var wordShift = ShiftState.State.NONE
     private var lastCandidates: List<WordCandidate> = emptyList()
+    // The candidate the merge cleared to lead, the only one that may autocorrect a tapped
+    // word. Not the list head: when the active language decoded nothing the head is a word
+    // the merge refused.
+    private var lastTentative: WordCandidate? = null
     private var lastLiteral = ""
     private var expectedSelectionUpdates = 0
     // The word reloadWordUnderCursor seeded back from the editor, if any. Read
@@ -214,13 +235,24 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         }
     }
 
+    // Clears the spacebar's shortcut notice. The label has no timer of its own, so this
+    // is it; see showSpacebarNotice.
+    private val spacebarNoticeRunnable = Runnable { keyboardView?.spacebarNotice = null }
+
     // A buffer whose decode came back empty is closed after a pause instead of
     // being left open. See staleBufferRunnable.
     private var stalePending = false
     private val staleBufferRunnable = Runnable {
         stalePending = false
-        abandonWord()
+        if (lastCandidates.isNotEmpty()) closeBufferKeepBar() else abandonWord()
     }
+
+    // Set while the bar shows candidates of a buffer the stale timeout already closed (R91):
+    // the earlier decode still on screen, and what the editor held when the buffer closed, so
+    // a pick can prove nothing moved since. Null otherwise.
+    private var keptBar: KeptBar? = null
+
+    private class KeptBar(val staleWord: String, val tailAtClose: String)
 
     // True while the space before the cursor is an autospace that followed a TAPPED
     // word. Only that kind is provisional: a swipe's space was earned by a finished
@@ -301,6 +333,12 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             val previous = config
             config = KeyboardConfig.from(p)
             applyViewConfig()
+            // Its own branch rather than a clause in the chain below: an expansion edit
+            // has nothing to do with dictionaries or layouts, and folding it into either
+            // would rebuild something it did not touch.
+            if (config.expansionGeneration != previous.expansionGeneration) {
+                reloadExpansions()
+            }
             if (config.peckMode != previous.peckMode) {
                 // Entering or leaving literal mode mid-word would leave a
                 // half-tracked tentative; settle it as plain text first.
@@ -345,6 +383,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         prefListener = listener
         prefs.registerOnSharedPreferenceChangeListener(listener)
         loadDictionaryAsync()
+        reloadExpansions()
     }
 
     override fun onDestroy() {
@@ -353,6 +392,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
                 .unregisterOnSharedPreferenceChangeListener(it)
         }
         cancelUserDictReload()
+        mainHandler.removeCallbacks(spacebarNoticeRunnable)
         decodeExecutor.shutdown()
         dbExecutor.shutdown()
         super.onDestroy()
@@ -699,6 +739,16 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         suggestionBar?.reinforceIncrement = config.reinforceIncrement
         suggestionBar?.retypeButton = config.retypeButton
         suggestionBar?.retypeButtonDp = config.retypeButtonDp
+        // Resolved here rather than in the views: the language cell drops out below two
+        // enabled languages on both surfaces alike.
+        barActions = ActionRow.resolve(
+            config.barActions, config.enabledLanguages.size, ActionRow.ALL.size,
+        )
+        menuActions = ActionRow.resolve(
+            config.menuActions, config.enabledLanguages.size, ActionRow.ALL.size,
+        )
+        suggestionBar?.actions = barActions.map { ActionRow.glyph(it) }
+        kv.modeMenuCells = menuActions.map { ActionRow.glyph(it) }
         keyboardView?.sidePadDp = config.sidePadDp
         containerView?.setBottomGap(dpToPx(config.bottomPadDp.toFloat()))
         containerView?.setBarHeight(dpToPx(config.suggestionBarDp.toFloat()))
@@ -785,6 +835,29 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         reloadEmojiUses()
     }
 
+    /**
+     * Mirrors the expansion table into memory.
+     *
+     * Only position 0 is read. The column exists so the several-targets picker can arrive
+     * without a migration; until it does, a trigger with a list fires its first entry,
+     * which is the same answer the picker would give for "always use this one".
+     */
+    private fun reloadExpansions() {
+        dbExecutor.execute {
+            val rows = try {
+                KineticaDb.get(this).expansions().all()
+            } catch (e: RuntimeException) {
+                Log.w(TAG, "expansion table unavailable", e)
+                emptyList()
+            }
+            val map = HashMap<String, String>(rows.size * 2)
+            for (row in rows) {
+                if (row.position == 0 && row.trigger.isNotEmpty()) map[row.trigger] = row.target
+            }
+            expansionMap = map
+        }
+    }
+
     private fun reloadChords() {
         dbExecutor.execute {
             val rows = try {
@@ -807,6 +880,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     override fun onStartInputView(editorInfo: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(editorInfo, restarting)
         suggestionBar?.clearSuggestions()
+        updateBarWordPending()
         keyboardView?.setShiftUppercase(shift.isShifted)
         closeEmojiPicker()
         applyViewConfig()
@@ -815,6 +889,8 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     override fun onFinishInput() {
         abandonWord()
         composer?.reset()
+        // A notice belongs to the field it was shown in, not to the next one.
+        clearSpacebarNotice()
         super.onFinishInput()
     }
 
@@ -887,6 +963,8 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     override fun onTokenFinalized(token: InputToken) {
         cancelAutospace()
         clearCorrection()
+        // A new gesture starts a new word; a kept bar belongs to the one before it.
+        keptBar = null
         // Peck-type mode: pure literal insertion. Taps commit their letter
         // (shift-aware) and never feed the composer, so there is no pending
         // word, no suggestions, no autocorrect, and no learning; swipes are
@@ -1001,14 +1079,9 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         literal: String,
     ) {
         lastCandidates = candidates
+        lastTentative = tentative
         lastLiteral = literal
-        candidateLanguages = if (candidates.isEmpty()) {
-            emptyMap()
-        } else {
-            HashMap<String, String>(candidates.size * 2).apply {
-                for (c in candidates) if (c.language.isNotEmpty()) putIfAbsent(c.word, c.language)
-            }
-        }
+        candidateLanguages = provenanceOf(candidates)
         if (!editorState.privateMode) {
             pushSuggestions()
         }
@@ -1087,7 +1160,8 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
      *
      * Nothing is committed and nothing is learned. The stale tentative on screen is
      * exactly what [swipeDecodeEmpty] exists to keep out of the editor's history, so
-     * this only clears the composer and lets the next gesture start a word.
+     * this only clears the composer and lets the next gesture start a word. A bar that
+     * still has candidates keeps them: see [closeBufferKeepBar].
      *
      * The pause, not the emptiness, is what ends it: a long word typed in pieces
      * decodes to nothing in between, and that is a word in progress rather than a dead
@@ -1102,7 +1176,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         stalePending = true
         // Follows the SWIPE delay: the buffer this ends is a swipe buffer, and the
         // inter-token reasoning above is about swipes.
-        mainHandler.postDelayed(staleBufferRunnable, 2 * config.autospaceDelayMs)
+        mainHandler.postDelayed(staleBufferRunnable, staleTimeoutMs(config.autospaceDelayMs))
     }
 
     private fun cancelStaleTimeout() {
@@ -1289,17 +1363,9 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             }
         }
 
-        override fun onSettingsRequested() {
-            cancelAutospace()
-            finalizePendingWord()
-            requestHideSelf(0)
-            startActivity(
-                Intent(this@KineticaIME, SettingsActivity::class.java).apply {
-                    // A service context has no activity task to attach to.
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                },
-            )
-        }
+        override fun onSettingsRequested() = openSettings()
+
+        override fun onMenuAction(index: Int) = this@KineticaIME.performMenuAction(index)
 
         override fun hasChord(letterCode: Int): Boolean =
             isLangCycleChord(letterCode) || isPeckChord(letterCode) ||
@@ -1362,6 +1428,20 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             // what EditorAction exists for.
             performIfAction(EditorAction.RETYPE.output)
         }
+
+        override fun onBarAction(index: Int) = this@KineticaIME.performBarAction(index)
+    }
+
+    /**
+     * Tells the bar whether a word is in progress, which is what suppresses the shortcut
+     * row. Called from the paths that already move word state rather than inferred from
+     * which setter ran last: the difference IS carried by setSuggestions against
+     * clearSuggestions, but a state machine built out of setter side effects is the
+     * ordering hazard item 46 was written about.
+     */
+    private fun updateBarWordPending() {
+        suggestionBar?.wordPending =
+            tentativeLength > 0 || composer?.hasPendingWord == true
     }
 
     /** Current candidates -> suggestion bar, with personal-weight badges. */
@@ -1385,6 +1465,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             suggestionZoneWords(lastCandidates.map { displayWord(it.word) }, literal)
                 .map { barSuggestion(it) },
         )
+        updateBarWordPending()
     }
 
     private fun barSuggestion(display: String): SuggestionBarView.Suggestion {
@@ -1470,21 +1551,200 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     private fun performIfAction(text: String): Boolean {
         val action = EditorAction.of(text)
         if (action == null) return EditorAction.isUnknownAction(text)
+        // Undo and redo are ordinary context-menu commands, so the app does the work and
+        // the keyboard keeps no history. performContextMenuAction reports that the call
+        // was delivered rather than that anything happened, so an editor without an undo
+        // stack is silently a no-op - the contract paste has shipped under since v1.0.2.
         val menuId = when (action) {
             EditorAction.PASTE -> android.R.id.paste
             EditorAction.COPY -> android.R.id.copy
             EditorAction.CUT -> android.R.id.cut
             EditorAction.SELECT_ALL -> android.R.id.selectAll
-            EditorAction.RETYPE -> null
+            EditorAction.UNDO -> android.R.id.undo
+            EditorAction.REDO -> android.R.id.redo
+            EditorAction.RETYPE, EditorAction.EXPANDIFY, EditorAction.SETTINGS,
+            EditorAction.NEXT_LANGUAGE, EditorAction.TOGGLE_AUTOSPACE,
+            EditorAction.ONE_HANDED, EditorAction.DATE, EditorAction.TIME,
+            EditorAction.ENTER, EditorAction.COPY_LINE,
+            -> null
         }
         if (menuId == null) {
-            retypeCurrentWord()
+            performLocalAction(action)
             return true
         }
         finalizePendingWord()
         ich.performContextMenuAction(menuId)
         expectedSelectionUpdates++
         return true
+    }
+
+    /**
+     * The actions the keyboard carries out itself, rather than asking the app to.
+     *
+     * RETYPE owns the pending word, so it must run BEFORE the word is settled; EXPANDIFY
+     * reads what the editor already holds, so it settles first. The last four change the
+     * keyboard rather than the text, and every one of them is a preference write: the
+     * preference listener rebuilds the config and applyViewConfig pushes the result, which
+     * is how the peck-mode chord has always worked.
+     */
+    private fun performLocalAction(action: EditorAction) {
+        when (action) {
+            EditorAction.RETYPE -> retypeCurrentWord()
+            EditorAction.EXPANDIFY -> expandifyAtCursor()
+            EditorAction.SETTINGS -> openSettings()
+            EditorAction.NEXT_LANGUAGE -> cycleLanguage()
+            EditorAction.TOGGLE_AUTOSPACE -> toggleAutospace()
+            EditorAction.ONE_HANDED -> toggleOneHanded()
+            EditorAction.DATE -> insertNow(date = true)
+            EditorAction.TIME -> insertNow(date = false)
+            EditorAction.ENTER -> onEnter()
+            EditorAction.COPY_LINE -> copyLine()
+            // Every context-menu action is handled by the caller.
+            else -> Unit
+        }
+    }
+
+    /**
+     * Today's date or the time, in the format the phone is set to, so a 24-hour phone
+     * gets 24-hour time without a setting of our own.
+     */
+    private fun insertNow(date: Boolean) {
+        cancelAutospace()
+        finalizePendingWord()
+        val now = java.util.Date()
+        val text = if (date) {
+            android.text.format.DateFormat.getDateFormat(this).format(now)
+        } else {
+            android.text.format.DateFormat.getTimeFormat(this).format(now)
+        }
+        commitTracked(text)
+        updateAutoShift()
+    }
+
+    /**
+     * The line the cursor is on, onto the clipboard (#19). Read out of the editor in this
+     * call and handed to the clipboard, so nothing is selected and no remembered offset is
+     * trusted. A line longer than the read is refused rather than half copied, and a
+     * private field is never read for it.
+     */
+    private fun copyLine() {
+        cancelAutospace()
+        finalizePendingWord()
+        if (editorState.privateMode) return
+        val before = ich.textBeforeCursor(COPY_LINE_READ_CHARS) ?: return
+        val after = ich.textAfterCursor(COPY_LINE_READ_CHARS) ?: return
+        val selected = if (selectionLength() > 0) ich.selectedText() ?: return else ""
+        val line = lineAroundCursor(before, selected, after, COPY_LINE_READ_CHARS)
+        DecodeTrace.log { "  copy line len=${line?.length ?: "refused"}" }
+        if (line.isNullOrBlank()) {
+            vibrateForKeyPress()
+            return
+        }
+        getSystemService(ClipboardManager::class.java)
+            ?.setPrimaryClip(ClipData.newPlainText(getString(R.string.clip_label_line), line))
+    }
+
+    private fun openSettings() {
+        cancelAutospace()
+        finalizePendingWord()
+        requestHideSelf(0)
+        startActivity(
+            Intent(this@KineticaIME, SettingsActivity::class.java).apply {
+                // A service context has no activity task to attach to.
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            },
+        )
+    }
+
+    /** A shortcut chosen from the suggestion bar's row, by its index into [barActions]. */
+    private fun performBarAction(index: Int) = performShortcut(barActions.getOrNull(index))
+
+    /** A shortcut chosen from the ?123 hold menu, by its index into [menuActions]. */
+    private fun performMenuAction(index: Int) = performShortcut(menuActions.getOrNull(index))
+
+    private fun performShortcut(action: EditorAction?) {
+        if (action == null) return
+        // Decided before the action runs: the toggles write a preference, and the notice
+        // says what that write leaves behind.
+        val notice = ActionRow.notice(action, shortcutState())
+        // No buzz here. The actions that change the keyboard buzz themselves, the way the
+        // language cycle and the peck toggle always have; the editor commands beside them
+        // are silent on every route they already have, and a shortcut row is not the place
+        // to make paste feel different from paste.
+        performIfAction(action.output)
+        notice?.let { noticeText(it) }?.let { showSpacebarNotice(it) }
+    }
+
+    private fun shortcutState(): ActionRow.KeyboardState {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+        return ActionRow.KeyboardState(
+            autospace = config.autospace,
+            languages = config.enabledLanguages,
+            language = config.language,
+            layoutMode = prefs.getString(Prefs.LAYOUT_MODE, Prefs.DEFAULT_LAYOUT_MODE)
+                ?: Prefs.DEFAULT_LAYOUT_MODE,
+            rememberedOneHanded = prefs.getString(Prefs.LAYOUT_MODE_ONE_HANDED, null),
+        )
+    }
+
+    private fun noticeText(notice: ActionRow.Notice): String? = when (notice) {
+        is ActionRow.Notice.Sent -> ActionLabels.noticeRes(notice.action)?.let { getString(it) }
+        is ActionRow.Notice.Autospace -> getString(
+            if (notice.on) R.string.notice_autospace_on else R.string.notice_autospace_off,
+        )
+        is ActionRow.Notice.Language ->
+            entryFor(R.array.language_values, R.array.language_entries, notice.code)
+        is ActionRow.Notice.Layout ->
+            entryFor(R.array.layout_mode_values, R.array.layout_mode_entries, notice.mode)
+    }
+
+    /** The settings list's own wording for [value], so the spacebar and the chooser agree. */
+    private fun entryFor(valuesRes: Int, entriesRes: Int, value: String): String {
+        val values = resources.getStringArray(valuesRes)
+        val entries = resources.getStringArray(entriesRes)
+        return entries.getOrNull(values.indexOf(value)) ?: value
+    }
+
+    /**
+     * Shows [text] on the spacebar for [SPACEBAR_NOTICE_MS]. A second notice replaces the
+     * first and restarts the clock, so two quick taps never leave a stale one behind.
+     */
+    private fun showSpacebarNotice(text: String) {
+        mainHandler.removeCallbacks(spacebarNoticeRunnable)
+        keyboardView?.spacebarNotice = text
+        mainHandler.postDelayed(spacebarNoticeRunnable, SPACEBAR_NOTICE_MS)
+    }
+
+    private fun clearSpacebarNotice() {
+        mainHandler.removeCallbacks(spacebarNoticeRunnable)
+        keyboardView?.spacebarNotice = null
+    }
+
+    /** Autospace on or off for good. The spacebar dot follows through applyViewConfig. */
+    private fun toggleAutospace() {
+        vibrateForKeyPress()
+        PreferenceManager.getDefaultSharedPreferences(this)
+            .edit().putBoolean(Prefs.AUTOSPACE, !config.autospace).apply()
+    }
+
+    /**
+     * One-handed on or off, remembering which side.
+     *
+     * Toggling to a fixed mode would take a left-hander back to the right-hand default
+     * every time, so the mode being left is stored and handed back. LayoutMode is a single
+     * preference where the hand is part of the value, which is why remembering it needs a
+     * second one rather than a flag.
+     */
+    private fun toggleOneHanded() {
+        vibrateForKeyPress()
+        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+        val current = prefs.getString(Prefs.LAYOUT_MODE, Prefs.DEFAULT_LAYOUT_MODE)
+            ?: Prefs.DEFAULT_LAYOUT_MODE
+        val remembered = prefs.getString(Prefs.LAYOUT_MODE_ONE_HANDED, null)
+        val next = ActionRow.oneHandedToggle(current, remembered)
+        val edit = prefs.edit().putString(Prefs.LAYOUT_MODE, next.mode)
+        if (next.remember != null) edit.putString(Prefs.LAYOUT_MODE_ONE_HANDED, next.remember)
+        edit.apply()
     }
 
     /**
@@ -1500,6 +1760,67 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
      * of the editor. Deleting text the user did not point at is the worse failure, and a
      * retype with nothing to retype is a no-op the user will repeat.
      */
+    /**
+     * Replaces the trigger at the cursor with its stored expansion (R58, expandify).
+     *
+     * The word in progress is settled first, so the trigger is read out of the editor
+     * rather than guessed from composer state: the whole span comes from one read, which
+     * is what keeps item 69's arithmetic from being reinvented here.
+     *
+     * A target may itself be a trigger, so firing again continues a chain, and a chain
+     * that points back at its own start is a loop. Neither needs anything here.
+     */
+    private fun expandifyAtCursor() {
+        cancelAutospace()
+        finalizePendingWord()
+        val before = ich.textBeforeCursor(MAX_TRIGGER_CHARS + 2) ?: ""
+        val found = triggerAtCursor(before, MAX_TRIGGER_CHARS)
+        val target = expansionMap[found.trigger]
+        if (found.trigger.isEmpty() || target == null) {
+            // Nothing is typed into the document for a miss. A trigger the user has not
+            // set yet is the commonest case while they are learning the feature, and
+            // inserting something would be the worse of the two answers.
+            DecodeTrace.log { "  expandify miss trigger=${found.trigger}" }
+            vibrateForKeyPress()
+            return
+        }
+        val text = when (val effect = expansionEffect(target)) {
+            is ExpansionEffect.Refused -> {
+                // Refused before anything is deleted, so the trigger is still there to fix.
+                DecodeTrace.log { "  expandify refused trigger=${found.trigger} why=${effect.why}" }
+                vibrateForKeyPress()
+                return
+            }
+            is ExpansionEffect.Action -> {
+                // The trigger and its space go, then the action runs where the trigger was.
+                ich.deleteBeforeCursor(found.span)
+                expectedSelectionUpdates++
+                DecodeTrace.log {
+                    "  expandify trigger=${found.trigger} span=${found.span} action=${effect.action.name}"
+                }
+                abandonWord()
+                forgetAutospace()
+                performIfAction(effect.action.output)
+                updateAutoShift()
+                return
+            }
+            is ExpansionEffect.Text -> expansionForField(effect.text, editorState.multiline)
+        }
+        val tail = before.subSequence(
+            before.length - found.span + found.trigger.length, before.length,
+        )
+        ich.replaceBeforeCursor(found.span, text + tail)
+        expectedSelectionUpdates++
+        DecodeTrace.log {
+            "  expandify trigger=${found.trigger} span=${found.span} len=${text.length}"
+        }
+        // The expansion is finished text, not a word in progress: nothing may autocorrect
+        // it, autospace after it or learn it.
+        abandonWord()
+        forgetAutospace()
+        updateAutoShift()
+    }
+
     private fun retypeCurrentWord() {
         cancelAutospace()
         // The button is the user saying the last commit was wrong, which is the only
@@ -1924,8 +2245,11 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     private fun recaseWordInHand(cell: String) {
         val idx = LayoutMutations.SHIFT_CASE_CELLS.indexOf(cell)
         val want = WordCase.entries.getOrNull(idx) ?: return
+        if (tentativeLength == 0 && recaseAroundCursor(want)) return
         // The same guard the retype and the reload share: with a letter after the cursor
-        // the user is parked inside a word rather than at the end of one.
+        // the user is parked inside a word rather than at the end of one. Inside a word was
+        // answered above; what still reaches here is a letter after a space, the start of
+        // the next word.
         val after = ich.textAfterCursor(1)
         if (after != null && after.isNotEmpty() && after[0].isLetter()) return
 
@@ -1979,6 +2303,35 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             }
         }
         updateAutoShift()
+    }
+
+    /**
+     * Re-cases the whole word the cursor is parked inside and leaves the cursor where it was
+     * (R85). The shift popup refused here until now, by the guard above that the retype and
+     * the reload still keep.
+     *
+     * True when the cursor was inside a word at all, changed or not, so the caller never
+     * falls through and re-cases the half before the cursor.
+     */
+    private fun recaseAroundCursor(want: WordCase): Boolean {
+        val read = KineticaConstants.MAX_WORD_LEN + 1
+        val before = ich.textBeforeCursor(read) ?: return false
+        val after = ich.textAfterCursor(read) ?: return false
+        if (!cursorInsideWord(before, after)) return false
+        // A selection is a range the user chose; re-casing that is its own request (R72).
+        if (selectionLength() > 0) return true
+        val word = wordAroundCursor(before, after, KineticaConstants.MAX_WORD_LEN)
+        DecodeTrace.log {
+            val span = word?.let { "${it.head.length}+${it.tail.length}" } ?: "refused"
+            "  recase to=$want src=inside span=$span"
+        }
+        if (word == null) return true
+        val (head, tail) = want.applyAround(word.head, word.tail)
+        if (head == word.head && tail == word.tail) return true
+        ich.replaceAroundCursor(word.head.length, word.tail.length, head, tail)
+        expectedSelectionUpdates++
+        updateAutoShift()
+        return true
     }
 
     private fun onPunctuation(text: String) {
@@ -2086,6 +2439,21 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
 
     private fun onSuggestionPicked(word: String) {
         cancelAutospace()
+        val kept = keptBar
+        if (kept != null) {
+            keptBar = null
+            val now = ich.textBeforeCursor(KEPT_BAR_TAIL_CHARS)?.toString() ?: ""
+            val span = keptBarPickSpan(now, kept.tailAtClose, kept.staleWord)
+            DecodeTrace.log { "  stale pick word=$word span=${if (span < 0) "refused" else span}" }
+            if (span < 0) {
+                abandonWord()
+                return
+            }
+            // What replaceTentative replaces: the earlier decode the closed buffer left on
+            // screen, re-proved against the editor rather than remembered (item 69).
+            tentativeLength = span
+            tentativeWord = kept.staleWord
+        }
         replaceTentative(word)
         commitWordInternal(word)
         commitTracked(" ")
@@ -2143,7 +2511,11 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             abandonWord()
             return false
         }
-        if (!comp.hasPendingWord) return false
+        if (!comp.hasPendingWord) {
+            // A delimiter says the user has moved on from a kept bar's words.
+            if (keptBar != null) abandonWord()
+            return false
+        }
 
         var finalWord = tentativeWord
         val p = predictor
@@ -2152,7 +2524,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             !editorState.privateMode
         ) {
             val target = if (threshold != null) {
-                p.autocorrectTarget(lastLiteral, lastCandidates, threshold)
+                p.tapAutocorrect(lastLiteral, lastTentative, threshold)
             } else {
                 null
             }
@@ -2188,6 +2560,9 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         if (editorState.teachesNothing) return
         val w = word.lowercase()
         if (w.length > KineticaConstants.MAX_WORD_LEN || !WORD_RE.matches(w)) return
+        // Which dictionary a word is filed under emitted nothing, so R56 could only ever be
+        // reported by reading the learned-words list.
+        DecodeTrace.log { "  learn word=$w lang=$lang amount=$amount" }
         var before = 0
         val after = countsFor(lang).compute(w) { _, v ->
             before = v ?: 0
@@ -2278,14 +2653,22 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
 
     @Suppress("DEPRECATION") // method.xml declares legacy imeSubtypeLocale values.
     private fun subtypeLanguage(subtype: InputMethodSubtype?): String? =
-        subtype?.locale?.substringBefore('_')
+        kineticaLanguageOf(subtype?.locale?.substringBefore('_'))
 
     override fun onCurrentInputMethodSubtypeChanged(newSubtype: InputMethodSubtype?) {
+        // Inbound only: with the sync off, Android may still change its own subtype but
+        // it no longer decides what Kinetica types (R93).
+        if (!config.syncSystemLanguage) return
         val language = subtypeLanguage(newSubtype) ?: return
         acceptSubtypeLanguage(language)
     }
 
     private fun acceptSubtypeLanguage(language: String) {
+        // A subtype locale this build has no dictionary for must never reach the
+        // preference: the load throws, the previous predictor keeps serving, and the
+        // settings row shows nothing selected. kineticaLanguageOf already folds the known
+        // spellings, so anything left over is a language we do not ship.
+        if (language !in Prefs.ALL_LANGUAGES) return
         val prefs = PreferenceManager.getDefaultSharedPreferences(this)
         // Called from onStartInput, so in the steady state where everything already agrees
         // this would open an editor at every field focus. Android suppresses the listener
@@ -2334,6 +2717,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             prefs.getString(Prefs.LANGUAGE, null),
             prefs.getString(Prefs.SYNCED_LANGUAGE, null),
             systemLanguage,
+            config.syncSystemLanguage,
         )
         if (language == systemLanguage) {
             acceptSubtypeLanguage(language)
@@ -2368,9 +2752,8 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
 
     /** ?123-chord language switch: next enabled language in canonical order. */
     private fun cycleLanguage() {
-        val langs = config.enabledLanguages
-        if (langs.size < 2) return
-        val next = langs[(langs.indexOf(config.language) + 1).mod(langs.size)]
+        // Shared with the shortcut notice, so the name it shows is the language this picks.
+        val next = ActionRow.nextLanguage(config.enabledLanguages, config.language) ?: return
         vibrateForKeyPress()
         // The preference listener does the rest: layout swap now, predictions
         // when the new dictionary finishes parsing.
@@ -2503,6 +2886,8 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         tentativeLength = 0
         tentativeWord = ""
         lastCandidates = emptyList()
+        lastTentative = null
+        keptBar = null
         // The strip outlives the candidate list, so provenance is snapshotted
         // rather than cleared: a correction pick is a real commit.
         correctionLanguages = candidateLanguages
@@ -2532,6 +2917,10 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
                 // change.
                 learnPair(composer?.contextSnapshot(), word, lang)
             }
+        }
+        // Deliberately not under the learning guard above, and not the same condition:
+        // see showsCorrectionStrip.
+        if (showsCorrectionStrip(word, editorState.offersCorrections, options.size)) {
             lastCommitWord = word
             suggestionBar?.showCorrection(
                 options.take(KineticaConstants.TOP_K).map { barSuggestion(it) },
@@ -2540,20 +2929,53 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         }
         swipeDecodeEmpty = false
         reloadedWord = null
+        updateBarWordPending()
     }
 
     private fun abandonWord() {
+        keptBar = null
         composer?.clear()
         reloadedWord = null
         seededWithoutTokens = false
         tentativeLength = 0
         tentativeWord = ""
         lastCandidates = emptyList()
+        lastTentative = null
         candidateLanguages = emptyMap()
         lastLiteral = ""
         swipeDecodeEmpty = false
         suggestionBar?.clearSuggestions()
         clearCorrection()
+        updateBarWordPending()
+    }
+
+    /**
+     * Ends the buffer as the stale timeout always has, but leaves its candidates up (R91).
+     *
+     * A populated bar with nothing auto-committed is merge's `no-native` return: the active
+     * language decoded nothing and the other one did. Those candidates are the words the user
+     * is reading, and clearing them 600 ms later contradicted the comment that promised they
+     * stay pickable. The buffer still closes, so the next gesture starts a word (item 29), and
+     * provenance stays, so a pick is learned into the language it came from (R56).
+     */
+    private fun closeBufferKeepBar() {
+        val tail = ich.textBeforeCursor(KEPT_BAR_TAIL_CHARS)?.toString()
+        if (tail == null) {
+            abandonWord()
+            return
+        }
+        keptBar = KeptBar(tentativeWord, tail)
+        composer?.clear()
+        reloadedWord = null
+        seededWithoutTokens = false
+        tentativeLength = 0
+        tentativeWord = ""
+        lastTentative = null
+        lastLiteral = ""
+        swipeDecodeEmpty = false
+        clearCorrection()
+        updateBarWordPending()
+        DecodeTrace.log { "  stale keep n=${lastCandidates.size} staleLen=${keptBar?.staleWord?.length}" }
     }
 
     private fun clearCorrection() {
@@ -2623,6 +3045,15 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         // cost one parse, and still has the word usable while the user is typing the
         // thing they added it for.
         const val USER_DICT_RELOAD_DELAY_MS = 1500L
+        // How long a shortcut's notice stays on the spacebar. Chosen, not measured: long
+        // enough to read two words, gone before the next word is typed.
+        const val SPACEBAR_NOTICE_MS = 1500L
+        // How much editor text a kept bar compares to prove nothing changed before a pick.
+        // Longer than any word, so a space or a deleted letter after the stale text shows.
+        const val KEPT_BAR_TAIL_CHARS = 64
+        // How far each way COPY_LINE reads for the line's ends. A longer line is refused,
+        // not half copied.
+        const val COPY_LINE_READ_CHARS = 2000
         // Backspace slide: how much text to fetch for word-span staging.
         const val STAGE_FETCH_CHARS = 256
         // Spacebar word slide: how far to read for ONE word boundary. Smaller than the
@@ -2637,16 +3068,12 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         // already needs three; past this the word is not where the caller thinks it is and
         // the span is refused rather than guessed.
         const val COMMIT_TAIL_CHARS = 8
+
         // Any-letter (accented Italian included) with internal apostrophes.
         val WORD_RE = Regex("^\\p{L}+(?:'\\p{L}+)*$")
     }
 }
 
-/**
- * Choose the initial language without losing Settings edits made while the
- * service was absent. An existing preference also wins on the first sync;
- * once acknowledged, Android can select a different subtype on a cold start.
- */
 /**
  * Whether the language preferences need writing at all.
  *
@@ -2659,13 +3086,41 @@ internal fun languageSyncNeedsWrite(
     language: String,
 ): Boolean = storedLanguage != language || syncedLanguage != language
 
+/**
+ * Choose the initial language without losing Settings edits made while the
+ * service was absent. An existing preference also wins on the first sync;
+ * once acknowledged, Android can select a different subtype on a cold start.
+ *
+ * [followSystem] off is R93. Android assigns the subtype matching the system locale to
+ * any subtype the user never forced through its own picker, so the steady state where
+ * stored and synced agree handed an English phone back to English at every cold start
+ * whatever the user had chosen here. Off, a stored choice always wins and only a first
+ * run with nothing stored still takes the subtype.
+ */
 internal fun languageOnInputStart(
     storedLanguage: String?,
     syncedLanguage: String?,
     subtypeLanguage: String?,
+    followSystem: Boolean = true,
 ): String {
     if (storedLanguage != null && storedLanguage != syncedLanguage) return storedLanguage
+    if (!followSystem) return storedLanguage ?: subtypeLanguage ?: Prefs.DEFAULT_LANGUAGE
     return subtypeLanguage ?: storedLanguage ?: Prefs.DEFAULT_LANGUAGE
+}
+
+/**
+ * The Kinetica language code an Android subtype locale names, or null.
+ *
+ * Only Norwegian needs folding and it needed it from the day it shipped: `method.xml`
+ * declares `nb_NO`, which is the correct locale for Bokmal, while the asset and
+ * [Prefs.ALL_LANGUAGES] use `no`. Nothing matched, so Norwegian fell out of the
+ * synchronisation in both directions and picking Norsk in Android's own picker stored a
+ * code with no dictionary behind it.
+ */
+internal fun kineticaLanguageOf(subtypeLanguage: String?): String? = when (subtypeLanguage) {
+    null -> null
+    "nb", "nn" -> "no"
+    else -> subtypeLanguage
 }
 
 /**
@@ -3067,6 +3522,109 @@ internal fun trailingLetterRun(before: CharSequence, end: Int = before.length): 
 private fun isWordChar(c: Char): Boolean = c.isLetter() || c == '\''
 
 /**
+ * The expandify trigger sitting at the cursor, and how many characters it occupies there.
+ *
+ * A fourth walk rather than a fifth caller of [trailingLetterRun], because a trigger is
+ * not a word. The reporter's own five are `.`, `x`, `vv`, `^^` and `(-.-)'`: the letter
+ * walk returns nothing for three of them and an apostrophe for the fourth, and
+ * [joinedTokenForAutospace] refuses anything with no letter in it. So the boundary here is
+ * whitespace and nothing else.
+ *
+ * **One trailing space is skipped and reported in [span].** After typing a word the
+ * autospace has usually already written one, and a trigger that stops working the moment
+ * the space arrives is a trigger nobody can fire. The caller puts the skipped character
+ * back, the way a correction pick puts the punctuation after a word back.
+ *
+ * [span] is what the caller replaces, and it is measured from the text it was just handed
+ * rather than remembered from an earlier commit. That is what makes item 69 structurally
+ * impossible here: there is no second source of truth to drift from.
+ */
+internal fun triggerAtCursor(before: CharSequence, maxLen: Int): TriggerSpan {
+    var end = before.length
+    // At most one, so `word\n\n` or a run of spaces is a boundary and not a licence to
+    // reach back over it for something the user has finished with.
+    if (end > 0 && before[end - 1] == ' ') end--
+    var start = end
+    while (start > 0 && end - start < maxLen && !before[start - 1].isWhitespace()) start--
+    val trigger = before.subSequence(start, end).toString()
+    if (trigger.isEmpty()) return TriggerSpan("", 0)
+    return TriggerSpan(trigger, before.length - start)
+}
+
+/** [trigger] and the characters it occupies before the cursor, trailing space included. */
+internal data class TriggerSpan(val trigger: String, val span: Int)
+
+/**
+ * Longest expandify trigger, shared by the walk and by the editor that validates one.
+ *
+ * Generous against the reporter's own, which run from one character to six, because a
+ * trigger may also be a whole keyword standing in for a link. Cheap either way: it bounds
+ * one editor read.
+ */
+const val MAX_TRIGGER_CHARS = 32
+
+/**
+ * A target written into a field that holds one line.
+ *
+ * Nothing in the commit path inspects what it is handed - `commitText` passes a newline
+ * straight through - and the only place the keyboard asks whether newlines are allowed is
+ * the enter key. A multi-line target in a search box is the target editor's problem
+ * otherwise, and what it does with it is unpredictable: a framework EditText filters it
+ * out, others keep it and break their own layout.
+ */
+internal fun expansionForField(target: String, multiline: Boolean): String =
+    if (multiline) target else target.replace('\n', ' ').replace('\r', ' ')
+
+/** What firing an expansion does: write text, run an action, or refuse. */
+internal sealed interface ExpansionEffect {
+    data class Text(val text: String) : ExpansionEffect
+    data class Action(val action: EditorAction) : ExpansionEffect
+    data class Refused(val why: String) : ExpansionEffect
+}
+
+/**
+ * Reads an expansion's target (#19: "replace the trigger with text, or do an action").
+ *
+ * A target in the `action:` form runs that action, as chords and edge swipes already do.
+ * [EditorAction.NOT_EXPANSION_TARGETS] and a misspelled action are refused, and refused
+ * before the caller deletes anything: a typo in a stored target must not cost the trigger.
+ * Anything else is text, exactly as before.
+ */
+internal fun expansionEffect(target: String): ExpansionEffect {
+    val action = EditorAction.of(target)
+    return when {
+        action != null && action in EditorAction.NOT_EXPANSION_TARGETS -> ExpansionEffect.Refused(action.name)
+        action != null -> ExpansionEffect.Action(action)
+        EditorAction.isUnknownAction(target) -> ExpansionEffect.Refused("unknown")
+        else -> ExpansionEffect.Text(target)
+    }
+}
+
+/**
+ * The line the cursor is on, or null when it cannot be seen whole.
+ *
+ * [before] and [after] are what the editor returned for a read of [read] characters each
+ * way, and [selected] is any selection between them. A side with no newline that filled
+ * its read may continue past it, so the line is refused rather than cut. A selection that
+ * crosses a line is not one line.
+ */
+internal fun lineAroundCursor(
+    before: CharSequence,
+    selected: CharSequence,
+    after: CharSequence,
+    read: Int,
+): String? {
+    if (selected.contains('\n')) return null
+    val start = before.lastIndexOf('\n')
+    if (start < 0 && before.length >= read) return null
+    val end = after.indexOf('\n')
+    if (end < 0 && after.length >= read) return null
+    val head = before.substring(start + 1)
+    val tail = if (end < 0) after.toString() else after.substring(0, end)
+    return head + selected + tail
+}
+
+/**
  * How many characters before the cursor the committed [word] and whatever the editor put
  * after it occupy, or -1 when the editor does not hold [word] there.
  *
@@ -3092,6 +3650,58 @@ internal fun commitSpan(before: CharSequence, word: String, maxTrailing: Int): I
     if (!before.subSequence(start, i).toString().equals(word, ignoreCase = true)) return -1
     return before.length - start
 }
+
+/**
+ * How much text a pick from a kept bar replaces (R91), or -1 to refuse.
+ *
+ * The stale timeout closed the buffer and left its candidates up, so the pick arrives after
+ * the word state was cleared and no remembered length can be trusted (KNOWN_ISSUES item 69).
+ * [tailAtClose] is what the editor held before the cursor when the buffer closed: unless it
+ * holds exactly that now, something was typed or deleted since. [staleWord] is the earlier
+ * decode still on screen, empty when the gesture never produced one.
+ */
+internal fun keptBarPickSpan(tailNow: CharSequence, tailAtClose: CharSequence, staleWord: String): Int {
+    if (tailNow.toString() != tailAtClose.toString()) return -1
+    if (!tailAtClose.endsWith(staleWord)) return -1
+    return staleWord.length
+}
+
+/**
+ * Which dictionary each candidate came from, keyed the way `languageOf` looks a word up:
+ * lowercased. Keyed by the display form it missed every capitalized German noun, so with
+ * German as the second language `Haus` was filed under the active one (R56's class).
+ */
+internal fun provenanceOf(candidates: List<WordCandidate>): Map<String, String> {
+    if (candidates.isEmpty()) return emptyMap()
+    val out = HashMap<String, String>(candidates.size * 2)
+    for (c in candidates) if (c.language.isNotEmpty()) out.putIfAbsent(c.word.lowercase(), c.language)
+    return out
+}
+
+/** True when a word character sits on both sides of the cursor. */
+internal fun cursorInsideWord(before: CharSequence, after: CharSequence): Boolean =
+    before.isNotEmpty() && isWordChar(before[before.length - 1]) &&
+        after.isNotEmpty() && isWordChar(after[0])
+
+/**
+ * The word the cursor is parked inside, split at the cursor, or null.
+ *
+ * Both halves are walked out of text read from the editor in the same call, so there is no
+ * remembered length to drift from (KNOWN_ISSUES item 69). The caller reads [maxLen] + 1
+ * characters each side: a word that runs past either read is longer than [maxLen] and is
+ * refused rather than half re-cased.
+ */
+internal fun wordAroundCursor(before: CharSequence, after: CharSequence, maxLen: Int): WordAround? {
+    val head = trailingLetterRun(before)
+    var end = 0
+    while (end < after.length && isWordChar(after[end])) end++
+    val tail = after.subSequence(0, end).toString()
+    if (head.isEmpty() || tail.isEmpty() || head.length + tail.length > maxLen) return null
+    return WordAround(head, tail)
+}
+
+/** A word split at the cursor: [head] before it, [tail] after it. */
+internal data class WordAround(val head: String, val tail: String)
 
 /**
  * True when a user-driven selection change parks a collapsed cursor somewhere a word
@@ -3182,6 +3792,18 @@ internal fun retypeSource(tentativeLength: Int, commitSpan: Int): String = when 
     commitSpan >= 0 -> "commit"
     else -> "cursor"
 }
+
+/**
+ * How long an undecodable buffer stays open: twice the swipe delay, never under
+ * [STALE_TIMEOUT_FLOOR_MS].
+ *
+ * The swipe delay went down to 10 ms on #2, and twice that would close a word typed in
+ * pieces 20 ms after each piece. The floor is what the old 100 ms minimum gave, so every
+ * setting reachable before keeps its timeout.
+ */
+internal fun staleTimeoutMs(swipeDelayMs: Long): Long = maxOf(2 * swipeDelayMs, STALE_TIMEOUT_FLOOR_MS)
+
+internal const val STALE_TIMEOUT_FLOOR_MS = 200L
 
 internal fun hugsPreviousWord(text: String): Boolean =
     text.length == 1 && text[0] in HUGGING_PUNCTUATION
@@ -3325,6 +3947,20 @@ internal fun learnsOnCommit(word: String, reloadedFrom: String?): Boolean {
     if (reloadedFrom == null) return true
     return !word.equals(reloadedFrom, ignoreCase = true)
 }
+
+/**
+ * Whether a commit puts the correction strip up. [offersCorrections] is the field's own
+ * answer, which is where the privateMode / noLearning split is decided and documented.
+ *
+ * [optionCount] of one is suppressed. Its only zone is the selected one, a tap on the
+ * selected zone is deliberately a no-op, so the strip would be a word offering nothing
+ * but itself and a tap on it would do nothing at all.
+ */
+internal fun showsCorrectionStrip(
+    word: String,
+    offersCorrections: Boolean,
+    optionCount: Int,
+): Boolean = word.isNotEmpty() && offersCorrections && optionCount > 1
 
 internal fun suggestionZoneWords(candidates: List<String>, literal: String): List<String> =
     if (literal.isEmpty() || candidates.contains(literal)) candidates

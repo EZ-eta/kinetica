@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  The project's only layout resource, and it exists because a custom Preference
-  needs one: everything else in this app is a Canvas view built in Kotlin. It
+  One of two layout resources, both for a custom Preference: everything else in this
+  app is a Canvas view built in Kotlin. It
   replaces the whole preference row rather than filling the narrow widget slot,
   which is why the caption is a TextView here instead of the preference summary.
 -->

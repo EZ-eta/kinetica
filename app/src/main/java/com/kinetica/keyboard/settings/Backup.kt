@@ -48,6 +48,8 @@ object Backup {
 
     data class Chord(val chord: String, val expansion: String)
 
+    data class Expand(val trigger: String, val position: Int, val target: String)
+
     data class Phrase(val lang: String, val prev: String, val next: String, val count: Int)
 
     data class Data(
@@ -55,6 +57,7 @@ object Backup {
         val words: List<Word> = emptyList(),
         val blocked: List<Blocked> = emptyList(),
         val chords: List<Chord> = emptyList(),
+        val expansions: List<Expand> = emptyList(),
         /** Empty unless the user ticked the box; see [Data.phrases] at the call site. */
         val phrases: List<Phrase> = emptyList(),
         /**
@@ -67,6 +70,49 @@ object Backup {
 
     /** True when [s] can survive a round trip: no separator, no newline. */
     fun encodable(s: String): Boolean = s.none { it == '\t' || it == '\n' || it == '\r' }
+
+    /**
+     * A value with its separators written out, for the one record type that may hold them.
+     *
+     * An expansion target may legitimately be several lines - a bullet block is the
+     * example its own reporter leads with - and the line format cannot carry that. Every
+     * OTHER record still refuses rather than escapes, so nothing already written changes
+     * meaning and [VERSION] stays where it is.
+     *
+     * That last part is the whole reason for escaping rather than bumping the version.
+     * [decode] refuses a file newer than it understands outright, so a bump would make
+     * every backup taken from here unreadable by every build already installed, in full.
+     * A new record type is skipped and counted instead, and the rest of the file restores.
+     */
+    fun esc(s: String): String = s
+        .replace("\\", "\\\\")
+        .replace("\t", "\\t")
+        .replace("\n", "\\n")
+        .replace("\r", "\\r")
+
+    /** Inverse of [esc]. An unknown escape keeps its backslash rather than losing it. */
+    fun unesc(s: String): String {
+        if (!s.contains('\\')) return s
+        val out = StringBuilder(s.length)
+        var i = 0
+        while (i < s.length) {
+            val c = s[i]
+            if (c != '\\' || i == s.length - 1) {
+                out.append(c)
+                i++
+                continue
+            }
+            when (val next = s[i + 1]) {
+                '\\' -> out.append('\\')
+                't' -> out.append('\t')
+                'n' -> out.append('\n')
+                'r' -> out.append('\r')
+                else -> out.append(c).append(next)
+            }
+            i += 2
+        }
+        return out.toString()
+    }
 
     /**
      * The backup as lines, header first. A record whose fields cannot survive the separators
@@ -89,6 +135,13 @@ object Backup {
         for (c in data.chords) {
             if (encodable(c.chord) && encodable(c.expansion)) yield("chord\t${c.chord}\t${c.expansion}")
         }
+        for (e in data.expansions) {
+            // The target is escaped, so the only way this drops a row is a trigger with a
+            // separator in it - which the editor refuses to save in the first place.
+            if (encodable(e.trigger)) {
+                yield("expand\t${e.trigger}\t${e.position}\t${esc(e.target)}")
+            }
+        }
         for (p in data.phrases) {
             if (encodable(p.lang) && encodable(p.prev) && encodable(p.next)) {
                 yield("phrase\t${p.lang}\t${p.prev}\t${p.next}\t${p.count}")
@@ -105,6 +158,7 @@ object Backup {
             data.words.count { !encodable(it.lang) || !encodable(it.word) } +
             data.blocked.count { !encodable(it.lang) || !encodable(it.word) } +
             data.chords.count { !encodable(it.chord) || !encodable(it.expansion) } +
+            data.expansions.count { !encodable(it.trigger) } +
             data.phrases.count { !encodable(it.lang) || !encodable(it.prev) || !encodable(it.next) }
 
     /** What a file turned out to be. */
@@ -146,6 +200,7 @@ object Backup {
         val words = ArrayList<Word>()
         val blocked = ArrayList<Blocked>()
         val chords = ArrayList<Chord>()
+        val expansions = ArrayList<Expand>()
         val phrases = ArrayList<Phrase>()
         val base = ArrayList<String>()
         var skipped = 0
@@ -166,13 +221,25 @@ object Backup {
                 } else {
                     false
                 }
+                "expand" -> parseExpand(f)?.also { e -> expansions.add(e) } != null
                 "phrase" -> parsePhrase(f)?.also { p -> phrases.add(p) } != null
                 "basedict" -> if (f.size == 2 && f[1].isNotEmpty()) { base.add(f[1]); true } else false
                 else -> false
             }
             if (!ok) skipped++
         }
-        return Result.Ok(Data(prefs, words, blocked, chords, phrases, base), skipped)
+        return Result.Ok(Data(prefs, words, blocked, chords, expansions, phrases, base), skipped)
+    }
+
+    private fun parseExpand(f: List<String>): Expand? {
+        // The target is the last field and is escaped, so it can never look like extra
+        // fields; a size check of exactly four is therefore safe here, unlike for a pref.
+        if (f.size != 4 || f[1].isEmpty()) return null
+        val position = f[2].toIntOrNull() ?: return null
+        if (position < 0) return null
+        val target = unesc(f[3])
+        if (target.isEmpty()) return null
+        return Expand(f[1], position, target)
     }
 
     private fun parsePref(f: List<String>): Pref? {

@@ -58,6 +58,23 @@ object BarAdjust {
     }
 
     /**
+     * Whether an armed slide applies its delta on lift, or hands the lift back to the
+     * tap it was armed on top of.
+     *
+     * A hold that never slid, in correction mode, is a slow tap and not a gesture. The
+     * strip's primary action is swapping a word in, a deliberate aim at one is slower
+     * than a typing tap, and the arm's only feedback is a badge preview under the thumb -
+     * so the gesture the strip exists for was being eaten silently. Nothing is lost:
+     * picking a correction learns the word it picks, and one step of slide in either
+     * direction still adjusts and still blocks.
+     *
+     * Composition mode is untouched. There a release in place is the plain long-press
+     * reinforce that shipped first, and the tap means commit rather than correct.
+     */
+    fun appliesOnLift(correctionMode: Boolean, steps: Int): Boolean =
+        !(correctionMode && steps == 0)
+
+    /**
      * [steps] clamped so the slide cannot travel past the blocking step.
      * Further thumb travel then changes nothing, which is what makes the armed
      * state readable: the badge stops moving and shows the block instead.

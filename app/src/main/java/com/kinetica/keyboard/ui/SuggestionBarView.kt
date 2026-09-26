@@ -12,14 +12,16 @@ import android.view.MotionEvent
 import android.view.VelocityTracker
 import android.view.View
 import com.kinetica.keyboard.engine.KineticaConstants
+import com.kinetica.keyboard.keys.ActionRow
 
 /**
- * Suggestion strip: one row of up to [MAX_ZONES] equal-width zones, each an
- * independently tappable full candidate word. Candidates beyond one row live
- * on further pages: a horizontal drag anywhere across the words cycles pages
- * in either direction, with position dots at the bottom center while
- * more than one page exists. The same layout serves both phases of a word's
- * life:
+ * Suggestion strip: one row of equal-width zones, each an independently tappable full
+ * candidate word. How many share a row is [BarZones]' answer, from the words' own
+ * measured widths up to [MAX_ZONES], so long candidates get the room rather than an
+ * ellipsis. Candidates beyond one row live on further pages: a horizontal drag anywhere
+ * across the words cycles pages in either direction, with position dots at the bottom
+ * center while more than one page exists. The same layout serves both phases of a
+ * word's life:
  *
  *  - composition mode: ranked candidates for the word in progress, best first
  *    (bold); tapping a zone commits that word, a fast upward flick commits
@@ -29,11 +31,13 @@ import com.kinetica.keyboard.engine.KineticaConstants
  *    committed word in the editor directly.
  *
  * Long-pressing any zone in either mode arms weight adjustment without
- * committing: releasing in place reinforces the word (as a plain long-press
- * always did); sliding up while held increases the personal weight further,
- * sliding down decreases it, one increment per REINFORCE_STEP_DP of travel,
- * with the tier badge previewing the pending level live. The delta is applied
- * only on lift.
+ * committing: sliding up while held increases the personal weight, sliding down
+ * decreases it, one increment per REINFORCE_STEP_DP of travel, with the tier badge
+ * previewing the pending level live. The delta is applied only on lift.
+ *
+ * Releasing in place reinforces the word in composition mode, as a plain long-press
+ * always did. In correction mode it picks instead: there the tap is the primary action
+ * and a deliberate one is slow, so the arm was stealing the gesture the strip exists for.
  */
 class SuggestionBarView @JvmOverloads constructor(
     context: Context,
@@ -57,6 +61,13 @@ class SuggestionBarView @JvmOverloads constructor(
 
         /** The reserved right-edge button: throw the current word away and start again. */
         fun onRetype()
+
+        /**
+         * A shortcut in the action row was tapped, by its index into what the bar was
+         * given. An index rather than the glyph, because two actions could in principle
+         * draw the same symbol and the bar has no business knowing what any of them mean.
+         */
+        fun onBarAction(index: Int)
 
         /**
          * The weight slide travelled past the bottom of its own scale: never
@@ -122,6 +133,37 @@ class SuggestionBarView @JvmOverloads constructor(
     private var downX = 0f
     private var downY = 0f
     private var pageSwipeCandidate = false
+    private var zoneKey = Int.MIN_VALUE
+
+    /**
+     * Shortcut glyphs to offer when there is nothing to suggest, already ordered and
+     * filtered by the service. Empty turns the row off.
+     */
+    var actions: List<String> = emptyList()
+        set(value) {
+            if (field != value) {
+                field = value
+                invalidate()
+            }
+        }
+
+    /**
+     * Whether a word is being typed right now.
+     *
+     * The row is suppressed while it is, and that guard is the whole reason the row is
+     * usable. An empty bar is not a rare state - it is every field entry, every commit
+     * whose correction strip is suppressed, every cursor move, the stale timeout after any
+     * failed swipe, and permanently in a password field - so without this the row would
+     * appear mid-word on every empty decode, under a thumb aiming at a suggestion.
+     */
+    var wordPending: Boolean = false
+        set(value) {
+            if (field != value) {
+                field = value
+                if (words.isEmpty() && actions.isNotEmpty()) invalidate()
+            }
+        }
+    private var pageSizes: List<Int> = emptyList()
     private var pageSwipeConsumed = false
     private var lastTouchY = 0f
     private var adjustArmed = false
@@ -229,14 +271,71 @@ class SuggestionBarView @JvmOverloads constructor(
         }
     }
 
-    private fun pageCount(): Int =
-        if (words.isEmpty()) 0 else (words.size + MAX_ZONES - 1) / MAX_ZONES
+    /**
+     * Page sizes for the current words at the current size, recomputed only when one of
+     * those changes. onDraw and onTouchEvent both need it and neither may measure text
+     * on every frame or every move event.
+     */
+    private fun pageSizes(): List<Int> {
+        // retypeButton and retypeButtonDp belong in the key because both change
+        // wordsWidth(), which the partition is computed against: without them, turning the
+        // button on with the same words up left a partition sized for the old width.
+        val key = words.hashCode() * 31 * 31 + width * 31 + height +
+            (if (retypeButton) 7919 else 0) + retypeButtonDp
+        if (key != zoneKey) {
+            zoneKey = key
+            pageSizes = BarZones.pages(zoneWidths(), wordsWidth(), MAX_ZONES)
+        }
+        return pageSizes
+    }
+
+    /**
+     * What each word needs of its zone: its own drawn width, the padding [fit] already
+     * reserves, and for a badged word the room the badge takes past the text. The text
+     * is centred, so the badge's reach counts on both sides.
+     *
+     * Measured with the bold paint, which is the widest a word is ever drawn.
+     */
+    private fun zoneWidths(): List<Float> {
+        val h = height.toFloat()
+        val orn = BarMetrics.scale(h, density)
+        primaryPaint.textSize = BarMetrics.textSize(h)
+        val pad = TEXT_INSET_DP * density * orn
+        val badge = 2f * (BADGE_GAP_DP + BADGE_REACH_DP) * density * orn
+        return words.map {
+            primaryPaint.measureText(it.word) + pad + if (it.tier > 0) badge else 0f
+        }
+    }
+
+    /**
+     * Whether the shortcut row is on screen. Correction mode counts as content: the strip
+     * is a live offer and the row must not cover it.
+     */
+    private fun actionsVisible(): Boolean =
+        actions.isNotEmpty() && words.isEmpty() && !correctionMode && !wordPending
+
+    /** Cells actually drawn, which is as many as a thumb-sized cell leaves room for. */
+    private fun visibleActions(): List<String> {
+        if (!actionsVisible()) return emptyList()
+        val fit = ActionRow.cellsThatFit(wordsWidth(), BarMetrics.RETYPE_MIN_DP * density)
+        return actions.take(fit)
+    }
+
+    private fun pageCount(): Int = pageSizes().size
+
+    private fun pageStart(): Int = BarZones.startOfPage(pageSizes(), page)
 
     /** The page's slice of [words]; zone indices are relative to this. */
-    private fun visible(): List<Suggestion> = words.drop(page * MAX_ZONES).take(MAX_ZONES)
+    private fun visible(): List<Suggestion> {
+        val sizes = pageSizes()
+        if (sizes.isEmpty()) return emptyList()
+        val p = page.coerceIn(0, sizes.size - 1)
+        val start = BarZones.startOfPage(sizes, p)
+        return words.subList(start, start + sizes[p])
+    }
 
     private fun wordAt(zone: Int): Suggestion? =
-        if (zone < 0) null else words.getOrNull(page * MAX_ZONES + zone)
+        if (zone < 0) null else words.getOrNull(pageStart() + zone)
 
     override fun onDraw(canvas: Canvas) {
         val w = width.toFloat()
@@ -257,12 +356,26 @@ class SuggestionBarView @JvmOverloads constructor(
             canvas.drawText(RETYPE_GLYPH, w - bw / 2f, baseY, textPaint)
             canvas.drawRect(w - bw - 1f, h * 0.2f, w - bw + 1f, h * 0.8f, dividerPaint)
         }
+        // Beside the retype glyph and for the same reason: an empty bar is the state this
+        // row exists for, so it has to be painted before the return below.
+        val acts = visibleActions()
+        if (acts.isNotEmpty()) {
+            val cellW = wordsWidth() / acts.size
+            for (i in acts.indices) {
+                canvas.drawText(acts[i], cellW * (i + 0.5f), baseY, textPaint)
+                if (i > 0) {
+                    canvas.drawRect(
+                        cellW * i - 1f, h * 0.2f, cellW * i + 1f, h * 0.8f, dividerPaint,
+                    )
+                }
+            }
+        }
         if (vis.isEmpty()) return
         val zoneW = wordsWidth() / vis.size
 
         for (i in vis.indices) {
             val s = vis[i]
-            val fullIdx = page * MAX_ZONES + i
+            val fullIdx = pageStart() + i
             val left = i * zoneW
             val cx = left + zoneW / 2f
             // The bold "best" emphasis belongs to the overall top candidate /
@@ -288,7 +401,7 @@ class SuggestionBarView @JvmOverloads constructor(
             } else {
                 s.tier
             }
-            val badgeX = cx + paint.measureText(shown) / 2f + 6f * density * orn
+            val badgeX = cx + paint.measureText(shown) / 2f + BADGE_GAP_DP * density * orn
             val badgeY = baseY + paint.ascent() + 3f * density * orn
             if (blockArmed) {
                 // Struck through and marked, so the pending block is legible
@@ -364,7 +477,7 @@ class SuggestionBarView @JvmOverloads constructor(
     }
 
     private fun fit(word: String, paint: Paint, maxW: Float): String {
-        val inset = 8f * density * BarMetrics.scale(height.toFloat(), density)
+        val inset = TEXT_INSET_DP * density * BarMetrics.scale(height.toFloat(), density)
         if (paint.measureText(word) <= maxW - inset) return word
         var s = word
         while (s.length > 3 && paint.measureText("$s…") > maxW - inset) {
@@ -451,7 +564,7 @@ class SuggestionBarView @JvmOverloads constructor(
             }
             MotionEvent.ACTION_UP -> {
                 longPressHandler.removeCallbacks(reinforceRunnable)
-                if (adjustArmed) {
+                if (adjustArmed && BarAdjust.appliesOnLift(correctionMode, adjustSteps)) {
                     wordAt(adjustZone)?.let {
                         if (BarAdjust.blockArmed(it.count, adjustSteps, reinforceIncrement)) {
                             listener?.onSuggestionBlocked(it.word)
@@ -464,6 +577,12 @@ class SuggestionBarView @JvmOverloads constructor(
                     recycleTracker()
                     invalidate()
                     return true
+                }
+                // Armed but falling through to the pick: the chip preview the arm drew
+                // has to go whether or not the pick itself redraws.
+                if (adjustArmed) {
+                    resetAdjust()
+                    invalidate()
                 }
                 if (pageSwipeConsumed) {
                     pageSwipeConsumed = false
@@ -480,9 +599,16 @@ class SuggestionBarView @JvmOverloads constructor(
                     recycleTracker()
                     return true
                 }
+                if (zone <= ZONE_ACTION_BASE && zone == downZone) {
+                    listener?.onBarAction(ZONE_ACTION_BASE - zone)
+                    performClick()
+                    downZone = -1
+                    recycleTracker()
+                    return true
+                }
                 if (zone >= 0 && zone == downZone) {
                     wordAt(zone)?.let { s ->
-                        val fullIdx = page * MAX_ZONES + zone
+                        val fullIdx = pageStart() + zone
                         if (correctionMode) {
                             if (fullIdx != selectedIndex) {
                                 selectedIndex = fullIdx
@@ -544,16 +670,34 @@ class SuggestionBarView @JvmOverloads constructor(
         // The button is not a word zone: it is outside the paging arithmetic, so
         // MAX_ZONES, visible() and pageCount() are all unchanged by it.
         if (retypeButton && x >= wordsWidth()) return ZONE_RETYPE
+        val acts = visibleActions()
+        if (acts.isNotEmpty()) {
+            // Negative, like ZONE_RETYPE and for the same reason: wordAt refuses a
+            // negative zone, which is what keeps the reinforce arm, the page swipe and the
+            // flick off a row that has no words behind it.
+            val i = (x / (wordsWidth() / acts.size)).toInt().coerceIn(0, acts.size - 1)
+            return ZONE_ACTION_BASE - i
+        }
         if (vis.isEmpty()) return -1
         return (x / (wordsWidth() / vis.size)).toInt().coerceIn(0, vis.size - 1)
     }
 
     private companion object {
+        /** Most zones one page may hold, whatever the words measure. */
         const val MAX_ZONES = 5
+
+        /** Padding a word keeps inside its zone, shared by the packing and by [fit]. */
+        private const val TEXT_INSET_DP = 8f
+
+        // The tier badge rides the text's right edge at BADGE_GAP_DP, and its outermost
+        // dot reaches BADGE_REACH_DP further (ring 3.2 + radius 1.2). Named here so the
+        // width the packing reserves and the position the drawing uses cannot drift.
+        private const val BADGE_GAP_DP = 6f
+        private const val BADGE_REACH_DP = 4.4f
         const val FLICK_VELOCITY_DP_S = 800f
-        // Between the keyboard's 300ms long-press floor and its 700ms
-        // ceiling: slow enough not to swallow taps, fast enough to feel like
-        // the same gesture family as the key popups.
+        // Fixed, not the key long-press setting: that one now goes down to 25 ms, and a
+        // bar tap slower than that would bump a word's weight. 450 ms is slow enough not to
+        // swallow a deliberate tap and fast enough to feel like the key popups.
         const val REINFORCE_HOLD_MS = 450L
         // Travel per weight-adjust step: about half a key height, so two or
         // three deliberate steps fit between the bar and the top key row
@@ -568,6 +712,16 @@ class SuggestionBarView @JvmOverloads constructor(
         const val PAGE_SWIPE_TRAVEL_DP = 30f
         // Not a word zone, so it cannot be an index into one.
         const val ZONE_RETYPE = -2
+
+        /**
+         * First shortcut cell; cell i is `ZONE_ACTION_BASE - i`.
+         *
+         * Negative for the reason [ZONE_RETYPE] is, and it is load-bearing rather than
+         * tidy: `wordAt` returns null for any negative zone, which is what keeps the
+         * 450ms weight arm, the page swipe and the upward flick away from a row that has
+         * no words behind them. A positive index would have to defeat all three by hand.
+         */
+        const val ZONE_ACTION_BASE = -10
         // U+21BB. A symbol rather than an icon: it themes with the text, scales with the
         // bar, and needs no drawable.
         const val RETYPE_GLYPH = "\u21bb"

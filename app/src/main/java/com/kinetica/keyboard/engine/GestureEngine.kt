@@ -101,6 +101,15 @@ class GestureEngine(private val listener: Listener) {
 
     fun streamIdOf(pointerId: Int): StreamId? = streamFor(pointerId)?.streamId
 
+    /**
+     * Keys this pointer has contacted, or 1 when it is not the engine's to track.
+     *
+     * The fallback is the answer, not a placeholder: a pointer with no stream is on
+     * backspace, enter, the spacebar or a symbol layer, where there is no word being
+     * swiped and a directional flick means exactly what it says.
+     */
+    fun contactCount(pointerId: Int): Int = streamFor(pointerId)?.contactCount ?: 1
+
     fun hasActivePointers(): Boolean = activeCount() > 0
 
     private fun streamFor(pointerId: Int): GestureStream? {

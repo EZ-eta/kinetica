@@ -19,6 +19,7 @@ import androidx.preference.PreferenceManager
 import com.kinetica.keyboard.R
 import com.kinetica.keyboard.keys.EdgeSwipeBinding
 import com.kinetica.keyboard.keys.EdgeSwipeBindings
+import com.kinetica.keyboard.keys.EditorAction
 
 /**
  * Edge-swipe shortcut management: each binding is (trigger key, direction,
@@ -104,12 +105,35 @@ class EdgeSwipeSettingsActivity : AppCompatActivity() {
         EdgeSwipeBinding.Direction.RIGHT -> "→"
     }
 
-    private fun actionLabel(output: String): String =
-        if (output == EdgeSwipeBindings.ACTION_EMOJI) {
+    /**
+     * What a binding may do, in picker order: insert text, open the picker, or run one of
+     * the editor actions.
+     *
+     * Derived from [EditorAction.entries] rather than hand-listed, for the reason the
+     * chord editor's own list gives: a hand-written list silently omitted RETYPE there for
+     * three releases. This one omitted **every** action, which is why `onEdgeSwipe` has
+     * been able to run them since v1.0.2 and no user could ever assign one.
+     */
+    private val actionOutputs: List<String?> =
+        listOf(null, EdgeSwipeBindings.ACTION_EMOJI) + EditorAction.entries.map { it.output }
+
+    private fun actionLabel(output: String): String = when {
+        output == EdgeSwipeBindings.ACTION_EMOJI || EditorAction.of(output) != null ->
+            actionName(output)
+        // Newlines are legal in an inserted string and would make one row as tall as the
+        // text it holds, pushing every other binding off the screen.
+        else -> "\"${output.replace("\n", " ").replace("\r", " ")}\""
+    }
+
+    private fun actionName(output: String?): String {
+        val action = EditorAction.of(output.orEmpty())
+        if (action != null) return getString(ActionLabels.labelRes(action))
+        return if (output == EdgeSwipeBindings.ACTION_EMOJI) {
             getString(R.string.edge_swipe_action_emoji)
         } else {
-            "\"$output\""
+            getString(R.string.edge_swipe_action_insert)
         }
+    }
 
     /** Message for a binding that shadows a built-in gesture, or null. */
     private fun shadowNote(row: EdgeSwipeBinding): String? {
@@ -206,14 +230,17 @@ class EdgeSwipeSettingsActivity : AppCompatActivity() {
             )
             setSelection(directions.indexOf(existing?.direction).coerceAtLeast(0))
         }
-        val actions = listOf(
-            getString(R.string.edge_swipe_action_insert),
-            getString(R.string.edge_swipe_action_emoji),
-        )
+        val actions = actionOutputs.map { actionName(it) }
+        val reserved = existing?.output?.takeIf {
+            it == EdgeSwipeBindings.ACTION_EMOJI || EditorAction.of(it) != null
+        }
         val textField = EditText(this).apply {
             hint = getString(R.string.edge_swipe_text_hint)
-            inputType = InputType.TYPE_CLASS_TEXT
-            setText(existing?.output.takeIf { it != EdgeSwipeBindings.ACTION_EMOJI }.orEmpty())
+            // Multi-line so a target with a newline in it can be typed rather than only
+            // pasted; the expansion editor needs the same and for the same reason.
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
+            setText(if (reserved == null) existing?.output.orEmpty() else "")
+            visibility = if (reserved == null) View.VISIBLE else View.GONE
         }
         val actionSpinner = Spinner(this).apply {
             adapter = ArrayAdapter(
@@ -221,10 +248,11 @@ class EdgeSwipeSettingsActivity : AppCompatActivity() {
                 android.R.layout.simple_spinner_dropdown_item,
                 actions,
             )
-            setSelection(if (existing?.output == EdgeSwipeBindings.ACTION_EMOJI) 1 else 0)
+            setSelection(actionOutputs.indexOf(reserved).coerceAtLeast(0))
             onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
                 override fun onItemSelected(p: AdapterView<*>?, v: View?, pos: Int, id: Long) {
-                    textField.visibility = if (pos == 0) View.VISIBLE else View.GONE
+                    textField.visibility =
+                        if (actionOutputs[pos] == null) View.VISIBLE else View.GONE
                 }
 
                 override fun onNothingSelected(p: AdapterView<*>?) = Unit
@@ -245,11 +273,8 @@ class EdgeSwipeSettingsActivity : AppCompatActivity() {
             .setTitle(if (existing == null) R.string.edge_swipe_add else R.string.chord_edit)
             .setView(content)
             .setPositiveButton(android.R.string.ok) { _, _ ->
-                val output = if (actionSpinner.selectedItemPosition == 1) {
-                    EdgeSwipeBindings.ACTION_EMOJI
-                } else {
-                    textField.text.toString()
-                }
+                val output = actionOutputs[actionSpinner.selectedItemPosition]
+                    ?: textField.text.toString()
                 if (output.isEmpty()) return@setPositiveButton
                 val keyId = keySpinner.selectedItem as String
                 val direction = directions[dirSpinner.selectedItemPosition]

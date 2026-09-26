@@ -121,7 +121,7 @@ sealed class Matcher {
             // Which keys the gesture was measurably on, straight from the token.
             // GestureStream applies hysteresis before recording one, so this is the
             // conservative half of the evidence: a fast crossing can be missed, but
-            // a key listed here was genuinely under the finger.
+            // a key listed here was under the finger.
             val contacted = if (t.keyContacts.isEmpty()) {
                 NO_CONTACTS
             } else {

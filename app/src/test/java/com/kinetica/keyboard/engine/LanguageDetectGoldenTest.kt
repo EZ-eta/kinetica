@@ -154,7 +154,7 @@ class LanguageDetectGoldenTest {
         // Narrowed deliberately, on the same precedent as the scoring goldens: a
         // reconstruction is a reachability fixture, not a ranking fixture.
         // On this polyline-through-key-centres path Spanish "suerte" (d=0.188)
-        // genuinely fits better than Italian "siete" (d=0.301), so the merged
+        // fits better than Italian "siete" (d=0.301), so the merged
         // list leads in Spanish and rule 2 cannot say otherwise - the foreign
         // candidate is inside the informative zone AND fits strictly better,
         // which is exactly the positive evidence the rule asks for.
@@ -230,7 +230,7 @@ class LanguageDetectGoldenTest {
         // between two Romance languages than a foreign word is, which is why
         // the sweep measured detection at only 23 of 38 rows.
         // Ranking the languages together asks nothing of the sort: the Spanish
-        // word simply has to fit better.
+        // word has to fit better.
         //
         // "cuando" is back on this list, and it is the clearest evidence of the
         // difference. It was removed once the recall fix

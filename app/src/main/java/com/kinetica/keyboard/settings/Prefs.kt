@@ -25,6 +25,28 @@ object Prefs {
     const val LAYOUT_MODE = "pref_layout_mode"
 
     /**
+     * The non-full layout mode the one-handed toggle returns to.
+     *
+     * [LAYOUT_MODE] carries the hand inside its own value ("left" against "right"), so
+     * remembering which one a user prefers needs a second key rather than a flag. Without
+     * it the toggle would take a left-hander back to the right-hand default every time.
+     */
+    const val LAYOUT_MODE_ONE_HANDED = "pref_layout_mode_one_handed"
+
+    /**
+     * Shortcut actions offered in the suggestion bar, as a set of [EditorAction] names.
+     * Order is canonical, not stored - see [ActionRow].
+     */
+    const val BAR_ACTIONS = "pref_bar_actions"
+
+    /**
+     * The same, for the ?123 hold menu. A set of its own because the gear was the keyboard's
+     * only route to settings, and one shared set took it off the hold whenever a user took
+     * it off the bar.
+     */
+    const val MENU_ACTIONS = "pref_menu_actions"
+
+    /**
      * Letter arrangement: qwerty | qwertz | qzerty | azerty. Distinct from
      * [LAYOUT_MODE], which is where the keys sit on screen (full, split,
      * one-handed); this is which letter is on which key.
@@ -151,12 +173,37 @@ object Prefs {
     const val LANGUAGE = "pref_language"
     /** Last language agreed with Android; detects Settings edits while the IME is inactive. */
     const val SYNCED_LANGUAGE = "pref_synced_language"
+
+    /**
+     * Let Android's selected subtype decide the language at every input start (R93).
+     *
+     * On by default because that is what shipped in v1.1.0 and it answers a real
+     * complaint, Android's picker and Kinetica disagreeing. Off, [LANGUAGE] is the only
+     * source of truth: Android can no longer pull a user whose phone is English back to
+     * English on every cold start, while Kinetica still asks Android to follow when the
+     * language changes here.
+     */
+    const val SYNC_SYSTEM_LANGUAGE = "pref_sync_system_language"
     const val LONG_PRESS_MS = "pref_long_press_ms"
     const val CHORD_ARM_MS = "pref_chord_arm_ms"
     const val RETYPE_AVOIDS_REJECTED = "pref_retype_avoids_rejected"
     const val AUTOCORRECT_LEVEL = "pref_autocorrect_level"
     const val REINFORCE_INCREMENT = "pref_reinforce_increment"
     const val EMOJI_KEY = "pref_emoji_key"
+    /**
+     * Put the digit or symbol ahead of the accents in a letter key's alternates.
+     *
+     * It decides the corner HINT as well as the popup order, and the corner hint is what
+     * an up-swipe on the top row types, so this is how the number row is reached without
+     * a long press. On by default since 2026-09-21: a user reported the number row as
+     * unreachable by swipe and could not find this, because nothing in its own wording
+     * mentioned a swipe (R60).
+     *
+     * Named cost: an accented top-row key draws its digit rather than its accent in all
+     * nine languages, and the long-press popup reorders with it. The accents stay in that
+     * popup. Nothing reaches the decoder - alternates and hints are display and gesture
+     * only - so no golden can move on it.
+     */
     const val NUMBER_PRIORITY = "pref_number_priority"
 
     /**
@@ -280,13 +327,22 @@ object Prefs {
      */
     const val DICT_GENERATION = "pref_dict_generation"
 
+    /**
+     * Bumped when the expansion table changes, so the keyboard reloads it and only then.
+     *
+     * Chords are re-read on every input start instead, which is free for at most 26 rows
+     * and wrong here: a user of this feature is expected to have hundreds, and paying for
+     * all of them at every field focus is a cost that grows with how much they use it.
+     */
+    const val EXPANSION_GENERATION = "pref_expansion_generation"
+
     /** StringSet of enabled language codes; cycle order is canonical (en, it). */
     const val ENABLED_LANGUAGES = "pref_enabled_languages"
 
     /** Letter for the ?123-chord language cycle ("none" disables). */
     const val LANG_CYCLE_KEY = "pref_lang_cycle_key"
 
-    /** Experimental per-word language auto-detection (swipe words only). */
+    /** "Mix enabled languages": every word also decodes against a second language. */
     const val AUTO_DETECT_LANGUAGE = "pref_auto_detect_language"
 
     /**
@@ -357,6 +413,20 @@ object Prefs {
 
     /** The retraction window's multiple of the tap delay, which is what it always was. */
     const val DEFAULT_AUTOSPACE_RETRACT_MULTIPLE = 2
+
+    // Slider ranges, shared by KeyboardConfig's clamps and the step tables in arrays.xml
+    // (TimingStepsTest holds the two together). The floors were 100 ms for autospace and
+    // 300 ms for long-press until users asked for lower on #2; the ceilings are unchanged.
+    const val AUTOSPACE_DELAY_MIN_MS = 10
+    const val AUTOSPACE_DELAY_MAX_MS = 800
+    const val AUTOSPACE_RETRACT_MIN_MS = 10
+    const val AUTOSPACE_RETRACT_MAX_MS = 2000
+
+    // 25 ms is the developer's decision. Below the length of an ordinary tap, roughly
+    // 60-150 ms, the hold timer fires first: a letter tap types its first alternate and a
+    // swipe that has not yet moved 12 dp opens the popup instead.
+    const val LONG_PRESS_MIN_MS = 25
+    const val LONG_PRESS_MAX_MS = 700
     const val DEFAULT_WORD_ENDS_ON_SPACE = false
     const val DEFAULT_AUTOSPACE_TAPPED_WORDS = false
     const val DEFAULT_ZEN = false
@@ -372,7 +442,10 @@ object Prefs {
     const val DEFAULT_AUTOCORRECT_LEVEL = "normal"
     const val DEFAULT_REINFORCE_INCREMENT = "medium"
     const val DEFAULT_EMOJI_KEY = false
-    const val DEFAULT_NUMBER_PRIORITY = false
+    const val DEFAULT_NUMBER_PRIORITY = true
+
+    /** Was a bare "full" in two places until the one-handed toggle needed to name it. */
+    const val DEFAULT_LAYOUT_MODE = "full"
     const val DEFAULT_PLAIN_LETTER_ALTERNATES = false
     const val DEFAULT_ALTERNATE_SWIPES = true
     const val DEFAULT_BACKSPACE_CHAR_SLIDE = false
@@ -393,6 +466,7 @@ object Prefs {
     const val DEFAULT_THEME_BRIGHTNESS = "dark"
     const val DEFAULT_LANG_CYCLE_KEY = "l"
     const val DEFAULT_AUTO_DETECT_LANGUAGE = false
+    const val DEFAULT_SYNC_SYSTEM_LANGUAGE = true
     const val DEFAULT_BRITISH_SPELLING = false
 
     /**

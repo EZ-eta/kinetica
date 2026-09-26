@@ -70,7 +70,7 @@ class LanguagePreferenceTest {
         // bm=1.54 plus one personal commit), while the SAME list held "sudare"
         // at d=0.18. The old gate read the heads (pConf 0.557 vs oConf 0.699)
         // and swapped, so "ayudarte" committed and the whole Italian list was
-        // discarded. Merged, Italian's own head simply outscores every Spanish
+        // discarded. Merged, Italian's own head outscores every Spanish
         // candidate and leads - and "sudare" stays reachable.
         //
         // That "state" heads Italian here is a scoring question, not a
@@ -194,7 +194,7 @@ class LanguagePreferenceTest {
         // active dictionary leaves the active language with no geometric
         // explanation of the path. Under the swap this was the low-confidence
         // gate's job; under the merge it needs no gate at all - the foreign
-        // candidate simply outscores everything Italian offers, and its own fit
+        // candidate outscores everything Italian offers, and its own fit
         // (d=0.19) is well inside the informative zone, so it may lead.
         val composer = composerWithActiveWords("sudare", "state", "sarei")
         val m = composer.merge(
@@ -271,7 +271,7 @@ class LanguagePreferenceTest {
         // The Spanish list is itself headed by "me" on score (fw 0.93 at
         // d=0.91 beating fw 0.81 at d=0.27 - a scoring question inside Spanish), so a swap
         // justified by "mujer" would have committed "me". Here the shared word
-        // simply drops out and "mujer" wins on its own fit.
+        // drops out and "mujer" wins on its own fit.
         //
         // Not every mujer attempt in that capture is recovered, and the reason
         // is not language: at line 50 the same word decoded at d=0.407 against
@@ -401,7 +401,7 @@ class LanguagePreferenceTest {
         // Merged, no foreign candidate here is inside the informative zone
         // (0.625 and 1.243 both past the cap), so none may lead: the active
         // language keeps the editor and the gesture stays visibly unresolved,
-        // which is the honest outcome when nothing fits.
+        // which is the right outcome when nothing fits.
         val composer = composerWithActiveWords("verdugo", "cuando", "cariño")
         val m = composer.merge(
             listOf(it("verdugo", 1.2700267f, 0.31f)),

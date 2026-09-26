@@ -34,11 +34,36 @@ object EdgeSwipeDetector {
     private const val DOMINANCE = 1.5f
 
     /**
+     * Keys a pointer may touch and still be read as a shortcut.
+     *
+     * A shortcut flick leaves its own key and stops; a swiped word crosses the board. That
+     * was not asked before, so `Connecticut` - which starts on `c` and ends on the top row -
+     * read as a dominant up-swipe and fired the `c` binding, giving `On°Cicut`. The peak
+     * reading above widened the window it fires in, deliberately, and this narrows the
+     * thing it is allowed to fire on.
+     *
+     * Three rather than one, because a flick is not confined to its key. The minimum travel
+     * is 30dp against a row pitch of about 1.6 kw, so a real flick leaves the key it starts
+     * on and enters the next row: two contacts, routinely. Three leaves room for a curved
+     * one and still refuses anything that has been travelling - `Connecticut` contacts
+     * eleven.
+     *
+     * **Reasoned from that geometry, not measured.** A fired edge swipe emitted no trace
+     * line until this change, so there is no capture to price it against; the line added
+     * beside it is what lets the next one settle the value.
+     */
+    private const val MAX_SHORTCUT_CONTACTS = 3
+
+    /**
      * Returns the bound output ("emoji" is a reserved value), or null.
      *
      * [peakDxPx]/[peakDyPx] are the displacement at the pointer's furthest
      * sample from its down point. Passing the lift displacement for both
      * reproduces the endpoint-only behaviour exactly.
+     *
+     * [contacts] is how many keys the pointer has touched; see [MAX_SHORTCUT_CONTACTS].
+     * It defaults to one so a caller with no gesture stream - every key that is not a
+     * letter - reads exactly as it did before.
      */
     fun detect(
         key: Key,
@@ -48,6 +73,7 @@ object EdgeSwipeDetector {
         peakDyPx: Float,
         density: Float,
         bindings: EdgeSwipeBindings,
+        contacts: Int = 1,
     ): String? {
         val minTravel = MIN_TRAVEL_DP * density
         // The lift decides first and alone wherever it decides anything, so a
@@ -57,8 +83,23 @@ object EdgeSwipeDetector {
         // report describes and the narrowest widening that covers it.
         val direction = directionOf(dxPx, dyPx, minTravel)
             ?: directionOf(peakDxPx, peakDyPx, minTravel)
-        if (direction != null) {
-            bindings.outputFor(key.id, direction)?.let { return it }
+        val bound = direction?.let { bindings.outputFor(key.id, it) }
+        if (bound != null) {
+            // The threshold refusal is traced beside the firing on purpose: it is the only
+            // measurement of what MAX_SHORTCUT_CONTACTS costs, and a guard whose cost is
+            // invisible is a guard nobody can price later.
+            if (contacts <= MAX_SHORTCUT_CONTACTS) {
+                DecodeTrace.log {
+                    "  edgeswipe fired key=${key.id} dir=$direction out=$bound " +
+                        "contacts=$contacts"
+                }
+                return bound
+            }
+            DecodeTrace.log {
+                "  edgeswipe refused key=${key.id} dir=$direction bound=$bound " +
+                    "reason=contacts contacts=$contacts"
+            }
+            return null
         }
         // Not a bound shortcut, so the pointer goes to the decoder. Traced when
         // the key had a binding in the direction the gesture was mostly headed,
@@ -71,6 +112,7 @@ object EdgeSwipeDetector {
             if (bound != null) {
                 DecodeTrace.log {
                     "  edgeswipe refused key=${key.id} dir=$intended bound=$bound " +
+                        "reason=threshold contacts=$contacts " +
                         "lift=(${dxPx.toInt()},${dyPx.toInt()}) " +
                         "peak=(${peakDxPx.toInt()},${peakDyPx.toInt()}) " +
                         "minTravel=${minTravel.toInt()}"

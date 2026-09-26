@@ -33,7 +33,14 @@ object SettingsSynonyms {
     /** Extra words that should find the row [key], or an empty list. */
     fun termsFor(key: String): List<String> = TERMS[key] ?: emptyList()
 
+    /** The row key of the expansions screen; it is an intent row, not a preference. */
+    const val EXPANSIONS_ROW = "pref_expansions_screen"
+
     private val TERMS: Map<String, List<String>> = mapOf(
+        EXPANSIONS_ROW to listOf(
+            "expand", "expandify", "shortcut", "macro", "snippet", "abbreviation",
+            "replace", "template", "autotext",
+        ),
         // Look
         Prefs.THEME_MODE to listOf("dark", "light", "night", "colour", "color", "material"),
         Prefs.THEME_BRIGHTNESS to listOf("dark", "light", "contrast", "dim"),
@@ -45,6 +52,14 @@ object SettingsSynonyms {
 
         // Size and keys
         Prefs.KEYBOARD_HEIGHT_PCT to listOf("size", "tall", "short", "big", "small", "bigger"),
+        Prefs.BAR_ACTIONS to listOf(
+            "toolbar", "shortcut", "button", "undo", "clipboard", "one handed",
+            "menu", "action", "language",
+        ),
+        Prefs.MENU_ACTIONS to listOf(
+            "?123", "123", "hold", "long press", "shortcut", "gear", "undo", "menu",
+            "action", "popup",
+        ),
         Prefs.SUGGESTION_BAR_DP to listOf("size", "topbar", "toolbar", "candidates", "strip"),
         Prefs.SIDE_PAD_DP to listOf("margin", "gap", "inset", "narrow", "edge", "width"),
         Prefs.BOTTOM_PAD_DP to listOf("margin", "gap", "inset", "navigation", "thumb"),
@@ -52,7 +67,7 @@ object SettingsSynonyms {
         Prefs.KEY_ARRANGEMENT to listOf("qwerty", "qwertz", "qzerty", "azerty", "french", "german"),
         Prefs.LAYOUT_MODE to listOf("split", "one handed", "onehanded", "thumb", "compact"),
         Prefs.PLAIN_LETTER_ALTERNATES to listOf("accent", "long press", "popup", "alternates"),
-        Prefs.NUMBER_PRIORITY to listOf("digits", "number row", "top row"),
+        Prefs.NUMBER_PRIORITY to listOf("digits", "number row", "top row", "swipe", "1234", "accent"),
         Prefs.EMOJI_KEY to listOf("smiley", "emoticon"),
         Prefs.APOSTROPHE_KEY to listOf("quote", "contraction"),
         Prefs.COMMA_MODE to listOf("punctuation", "remove", "rebind", "replace"),
@@ -76,6 +91,7 @@ object SettingsSynonyms {
         Prefs.AUTOCORRECT_LEVEL to listOf("correction", "spelling", "fix", "aggressive"),
         Prefs.AUTO_CAPITALIZE to listOf("capital", "uppercase", "shift", "sentence"),
         Prefs.LANGUAGE to listOf("dictionary", "locale", "keyboard language"),
+        Prefs.SYNC_SYSTEM_LANGUAGE to listOf("android", "subtype", "locale", "globe", "picker"),
         Prefs.BRITISH_SPELLING to listOf("uk", "gb", "english", "colour", "spelling"),
         Prefs.ENABLED_LANGUAGES to listOf("multilingual", "bilingual", "dictionary", "locale"),
         Prefs.AUTO_DETECT_LANGUAGE to listOf("multilingual", "bilingual", "switch"),

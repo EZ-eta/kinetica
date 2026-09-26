@@ -11,7 +11,7 @@ import kotlin.math.abs
  *
  * Primary order = sort by tStart: in sustained dual-thumb typing the *start*
  * of each gesture is the user's sequencing signal. Two bounded generators add
- * alternatives for genuinely ambiguous timings; wrong alternatives find
+ * alternatives for ambiguous timings; wrong alternatives find
  * no dictionary words and cost microseconds.
  */
 object MergeAlternatives {
@@ -73,7 +73,7 @@ object MergeAlternatives {
         //   reservation of 1       85/12      ceiling 12, cap 24        84/12
         //
         // The pattern is the same in every formulation: the cross-swipe generator
-        // genuinely needs most of the budget on a swipes-only buffer, and the
+        // needs most of the budget on a swipes-only buffer, and the
         // readings the starved generator would have built are refused by the
         // segment gates anyway. So the order stays, and item 41 carries the numbers
         // so this is not re-argued.

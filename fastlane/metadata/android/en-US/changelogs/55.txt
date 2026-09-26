@@ -1,0 +1,10 @@
+Shortcuts in the suggestion bar when there is nothing to suggest
+Text expansions: type a trigger, get your text
+Change a word's case from the shift menu
+Autospace down to 10 ms, long-press down to 25 ms
+Edge swipes no longer fire inside a swiped word
+Top-row digits on the key corners by default
+Long suggestions are no longer cut off
+Tapped words can come from your second language
+Keep your language when Android switches keyboards
+Fixed: picking Norwegian in Android's keyboard switcher

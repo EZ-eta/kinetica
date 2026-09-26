@@ -13,7 +13,7 @@ import org.junit.Test
 
 /**
  * Regression suite for dual-thumb
- * words where the two streams genuinely interleave, which the single-cut merge
+ * words where the two streams interleave, which the single-cut merge
  * generators could not represent.
  *
  * The fixtures' TIMINGS are transcribed from a device capture, so these are

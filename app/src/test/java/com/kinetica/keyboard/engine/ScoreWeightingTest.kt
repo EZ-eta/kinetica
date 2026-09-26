@@ -78,7 +78,7 @@ class ScoreWeightingTest {
      *
      * So the contests are locked here on their real numbers, dictionary-free,
      * exactly as LanguagePreferenceTest pins the langdetect tuples - with the
-     * end-to-end tests carrying what reconstruction can honestly carry.
+     * end-to-end tests carrying what reconstruction can carry.
      */
     @Test
     fun deviceContestsRankCorrectlyUnderTheSaturatingTerm() {
@@ -380,7 +380,7 @@ class ScoreWeightingTest {
 
     @Test
     fun theBoostWeightIsContinuousAtTheCapAndGoneOneKeyLater() {
-        // The whole point. Both shapes this replaces jumped here: the hard gate
+        // Why this shape. Both shapes it replaces jumped here: the hard gate
         // from raw to 1.0, the flat retention from raw to 1+(raw-1)*0.2186.
         // "sempre" led at d=0.37/0.47 carrying pb=1.54 and lost at d=0.50/0.60
         // carrying pb=1.0 in one capture, so the jump was deciding real rows.
@@ -470,7 +470,7 @@ class ScoreWeightingTest {
                             }
                             // 4. Same raw boost, different fits: the better fit
                             // must end up with at least as much of it. This is
-                            // the honest form of "never favours the worse fit".
+                            // the strict form of "never favours the worse fit".
                             a == b ->
                                 assertTrue("the better fit kept less: $now vs $was", if (da < db) now >= 1f else now <= 1f)
                         }
@@ -660,7 +660,7 @@ class ScoreWeightingTest {
             // Spanish "mujer" fits 2.2x better than
             // Italian "me", which wins anyway on ~59 commits (pb 1.605). The
             // languages are merged by WordComposer, but the contest is decided
-            // before that - "me" simply outscores it - so it ranks here like any
+            // before that - "me" outscores it - so it ranks here like any
             // other row. Red if the boost is left unbounded.
             "mujer/me, unbounded-boost row" to ("mujer" to mapOf(
                 "me" to Row(0.88f, 0.89f, 1.0f, 0.760f),

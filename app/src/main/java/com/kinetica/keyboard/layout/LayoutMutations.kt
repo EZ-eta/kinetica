@@ -292,7 +292,7 @@ object LayoutMutations {
      * What travels with the LETTER: its id, label, output and its accented
      * alternates - "y" keeps "ý" and "ÿ" wherever it lands.
      * What stays with the POSITION: x/y/w/h and the non-letter alternates.
-     * That second half is deliberate and it keeps two shipped features honest:
+     * That second half is deliberate and it keeps two shipped features correct:
      * [EdgeSwipeBindings.withImplicitAlternates] reads the first non-letter
      * alternate per key, so the top row stays 1-0 in every arrangement instead
      * of offering an apostrophe where the 6 belongs; and [Key.hintChar] is the

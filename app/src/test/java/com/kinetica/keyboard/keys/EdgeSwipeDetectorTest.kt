@@ -36,8 +36,14 @@ class EdgeSwipeDetectorTest {
         ),
     )
 
-    private fun detect(key: Key, dx: Float, dy: Float, px: Float = dx, py: Float = dy) =
-        EdgeSwipeDetector.detect(key, dx, dy, px, py, 1f, bindings)
+    private fun detect(
+        key: Key,
+        dx: Float,
+        dy: Float,
+        px: Float = dx,
+        py: Float = dy,
+        contacts: Int = 1,
+    ) = EdgeSwipeDetector.detect(key, dx, dy, px, py, 1f, bindings, contacts)
 
     @Test
     fun aCleanUpFlickStillFires() {
@@ -87,4 +93,37 @@ class EdgeSwipeDetectorTest {
         // `y` is bound UP only; a clean down-flick on it is not a shortcut.
         assertNull(detect(y, dx = 0f, dy = 40f))
     }
+
+    // ---- R59: a shortcut leaves one key, a word crosses the board --------------------
+    //
+    // Reported: binding `c` up to a degree sign turned `Connecticut` into `On°Cicut`. The
+    // word starts on a bound key and ends two rows higher, so the lift reads as a clean
+    // up-flick and nothing downstream could tell the two apart.
+
+    @Test
+    fun aSwipedWordThatEndsUpwardIsNotAShortcut() {
+        // The gesture geometry of the report: a long travel that resolves UP, on a key
+        // with an UP binding. Only the contact count separates it from a real flick.
+        assertEquals("6", detect(y, dx = 2f, dy = -40f, contacts = 3))
+        assertNull(detect(y, dx = 2f, dy = -40f, contacts = 4))
+        assertNull(detect(y, dx = 2f, dy = -40f, contacts = 11))
+    }
+
+    @Test
+    fun aFlickThatLeavesItsOwnKeyStillFires() {
+        // 30dp against a row pitch near 1.6kw: a real flick routinely enters the next row,
+        // so the threshold cannot be one. This is the case a naive guard would break, and
+        // it is the one the reporter actually binds.
+        assertEquals(".", detect(b, dx = 0f, dy = 36f, contacts = 2))
+        assertEquals("6", detect(y, dx = 2f, dy = -40f, contacts = 2))
+    }
+
+    @Test
+    fun aKeyWithNoStreamIsUnaffected() {
+        // Backspace, enter, comma and every symbol layer never reach the engine, so the
+        // caller passes the default. Nothing about those bindings changes.
+        assertEquals("6", detect(y, dx = 2f, dy = -40f))
+        assertEquals(".", detect(b, dx = 0f, dy = 36f))
+    }
+
 }

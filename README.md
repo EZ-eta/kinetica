@@ -179,7 +179,7 @@ bytes, and either can install and update over the other's build.
 ## Worth a look in Settings
 
 Most of what people have asked for since the first release was already in
-Settings and simply hard to find. The ones that come up most:
+Settings and hard to find. The ones that come up most:
 
 - **Chord shortcuts that paste, copy, cut, select all or retype the word.**
   Settings > Chords, add a chord and set *This chord* to the action you want.
@@ -511,7 +511,7 @@ obligation.
 ### A note on the name and icon
 
 Kinetica is the name I use for this project, and the launcher icon is my own
-artwork. The GPL covers the code, and forks are genuinely welcome - please
+artwork. The GPL covers the code, and forks are welcome - please
 rebrand them. Use a different app name and a different icon so users can tell
 your build from mine, and so bug reports and reviews land in the right place.
 
