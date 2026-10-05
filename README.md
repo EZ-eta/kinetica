@@ -21,7 +21,7 @@ Typing SOMETHING:
 
 ## Video
 
-https://github.com/user-attachments/assets/220ca042-322f-45df-bbd5-04a6b06d4a66
+https://github.com/user-attachments/assets/7bfdabe4-c265-4b40-8db1-c9eb0d9b14d7
 
 ## Install
 
