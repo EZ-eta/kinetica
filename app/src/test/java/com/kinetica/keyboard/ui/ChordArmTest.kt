@@ -1,5 +1,6 @@
 package com.kinetica.keyboard.ui
 
+import com.kinetica.keyboard.keys.ChordTrigger
 import com.kinetica.keyboard.settings.Prefs
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -9,10 +10,9 @@ import org.junit.Test
 /**
  * When holding `?123` and tapping a letter fires a chord.
  *
- * A user reported the default 150 ms lead-in as a delay between the two presses, and they
- * were right: the window is a real wait, it is checked once at the letter's down, and a
- * letter inside it types normally instead. The window is a setting now, so what this pins
- * is that the ends of its range behave.
+ * The lead-in window is a real wait: it is checked once at the letter's down, and a letter
+ * inside it types normally. Users felt the 150 ms default as a delay, so the window is a
+ * setting and this pins the ends of its range.
  */
 class ChordArmTest {
 
@@ -58,5 +58,33 @@ class ChordArmTest {
     @Test
     fun aLetterWithNoModeKeyDownIsJustALetter() {
         assertFalse(chordArms(modeHeld = false, modeMoved = false, heldMs = 5_000, armMs = 0))
+    }
+
+    // ---- the spacebar trigger and the decision at the lift ---------------------------------
+
+    @Test
+    fun theSpacebarDefaultAndThePreferenceDefaultAgree() {
+        assertEquals(Prefs.DEFAULT_SPACE_CHORD_ARM_MS.toLong(), SPACE_CHORD_ARM_MS_DEFAULT)
+        // 50 ms, the default. The lift rule guards against rollover, so a short wait
+        // is not the only thing between a typed space and a chord.
+        assertEquals(50L, SPACE_CHORD_ARM_MS_DEFAULT)
+    }
+
+    @Test
+    fun questionMarkWinsWhenBothTriggersAreHeld() {
+        assertEquals(listOf(ChordTrigger.MODE, ChordTrigger.SPACE), armedChordTriggers(modeArmed = true, spaceArmed = true))
+        assertEquals(listOf(ChordTrigger.SPACE), armedChordTriggers(modeArmed = false, spaceArmed = true))
+        assertEquals(emptyList<ChordTrigger>(), armedChordTriggers(modeArmed = false, spaceArmed = false))
+    }
+
+    @Test
+    fun aChordFiresOnlyWhileItsTriggerIsStillHeldStill() {
+        val slop = 12f * 12f
+        assertEquals(ChordLift.FIRE, chordAtLift(triggerHeld = true, triggerMoved = false, travelSq = 4f, slopSq = slop))
+        // The thumb left the spacebar first: that was typing, and the key types.
+        assertEquals(ChordLift.LIFTED, chordAtLift(triggerHeld = false, triggerMoved = false, travelSq = 4f, slopSq = slop))
+        assertEquals(ChordLift.MOVED, chordAtLift(triggerHeld = true, triggerMoved = true, travelSq = 4f, slopSq = slop))
+        // A swipe from a chord key is a word, not a chord.
+        assertEquals(ChordLift.SWIPED, chordAtLift(triggerHeld = true, triggerMoved = false, travelSq = 400f, slopSq = slop))
     }
 }

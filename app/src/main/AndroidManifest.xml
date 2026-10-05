@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.VIBRATE" />
 
@@ -7,7 +8,9 @@
         android:label="@string/app_name"
         android:icon="@mipmap/ic_launcher"
         android:theme="@style/Theme.Kinetica"
-        android:allowBackup="true">
+        android:allowBackup="true"
+        android:localeConfig="@xml/locales_config"
+        tools:targetApi="33">
 
         <service
             android:name=".ime.KineticaIME"
@@ -43,13 +46,32 @@
             android:exported="false" />
 
         <activity
+            android:name=".settings.ShortcutSetActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".settings.DictionarySettingsActivity"
             android:label="@string/dict_settings_title"
             android:exported="false" />
 
         <activity
+            android:name=".settings.BackupSettingsActivity"
+            android:label="@string/backup_settings_title"
+            android:exported="false" />
+
+        <activity
+            android:name=".onboarding.TutorActivity"
+            android:label="@string/tutor_title"
+            android:exported="false" />
+
+        <activity
             android:name=".settings.LicensesActivity"
             android:label="@string/licenses_title"
+            android:exported="false" />
+
+        <activity
+            android:name=".settings.ContributeActivity"
+            android:label="@string/contribute_title"
             android:exported="false" />
 
         <activity

@@ -10,13 +10,12 @@ import org.junit.Test
 /**
  * `SteppedSliderPreference.onGetDefaultValue` must not read the `steps` field.
  *
- * The androidx `Preference` base constructor calls `onGetDefaultValue` while it is still
- * running, before this subclass's `init` block has set `steps`, so reading `steps` there is
- * an NPE that crashes every settings open (1.1.1f). A preference cannot be inflated in a JVM
- * test - it needs a Context and real resources - which is why that shipped, so the guard is a
- * source scan, the same shape as `PreferenceTreeTest` and `InitOrderTest`.
+ * The androidx `Preference` base constructor calls `onGetDefaultValue` before this subclass's
+ * `init` block has set `steps`, so reading it there throws an NPE on every settings open. A
+ * preference cannot be inflated in a JVM test (it needs a Context and real resources), so the
+ * guard is a source scan, like `PreferenceTreeTest` and `InitOrderTest`.
  *
- * Read straight off disk: **`--rerun-tasks` is what makes a fail-first check here run.**
+ * Read off disk, so a fail-first check here needs `--rerun-tasks`.
  */
 class SteppedSliderSourceTest {
 

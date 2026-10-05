@@ -8,9 +8,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Enter alternate injection. Hand-builds [KeyboardLayout]/[Key]
- * directly - the JVM test runtime stubs org.json, so LayoutLoader/parse must
- * never be touched here.
+ * The mutations applied over a loaded board. Hand-builds [KeyboardLayout] and [Key], because
+ * the JVM test runtime stubs org.json and LayoutLoader cannot parse here.
  */
 class LayoutMutationsTest {
 
@@ -76,9 +75,9 @@ class LayoutMutationsTest {
 
     @Test
     fun eachShiftCellIsWrittenInTheCaseItSelects() {
-        // The one new coupling in R34: the popup hands back a cell string and
-        // the service maps it to WordCase BY INDEX, so the two lists have to agree and
-        // nothing else in the tree would notice if they stopped.
+        // The caps popup's coupling: the popup hands back a cell string and the service maps it to
+        // WordCase by index, so the two lists must agree and nothing else would notice if
+        // they stopped.
         val cells = LayoutMutations.SHIFT_CASE_CELLS
         assertEquals(WordCase.entries.size, cells.size)
         for ((i, cell) in cells.withIndex()) {
@@ -151,8 +150,8 @@ class LayoutMutationsTest {
 
     @Test
     fun withoutForeignAlternatesIsANoopForALayoutWhoseAccentsAreItsOwn() {
-        // Why it is declared: Italian, Spanish, Polish and Czech
-        // writers keep "è", "ñ", "ą" and "ř" even with the setting on.
+        // Why native accents are declared: Italian, Spanish, Polish and Czech writers keep
+        // "è", "ñ", "ą" and "ř" even with the setting on.
         val before = accentLayout(nativeAccents = true)
         val out = LayoutMutations.withoutForeignAlternates(before)
         assertEquals(before, out)
@@ -161,9 +160,9 @@ class LayoutMutationsTest {
 
     @Test
     fun withoutForeignAlternatesNeverEmptiesAPopup() {
-        // A key whose alternates are ALL accents would lose its popup and its
-        // corner hint, so it is left alone instead. No bundled key is like this
-        // (see the asset guard below), which is why the rule can be this simple.
+        // A key whose alternates are all accents would lose its popup and its corner hint, so
+        // it is left alone. No bundled key is like this (see the asset guard below), so the
+        // rule can stay this simple.
         val allAccents = KeyboardLayout(
             "x", "x",
             listOf(Key("e", KeyType.CHAR, "e", "e", 0f, 0f, 0.1f, 0.25f,
@@ -175,8 +174,7 @@ class LayoutMutationsTest {
 
     @Test
     fun withNumberPriorityFindsNothingLeftToReorderAfterTheTrim() {
-        // The two settings compose rather than fight: order matters only in that
-        // the trim must run first, which KineticaIME.alphaLayout does.
+        // The two settings compose: the trim must run first, which KineticaIME.alphaLayout does.
         val trimmed = LayoutMutations.withoutForeignAlternates(accentLayout())
         assertEquals(trimmed, LayoutMutations.withNumberPriority(trimmed))
     }
@@ -185,7 +183,7 @@ class LayoutMutationsTest {
     fun aFixedArrangementLayoutIsNotPermuted() {
         // AZERTY already places its letters, so applying the QWERTZ or QZERTY
         // swap on top would move keys the arrangement chose and leave a board
-        // that is neither. The flag is what declines the swap.
+        // that is neither. The flag declines the swap.
         val azerty = KeyboardLayout(
             name = "azerty_fr",
             locale = "fr_FR",
@@ -207,8 +205,8 @@ class LayoutMutationsTest {
             val out = LayoutMutations.withLetterArrangement(azerty, arrangement)
             assertSame("$arrangement permuted a fixed layout", azerty, out)
         }
-        // The same swap still applies to an ordinary layout, so the guard is
-        // the flag and not a disabled mutation.
+        // The same swap still applies to an ordinary layout, so the guard is the flag, not a
+        // disabled mutation.
         val plain = azerty.copy(fixedArrangement = false)
         val swapped = LayoutMutations.withLetterArrangement(
             plain, LayoutMutations.ARRANGEMENT_QWERTZ,
@@ -218,9 +216,9 @@ class LayoutMutationsTest {
 
     @Test
     fun azertyIsNotExpressibleAsASwapOnAPlainLayout() {
-        // AZERTY on a QWERTY-derived layout is a no-op rather than a partial
-        // rearrangement: KineticaIME.alphaLayoutName serves azerty_fr.json
-        // instead, and a language with no such file keeps its own board.
+        // AZERTY on a QWERTY-derived layout is a no-op, not a partial rearrangement:
+        // AlphaLayouts.name serves azerty_fr.json instead, and a language with no such file
+        // keeps its own board.
         val plain = KeyboardLayout(
             name = "qwerty_en",
             locale = "en_US",
@@ -238,11 +236,12 @@ class LayoutMutationsTest {
     @Test
     fun everyBundledAccentKeyKeepsANonLetterAlternate() {
         // The precondition withoutForeignAlternates rests on, guarded against a
-        // future layout edit. Read as text on purpose: the JVM test runtime stubs
-        // org.json, so LayoutLoader cannot be used here.
+        // future layout edit. Read as text because the JVM test runtime stubs org.json, so
+        // LayoutLoader cannot be used here.
         for (name in listOf(
             "qwerty", "qwerty_it", "qwerty_es", "qwerty_pl", "qwerty_cs",
             "qwerty_nl", "qwerty_de", "qwerty_fr", "qwerty_no", "azerty_fr",
+            "native_ru", "native_he", "native_ar",
         )) {
             val p = listOf(
                 java.nio.file.Paths.get("src/main/assets/layouts/$name.json"),
@@ -299,7 +298,7 @@ class LayoutMutationsTest {
         assertEquals("z", top.label)
         assertEquals("z", top.id)
         assertEquals("y", bottom.output)
-        // Untouched keys stay exactly as they were.
+        // Untouched keys stay as they were.
         assertEquals("w", keyAt(out, 0.10f, 0.0f).output)
         assertEquals("a", keyAt(out, 0.05f, 0.25f).output)
         assertEquals(4, out.keys.size)
@@ -316,8 +315,8 @@ class LayoutMutationsTest {
 
     @Test
     fun accentsFollowTheLetterAndDigitsStayWithThePosition() {
-        // The rule the whole mutation rests on. Digits are positional on this
-        // keyboard - the top row is 1-0 - while an accent belongs to its letter.
+        // The rule the mutation rests on: digits are positional (the top row is 1-0), while an
+        // accent belongs to its letter.
         val out = LayoutMutations.withLetterArrangement(arrangementLayout(), "qwertz")
         val top = keyAt(out, 0.50f, 0.0f)
         val bottom = keyAt(out, 0.15f, 0.5f)
@@ -327,9 +326,8 @@ class LayoutMutationsTest {
 
     @Test
     fun theImplicitDigitSwipesSurviveTheSwap() {
-        // withImplicitAlternates takes the first NON-letter alternate per key,
-        // so this is the assertion that the top row still offers 6 rather than
-        // the apostrophe that would arrive with a whole-key swap.
+        // The digit stays with the position: the top row's first non-letter alternate is still
+        // 6, not the apostrophe a whole-key swap would bring.
         val out = LayoutMutations.withLetterArrangement(arrangementLayout(), "qwertz")
         val top = keyAt(out, 0.50f, 0.0f)
         assertEquals("6", top.alternates.first { it.firstOrNull()?.isLetter() != true })
@@ -444,7 +442,7 @@ class LayoutMutationsTest {
 
     // ---- user-editable punctuation flyouts ---------------------------------
 
-    /** Period and comma with the alternates all five bundled layouts author. */
+    /** Period and comma with the alternates the bundled layouts author. */
     private fun punctuationLayout(): KeyboardLayout = KeyboardLayout(
         name = "qwerty", locale = "en_US",
         keys = listOf(
@@ -458,9 +456,8 @@ class LayoutMutationsTest {
 
     @Test
     fun aBlankListLeavesTheLayoutsOwnPunctuation() {
-        // The whole reason the preference defaults to blank: the layout JSON stays
-        // the source of truth, so a future language layout with different
-        // punctuation is not overridden by a global default.
+        // The preference defaults to blank so the layout JSON stays the source of truth, and a
+        // future layout with different punctuation is not overridden by a global default.
         val before = punctuationLayout()
         assertEquals(before, LayoutMutations.withPunctuationAlternates(before, emptyList(), emptyList()))
     }
@@ -488,8 +485,8 @@ class LayoutMutationsTest {
 
     @Test
     fun theEmojiEntryStillLandsFirstOnAUserCommaList() {
-        // Ordering in KineticaIME.alphaLayout is load-bearing: the punctuation
-        // mutation runs BEFORE withEmojiOnComma, so the emoji cell still leads.
+        // Order matters in KineticaIME.alphaLayout: the punctuation mutation runs before
+        // withEmojiOnComma, so the emoji cell still leads.
         val custom = LayoutMutations.withPunctuationAlternates(
             punctuationLayout(), emptyList(), listOf(":", "-"),
         )
@@ -526,8 +523,8 @@ class LayoutMutationsTest {
 
     @Test
     fun aRemovedPeriodGivesItsWidthToTheSpacebar() {
-        // R70: the period gets the six modes the comma already had, through the same
-        // function. The spacebar absorbing the freed width is what stops a gap.
+        // The period has the comma's six modes, through the same function. The spacebar
+        // absorbs the freed width, so no gap is left.
         val out = LayoutMutations.withPeriodKey(bottomRowLayout(), "remove", "")
         assertEquals(null, out.keys.firstOrNull { it.output == "." })
         val space = out.keys.first { it.type == KeyType.SPACE }
@@ -547,8 +544,7 @@ class LayoutMutationsTest {
 
     @Test
     fun removingTheCommaHandsItsEmojiToThePeriod() {
-        // The rendezvous rule, and the reason the two functions cannot be applied in
-        // either order. Untested until R70 generalised the function.
+        // The handover rule, and why the two functions cannot be applied in either order.
         val withEmoji = LayoutMutations.withEmojiOnComma(bottomRowLayout())
         val out = LayoutMutations.withCommaKey(withEmoji, "remove", "")
         assertEquals(null, out.keys.firstOrNull { it.output == "," })
@@ -560,9 +556,9 @@ class LayoutMutationsTest {
 
     @Test
     fun removingBothKeysDropsTheSharedEmojiAlternate() {
-        // The named accepted cost of R70. The comma hands the emoji to the period, and
-        // the period has nowhere left to hand it on to, so asking for both keys to be
-        // gone costs the long-press they shared. The emoji key setting is the way back.
+        // The accepted cost: the comma hands the emoji to the period, and the period has
+        // nowhere to hand it on, so removing both keys costs the long-press they shared. The
+        // emoji key setting is the way back.
         val withEmoji = LayoutMutations.withEmojiOnComma(bottomRowLayout())
         val noComma = LayoutMutations.withCommaKey(withEmoji, "remove", "")
         val out = LayoutMutations.withPeriodKey(noComma, "remove", "")
@@ -626,16 +622,15 @@ class LayoutMutationsTest {
         )
     }
 
-    // ---- R60: the digit is what the corner swipe types ------------------------------
+    // ---- The digit is what the corner swipe types ------------------------------
     //
-    // Reported as "the edge-swipe menu was not pre-populated with numbers". It ships and
-    // is one setting, which nothing in that setting's own wording said, because it talked
-    // about long-press and the swipe reads the same hint. On by default since 2026-09-21.
+    // Number priority moves the digit onto the corner hint, which the swipe reads, so it also
+    // decides what the corner swipe types. On by default.
 
     @Test
     fun numberPriorityPutsTheDigitOnTheCornerHint() {
-        // e is the shape the report is about: five accents ahead of the digit, so the
-        // corner drew è and swiping up on it typed è.
+        // e has five accents ahead of the digit, so without the setting the corner draws è and
+        // swiping up types è.
         val before = Key(
             "e", KeyType.CHAR, "e", "e", 0.2f, 0f, 0.1f, 0.25f,
             alternates = listOf("è", "é", "ê", "ë", "ē", "3"),

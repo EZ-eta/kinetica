@@ -11,10 +11,9 @@ import org.junit.Assume.assumeTrue
 import org.junit.Test
 
 /**
- * French real-asset goldens (ADDING_A_LANGUAGE.md §6). Common words run on
- * the AZERTY geometry as well as QWERTY, because AZERTY is a different board
- * (rows 10/10/6, M on the home row) rather than a letter swap, and a golden
- * decoded on the wrong geometry would prove nothing about it.
+ * French real-asset goldens (ADDING_A_LANGUAGE.md §6). Common words run on AZERTY as well as
+ * QWERTY, because AZERTY is a different board (rows 10/10/6, M on the home row), not a letter
+ * swap, and a golden decoded on the wrong geometry proves nothing about it.
  */
 class FrenchDictionaryTest {
 

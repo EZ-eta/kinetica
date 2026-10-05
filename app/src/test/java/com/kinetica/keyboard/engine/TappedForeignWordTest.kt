@@ -15,18 +15,16 @@ import org.junit.Assume.assumeTrue
 import org.junit.Test
 
 /**
- * A word tapped out letter by letter reaches the other enabled language (R87, R56).
+ * A word tapped out letter by letter reaches the other enabled language.
  *
- * `WordComposer` asked the second language only about buffers holding a swipe. The reporter
- * runs English and Polish with Polish active and named seventeen English words that ended up
- * in his Polish dictionary. Checked against the bundled lists, seven are English only and
- * those are the ones this reaches. Nine are also in the Polish list, where the merge drops
- * the English reading as a shared word, and one is in neither; [aWordBothListsHoldStaysWithTheActiveLanguage]
- * pins that limit so it cannot be claimed away.
+ * `WordComposer` used to ask the second language only about buffers holding a swipe. Of
+ * seventeen English words a user with Polish active found in his Polish dictionary, seven are
+ * English only, and those are the ones this reaches. Nine are also in the Polish list, where
+ * the merge drops the English reading as a shared word, and one is in neither;
+ * [aWordBothListsHoldStaysWithTheActiveLanguage] pins that limit.
  *
- * The second half is the guards, on buffers replayed verbatim from the developer's captures
- * with Italian active and English resident. Each is a commit the lift changed before its
- * guard existed.
+ * The rest are the guards, on captured buffers with Italian active and English resident. Each
+ * keeps a commit that asking the second language would otherwise change.
  */
 class TappedForeignWordTest {
 
@@ -67,6 +65,18 @@ class TappedForeignWordTest {
             ?: active
 
     @Test
+    fun aTappedItalianAccentReachesTheBarWithEnglishActive() {
+        // English active, Italian resident, a tapped `e`: Italian decodes `è` beside `e`, and
+        // the merge must not drop it as shared because English's `e` has no display forms. It
+        // is offered; the letters typed stay the lead.
+        val cap = compose(english(), italian(), tapped("e"))
+        val words = cap.candidates.map { it.word }
+        assertTrue("è not offered: $words", "è" in words)
+        assertEquals("it", cap.candidates.first { it.word == "è" }.language)
+        assertEquals("e", cap.tentative?.word)
+    }
+
+    @Test
     fun aTappedWordOnlyEnglishHoldsIsFoundAndFiledUnderEnglish() {
         val pl = polish()
         val en = english()
@@ -101,9 +111,9 @@ class TappedForeignWordTest {
 
     @Test
     fun aWordOnlyTheOtherLanguageCanFixIsNeverAutocorrectedIntoIt() {
-        // A captured tapped buffer: `conquesta`, Italian active. Italian decodes nothing, English offers
-        // `conquests` at a confidence that clears autocorrect. The merge refuses to let it lead,
-        // and autocorrecting from the head of the list would have committed it anyway.
+        // A captured tapped buffer: `conquesta`, Italian active. Italian decodes nothing,
+        // English offers `conquests` at a confidence that clears autocorrect. The merge refuses
+        // to let it lead, and autocorrecting from the head of the list would commit it anyway.
         val it = italian()
         val cap = compose(it, english(), TraceReplay.tokens(CONQUESTA, g))
         assertNull("the merge must refuse the lead", cap.tentative)
@@ -115,8 +125,8 @@ class TappedForeignWordTest {
 
     @Test
     fun aRarerForeignFixNeverCorrectsATappedWord() {
-        // A captured tapped buffer: `comun`. English `comin` fits better than anything Italian has and is the
-        // rarer word, so it may not lead.
+        // A captured tapped buffer: `comun`. English `comin` fits better than anything
+        // Italian has and is the rarer word, so it may not lead.
         val it = italian()
         val cap = compose(it, english(), TraceReplay.tokens(COMUN, g))
         assertNotEquals("comin", cap.tentative?.word)
@@ -125,9 +135,9 @@ class TappedForeignWordTest {
 
     @Test
     fun theActiveLanguageKeepsItsOwnCorrectionOverRarerForeignJunk() {
-        // A captured tapped buffer: `maa`. English holds `maa` at rank 40 829; Italian corrects it to `ama`,
-        // rank 1 309, and did before English took part. On score the English exact reading
-        // wins, because the Italian one pays its tap penalty; on frequency it does not.
+        // A captured tapped buffer: `maa`. English holds `maa` at rank 40 829; Italian
+        // corrects it to `ama`, rank 1 309. On score the English exact reading wins, because
+        // the Italian one pays its tap penalty; on frequency it does not.
         val it = italian()
         val cap = compose(it, english(), TraceReplay.tokens(MAA, g))
         assertEquals("ama", it.tapAutocorrect("maa", cap.tentative, THRESHOLD)?.word)

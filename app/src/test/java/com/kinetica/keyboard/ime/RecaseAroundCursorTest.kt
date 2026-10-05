@@ -8,11 +8,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Re-casing the word the cursor is parked inside (R85).
+ * Re-casing the word the cursor is parked inside.
  *
- * The shift popup refused mid-word, by the guard the retype and the reload share. What is
- * decided here is how much text either side of the cursor gets replaced, and item 69 is what
- * a wrong count does, so every span is read out of the text handed in and nothing else.
+ * These rules decide how much text either side of the cursor is replaced. A wrong count eats
+ * text, so every span is read from the text handed in and nothing else.
  */
 class RecaseAroundCursorTest {
 
@@ -26,7 +25,7 @@ class RecaseAroundCursorTest {
 
     @Test
     fun aHyphenIsABoundaryOnBothSides() {
-        // The same word run item 69's half-hearted fixture pinned for the commit case.
+        // The same word run the commit case's fixture pins.
         assertEquals(WordAround("hear", "ted"), wordAroundCursor("half-hear", "ted", max))
         assertEquals(WordAround("half", "x"), wordAroundCursor("half", "x-hearted", max))
     }

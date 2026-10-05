@@ -73,9 +73,9 @@ class MergeAlternativesTest {
     @Test
     fun splitAtRestResumesAtNextRealLetter() {
         // Left swipes t-e-r-e-s-a, rests on A, then resumes A->T->E. A cut in
-        // the rest must resume the second half at T (the first real resumed
-        // letter, where the path turns away from A) - not ~0.6kw from the rest
-        // position A, which is what the old fixed head trim did.
+        // the rest must resume the second half at T (the first resumed letter,
+        // where the path turns away from A), not ~0.6kw from the rest position
+        // A as a fixed head trim would.
         val swipe = TestData.dwellSwipe("teresa", "te", g, 0, 300, 400, 200, 0f, StreamId.LEFT)
         val halves = MergeAlternatives.splitSwipe(swipe, 500L, dtw) // 500ms is inside the rest
         assertNotNull(halves)
@@ -93,7 +93,7 @@ class MergeAlternativesTest {
     @Test
     fun swipeAroundSwipeSplitsOuterAroundInner() {
         // Left swipes s-e, holds on E, right swipes m-p during the hold, left
-        // resumes r-e. sequences() must generate the [se][mp][re] interleave
+        // resumes r-e. sequences must generate the [se][mp][re] interleave
         // that the tap-only generator could never represent.
         val left = TestData.dwellSwipe("se", "re", g, 0, 200, 400, 200, 0f, StreamId.LEFT)
         val right = TestData.swipe("mp", g, 300, 200, StreamId.RIGHT)
@@ -110,19 +110,18 @@ class MergeAlternativesTest {
     /**
      * The budget accounting, on the buffer that made it necessary.
      *
-     * `provando` typed with both thumbs, verbatim from the 2026-08-28 capture: the
-     * right thumb sweeps p-o-i-j, lifts, sweeps b-n-j-k-o, while the left taps r
-     * into the first sweep and d into the second. Both cross-stream taps land past
-     * SPLIT_MARGIN_MS, so the mid-swipe split is obliged to examine both, and in
-     * the capture it examined neither - the cap was spent before it ran, and a
-     * generator that was never reached looked exactly like a generator that
-     * rejected every cut.
+     * `provando` typed with both thumbs, verbatim from a capture: the right thumb
+     * sweeps p-o-i-j, lifts, sweeps b-n-j-k-o, while the left taps r into the first
+     * sweep and d into the second. Both cross-stream taps land past SPLIT_MARGIN_MS,
+     * so the mid-swipe split must examine both; on the phone it examined neither,
+     * because the cap was spent before it ran, and an unreached generator looked
+     * like one that rejected every cut.
      *
-     * This asserts the accounting rather than a word, because the reading IS built
-     * here and is then refused by the segment gates (item 41): the piece that must
-     * spell the second `o` overshoots to `i` and `j`, so `isEnd` is [h, j, k], and
-     * the final piece carries letterArc 2.00 kw against MIN_SWIPE_ARC_KW 1.8, so
-     * minLetters is 2 where the word needs one letter.
+     * This asserts the accounting, not a word: the reading is built and then refused
+     * by the segment gates. The piece that must spell the second `o`
+     * overshoots to `i` and `j`, so `isEnd` is [h, j, k], and the final piece
+     * carries letterArc 2.00 kw against MIN_SWIPE_ARC_KW 1.8, so minLetters is 2
+     * where the word needs one letter.
      */
     @Test
     fun theBudgetAccountingNamesTheGeneratorTheCapRefused() {
@@ -141,8 +140,7 @@ class MergeAlternativesTest {
         val seqs = lines.firstOrNull { it.trimStart().startsWith("seqs ") }
         assertNotNull("no budget accounting was traced: $lines", seqs)
         // taken/produced per generator, and a non-zero dropped count: this buffer
-        // asks for more sequences than MAX_ALT_SEQUENCES allows, which is the fact
-        // the trace could not previously express.
+        // asks for more sequences than MAX_ALT_SEQUENCES allows.
         for (name in listOf("anchorIL", "crossIL", "orderSwap", "tapSplit", "swipeAround")) {
             assertTrue("$name is missing from the accounting: $seqs", seqs!!.contains("$name="))
         }

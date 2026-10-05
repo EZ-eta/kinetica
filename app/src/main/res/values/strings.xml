@@ -1,19 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="app_name">Kinetica</string>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <!-- Translations go in values-<code>/strings.xml and fall back to English string by string,
+         so a partial file works. CONTRIBUTING.md says what to leave alone. -->
+    <string name="app_name" translatable="false">Kinetica</string>
     <!-- The application id, as a resource so the settings sub-screen intents below
          follow the build they are running in. The developer build overrides it. -->
     <string name="app_pkg" translatable="false">com.kinetica.keyboard</string>
     <string name="ime_name">Kinetica Keyboard</string>
-    <string name="subtype_en_us">English (US)</string>
-    <string name="subtype_it_it">Italiano</string>
-    <string name="subtype_es_es">Español</string>
-    <string name="subtype_pl_pl">Polski</string>
-    <string name="subtype_cs_cz">Čeština</string>
-    <string name="subtype_nl_nl">Nederlands</string>
-    <string name="subtype_de_de">Deutsch</string>
-    <string name="subtype_fr_fr">Français</string>
-    <string name="subtype_nb_no">Norsk</string>
+    <string name="subtype_en_us" translatable="false">English (US)</string>
+    <string name="subtype_it_it" translatable="false">Italiano</string>
+    <string name="subtype_es_es" translatable="false">Español</string>
+    <string name="subtype_pl_pl" translatable="false">Polski</string>
+    <string name="subtype_cs_cz" translatable="false">Čeština</string>
+    <string name="subtype_nl_nl" translatable="false">Nederlands</string>
+    <string name="subtype_de_de" translatable="false">Deutsch</string>
+    <string name="subtype_fr_fr" translatable="false">Français</string>
+    <string name="subtype_nb_no" translatable="false">Norsk</string>
+    <string name="subtype_ru_ru" translatable="false">Русский</string>
+    <string name="subtype_uk_ua" translatable="false">Українська</string>
+    <string name="subtype_he_il" translatable="false">עברית</string>
+    <string name="subtype_ar" translatable="false">العربية</string>
     <string name="settings_search">Search settings</string>
     <string name="settings_search_hint">Search settings</string>
     <string name="settings_search_none">No setting matches that</string>
@@ -24,8 +30,8 @@
     <string name="licenses_missing">License notices missing from this build.</string>
 
     <string name="onboarding_title">Set up Kinetica</string>
-    <string name="onboarding_step1">1. Enable Kinetica in system keyboard list</string>
-    <string name="onboarding_step2">2. Select Kinetica as current keyboard</string>
+    <string name="onboarding_step1">1. Turn on Kinetica in the system keyboard list</string>
+    <string name="onboarding_step2">2. Make Kinetica the current keyboard</string>
     <string name="onboarding_step3">3. Try it out</string>
     <string name="onboarding_enable">Enable</string>
     <string name="onboarding_select">Select</string>
@@ -33,35 +39,108 @@
     <string name="onboarding_open_settings">Keyboard settings</string>
     <string name="onboarding_step_done">%1$s  (done)</string>
 
-    <string name="pref_tips_title">Gestures you may not have found</string>
-    <string name="pref_tips_summary">Slide along the spacebar to move the cursor. Swipe the suggestion bar sideways for more words. Long-press shift to change a word\'s case. Long-press a suggestion and slide to change how strongly it is preferred. Assign the Expand action to an edge swipe to turn a short trigger into a longer piece of text.</string>
+    <string name="learn_group_start">Start here</string>
+    <string name="tip_two_thumbs_title">Share a word between two thumbs</string>
+    <string name="tip_two_thumbs_summary">Each thumb swipes or taps the letters on its half, together or one after the other. Practise two thumbs shows how</string>
+    <string name="tip_correct_title">Fix the word you just typed</string>
+    <string name="tip_correct_summary">Right after a word, tap another one on the bar and it takes its place</string>
+    <string name="tip_more_words_title">Swipe the bar sideways</string>
+    <string name="tip_more_words_summary">More suggestions wait on the next page; the dots say how many</string>
+    <string name="tip_cursor_title">Slide the spacebar to move the cursor</string>
+    <string name="tip_cursor_summary">Left or right, a letter at a time, or a word at a time with the setting on</string>
+    <string name="tip_accents_title">Hold a letter for its accents</string>
+    <string name="tip_accents_summary">Slide to the one you want and lift. Long-press menus shapes the popup</string>
+    <string name="tip_delete_words_title">Slide left from backspace</string>
+    <string name="tip_delete_words_summary">Words are marked for deletion as you go; slide back to keep them, lift to delete</string>
+    <string name="tip_case_title">Hold shift to change a word\'s case</string>
+    <!-- abc, Abc and ABC are the popup's own labels. -->
+    <string name="tip_case_summary">abc, Abc or ABC for the word at the cursor, or for selected text</string>
+    <string name="tip_digits_title">Swipe up on the top row for digits</string>
+    <string name="tip_digits_summary">The small glyph on a key is one swipe away: up on the top row, down on the bottom row</string>
+    <string name="tip_settings_key_title">Hold ?123 for settings</string>
+    <string name="tip_settings_key_summary">Slide onto the gear and the settings open without leaving the field</string>
+    <string name="tip_resize_title">Drag the handle to resize</string>
+    <string name="tip_resize_summary">The strip above the bar sets the keyboard\'s height; Size and layout has the rest</string>
+    <string name="learn_group_faster">Type faster</string>
+    <string name="tip_next_word_title">Pick the next word before typing it</string>
+    <string name="tip_next_word_summary">After a word the bar offers the ones that usually follow</string>
+    <string name="tip_recent_title">Keep the last words on the bar</string>
+    <string name="tip_recent_summary">Recent words, off by default: each stays with the words it beat, so a wrong one is a tap from fixed</string>
+    <string name="tip_retype_title">Swipe a word again in one tap</string>
+    <string name="tip_retype_summary">The retype button, off by default, takes the word back, and the bar offers what else the gesture could be</string>
+    <string name="tip_flick_title">Flick a suggestion up</string>
+    <string name="tip_flick_summary">It goes in at once</string>
+    <string name="tip_autospace_title">Let the space come by itself</string>
+    <string name="tip_autospace_summary">A space follows a swiped word; Spacing sets how soon, or turns it off</string>
+    <string name="tip_double_space_title">Two spaces for a full stop</string>
+    <string name="tip_double_space_summary">Off by default</string>
+    <string name="tip_enter_title">Enter searches or sends</string>
+    <string name="tip_enter_summary">Where the app asks for it, and the key says which. Hold enter for a new line</string>
+    <string name="tip_languages_title">Type in several languages</string>
+    <string name="tip_languages_summary">Turn them on in Languages; ?123 and l switches between them</string>
+    <string name="tip_follow_language_title">Let the keyboard follow your language</string>
+    <string name="tip_follow_language_summary">Follow the language I type, experimental: up to three languages as equals, the one you are typing weighs most</string>
+    <string name="tip_peck_title">Type exactly what you tap</string>
+    <string name="tip_peck_summary">Peck-type, ?123 and p: no swiping, suggestions or autocorrect, for slang or code</string>
+    <string name="learn_group_yours">Make it yours</string>
+    <string name="tip_rank_title">Raise or lower a suggestion</string>
+    <string name="tip_rank_summary">Hold a word on the bar and slide up or down, one rank per step; slide past the last rank to block it</string>
+    <string name="tip_chords_title">Hold ?123 or the spacebar, tap a key</string>
+    <string name="tip_chords_summary">A chord types your text, runs an action or presses Ctrl and a key</string>
+    <string name="tip_edge_swipes_title">Swipe off a key\'s edge</string>
+    <string name="tip_edge_swipes_summary">Any key and direction can type text, run an action or press Ctrl and a key</string>
+    <string name="tip_expansions_title">Turn a short trigger into text</string>
+    <string name="tip_expansions_summary">Add one in Expansions, then put Expand on a chord, an edge swipe or the bar to fire it</string>
+    <string name="tip_letter_lists_title">Choose what a letter offers when held</string>
+    <string name="tip_letter_lists_summary">Long-press menus edits each letter\'s list. With Edit a menu from the keyboard on, hold a menu still to open its list</string>
+    <string name="tip_shortcut_row_title">Shortcuts when the bar is empty</string>
+    <string name="tip_shortcut_row_summary">Choose them for the bar; the ?123 menu has its own set</string>
+    <string name="tip_midword_title">Tap inside a word to change it</string>
+    <string name="tip_midword_summary">The bar offers other words for the whole word; pick one and it is replaced</string>
+    <string name="tip_ctrl_title">Ctrl and a key</string>
+    <!-- Keep a, c, v and Del as they are: they are typed into the field. -->
+    <string name="tip_ctrl_summary">Set a chord or an edge swipe to Ctrl + key and type the key: a, c, v, Del</string>
+    <string name="tip_backup_title">Keep everything in one file</string>
+    <string name="tip_backup_summary">Backup saves every setting, learned word, chord and swipe, and restores them on another phone</string>
+    <string name="tip_learned_title">See what Kinetica learned</string>
+    <string name="tip_learned_summary">Dictionary lists your learned and blocked words, per language</string>
+    <string name="tip_bigger_dictionary_title">A bigger dictionary</string>
+    <string name="tip_bigger_dictionary_summary">Dictionary imports an AOSP word list and merges it on the phone, with no network</string>
+    <string name="tip_search_title">Search the settings</string>
+    <string name="tip_search_summary">The search icon finds a setting by the word you use for it</string>
+    <string name="tip_layouts_title">Split or one-handed</string>
+    <string name="tip_layouts_summary">Layout mode: full width, right, left, split or one-handed, and its own keys for landscape</string>
     <string name="pref_height_title">Keyboard height (% of screen)</string>
+    <string name="pref_height_landscape_title">Keyboard height in landscape (% of screen)</string>
+    <string name="pref_landscape_arrangement_title">Keys in landscape</string>
+    <string name="pref_landscape_split_gap_title">Gap between the split halves (% of width)</string>
+    <string name="pref_landscape_split_gap_summary">Smaller gives wider keys. Split only</string>
     <string name="pref_suggestion_bar_title">Suggestion bar height (dp)</string>
-    <string name="pref_suggestion_bar_summary">The word text and its badges scale with the bar, so a thinner bar means smaller text too</string>
+    <string name="pref_suggestion_bar_summary">Words and badges scale with the bar, so a thinner bar has smaller text</string>
     <string name="pref_drag_handle_title">Resize handle height</string>
-    <string name="pref_drag_handle_summary">The grip strip above the suggestion bar, in dp. Zero removes it and reclaims the space; the keyboard can still be resized with the height slider above</string>
+    <string name="pref_drag_handle_summary">The grip above the suggestion bar, in dp. 0 removes it; the height slider above still resizes the keyboard</string>
     <string name="pref_key_arrangement_title">Letter arrangement</string>
-    <string name="pref_key_arrangement_summary">Which letter sits on which key. Accents, digits and symbols stay where they are. AZERTY applies to French only and also moves M to the home row; selecting French sets it for you unless you have chosen an arrangement here</string>
+    <string name="pref_key_arrangement_summary">Which letter sits on which key; accents, digits and symbols stay put. AZERTY is for French only and also moves M to the middle row. Choosing French switches to AZERTY unless you picked an arrangement here</string>
     <string name="pref_layout_mode_title">Layout mode</string>
     <string name="pref_auto_capitalize_title">Capitalize sentences</string>
-    <string name="pref_auto_capitalize_summary">Shift the first letter after a full stop. Off means the keyboard never capitalizes for you</string>
+    <string name="pref_auto_capitalize_summary">A capital after a full stop. Off: the keyboard never capitalizes for you</string>
     <string name="pref_autospace_title">Autospace after swipe</string>
     <string name="pref_word_ends_on_space_title">Word ends only when you type a space</string>
-    <string name="pref_word_ends_on_space_summary">No timer: taps and swipes keep building the same word however long you take, and a space, punctuation or enter ends it. Helps with long words assembled in pieces</string>
+    <string name="pref_word_ends_on_space_summary">No timer: taps and swipes add to the same word however long you take, until a space, punctuation or enter. For long words written in pieces</string>
     <string name="pref_autospace_tapped_words_title">Autospace tapped words too</string>
-    <string name="pref_autospace_tapped_words_summary">A word you tapped out gets a space once you pause, if its letters spell a word. Typing another letter takes the space back.</string>
+    <string name="pref_autospace_tapped_words_summary">A tapped word gets a space when you pause, if its letters spell a word. Another letter takes the space back</string>
     <string name="pref_autospace_delay_title">Autospace delay after a swipe (ms)</string>
-    <string name="pref_autospace_delay_summary">How long a swiped word waits before its space arrives. Raise it if spaces land inside words you are still drawing.</string>
+    <string name="pref_autospace_delay_summary">How long a swiped word waits for its space. Raise it if spaces land inside words you are still swiping</string>
     <string name="pref_autospace_tap_delay_title">Autospace delay after tapping (ms)</string>
-    <string name="pref_autospace_tap_delay_summary">The same, for a word you tapped out. Tapping runs at a steadier speed than swiping, so this can usually be shorter</string>
+    <string name="pref_autospace_tap_delay_summary">The same for a tapped word. Taps come at a steadier pace than swipes, so this can be shorter</string>
     <string name="pref_autospace_retract_title">Take the space back within (ms)</string>
-    <string name="pref_autospace_retract_summary">After an automatic space, how long a letter still cancels it and rejoins the word.</string>
+    <string name="pref_autospace_retract_summary">After an automatic space, how long a letter still cancels it and rejoins the word</string>
     <string name="pref_zen_title">Zen mode (no animations)</string>
     <string name="pref_zen_summary">Disables trails and effects to save battery</string>
     <string name="pref_trail_custom_hue_title">Custom trail hue (degrees)</string>
     <string name="pref_vibration_title">Vibration on key press</string>
     <string name="pref_vibration_intensity_title">Vibration intensity</string>
-    <string name="pref_trail_color_title">Swipe trail color</string>
+    <string name="pref_trail_color_title">Swipe trail colour</string>
     <string name="pref_language_title">Primary language</string>
     <string name="pref_enabled_languages_title">Enabled languages</string>
     <string name="pref_side_pad_title">Side margin</string>
@@ -72,67 +151,111 @@
     <string name="pref_retype_button_dp_summary">Wider is easier to hit with a case on. Every dp comes out of the words</string>
     <string name="pref_british_spelling_title">British spelling</string>
     <string name="pref_british_spelling_summary">Rank colour, centre and organise above the American spellings. English only</string>
-    <string name="pref_enabled_languages_summary">Languages the chord switch cycles through (order: English, Italiano, Español, Polski, Čeština, Nederlands, Deutsch, Français, Norsk)</string>
-    <string name="pref_lang_cycle_key_title">Language switch chord key</string>
-    <string name="pref_lang_cycle_key_summary">Hold ?123 and tap this letter to cycle enabled languages mid-typing</string>
+    <string name="pref_enabled_languages_summary">Languages the language switch cycles through (order: English, Italiano, Español, Polski, Čeština, Nederlands, Deutsch, Français, Norsk, then the experimental Русский, עברית, العربية, Українська)</string>
     <string name="pref_peck_mode_title">Peck-type mode</string>
-    <string name="pref_peck_mode_summary">Turns off swipe typing, suggestions and autocorrect: every tap inserts its letter exactly. For slang and words the dictionary keeps correcting. The spacebar shows TAP while active</string>
-    <string name="pref_peck_chord_key_title">Peck-type chord key</string>
-    <string name="pref_peck_chord_key_summary">Hold ?123 and tap this letter to toggle peck-type mode from the keyboard</string>
+    <!-- TAP is the spacebar's own label and stays in English. -->
+    <string name="pref_peck_mode_summary">No swiping, suggestions or autocorrect: every tap types exactly its letter. For slang and words the dictionary keeps changing. The spacebar shows TAP while it is on</string>
     <string name="pref_sync_system_language_title">Follow the system keyboard language</string>
-    <string name="pref_sync_system_language_summary">Android decides the language each time the keyboard opens, from the subtype picked in the system keyboard switcher. Turn this off to keep the language you chose here; the switcher still follows when you change it</string>
+    <string name="pref_sync_system_language_summary">Each time the keyboard opens, Android sets its language from the system keyboard switcher. Off: the language chosen here stays, and the switcher still follows it</string>
     <string name="pref_auto_detect_title">Mix enabled languages in suggestions (experimental)</string>
-    <string name="pref_auto_detect_summary">Words decode against the active language and the first other enabled language, in one suggestion list, and are learned into the language they came from. The other language comes first only when it fits better, and for a tapped word only when it is also more common.</string>
+    <string name="pref_auto_detect_summary">Suggestions come from the active language and the next enabled one, in one list, and each word is learned into its own language. The other language leads only when it fits the gesture better; a tapped word must also be more common</string>
     <string name="pref_long_press_title">Long-press duration (ms)</string>
     <string name="pref_long_press_summary">Below about 150 ms a quick tap can open the long-press menu instead of typing the letter</string>
     <string name="slider_value_ms">%1$d ms</string>
     <string name="pref_autocorrect_title">Autocorrect</string>
     <string name="pref_reinforce_title">Suggestion reinforcement boost</string>
     <string name="pref_reinforce_summary">Weight added when long-pressing a suggestion</string>
+    <string name="pref_badges_while_adjusting_title">Show ranks only while adjusting</string>
+    <string name="pref_badges_while_adjusting_summary">A word\'s rank badge appears while you hold it and slide. Off: every rank, all the time</string>
+    <string name="pref_reinforce_step_title">Suggestion slide distance (dp)</string>
+    <string name="pref_reinforce_step_summary">How far a held suggestion slides per step. Each step doubles or halves the word\'s weight; past the lowest step the word is blocked. Lower is more sensitive</string>
 
     <string name="pref_retype_avoids_title">Retype offers a different word</string>
-    <string name="pref_retype_avoids_summary">After the retype button, the word you rejected drops to the end of the bar instead of leading again. It stays pickable.</string>
+    <string name="pref_retype_avoids_summary">After the retype button, the rejected word moves to the end of the bar instead of leading again. It stays pickable</string>
     <string name="pref_group_look_title">Look and feel</string>
     <string name="pref_group_look_summary">Theme, colours, trail, vibration</string>
-    <string name="pref_group_size_title">Size and keys</string>
-    <string name="pref_group_size_summary">Heights, suggestion bar shortcuts, letter arrangement, what each key does on a long press</string>
+    <string name="pref_group_size_title">Size and layout</string>
+    <string name="pref_group_size_summary">Heights, margins, split and landscape, letter arrangement</string>
     <string name="pref_group_spacing_title">Spacing</string>
     <string name="pref_group_spacing_summary">When an automatic space arrives and when it is taken back</string>
-    <string name="pref_group_typing_title">Typing and predictions</string>
-    <string name="pref_group_typing_summary">Autocorrect, languages, what the keyboard learns</string>
-    <string name="pref_group_gestures_title">Gestures and chords</string>
-    <string name="pref_group_gestures_summary">Chords, key swipes, spacebar and backspace slides</string>
-    <string name="pref_chord_arm_title">Chord lead-in (ms)</string>
-    <string name="pref_chord_arm_summary">How long ?123 must be held before a letter tap counts as a chord. Lower it if chords feel slow; raise it if one fires by accident.</string>
+    <string name="pref_group_typing_title">Typing</string>
+    <string name="pref_group_typing_summary">Autocorrect, capitals, spacing, the suggestion bar, what the keyboard learns</string>
+    <string name="pref_group_gestures_title">Shortcuts and gestures</string>
+    <string name="pref_group_gestures_summary">Chords, edge swipes, expansions, slides</string>
+    <string name="pref_home_row_spread_title">Middle row width (%)</string>
+    <string name="pref_home_row_spread_summary">Spreads a s d f g h j k l toward the edges, up to the full width. 0 keeps the usual half-key indent</string>
+    <string name="pref_group_languages_title">Languages</string>
+    <string name="pref_group_languages_summary">Which languages, which one leads, British spelling</string>
+    <string name="pref_group_languages_more_title">More language options</string>
+    <string name="pref_group_languages_more_summary">Mixing languages, following the language you type</string>
+    <string name="pref_group_bar_title">Suggestion bar</string>
+    <string name="pref_group_bar_summary">Height, recent words, the retype button, shortcuts</string>
+    <string name="pref_group_learning_title">Learning</string>
+    <string name="pref_group_learning_summary">What a word gains, the bar slide, phrases, retype</string>
+    <string name="pref_group_keys_title">Keys</string>
+    <string name="pref_group_keys_summary">Number row, extra keys, comma and period, long press</string>
+    <string name="pref_group_key_symbols_title">Comma, period and enter menus</string>
+    <string name="pref_group_key_symbols_summary">What those three keys offer when held</string>
+    <string name="pref_group_gestures_more_title">Swipes and slides</string>
+    <string name="pref_group_gestures_more_summary">Key swipes, backspace and spacebar slides</string>
+    <string name="pref_group_learn_title">Learn Kinetica</string>
+    <string name="pref_group_learn_summary">Practice for two thumbs, and short tips from the basics up</string>
+    <string name="contribute_title">Contribute</string>
+    <string name="pref_contribute_summary">Support the keyboard</string>
+    <string name="contribute_text">If this keyboard is useful to you, you can offer me a coffee on:</string>
+    <string name="contribute_button" translatable="false">Ko-fi</string>
+    <string name="contribute_no_browser">No browser to open it. The link:\n%1$s</string>
+    <string name="pref_chord_arm_title">\?123 lead-in (ms)</string>
+    <string name="pref_chord_arm_summary">How long to hold ?123, or a symbol page\'s page key, before a key tap counts as a chord. Lower it if chords feel slow, raise it if one fires by accident</string>
+    <string name="pref_space_chord_arm_title">Spacebar lead-in (ms)</string>
+    <string name="pref_space_chord_arm_summary">How long to hold the spacebar still before a key tap counts as a chord. The chord fires only if the spacebar is still held when the key lifts, so a short value does not get in the way of typing</string>
+    <string name="chord_trigger_label">Hold</string>
+    <string name="chord_trigger_mode">\?123, or a symbol page\'s page key</string>
+    <string name="chord_trigger_space">The spacebar</string>
+    <string name="chord_group_mode">Hold ?123</string>
+    <string name="chord_group_space">Hold the spacebar</string>
+    <string name="chord_row_text">%1$s  →  \"%2$s\"</string>
     <string name="chord_settings_title">Chord shortcuts</string>
-    <string name="chord_reserved_heading">Reserved keys</string>
     <string name="chord_lead_in_value">%1$d ms</string>
     <string name="chord_sort_key_asc">Sorted by key (A to Z)</string>
     <string name="chord_sort_key_desc">Sorted by key (Z to A)</string>
     <string name="chord_sort_function">Sorted by what it does</string>
-    <string name="pref_chords_summary">Hold ?123 and tap a letter: expansions, editor commands, the language switch and the peck-type toggle</string>
+    <string name="pref_chords_summary">Hold ?123 or the spacebar and tap a key: expansions, editor commands, the language switch and peck-type</string>
     <string name="chord_add">Add chord</string>
     <string name="chord_edit">Edit</string>
     <string name="chord_delete">Delete</string>
-    <string name="chord_letter_label">Letter</string>
+    <string name="chord_letter_label">Key</string>
+    <string name="shortcut_key_hint">Type the key</string>
+    <string name="shortcut_key_error_blank">Type the key it goes on</string>
+    <string name="shortcut_key_error_many">One key only, not %1$s</string>
+    <string name="chord_key_taken">%1$s already has a chord</string>
+    <string name="shortcut_key_or">or a key that types nothing:</string>
+    <string name="shortcut_key_enter">Enter</string>
+    <string name="shortcut_key_backspace">Backspace</string>
+    <string name="shortcut_key_shift">Shift</string>
+    <string name="shortcut_key_mode" translatable="false">\?123</string>
     <string name="chord_kind_label">This chord</string>
-    <string name="chord_kind_text">Types text</string>
-    <string name="chord_kind_paste">Pastes</string>
-    <string name="chord_kind_copy">Copies the selection</string>
-    <string name="chord_kind_cut">Cuts the selection</string>
-    <string name="chord_kind_select_all">Selects all</string>
-    <string name="chord_kind_retype">Retypes the word</string>
-    <string name="chord_kind_expandify">Expands the word into its shortcut</string>
+    <string name="chord_kind_text">Text</string>
+    <string name="chord_kind_combo">Ctrl + key</string>
+    <!-- Del, Tab, Left, Home, Backspace, Shift+ and Alt+ are what the field accepts: keep them in English. -->
+    <string name="combo_key_unsendable">Not a key Ctrl can press: a letter, a digit, or a name such as Del, Tab or Left</string>
+    <string name="combo_key_hint">Key to press with Ctrl: c, v, a, Del, Backspace, Tab, Left, Home…; Shift+ or Alt+ in front adds that too</string>
+    <string name="chord_kind_paste">Paste</string>
+    <string name="chord_kind_copy">Copy</string>
+    <string name="chord_kind_cut">Cut</string>
+    <string name="chord_kind_select_all">Select all</string>
+    <string name="chord_kind_retype">Retype the word</string>
+    <string name="chord_kind_expandify">Expand</string>
     <string name="action_undo">Undo</string>
     <string name="action_redo">Redo</string>
-    <string name="action_settings">Opens Kinetica settings</string>
-    <string name="action_next_language">Switches to the next language</string>
-    <string name="action_toggle_autospace">Turns the automatic space on or off</string>
-    <string name="action_one_handed">One-handed mode on or off</string>
-    <string name="action_date">Writes today\'s date</string>
-    <string name="action_time">Writes the time</string>
-    <string name="action_enter">Presses enter</string>
-    <string name="action_copy_line">Copies the whole line</string>
+    <string name="action_settings">Settings</string>
+    <string name="action_next_language">Next language</string>
+    <string name="action_toggle_autospace">Autospace on or off</string>
+    <string name="action_one_handed">One-handed on or off</string>
+    <string name="action_date">Date</string>
+    <string name="action_time">Time</string>
+    <string name="action_enter">Enter</string>
+    <string name="action_copy_line">Copy the line</string>
     <string name="notice_undo">Undo</string>
     <string name="notice_redo">Redo</string>
     <string name="notice_paste">Paste</string>
@@ -142,37 +265,129 @@
     <string name="notice_retype">Retype</string>
     <string name="notice_expand">Expand</string>
     <string name="notice_autospace_on">Autospace on</string>
+    <string name="notice_toggle_on">%1$s on</string>
+    <string name="notice_toggle_off">%1$s off</string>
+    <string name="notice_name_next_word">Next word</string>
+    <string name="notice_name_recent_words">Recent words</string>
+    <string name="notice_name_number_row">Numbers row</string>
+    <string name="notice_name_tidy_spaces">Tidy spaces</string>
+    <string name="action_toggle_next_word">Next word on or off</string>
+    <string name="action_toggle_recent_words">Recent words on or off</string>
+    <string name="action_toggle_number_row">Numbers row on or off</string>
+    <string name="action_toggle_tidy_spaces">Tidy spaces on or off</string>
+    <string name="action_toggle_peck_mode">Peck-type on or off</string>
+    <string name="action_toggle_typing_speed">Typing speed on or off</string>
+    <string name="action_tab">Tab</string>
+    <string name="action_backspace">Backspace</string>
+    <string name="action_ctrl_next">Ctrl</string>
+    <string name="action_escape">Esc</string>
+    <string name="action_forward_delete">Del</string>
+    <string name="action_home">Home</string>
+    <string name="action_end">End</string>
+    <string name="action_arrow_up">Up arrow</string>
+    <string name="action_arrow_down">Down arrow</string>
+    <string name="action_arrow_left">Left arrow</string>
+    <string name="action_arrow_right">Right arrow</string>
+    <string name="action_page_up">Page up</string>
+    <string name="action_page_down">Page down</string>
+    <string name="notice_name_peck_mode">Peck-type</string>
+    <string name="notice_name_typing_speed">Typing speed</string>
+    <string name="pref_no_primary_title">Follow the language I type (experimental)</string>
+    <string name="pref_no_primary_summary">Up to three enabled languages count as equals; the one you are typing weighs most. Another language\'s words go in on their own far more often, right or wrong. Works without Mix enabled languages</string>
+    <string name="pref_typing_speed_title">Typing speed on the spacebar</string>
+    <string name="pref_typing_speed_summary">Words per minute over the last few seconds, in a corner of the spacebar while you type. Gone after a pause</string>
+    <string name="typing_speed_label">%d wpm</string>
     <string name="notice_autospace_off">Autospace off</string>
     <string name="notice_date">Date</string>
     <string name="notice_time">Time</string>
     <string name="notice_enter">Enter</string>
     <string name="notice_copy_line">Copy line</string>
+    <string name="notice_tab">Tab</string>
+    <string name="notice_backspace">Backspace</string>
+    <string name="notice_name_ctrl">Ctrl</string>
+    <string name="notice_escape">Esc</string>
+    <string name="notice_forward_delete">Delete</string>
+    <string name="notice_home">Home</string>
+    <string name="notice_end">End</string>
+    <string name="notice_arrow_up">Up</string>
+    <string name="notice_arrow_down">Down</string>
+    <string name="notice_arrow_left">Left</string>
+    <string name="notice_arrow_right">Right</string>
+    <string name="notice_page_up">Page up</string>
+    <string name="notice_page_down">Page down</string>
     <string name="clip_label_line">Line</string>
     <string name="pref_bar_actions_title">Shortcuts in the suggestion bar</string>
+    <string name="pref_next_word_title">Suggest the next word</string>
+    <string name="pref_recent_words_title">Recent words on the bar</string>
+    <string name="size_preview_portrait">Portrait</string>
+    <string name="size_preview_landscape">Landscape</string>
+    <string name="expansion_more_targets_note">A trigger that already exists gets this as another target; the keyboard then offers its targets on the bar.</string>
+    <string name="tutor_title">Practise two thumbs</string>
+    <string name="tutor_summary">Five words, each drawn over the board thumb by thumb, typed in a practice field</string>
+    <string name="tutor_step">Word %1$d of %2$d: %3$s</string>
+    <string name="tutor_field_hint">Type the word here with Kinetica</string>
+    <string name="tutor_skip">Next word</string>
+    <string name="tutor_well_done">Done.</string>
+    <string name="tutor_hint_one_thumb">One thumb: swipe through every letter without lifting, then lift.</string>
+    <string name="tutor_hint_swipe_and_tap">The left thumb swipes its letters while the right one taps its own.</string>
+    <string name="tutor_hint_two_swipes">Each thumb swipes the letters on its half, one after the other or at the same time.</string>
+    <string name="tutor_hint_mixed">Taps and swipes in one word: follow the numbers, a ring is a tap.</string>
+    <string name="tutor_hint_alternate">The thumbs hand over letter by letter. Keep a steady rhythm.</string>
+    <string name="pref_tidy_spaces_title">Tidy spaces</string>
+    <string name="pref_enter_action_title">Enter runs the app\'s action</string>
+    <string name="pref_enter_action_summary">Enter searches, sends or goes when the field asks for it, and the key says which. Hold enter for a new line. Off: a new line in any multi-line field</string>
+    <string name="enter_label_search">Search</string>
+    <string name="enter_label_send">Send</string>
+    <string name="enter_label_go">Go</string>
+    <string name="enter_label_next">Next</string>
+    <string name="enter_label_done">Done</string>
+    <string name="enter_label_previous">Back</string>
+    <string name="pref_tidy_spaces_summary">Never two spaces in a row: a second space is dropped, or ends the sentence when the double-space full stop is on. No automatic space before a closing quote or bracket</string>
+    <string name="pref_number_row_title">Numbers row</string>
+    <string name="pref_number_row_summary">Digits in their own row above the letters, tap only. The keyboard grows a row so the letters keep their size</string>
+    <string name="pref_recent_words_summary">The last two words stay on the left of the bar, each with the two words it beat above and below it. Tap one to swap it in. The bar grows to fit</string>
+    <string name="pref_next_word_summary">When nothing is being typed, the bar offers the words that usually come next, in place of the shortcuts (the ?123 menu keeps them). With recent words on, they follow every word</string>
     <string name="pref_bar_actions_summary">Shown when there is nothing to suggest. Each is also assignable to a chord or an edge swipe</string>
     <string name="pref_menu_actions_title">Shortcuts in the ?123 long-press menu</string>
+    <string name="shortcut_set_intro">Tick a shortcut to show it; the arrows move a ticked one. The first ones are kept when the row runs out of room.</string>
+    <string name="shortcut_row" translatable="false">%1$s  %2$s</string>
+    <string name="shortcut_move_up">Move up</string>
+    <string name="shortcut_move_down">Move down</string>
     <string name="pref_menu_actions_summary">Hold ?123 and slide up onto one. Chosen separately from the bar, so the bar can drop the gear and the menu keep it</string>
 
     <string name="expansion_settings_title">Text expansions</string>
-    <string name="pref_expansions_summary">Replace a short trigger you have typed with a longer target: a link, an emoji, a block of lines. Fired by the Expand action, which you assign to an edge swipe or a chord</string>
-    <string name="expansion_intro">An expansion fires on the word already at the cursor. Assign the Expand action to an edge swipe or to a ?123 chord to fire it. A target may itself be a trigger, so expansions can chain.</string>
+    <string name="pref_expansions_summary">Turn a short trigger into longer text, such as a link or a few lines. Fired by the Expand action on an edge swipe, a chord or the bar</string>
+    <string name="expansion_intro">An expansion replaces the trigger at the cursor. Put the Expand action on an edge swipe, a chord or the bar to fire it. A target can be another trigger, so expansions chain.</string>
     <string name="expansion_filter_hint">Filter by trigger or target</string>
     <string name="expansion_empty">No expansions yet.</string>
     <string name="expansion_no_match">No expansion matches that.</string>
     <string name="expansion_add">Add an expansion</string>
-    <string name="expansion_row">%1$s  →  %2$s</string>
+    <string name="expansion_row" translatable="false">%1$s  →  %2$s</string>
     <string name="expansion_trigger_label">Trigger</string>
     <string name="expansion_trigger_hint">What you type</string>
     <string name="expansion_target_label">Target</string>
     <string name="expansion_target_hint">What replaces it</string>
-    <string name="expansion_bad_trigger">A trigger cannot be blank or contain a space, and is at most 32 characters.</string>
+    <string name="expansion_bad_trigger">Blank, or longer than 32 characters. Spaces are removed.</string>
     <string name="chord_expansion_hint">Expansion text</string>
     <string name="chord_empty_hint">No chords assigned. The feature stays off until you add one.</string>
-    <string name="chord_list_hint">Hold ?123, then tap the letter.</string>
-    <string name="chord_row">%1$s  →  %2$s</string>
-    <string name="chord_reserved_lang">Note: ?123+%1$s is reserved for the language cycle. This text chord will not fire while more than one language is enabled.</string>
-    <string name="chord_reserved_peck">Note: ?123+%1$s is reserved for the peck-type toggle. This text chord will not fire.</string>
+    <string name="chord_list_hint">Hold the trigger still, then tap the key. On a symbol page, ?123 is the page key.</string>
+    <string name="chord_row" translatable="false">%1$s  →  %2$s</string>
 
+    <string name="pref_group_longpress_title">Long-press menus</string>
+    <string name="pref_group_longpress_summary">Grid or strip, and what each letter offers when held</string>
+    <string name="pref_letter_alternates_note_title">Each letter\'s list</string>
+    <!-- The :paste, :copy ... names are typed into the lists and read by the keyboard: keep them in English. -->
+    <string name="pref_letter_alternates_note_summary">Characters separated by spaces. The first is the key\'s corner character, typed by a plain long-press or an up-swipe. Blank, or the built-in list, keeps the built-in one; Default fills in every enabled language\'s characters to trim. A shortcut runs from its bar symbol or its name: :paste :copy :cut :undo :redo :settings :retype :date :time :copy_line :tab :escape :home :end. One list for every language</string>
+    <string name="pref_edit_from_menu_title">Edit a menu from the keyboard</string>
+    <string name="pref_edit_from_menu_summary">Hold a letter\'s long-press menu still for a moment to open its list here</string>
+    <string name="pref_letter_alternates_builtin">Built-in: %1$s</string>
+    <string name="pref_letter_alternates_none">Built-in: none</string>
+    <string name="pref_letter_alternates_default">Default: every enabled language</string>
+    <string name="pref_letter_alternates_reset_title">Reset every list</string>
+    <string name="pref_letter_alternates_reset_summary">Every letter back to its built-in list</string>
+    <string name="pref_letter_alternates_reset_message">Clear the lists you wrote for every letter. Each letter goes back to its built-in list.</string>
+    <string name="pref_letter_alternates_dialog_title">Long-press on %1$s</string>
+    <string name="pref_popup_shape_title">Long-press menu shape</string>
     <string name="pref_plain_letter_alternates_title">Hide accented letters on long-press</string>
     <string name="pref_plain_letter_alternates_summary">Letter keys offer only digits and symbols. Ignored for a language whose own alphabet uses accents, such as Italian, Spanish, Polish, Czech, German, French or Norwegian</string>
     <string name="pref_number_priority_title">Numbers before accents on the letter keys</string>
@@ -181,6 +396,8 @@
     <string name="dict_settings_title">Dictionary</string>
     <string name="pref_dictionary_summary">Base and personal dictionaries per language: info, import, export, reset</string>
     <string name="dict_lang_header_active">%1$s (active)</string>
+    <string name="dict_lang_closed" translatable="false">▸ %1$s</string>
+    <string name="dict_lang_open" translatable="false">▾ %1$s</string>
     <string name="dict_base_line">Base: %1$s • %2$d words • %3$s</string>
     <string name="dict_updated_bundled">ships with the app</string>
     <string name="dict_personal_line">Personal overlay: %1$d learned words</string>
@@ -198,8 +415,21 @@
     <string name="dict_import_personal">Import personal dictionary…</string>
     <string name="dict_manage_personal">Review learned words (%1$d)…</string>
     <string name="dict_manage_personal_title">Learned words: %1$s</string>
-    <string name="dict_word_row_active">%1$s · %2$d, used in predictions</string>
-    <string name="dict_word_row_inactive">%1$s · %2$d, below the merge floor</string>
+    <plurals name="dict_word_row_suggested">
+        <item quantity="one">%1$s · %2$d commit, suggested</item>
+        <item quantity="other">%1$s · %2$d commits, suggested</item>
+    </plurals>
+    <plurals name="dict_word_row_below_floor">
+        <item quantity="one">%1$s · %2$d commit, suggested from %3$d</item>
+        <item quantity="other">%1$s · %2$d commits, suggested from %3$d</item>
+    </plurals>
+    <string name="dict_word_row_taken_back">%1$s · taken back, not suggested</string>
+    <string name="dict_words_help">The number counts how often you typed the word; sliding it up on the bar adds more. From %1$d it is suggested; below that it is kept but not suggested. Tick words to delete or raise them.</string>
+    <string name="dict_word_raise_checked">Raise ticked</string>
+    <plurals name="dict_words_raised">
+        <item quantity="one">Raised %d word by one commit</item>
+        <item quantity="other">Raised %d words by one commit</item>
+    </plurals>
     <string name="dict_word_search_hint">Search learned words</string>
     <string name="dict_word_search_empty">No learned word matches that.</string>
     <string name="dict_word_delete_checked">Delete ticked</string>
@@ -225,16 +455,18 @@
     <string name="dict_personal_import_mode_message">Merge adds the file\'s counts onto what is already learned. Replace deletes all learned words for this language first.</string>
     <string name="dict_personal_import_merge">Merge</string>
     <string name="dict_personal_import_replace">Replace</string>
-    <string name="dict_import_note">Improved dictionaries use the AOSP wordlist.combined format (e.g. main_en_US, main_it, main_pl or main_cs from the Helium314/aosp-dictionaries mirror, Apache-2.0). The merge runs on-device against the bundled wordlist; abbreviations and offensive entries are dropped. Bigrams stay bundled.</string>
+    <string name="dict_import_note">Takes an AOSP wordlist.combined file, such as main_it from the Helium314/aosp-dictionaries mirror (Apache-2.0). It is merged with the bundled list on the phone; abbreviations, offensive entries and spellings missing a bundled word\'s accents are dropped. Word pairs stay the bundled ones.</string>
 
     <string name="pref_backspace_char_slide_title">Backspace slide deletes letters</string>
-    <string name="pref_backspace_char_slide_summary">Sliding left from backspace stages one letter at a time instead of one word. Nothing is deleted until you lift, and sliding back right still undoes it.</string>
+    <string name="pref_backspace_char_slide_summary">Sliding left from backspace marks one letter at a time instead of a word. Nothing is deleted until you lift; sliding back undoes it</string>
     <string name="pref_retype_button_title">Retype button on the suggestion bar</string>
-    <string name="pref_retype_button_summary">Reserves the right edge of the suggestion bar for a \u21bb button. One tap throws away the word you are writing, or the one just finished, so you can swipe it again in its place.</string>
+    <string name="pref_retype_button_summary">A \u21bb button at the right end of the bar. One tap removes the word you are writing, or the one just finished, so you can swipe it again</string>
     <string name="pref_spacebar_word_slide_title">Spacebar slide moves by word</string>
-    <string name="pref_spacebar_word_slide_summary">Sliding along the spacebar moves the cursor a whole word at a time instead of one letter, the way the backspace slide does. Punctuation goes with the word.</string>
+    <string name="pref_spacebar_word_slide_summary">The spacebar slide moves the cursor a word at a time, as the backspace slide does. Punctuation moves with the word</string>
     <string name="backup_heading">Backup everything</string>
-    <string name="backup_note">Carries every setting, your learned words in all languages, the blocked words, your chord shortcuts and your edge-swipe shortcuts, as one text file you can move to another phone. Imported base dictionaries are not carried. Re-import those from the file you used the first time.</string>
+    <string name="backup_settings_title">Backup</string>
+    <string name="pref_backup_summary">Every setting, learned word and shortcut as one file: export, restore, undo the last restore</string>
+    <string name="backup_note">One text file with every setting, learned word, blocked word, chord, edge swipe and expansion, to move to another phone. Imported dictionaries are not included: import them again from the original file.</string>
     <string name="backup_restore">Undo the last import (%1$s)</string>
     <string name="backup_restore_title">Undo the last import</string>
     <string name="backup_restore_message">Put the keyboard back as it was just before the last import. Words learned since then are lost.</string>
@@ -246,57 +478,66 @@
     <string name="backup_export_done">Backup written: %1$d entries</string>
     <string name="backup_export_partial">Backup written: %1$d entries, %2$d skipped</string>
     <string name="backup_export_failed">Backup failed: could not write the file</string>
-    <string name="backup_import_message">Merge keeps what is already on this phone and adds to it. Replace clears the learned words and phrases first. Settings and shortcuts are overwritten either way. A copy of your current keyboard is saved first, so this can be undone.</string>
+    <string name="backup_import_message">Merge adds to what this phone already has. Replace clears learned words and phrases first. Either way, settings and shortcuts are overwritten. The current keyboard is saved first, so this can be undone.</string>
     <string name="backup_import_not_backup">Not a Kinetica backup file</string>
     <string name="backup_import_too_new">This backup was made by a newer version of Kinetica</string>
     <string name="backup_import_done">Restored: %1$d words, %2$d settings</string>
+    <string name="backup_progress_title">Restoring</string>
+    <string name="backup_progress_reading">Reading the backup\u2026</string>
+    <string name="backup_progress_saving">Saving a copy of the current keyboard first\u2026</string>
+    <string name="backup_progress_writing">Writing %1$d / %2$d</string>
+    <string name="backup_progress_keep_open">%1$s\n\nKeep Kinetica open until this finishes.</string>
     <string name="backup_import_done_missing_base">Restored. Re-import the improved dictionary for: %1$s</string>
     <string name="dict_clear_phrases">Clear learned phrases</string>
     <string name="dict_clear_phrases_confirm">Forget every word pair Kinetica has learned for %1$s? The learned words themselves are kept.</string>
     <string name="pref_learn_phrases_title">Learn phrases you type</string>
-    <string name="pref_learn_phrases_summary">Remembers which word you tend to type after which, so the next one is guessed better. Stored on this device only and never included in a dictionary export.</string>
+    <string name="pref_learn_phrases_summary">Remembers which word you tend to type after which, to guess the next one better. Kept on this phone only, never in a dictionary export</string>
     <string name="pref_double_space_period_title">Double-tap space for a full stop</string>
     <string name="pref_double_space_period_summary">Two quick taps on the spacebar end the sentence instead of leaving two spaces. Off at the start of a line and after punctuation</string>
     <string name="pref_spaceless_space_title">Spaceless space on the left of the spacebar</string>
-    <string name="pref_spaceless_space_summary">Tapping the left third of the spacebar ends the word without adding a space, so a compound the dictionary does not hold can be swiped in two halves. That third stops working as a normal space.</string>
+    <string name="pref_spaceless_space_summary">The left third of the spacebar ends the word without a space, so a compound the dictionary lacks can be swiped in two halves. That third no longer types a space</string>
     <string name="pref_spacebar_step_title">Spacebar slide distance</string>
-    <string name="pref_spacebar_step_summary">How far you slide along the spacebar to move the cursor one step. Lower is faster.</string>
+    <string name="pref_spacebar_step_summary">How far you slide along the spacebar to move the cursor one step. Lower is faster</string>
 
     <string name="pref_alternate_swipes_title">Directional number/symbol swipes</string>
-    <string name="pref_alternate_swipes_summary">Swipe up on a top-row letter, or down on a bottom-row one, to type the small glyph printed on that key. Your own edge-swipe bindings take precedence.</string>
+    <string name="pref_alternate_swipes_summary">Swipe up on a top-row letter, or down on a bottom-row one, to type the small character on the key. Your own edge swipes come first</string>
 
     <string name="pref_enter_alternates_title">Enter slide-up symbols</string>
-    <string name="pref_enter_alternates_summary">Up to three symbols, space-separated (default \"? ! ,\"). The first sits above Enter and is inserted by a quick up-slide; slide left for the others.</string>
-    <string name="pref_enter_alternates_default">\? ! ,</string>
+    <!-- The symbols in quotes are the stored default: keep them. -->
+    <string name="pref_enter_alternates_summary">Up to three symbols, space-separated (default \"? ! ,\"). The first sits above Enter and is inserted by a quick up-slide; slide left for the others</string>
+    <string name="pref_enter_alternates_default" translatable="false">\? ! ,</string>
 
     <string name="pref_apostrophe_key_title">Apostrophe key</string>
-    <string name="pref_apostrophe_key_summary">Adds a narrow apostrophe key right of L, for writing contracted and elided words (don\'t, nell\'immagine) without the symbols layer.</string>
+    <string name="pref_apostrophe_key_summary">Adds a narrow apostrophe key right of L, for writing contracted and elided words (don\'t, nell\'immagine) without the symbols layer</string>
 
     <string name="edge_swipe_settings_title">Edge swipe shortcuts</string>
-    <string name="pref_edge_swipes_summary">Quick swipes on keys that insert text or open the emoji picker</string>
+    <string name="pref_edge_swipes_summary">A quick swipe off a key types text, runs an action or presses Ctrl and a key</string>
     <string name="edge_swipe_hint">Swipe across a key in the shown direction to fire its action.</string>
     <string name="edge_swipe_empty_hint">No edge swipes bound. Add one or reset to defaults.</string>
     <string name="edge_swipe_add">Add edge swipe</string>
     <string name="edge_swipe_reset">Reset to defaults</string>
-    <string name="edge_swipe_reset_confirm">Replace all edge-swipe bindings with the original five defaults?</string>
+    <string name="edge_swipe_reset_confirm">Replace all edge swipes with the defaults?</string>
     <string name="edge_swipe_shadow_note">Takes over %1$s</string>
     <string name="edge_swipe_shadow_cursor">sliding the spacebar to move the cursor</string>
     <string name="edge_swipe_shadow_delete">sliding backspace to delete words</string>
     <string name="edge_swipe_shadow_layer">sliding ?123 to reach the number pad</string>
     <string name="edge_swipe_shadow_enter">sliding enter for its symbols</string>
     <string name="edge_swipe_shadow_typing">short typing swipes on that letter</string>
-    <string name="edge_swipe_row">%1$s %2$s  →  %3$s</string>
+    <string name="edge_swipe_row" translatable="false">%1$s %2$s  →  %3$s</string>
     <string name="edge_swipe_key_label">Key</string>
     <string name="edge_swipe_direction_label">Direction</string>
     <string name="edge_swipe_action_label">Action</string>
-    <string name="edge_swipe_action_insert">Insert text</string>
-    <string name="edge_swipe_action_emoji">Open emoji picker</string>
+    <string name="edge_swipe_action_emoji">Emoji picker</string>
     <string name="edge_swipe_text_hint">Text to insert</string>
+    <string name="edge_swipe_dir_up">up</string>
+    <string name="edge_swipe_dir_down">down</string>
+    <string name="edge_swipe_dir_left">left</string>
+    <string name="edge_swipe_dir_right">right</string>
 
     <string name="pref_emoji_key_title">Emoji on comma long-press</string>
     <string name="pref_emoji_key_summary">Makes the emoji picker the first long-press option on the comma key</string>
     <string name="pref_comma_mode_title">Comma key</string>
-    <string name="pref_comma_mode_summary">Keep the comma, remove it (spacebar widens), or repurpose it as a custom character, text, or editor action; the comma stays in the key\'s long-press popup when repurposed</string>
+    <string name="pref_comma_mode_summary">Keep the comma, remove it (the spacebar widens), or make it a character, text or action of your own. A repurposed key keeps the comma in its long-press menu</string>
     <string name="pref_period_alternates_title">Period long-press symbols</string>
     <string name="pref_comma_alternates_title">Comma long-press symbols</string>
     <string name="pref_punctuation_alternates_summary">Space-separated, up to eight. Leave blank to keep the built-in list</string>
@@ -306,7 +547,7 @@
     <string name="pref_period_custom_summary">Used by the custom character and custom text options above</string>
     <string name="pref_comma_custom_title">Comma key custom text</string>
     <string name="pref_comma_custom_summary">Used by the custom character and custom text options above</string>
-    <string name="emoji_back_to_letters">ABC</string>
+    <string name="emoji_back_to_letters" translatable="false">ABC</string>
     <string name="emoji_recent">Frequently used</string>
 
     <string name="pref_theme_mode_title">Keyboard theme</string>
@@ -314,7 +555,7 @@
     <string name="theme_preview_note_custom">Preview: drag the hue above to change it</string>
     <string name="theme_preview_note_fixed">Preview: this palette ignores the hue. Choose Custom colour to use it.</string>
     <string name="pref_theme_hue_title">Accent hue</string>
-    <string name="pref_theme_hue_summary">Colour wheel position, 0-360. Used when the theme above is set to a custom colour; every surface is derived from it</string>
-    <string name="pref_theme_color_title">Custom theme color</string>
-    <string name="pref_theme_color_summary">Primary color the palette is derived from (theme: custom)</string>
+    <string name="pref_theme_hue_summary">Position on the colour wheel, from 0 to 360, for the custom colour theme. Every surface follows it</string>
+    <string name="pref_theme_color_title">Custom theme colour</string>
+    <string name="pref_theme_color_summary">The colour the custom palette is built from</string>
 </resources>

@@ -16,7 +16,6 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.Spinner
 import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.setPadding
@@ -24,25 +23,23 @@ import androidx.preference.PreferenceManager
 import com.kinetica.keyboard.R
 import com.kinetica.keyboard.data.Expansion
 import com.kinetica.keyboard.data.KineticaDb
+import com.kinetica.keyboard.ime.EditorState
 import com.kinetica.keyboard.ime.MAX_TRIGGER_CHARS
-import com.kinetica.keyboard.keys.EditorAction
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 /**
  * The text-expansion list: trigger -> target, with add, edit, delete and a filter.
  *
- * An expansion fires on whatever is written at the cursor, so a trigger is free text
- * rather than a letter picked from a list. That is the difference from the chord screen
- * beside it and it is also why this feature does not inherit the chord identity limit: a
- * chord is a 0-25 letter index, an expansion is a string.
+ * An expansion fires on whatever is written at the cursor, so a trigger is free text of any
+ * length, where a chord is one key.
  *
- * Nothing is bound to a gesture by default. The action is offered in the edge-swipe and
- * chord editors, and the note at the top of this screen says so, because a shipped default
- * on a letter key is the class of thing that produced the mid-word misfire report.
+ * Nothing is bound to a gesture by default: the action is offered in the edge-swipe and chord
+ * editors, and the note at the top of this screen says so, because a shipped default on a letter
+ * key can misfire mid-word.
  *
- * The keyboard reloads this table only when [Prefs.EXPANSION_GENERATION] moves, not at
- * every input start the way chords do: the list is expected to run to hundreds of rows.
+ * The keyboard reloads this table only when [Prefs.EXPANSION_GENERATION] moves, not at every
+ * input start as chords do, since the list can run to hundreds of rows.
  */
 class ExpansionSettingsActivity : AppCompatActivity() {
 
@@ -85,6 +82,14 @@ class ExpansionSettingsActivity : AppCompatActivity() {
                 })
             },
         )
+        // Under the filter, not below the list, so with hundreds of rows adding one needs no
+        // scroll (#19).
+        root.addView(
+            Button(this).apply {
+                text = getString(R.string.expansion_add)
+                setOnClickListener { showEditor(existing = null) }
+            },
+        )
         emptyHint = TextView(this).apply {
             text = getString(R.string.expansion_empty)
             setPadding(0, pad, 0, pad)
@@ -92,12 +97,6 @@ class ExpansionSettingsActivity : AppCompatActivity() {
         root.addView(emptyHint)
         listContainer = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         root.addView(listContainer)
-        root.addView(
-            Button(this).apply {
-                text = getString(R.string.expansion_add)
-                setOnClickListener { showEditor(existing = null) }
-            },
-        )
         setContentView(ScrollView(this).apply { addView(root) })
         refresh()
     }
@@ -124,8 +123,8 @@ class ExpansionSettingsActivity : AppCompatActivity() {
     /**
      * Tells the running keyboard to re-read the table.
      *
-     * A counter rather than a re-read at every input start, which is what chords do: that
-     * is free for at most twenty-six rows and grows with the table here.
+     * A counter instead of a re-read at every input start as chords do: that is cheap for a few
+     * dozen chords and grows with the table here.
      */
     private fun bumpGeneration() {
         val p = PreferenceManager.getDefaultSharedPreferences(this)
@@ -174,8 +173,10 @@ class ExpansionSettingsActivity : AppCompatActivity() {
                 Button(this).apply {
                     text = getString(R.string.chord_delete)
                     setOnClickListener {
+                        // This row only: a trigger with several targets keeps the rest.
+                        val keep = ExpansionRows.afterDelete(rows, row)
                         io.execute {
-                            dao().deleteByTrigger(row.trigger)
+                            dao().assign(row.trigger, keep)
                             main.post {
                                 if (!isDestroyed) {
                                     bumpGeneration()
@@ -194,34 +195,49 @@ class ExpansionSettingsActivity : AppCompatActivity() {
         val pad = (16 * resources.displayMetrics.density).toInt()
         val trigger = EditText(this).apply {
             hint = getString(R.string.expansion_trigger_hint)
-            inputType = InputType.TYPE_CLASS_TEXT
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+            isSingleLine = true
+            // Tells Kinetica this field holds one token, so it writes no automatic space here.
+            privateImeOptions = EditorState.ONE_TOKEN_OPTION
             setText(existing?.trigger.orEmpty())
+            // Shown under the field as it is typed, not in a toast after OK.
+            addTextChangedListener(object : TextWatcher {
+                override fun afterTextChanged(s: Editable?) {
+                    val t = ExpansionRows.cleanTrigger(s?.toString().orEmpty())
+                    error = if (t.length > MAX_TRIGGER_CHARS) getString(R.string.expansion_bad_trigger) else null
+                }
+
+                override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) = Unit
+
+                override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) = Unit
+            })
         }
-        // What the expansion DOES, as the chord editor asks it (#19: text, or an action).
-        // Built from the enum so a new action appears without being listed here, minus the
-        // ones an expansion must not fire.
-        val existingAction = existing?.target?.let { EditorAction.of(it) }
-        val kinds = listOf<EditorAction?>(null) +
-            EditorAction.entries.filter { it !in EditorAction.NOT_EXPANSION_TARGETS }
+        // What the expansion does, from ShortcutKinds, shared with the chord and edge-swipe editors
+        // (#19: text, Ctrl + a key, or an action), minus the actions an expansion must not fire.
+        val kinds = ShortcutKinds.expansions
+        val (wasKind, wasField) = ShortcutKinds.decode(existing?.target)
+        val target = EditText(this).apply {
+            // Multi-line: a target may be a bullet block.
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
+            setText(wasField)
+        }
+        fun showFieldFor(kind: ShortcutKind) {
+            target.visibility = if (ShortcutKinds.usesField(kind)) View.VISIBLE else View.GONE
+            target.hint = getString(ShortcutKinds.hintRes(kind, R.string.expansion_target_hint))
+        }
+        showFieldFor(wasKind)
         val kindSpinner = Spinner(this).apply {
             adapter = ArrayAdapter(
                 this@ExpansionSettingsActivity,
                 android.R.layout.simple_spinner_dropdown_item,
-                kinds.map { if (it == null) getString(R.string.chord_kind_text) else getString(ActionLabels.labelRes(it)) },
+                kinds.map { getString(ShortcutKinds.labelRes(it)) },
             )
-            setSelection(kinds.indexOfFirst { it == existingAction }.coerceAtLeast(0))
-        }
-        val target = EditText(this).apply {
-            hint = getString(R.string.expansion_target_hint)
-            // Multi-line: a target may be a bullet block, which is the example its
-            // reporter leads with.
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
-            setText(if (existingAction == null) existing?.target.orEmpty() else "")
-            visibility = if (existingAction == null) View.VISIBLE else View.GONE
+            setSelection(kinds.indexOf(wasKind).coerceAtLeast(0))
         }
         kindSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(p: AdapterView<*>?, v: View?, pos: Int, id: Long) {
-                target.visibility = if (kinds[pos] == null) View.VISIBLE else View.GONE
+                showFieldFor(kinds[pos])
+                target.error = null
             }
             override fun onNothingSelected(p: AdapterView<*>?) = Unit
         }
@@ -233,6 +249,9 @@ class ExpansionSettingsActivity : AppCompatActivity() {
             addView(TextView(context).apply { text = getString(R.string.expansion_target_label) })
             addView(kindSpinner)
             addView(target)
+            if (existing == null) {
+                addView(TextView(context).apply { text = getString(R.string.expansion_more_targets_note) })
+            }
         }
         val dialog = AlertDialog.Builder(this)
             .setTitle(if (existing == null) R.string.expansion_add else R.string.chord_edit)
@@ -244,22 +263,24 @@ class ExpansionSettingsActivity : AppCompatActivity() {
         // the builder's own listener always dismisses.
         dialog.setOnShowListener {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val t = trigger.text.toString()
-                val action = kinds[kindSpinner.selectedItemPosition]
-                val v = action?.output ?: target.text.toString()
+                val t = ExpansionRows.cleanTrigger(trigger.text.toString())
+                val kind = kinds[kindSpinner.selectedItemPosition]
                 if (!ExpansionRows.isValidTrigger(t, MAX_TRIGGER_CHARS)) {
-                    Toast.makeText(this, R.string.expansion_bad_trigger, Toast.LENGTH_LONG).show()
+                    trigger.error = getString(R.string.expansion_bad_trigger)
+                    trigger.requestFocus()
                     return@setOnClickListener
                 }
-                if (v.isEmpty()) return@setOnClickListener
+                val v = ShortcutKinds.encode(kind, target.text.toString())
+                if (v == null) {
+                    if (kind == ShortcutKind.CtrlKey) target.error = getString(R.string.combo_key_unsendable)
+                    return@setOnClickListener
+                }
                 dialog.dismiss()
+                // A new row on an existing trigger adds a target (#19); an edit touches its own
+                // row; a changed trigger moves that one target.
+                val writes = ExpansionRows.afterSave(rows, existing, t, v)
                 io.execute {
-                    // Editing to a different trigger frees the old one, the same way the
-                    // chord editor frees a letter it moved away from.
-                    if (existing != null && existing.trigger != t) {
-                        dao().deleteByTrigger(existing.trigger)
-                    }
-                    dao().assign(t, listOf(v))
+                    for ((trig, targets) in writes) dao().assign(trig, targets)
                     main.post {
                         if (!isDestroyed) {
                             bumpGeneration()

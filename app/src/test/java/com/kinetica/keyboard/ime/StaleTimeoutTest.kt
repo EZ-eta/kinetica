@@ -4,11 +4,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /**
- * How long an undecodable buffer stays open once the swipe delay can go to 10 ms (#2).
- *
- * The timeout was twice the swipe delay with nothing under it, which was safe while the
- * delay could not go below 100 ms. At 10 ms it would close a word typed in pieces 20 ms
- * after every piece, and the next piece would start a new word (item 29 in reverse).
+ * How long an undecodable buffer stays open now the swipe delay can go to 10 ms (#2).
+ * Twice the delay with no floor would close a word typed in pieces 20 ms after each piece,
+ * and the next piece would start a new word.
  */
 class StaleTimeoutTest {
 

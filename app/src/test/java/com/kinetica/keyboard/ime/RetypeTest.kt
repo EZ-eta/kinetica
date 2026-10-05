@@ -9,10 +9,9 @@ import org.junit.Test
 /**
  * What a retype throws away.
  *
- * Pure for the reason the rest of this package's rules are: the service has no JVM reach.
- * The behaviour around it - the delete, the abandon, the cursor - is one call each and is
- * on the device checklist; what is decided here is the span, which is the part that can be
- * got wrong quietly.
+ * Pure, like this package's other rules, because the service has no JVM reach. The delete, the
+ * abandon and the cursor are one call each and are checked on a device; the span is what can go
+ * wrong silently, so it is decided here.
  */
 class RetypeTest {
 
@@ -25,8 +24,8 @@ class RetypeTest {
 
     @Test
     fun theWordInProgressWinsOverTheOneBeforeIt() {
-        // Both can be set at once - the correction strip survives a commit while the next
-        // word is being written - and the one under the thumb is the one meant.
+        // Both can be set at once, since the correction strip survives a commit while the next
+        // word is written; the one under the thumb is the one meant.
         assertEquals(
             3,
             retypeSpan(tentativeLength = 3, commitSpan = commitSpan("hello ", "hello", 8), wordUnderCursor = ""),
@@ -35,10 +34,9 @@ class RetypeTest {
 
     @Test
     fun withNothingInProgressTheLastCommittedWordGoesWithItsSpace() {
-        // The case that actually gets used. The autospace commits fast, so by the time a
-        // wrong word is noticed there is usually no word in progress - and the trailing
-        // space is the keyboard's own, so leaving it would put the retyped word one space
-        // further along.
+        // The common case: the autospace commits fast, so by the time a wrong word is noticed
+        // there is usually no word in progress. The trailing space is the keyboard's own, and
+        // leaving it would put the retyped word one space further along.
         assertEquals(
             6,
             retypeSpan(tentativeLength = 0, commitSpan = commitSpan("hello ", "hello", 8), wordUnderCursor = ""),
@@ -47,9 +45,8 @@ class RetypeTest {
 
     @Test
     fun aCommittedWordWithNoTrailingTextIsJustTheWord() {
-        // Punctuation eats the autospace, so the trailing text can be a mark or nothing -
-        // and since item 69 the mark is read out of the editor instead of remembered, so
-        // these supply the text the editor actually holds.
+        // Punctuation eats the autospace, so the trailing text can be a mark or nothing. The
+        // mark is read from the editor, so these supply the text the editor holds.
         assertEquals(
             5,
             retypeSpan(tentativeLength = 0, commitSpan = commitSpan("hello", "hello", 8), wordUnderCursor = ""),
@@ -62,10 +59,9 @@ class RetypeTest {
 
     @Test
     fun aCommittedWordTheEditorNoLongerHoldsFallsThroughToTheRun() {
-        // The third case of item 69, and it is a behaviour change: the commit case used to
-        // answer with a remembered length whatever the editor held, so a retype at `be?`
-        // deleted `e?` and left `b`. A refused span now hands the question to the run under
-        // the cursor, which re-reads the text.
+        // The third case: a remembered length made a retype at `be?` delete `e?`
+        // and leave `b`. A refused span hands the question to the run under the cursor, which
+        // re-reads the text.
         assertEquals(
             4,
             retypeSpan(
@@ -78,11 +74,9 @@ class RetypeTest {
 
     @Test
     fun withNothingTheKeyboardKnowsItReadsTheRunUnderTheCursor() {
-        // The case the button was asked for, and the one the first version refused. An
-        // undecodable buffer is closed by the stale-buffer timeout, which zeroes the
-        // tentative AND nulls the last commit while the letters stay on screen - so both
-        // of the cases above report nothing exactly when the text is garbage. `pimn` was
-        // what the developer was looking at when the button did not work.
+        // The case the button exists for. The stale-buffer timeout closes an undecodable
+        // buffer, zeroing the tentative and nulling the last commit while the letters stay on
+        // screen, so both cases above report nothing when the text is garbage such as `pimn`.
         assertEquals(
             4,
             retypeSpan(
@@ -128,7 +122,7 @@ class RetypeTest {
         // One walk for three questions, so a retype cannot disagree with the reload about
         // where a word starts and delete the wrong thing.
         assertEquals("pimn", trailingLetterRun("car pet pimn"))
-        // Apostrophes belong to the word, exactly as the reload treats them.
+        // Apostrophes belong to the word, as the reload treats them.
         assertEquals("l'altro", trailingLetterRun("dico l'altro"))
         assertEquals("don't", trailingLetterRun("don't"))
         // Stops at a space, a delimiter and a digit.
@@ -137,14 +131,13 @@ class RetypeTest {
         assertEquals("", trailingLetterRun("v2"))
         // Start of the field.
         assertEquals("", trailingLetterRun(""))
-        // And the end offset is honoured, which is what wordBeforeAutospace needs.
+        // The end offset is honoured, as wordBeforeAutospace needs.
         assertEquals("car", trailingLetterRun("car ", 3))
     }
 
     @Test
     fun theTraceNamesWhichCaseAnswered() {
-        // The reason this defect was invisible in the capture: the retype emitted nothing
-        // at all, so the trace could not say that the span had been zero.
+        // A retype that emits nothing leaves a zero span invisible in the trace.
         assertEquals("tentative", retypeSource(tentativeLength = 4, commitSpan = -1))
         assertEquals("commit", retypeSource(tentativeLength = 0, commitSpan = 6))
         assertEquals("cursor", retypeSource(tentativeLength = 0, commitSpan = -1))
@@ -152,18 +145,17 @@ class RetypeTest {
 
     @Test
     fun theActionIsReachableByTheNameBothTriggersUse() {
-        // The bar button and a ?123 chord both dispatch this string, which is what keeps
-        // them one implementation.
+        // The bar button and a ?123 chord both dispatch this string, so they share one
+        // implementation.
         assertNotNull(EditorAction.of("action:retype"))
         assertEquals(EditorAction.RETYPE, EditorAction.of(EditorAction.RETYPE.output))
     }
 
     @Test
     fun onlyTheCommitCaseHasAWordToTakeBack() {
-        // A retype is the user saying the last commit was wrong, and until 2026-09-06 the
-        // word kept the personal weight that commit earned - so a word being fought got
-        // STRONGER with every attempt. `biologa` was measured climbing pb 1.10 -> 1.24
-        // across one capture while being retyped over and over.
+        // A retype says the last commit was wrong, so the word gives back the personal weight
+        // that commit earned. Kept, it made a fought word stronger: `biologa` climbed
+        // pb 1.10 -> 1.24 across one capture while being retyped over and over.
         //
         // Only the commit case names a word. The tentative case has nothing committed yet,
         // and the cursor case is a run of letters the keyboard has no record of deciding,
@@ -174,11 +166,71 @@ class RetypeTest {
     }
 
     @Test
+    fun aCommitTheStripDidNotShowIsStillRetypeable() {
+        // A lone candidate raises no correction strip, so a retype that read its word off the
+        // strip found none, fell to the run under the cursor, met the autospace and deleted
+        // nothing: eleven presses in a row on one capture.
+        val memory = CommitMemory()
+        memory.onCommit("provarne", stripShown = false)
+        assertEquals(null, memory.stripWord)
+        val before = "il proverbio provarne "
+        val committed = memory.retypeWord
+        assertNotNull("a lone-candidate commit must stay retypeable", committed)
+        val span = retypeSpan(
+            tentativeLength = 0,
+            commitSpan = commitSpan(before, committed!!, 8),
+            wordUnderCursor = trailingLetterRun(before),
+        )
+        assertEquals(9, span)
+        // Without the remembered commit the press finds nothing to take back.
+        assertEquals(0, retypeSpan(tentativeLength = 0, commitSpan = -1, wordUnderCursor = trailingLetterRun(before)))
+    }
+
+    @Test
+    fun theStripAndTheRetypeFollowARewriteAndClearTogether() {
+        val memory = CommitMemory()
+        memory.onCommit("be", stripShown = true)
+        memory.onReplaced("BE")
+        assertEquals("BE", memory.stripWord)
+        assertEquals("BE", memory.retypeWord)
+        // A rewrite never raises a strip that was not up.
+        memory.onCommit("provarne", stripShown = false)
+        memory.onReplaced("PROVARNE")
+        assertEquals(null, memory.stripWord)
+        assertEquals("PROVARNE", memory.retypeWord)
+        memory.clear()
+        assertEquals(null, memory.retypeWord)
+    }
+
+    @Test
+    fun aRetypeOffersTheGesturesOtherCandidatesNeverTheRejectedOne() {
+        // After retype takes `liver` back, the bar offers
+        // what else the gesture decoded, so a tap fixes it without re-swiping.
+        val memory = CommitMemory()
+        memory.onCommit(
+            "liver", stripShown = true,
+            alternatives = listOf("believe", "Liver", "lover", "believe", "lever"),
+            languages = mapOf("believe" to "en", "lover" to "en"),
+        )
+        assertEquals(listOf("believe", "lover", "lever"), memory.offerAfterRetype("liver", 10))
+        assertEquals(listOf("believe", "lover"), memory.offerAfterRetype("liver", 2))
+        assertEquals("en", memory.languages["believe"])
+        memory.clear()
+        assertTrue(memory.offerAfterRetype("liver", 10).isEmpty())
+    }
+
+    @Test
+    fun aCommitWithNoAlternativesOffersNothing() {
+        val memory = CommitMemory()
+        memory.onCommit("provarne", stripShown = false)
+        assertTrue(memory.offerAfterRetype("provarne", 10).isEmpty())
+    }
+
+    @Test
     fun everyActionRoundTripsThroughItsOwnName() {
         // The chord picker builds its list from EditorAction.entries and dispatches the
         // selected entry's output, so an action whose name does not survive `of` would be
-        // offered in settings and then inserted as text. Retype was missing from that list
-        // for three releases; the list is enum-driven now and this is the floor under it.
+        // offered in settings and then inserted as text.
         for (a in EditorAction.entries) {
             assertEquals("$a does not survive its own name", a, EditorAction.of(a.output))
             assertTrue("${a.output} must start with the reserved prefix", a.output.startsWith(EditorAction.PREFIX))

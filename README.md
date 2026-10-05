@@ -5,38 +5,30 @@
 [![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue)](LICENSE)
 [![Support on Ko-fi](https://img.shields.io/badge/support-Ko--fi-FF5A16?logo=kofi&logoColor=white)](https://ko-fi.com/ez_eta)
 
-An open-source (GPL-3.0) Android keyboard (IME) built around **two-handed
-hybrid swipe/tap input**: each thumb can independently swipe or tap,
-simultaneously, and both gesture streams merge into a single word prediction.
-It is a spiritual successor to the discontinued Nintype (also known as
-Keyboard69), built from first principles on Android's public IME APIs - no
-forks, no third-party gesture libraries.
+An open-source (GPL-3.0) Android keyboard built for **two thumbs at once**. Each thumb swipes or
+taps on its own, at the same time as the other, and both streams merge into one word. A spiritual
+successor to the discontinued Nintype (also known as Keyboard69), written from scratch on Android's
+public IME APIs: no fork, no third-party gesture library.
 
-**Private by construction: the app declares zero network permission, so
-nothing you type can ever leave your device.** All decoding, prediction, and
-learning run locally; the personal dictionary is on-device storage only, and
-password/private fields disable suggestions, trails, and learning entirely.
+**No network permission.** Nothing you type can leave the phone. Decoding, prediction and learning
+run on the device; password and private fields turn off suggestions, trails and learning.
 
-Example - typing SOMETHING:
+Typing SOMETHING:
 
-- Left thumb taps `S`, then `E`
-- Right thumb swipes `O -> M`, then `T -> H -> I -> N -> G`, overlapping in time
-- Kinetica merges `S + OM + E + THING -> "something"`
+- the left thumb taps `S`, then `E`;
+- the right thumb swipes `O -> M`, then `T -> H -> I -> N -> G`, overlapping in time;
+- Kinetica merges `S + OM + E + THING` into "something".
 
-## Video Example
-
+## Video
 
 https://github.com/user-attachments/assets/220ca042-322f-45df-bbd5-04a6b06d4a66
-
-
 
 ## Install
 
 [<img src="https://f-droid.org/badge/get-it-on.png" alt="Get it on F-Droid" height="80">](https://f-droid.org/packages/com.kinetica.keyboard/)
 
-F-Droid is the recommended channel: it updates in the background and verifies
-the build for you. New versions reach it a few days after a release is tagged
-here.
+F-Droid is the recommended channel: it updates in the background and verifies the build. A new
+version reaches it a few days after it is tagged here.
 
 Or take `kinetica-<version>.apk` from the
 [latest release](https://github.com/EZ-eta/kinetica/releases/latest):
@@ -45,212 +37,145 @@ Or take `kinetica-<version>.apk` from the
 adb install -r kinetica-*.apk
 ```
 
-Either way, open the Kinetica icon afterwards and follow the three enable steps.
-If you have been running a debug build, uninstall it first - it carries a
-different signing key, so Android will refuse the upgrade. Export your personal
-dictionary (Settings > Dictionary) before you do.
+Then open the Kinetica icon and follow the three steps. A debug build has a different signing key,
+so Android refuses to upgrade it: back up first (Settings > Backup), then uninstall it.
 
-Release APKs are signed with the project's own key by the tagged
-[release workflow](.github/workflows/release.yml), so the build behind any given
-APK is public and inspectable. Kinetica ships to F-Droid as a
-[reproducible build](https://f-droid.org/docs/Reproducible_Builds): F-Droid
-rebuilds the tag on its own servers, verifies its output against the APK above,
-and publishes that same signature. The two channels therefore carry the same
-bytes, and either can install and update over the other's build.
+Release APKs are signed with the project's key by the tagged
+[release workflow](.github/workflows/release.yml), so the build behind every APK is public.
+F-Droid ships Kinetica as a [reproducible build](https://f-droid.org/docs/Reproducible_Builds): it
+rebuilds the tag, checks its output against the APK above and publishes the same signature. Either
+channel can install and update over the other.
 
 ## Features
 
-- Dual-pointer gesture tracking: two independent swipe/tap streams, merged by
-  timestamp with bounded ambiguity handling (near-simultaneous order swaps,
-  mid-swipe cross-thumb taps for explicit double letters)
-- From-scratch swipe decoding: banded dynamic time warping over
-  arc-length-resampled paths, an anchored segmental trie search, frequency and
-  bigram-context scoring
-- Nine languages bundled, not nine supported: the trie, DTW matcher, merge and
-  scoring are locale- and layout-independent, so a language is data plus
-  registration - a wordlist, a layout, and the entries listed in
-  [ADDING_A_LANGUAGE.md](ADDING_A_LANGUAGE.md). Polish arrived that way, as a
-  contributor's pull request. The matching alphabet is a-z plus apostrophe and
-  accented Latin letters fold onto it, so Latin scripts fit; a non-Latin script
-  is a major engine change and out of scope.
-- What ships: 47k-word English plus 49k- to 50k-word Italian, Spanish, Polish,
-  Czech, Dutch, German, French and Norwegian dictionaries with real corpus
-  frequencies; 12k–100k bigrams per language;
-  switch languages in Settings without restarting the IME. Accented words
-  (perché, città, señal, también, dziękuję, późno, přítel, město, groß) are matched
-  through their base-key gesture path and restored with accents on commit.
-- Tap autocorrect (adjacent-key substitutions and transpositions) with three
-  aggressiveness levels; it also restores missing accents
-  (perche -> perché, pozno -> późno, mesto -> město, gross -> groß)
-- Suggestion bar of 3-5 equal-width, independently tappable candidate zones,
-  best first (bold), with flick-up fast commit; up to 10 candidates are kept
-  and a leftward swipe starting at the bar's right edge cycles to the next
-  page of five (position dots at the bottom center). After a commit the same
-  bar becomes the correction strip: the committed word is highlighted and
-  tapping any other zone (including the literal tap string after an
-  autocorrect) replaces it directly - and takes back the personal weight the
-  unwanted commit earned; the correction strip pages with the same gesture
-- Live tap completions: a partially tapped word surfaces its dictionary
-  extensions as pickable suggestions mid-word (t-h offers "the"/"they"), and
-  the exact letters you typed are always the last tappable zone, so an
-  out-of-dictionary word commits verbatim with one tap. Completions are
-  pick-only by design: space never autocorrects onto a completion
-- Editing into a committed word reloads it: backspacing to the end of a word
-  re-seeds the predictor with its remaining letters, so continued taps or
-  swipes correct that word instead of starting a fragment, and the eventual
-  commit earns personal weight for the whole word
-- Adaptive personal weighting, partitioned per language: every committed word
-  earns personal weight that boosts its future ranking (a consistently chosen
-  "thou" eventually outranks "you"); long-press a suggestion to reinforce it
-  manually (configurable boost), then slide up while holding to boost further
-  or slide down to take weight away, with the badge previewing the pending
-  tier live and the change applying on lift; reinforced words show a tiered
-  badge (up to 7 dots in a hexagon pattern) in the bar
-- Long-press alternates on every letter and punctuation key: accents first,
-  digits/symbols last (a Settings toggle flips that priority); hold past the
-  long-press delay for a popup, slide sideways to choose, lift to commit; a
-  plain long-press commits the first alternate; the default alternate is
-  hinted in the key's top-right corner at 40% opacity
-- Swipe trails with per-key hue cycling, key-contact bursts, press highlights
-- Special keys: spacebar slide moves the cursor; backspace hold repeats;
-  backspace slide-left stages whole words for deletion reversibly - the
-  staged span shows struck-through in a preview chip, sliding back retracts
-  it, and only lifting commits the delete (lift at zero = no-op)
-- Customizable edge swipes (Settings > Edge swipe shortcuts): any key +
-  direction can insert text or open the emoji picker; defaults are
-  backspace-up `!`, enter-up `?`, V-down `,`, B-down `.`, X-down emoji
-- Two-page symbols layer (currency, math, brackets on page 2, `=\<` and
-  `?123` keys switch pages with a 1/2 indicator) plus a phone-style numpad
-  (`?123` tap / slide-right; slide-left on enter returns to letters;
-  re-entering symbols always lands on page 1)
-- Settings from the keyboard: hold `?123` and slide onto the gear
-- Chord shortcuts: hold `?123` and tap a letter to insert its expansion
-  (managed in Settings; default is zero chords, fully opt-in per letter)
-- Multilingual mid-typing: an ordered set of enabled languages, cycled by a
-  chord (hold `?123` + tap the configured letter, default L) without leaving
-  the current field; with several languages enabled the active language code
-  shows at the spacebar's bottom-center; an experimental "auto-detect
-  language per word" toggle (default off) mixes the active language with the
-  first enabled non-active language and prefers that other language only when
-  it is clearly more confident
-- Contraction/elision writing: English contractions ("don't", "aren't",
-  "here's" ...) are in the dictionary and decode straight from the
-  apostrophe-free letters (the engine inserts the dictionary apostrophe for
-  free); an optional apostrophe key (Settings, off by default) adds a tappable
-  "'" right of "L" for writing any elided or contracted word ("nell'immagine",
-  "don't") without the symbols layer
-- Peck-type mode (Settings toggle or a configurable `?123`-chord): disables
-  swipe decoding, suggestions and autocorrect entirely so every tap inserts
-  its letter exactly - for slang and out-of-dictionary text the engine keeps
-  mangling; the spacebar shows TAP while active
-- Configurable comma key (Settings): keep it, remove it (the spacebar widens
-  to absorb its slot), or repurpose it as a custom character, a short text,
-  or an editor action (paste / select all); a repurposed key keeps "," as its
-  first long-press alternate
-- Emoji: a Settings toggle (default off) makes the picker the first
-  long-press option on the comma key; X-key swipe-down always opens the
-  category-tabbed picker regardless of the toggle. A "frequently used" tab
-  leads the strip once there is something in it, ordered by how often each
-  emoji is picked rather than by recency - one sent daily outranks one sent
-  once yesterday - and it is hidden until then. Picks in a password field are
-  never recorded
-- Dictionary management (Settings > Dictionary): per-language base and
-  personal dictionary info; on-device import of an AOSP-format
-  `wordlist.combined` merged against the bundled wordlist (no Python
-  needed); export/import of the personal dictionary as JSON; reset of the
-  personal dictionary per language
-- Theming: bundled dark theme, Android 12+ Material You wallpaper colors, or
-  a full palette derived from one custom primary color; trail color can
-  follow the theme accent
-- Five layout modes: full, right-aligned, left-aligned, split, one-handed
-- Adjustable height (drag the handle above the suggestion bar, or Settings);
-  the handle's own height is a 0-20dp setting applied live, and zero removes it
-  and reclaims the strip
-- Autospace after swiped words with configurable delay and spacebar indicator.
-  Optionally after tapped words too, including words with an apostrophe (`don't`,
-  `dell'anno`) and single letters (`a`, `I`); a space that arrives early is taken
-  back by the next letter, and one you delete does not come back
-- Zen mode: disables all animation work for battery/GPU savings
-- On-device learning: every committed word (and any unknown word) feeds a
-  private user dictionary that merges into predictions
-- Privacy: **zero network permission**; password fields disable suggestions,
-  trails, and learning
+### Two thumbs
+
+- Two independent swipe/tap streams, one per thumb, merged by contact time. Each thumb is read with
+  its own cursor, so a word can go back and forth between them in any order.
+- A tap from one thumb inside the other's swipe can double a letter (`h-e-l-o` swipe + `l` tap is
+  "hello"), and one tap can stand for a doubled letter (`ottima`, `tutti`).
+- Swipe decoding written from scratch: banded dynamic time warping over resampled paths, an anchored
+  trie search, frequency and word-pair context.
+- Practise two thumbs (Settings > Learn Kinetica): five words drawn over the keyboard, thumb by
+  thumb, typed in a practice field.
+
+### Suggestions
+
+- Up to ten candidates; a page holds as many as fit, and the bar swipes sideways to the next one.
+  Flick a word up to put it in at once.
+- After a commit the bar becomes a correction strip: tap another word and it replaces the one just
+  written, taking its learned weight with it.
+- Next-word suggestions while nothing is being typed (Typing, on).
+- Recent words: the last two words stay on the bar, each with the words it beat; tap one to swap it
+  in (off by default).
+- A tapped word with one stray or one missing letter is offered on the bar, never changed for you.
+- Tap completions mid-word (`t-h` offers "the", "they"); the letters you typed are always the last
+  zone, so a word the dictionary lacks goes in with one tap.
+- Tap autocorrect with three levels. It restores missing accents (`perche` -> `perché`,
+  `pozno` -> `późno`), and backspace right after it puts back what you typed.
+- A retype button (off by default) takes the word back, and the bar then offers what else the
+  gesture could have been.
+
+### Editing
+
+- Tap inside a word you wrote and the bar offers what it had when you wrote it, then the word's
+  spelling neighbours; a pick replaces the whole word.
+- Backspace to the end of a word to keep working on it with taps or swipes.
+- Slide along the spacebar to move the cursor, by letter or by word.
+- Slide left from backspace to mark words for deletion; slide back to keep them, lift to delete.
+- Hold shift for `abc`, `Abc` or `ABC` on the word at the cursor or on selected text.
+- Enter searches, sends or goes where the app asks for it, and its label says which; hold it for a
+  new line (Typing, on).
+- Tidy spaces: never two spaces in a row and none before a closing quote (Typing > Spacing, off).
+
+### Shortcuts
+
+- Chords: hold `?123` or the spacebar and tap a key. Each chord picks its trigger, so `?123`+`l` and
+  space+`l` are two chords. Defaults: `?123`+`l` switches language, `?123`+`p` toggles peck-type;
+  both can be removed.
+- Edge swipes: swipe off any key in any direction. Defaults: backspace up `!`, enter up `?`.
+- Text expansions: a short trigger becomes longer text, fired by the Expand action. A trigger can
+  have several targets, picked on the bar, and targets can chain.
+- A chord, an edge swipe or an expansion can type text, run an action (paste, copy, undo, Tab, the
+  arrows, Home, End, Esc, forward delete, the date) or press Ctrl and a key (Ctrl+A, Ctrl+Del).
+- Shortcuts on the bar when there is nothing to suggest, and in the `?123` hold menu; both sets are
+  chosen and ordered in Typing > Suggestion bar.
+- Settings from the keyboard: hold `?123` and slide onto the gear.
+
+### Keys and layout
+
+- Long-press menus on every letter and punctuation key: a row or a 3x3, 4x3 or 5x3 grid. Each
+  letter's list can be edited, filled from every enabled language with Default, or given a shortcut
+  (`:paste`). Swipe up on the top row, or down on the bottom row, for the key's corner character.
+- Numbers row above the letters (Keys, off). The keyboard grows so the letters keep their size.
+- Middle row width (Size and layout): spreads `a s d f g h j k l` toward the edges, for hands used to
+  a board without the half-key indent.
+- Layout modes: full width, right, left, split, one-handed. Landscape has its own height and can be
+  split to the edges, centred or full width.
+- Height by dragging the handle above the bar, side and bottom margins, a live size preview.
+- An optional apostrophe key right of `L`, for `don't` or `nell'immagine` without the symbols page.
+- Two symbol pages and a numpad; a configurable comma and period key; an emoji picker on the
+  comma's long-press, with a frequently used tab.
+- Words per minute on the spacebar while you type (Keys, off).
+- Themes: dark, light, Material You, or a palette from one colour of your choice. Zen mode turns
+  animations off.
+
+### Languages
+
+- English, Italian, Spanish, Polish, Czech, Dutch, German, French and Norwegian; Russian, Ukrainian,
+  Hebrew and Arabic are experimental, each with its own board. 46k to 50k words per language with
+  real corpus frequencies, and up to 100k word pairs.
+- Switch with a chord without leaving the field; the active language shows on the spacebar.
+- Accented words are drawn on their base keys and come out with their accents. A spelling with the
+  accents left off is offered only where written text uses it: `pojsc` corrects to `pójść`, while
+  `ze` and `że` both stay.
+- Mix enabled languages: the active language and the next enabled one in one list (Languages > More
+  language options, off).
+- Follow the language I type: up to three languages as equals, the one you are typing weighs most
+  (same screen, off, experimental).
+- British spelling for English.
+- A language is data plus registration, so new ones can be contributed:
+  [ADDING_A_LANGUAGE.md](ADDING_A_LANGUAGE.md).
+
+### Learning and privacy
+
+- Every committed word earns weight for its language; a word you keep choosing outranks a more
+  common one. Hold a suggestion and slide up or down to change its weight, one badge tier per step;
+  slide past the lowest tier to block it.
+- Phrase learning (optional): which word you tend to type after which.
+- Dictionary: learned and blocked words per language, with search; import of an AOSP word list,
+  merged on the phone.
+- Backup: every setting, learned word and shortcut in one text file, restored with progress, and
+  the last restore can be undone.
+- Settings in English and Italian, by the phone's language or Android 13's per-app language;
+  [CONTRIBUTING.md](CONTRIBUTING.md) says how to add a translation.
+- Learn Kinetica in Settings: the two-thumb practice, then short tips from the basics up.
 
 ## Worth a look in Settings
 
-Most of what people have asked for since the first release was already in
-Settings and hard to find. The ones that come up most:
-
-- **Chord shortcuts that paste, copy, cut, select all or retype the word.**
-  Settings > Chords, add a chord and set *This chord* to the action you want.
-  Hold `?123` and tap that letter to fire it. Chords still type text too - a
-  signature, an email address. The same screen holds the language-switch and
-  peck-type keys, and *Chord lead-in* sets how long `?123` must be held first.
-- **Long-press popups without the accents.** *Hide accented letters on
-  long-press* leaves only digits and symbols, so `A` gives you `@` instead of
-  eight forms of `a` you will never type. Ignored for Italian, Spanish, Polish,
-  Czech, Dutch, German, French and Norwegian, whose own alphabets need theirs. If
-  you would rather keep the accents but reach the digits first, *Prioritize numbers over accents on long-press* does that
-  instead.
-- **A shorter keyboard.** *Keyboard height* goes down to 10% of the screen.
-  *Suggestion bar height* shrinks the strip above it - the word text scales with
-  it - and *Resize handle height* takes the grip strip from 20dp down to 0,
-  which reclaims it entirely. It applies as you drag, without the keyboard
-  being torn down and rebuilt.
-- **Light theme and your own colour.** *Light or dark* (or follow the system),
-  and *Accent hue* is a slider with a preview of the palette underneath it, so
-  you can see the change without leaving Settings.
-- **Your own period and comma symbols.** *Period long-press symbols* and *Comma
-  long-press symbols* take a space-separated list; leave either blank to keep the
-  built-in one.
-- **Move the cursor without arrow keys.** Slide sideways along the spacebar. No
-  setting, it is always on.
-- **Push a word up or down the suggestions.** Long-press a suggestion and slide
-  up to prefer it, down to demote it. *Reinforce increment* sets the step size,
-  and Settings > Dictionary > *Review learned words* lists everything Kinetica
-  has picked up, with a search box and per-word delete.
-- **Get rid of a word for good.** Sliding a suggestion down only lowers its
-  priority; it can still come back. Settings > Dictionary > *Blocked words* takes
-  a spelling and drops it out of the dictionary altogether, so it stops being
-  offered at all. The dialog stays open after each one, since blocking several in
-  a row is the usual case, and tapping a word already in the list lifts the block.
-  Per language, and it takes effect on the next word you type.
-- **Automatic spaces while tapping, not only while swiping.** *Autospace tapped
-  words too* is off by default, because tapping says less about whether a word is
-  over than a finished gesture does: every letter looks like the middle of a longer
-  word. With it on, a word your dictionary holds gets its space after a pause, and
-  the next letter you type takes the space back if the word was not over after all.
-  Words with an apostrophe are read as one token, so `don't` and `dell'anno` space
-  correctly, and single letters that are words on their own (`a` and `I` in English,
-  `a`, `e`, `i`, `o` in Italian) wait a little longer than a whole word does before
-  spacing. Three sliders set the delays: one for swipes, one for taps, one for how
-  long a space stays retractable.
-- **A retype button.** *Retype button on the suggestion bar* reserves the bar's
-  right edge for a small restart arrow. One tap throws away the word you are
-  writing, or the one just finished, so a gesture that came out wrong can be redone
-  in place without hunting for the delete key.
-- **The spacebar's cursor slide, faster or by word.** Sliding along the spacebar
-  moves the cursor; *Spacebar slide distance* sets how far you travel per step, and
-  *Spacebar slide moves by word* steps a whole word at a time the way the backspace
-  slide does.
-- **A much bigger dictionary.** Settings > Dictionary > *Import improved
-  dictionary* takes an AOSP `wordlist.combined` and merges it with the bundled
-  list - three to five times the words. Grab one from
-  [aosp-dictionaries](https://codeberg.org/Helium314/aosp-dictionaries) under
-  `wordlists/` (the `.combined` files, not the compiled `.dict` ones); Polish
-  and Czech users should choose `main_pl.combined` and `main_cs.combined`,
-  respectively.
-- **When a word refuses to come out right.** *Peck-type mode* turns off swiping,
-  suggestions and autocorrect so every tap inserts exactly its letter. Good for
-  slang, codes and passwords the dictionary keeps fighting.
-- **Repurpose the comma key.** *Comma key* can become Paste or Select all, or a
-  character or short phrase of your own; the comma stays in its long-press popup.
+- **Get rid of a word for good.** Hold it on the bar and slide past the lowest tier, or add it in
+  Settings > Dictionary > *Blocked words*. A blocked word is never offered again and never learned
+  back.
+- **Peck-type mode** turns off swiping, suggestions and autocorrect, so every tap types exactly its
+  letter. For slang, codes and anything the dictionary keeps fighting.
+- **Automatic spaces after tapped words too.** Typing > Spacing > *Autospace tapped words too*. A
+  word the dictionary holds gets its space after a pause, and the next letter takes it back if the
+  word was not over. Three sliders set the delays.
+- **A shorter keyboard.** *Keyboard height* goes down to 10% of the screen, *Suggestion bar height*
+  shrinks the bar and its text, and *Resize handle height* at 0 removes the grip.
+- **Long-press without the accents.** *Hide accented letters on long-press* leaves digits and
+  symbols, for languages whose alphabet does not use accents.
+- **A much bigger dictionary.** Settings > Dictionary > *Import improved dictionary* takes an AOSP
+  `wordlist.combined` and merges it with the bundled list, three to five times the words. Get the
+  `main_<code>.combined` file for your language from
+  [aosp-dictionaries](https://codeberg.org/Helium314/aosp-dictionaries) under `wordlists/`.
+- **Search the settings** with the icon at the top; it knows several words for each setting.
 
 ## Requirements
 
 - JDK 17
-- Android SDK: platform 34, build-tools 34.0.0 (command-line tools suffice)
-- Gradle 8.7 via the bundled wrapper (no Gradle install needed)
+- Android SDK: platform 34, build-tools 34.0.0 (the command-line tools are enough)
+- Gradle 8.7 through the bundled wrapper
 - minSdk 26 (Android 8.0), targetSdk 34
 
 ### Toolchain from zero (macOS, Homebrew)
@@ -265,9 +190,9 @@ sdkmanager --sdk_root="$ANDROID_HOME" "platform-tools" "platforms;android-34" "b
 echo "sdk.dir=$ANDROID_HOME" > local.properties
 ```
 
-On Linux or Windows any JDK 17 plus the Android command-line tools work the
-same way: install SDK platform 34 and build-tools 34.0.0, then point
-`sdk.dir` in `local.properties` (or `ANDROID_HOME`) at the SDK root.
+On Linux or Windows, any JDK 17 and the Android command-line tools work the same way: install
+platform 34 and build-tools 34.0.0, then point `sdk.dir` in `local.properties` (or `ANDROID_HOME`)
+at the SDK.
 
 ## Build and install
 
@@ -276,10 +201,11 @@ same way: install SDK platform 34 and build-tools 34.0.0, then point
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
+The debug build installs as Kinetica DEV beside the release app, with its own data.
+
 ### Release build
 
-Release APKs are signed with a local keystore that never enters version
-control. One-time setup:
+Release APKs are signed with a local keystore that never enters version control. Once:
 
 ```bash
 mkdir -p keystore
@@ -300,171 +226,111 @@ Then:
 adb install -r app/build/outputs/apk/release/app-release.apk
 ```
 
-Without `keystore.properties`, `assembleRelease` still builds and produces an
-unsigned APK (not installable until signed).
+Without `keystore.properties`, `assembleRelease` builds an unsigned APK.
 
-Run the unit tests (the whole prediction engine is pure Kotlin and tested on
-the JVM, including golden decodes against the real dictionary):
+The prediction engine is pure Kotlin and tested on the JVM, including golden decodes against the
+real dictionaries:
 
 ```bash
 ./gradlew test
 ```
 
-### Enabling the keyboard
-
-Open the Kinetica launcher icon and follow the three steps: enable Kinetica in
-the system keyboard list, select it as the current keyboard, then try the test
-field. Settings are reachable from the same screen or from the system IME
-settings entry.
-
 ## Architecture
 
 ```
 MotionEvent
-   -> KeyboardView          touch routing: letters -> engine, space/backspace -> controllers
-   -> GestureEngine         <=2 pointer streams tracked by pointerId, tap/swipe classified at lift
+   -> KeyboardView          touch routing: letters to the engine, space and backspace to controllers
+   -> GestureEngine         up to two pointer streams, tap or swipe decided at lift
    -> InputToken            TapToken (anchor) | SwipeToken (resampled path + key contacts)
-   -> WordComposer          token buffer per word, decode snapshots on a dedicated thread
-   -> WordPredictor         merge alternatives -> anchored segmental trie search -> DTW -> top 5
-   -> KineticaIME           commit-only text model via InputConnection, suggestions, autocorrect
+   -> WordComposer          the word's tokens, decoded on a dedicated thread
+   -> WordPredictor         merge orders -> trie search per thumb -> DTW -> ranked candidates
+   -> KineticaIME           commit-only text model through InputConnection, the bar, autocorrect
 ```
-
-Source layout (package `com.kinetica.keyboard`):
 
 | Package | Contents |
 |---|---|
-| `engine/` | Pure-Kotlin core: `GestureEngine`, `GestureStream`, `DtwMatcher`, `Trie`, `WordPredictor`, `WordComposer`, `BigramTable`, `MergeAlternatives`, `AccentFolder`, `DictionaryLoader`, `DictionaryMerger`, models |
-| `ime/` | `KineticaIME` (InputMethodService), `InputConnectionHelper`, `EditorState` |
-| `ui/` | `KeyboardView`, `SuggestionBarView`, `InputContainerView`, `EmojiPickerView`, `KeyboardTheme`, `TrailRenderer`, `BurstRenderer` |
-| `layout/` | JSON layout model, loader, mutations (emoji on comma, number priority), the five layout-mode transforms |
-| `keys/` | `ShiftState`, spacebar/backspace controllers, `EdgeSwipeDetector`, `EdgeSwipeBindings` |
-| `settings/` | `SettingsActivity`, `ChordSettingsActivity`, `EdgeSwipeSettingsActivity`, `DictionarySettingsActivity`, preference fragment, `Prefs`, `KeyboardConfig` |
-| `data/` | Room database: user dictionary (personal weights, per language), chord shortcuts; `DictionaryStore` for imported wordlists |
-| `onboarding/` | Launcher activity with the enable flow |
+| `engine/` | Pure Kotlin: `GestureEngine`, `GestureStream`, `MergeAlternatives`, `WordPredictor`, `ThumbBeam`, `DtwMatcher`, `Trie`, `Alphabet` (one per script), `WordComposer`, `BigramTable`, `AccentFolder`, `DictionaryLoader`, `DictionaryMerger`, models |
+| `ime/` | `KineticaIME` (the InputMethodService), editor state, the selection and commit records |
+| `ui/` | `KeyboardView`, `SuggestionBarView`, `InputContainerView`, `EmojiPickerView`, theming, trails |
+| `layout/` | JSON layouts, mutations (numbers row, apostrophe key, middle row), layout-mode transforms |
+| `keys/` | Shift, spacebar and backspace controllers, edge swipes, editor actions, key combinations |
+| `settings/` | The settings screens, `Prefs`, `KeyboardConfig`, backup |
+| `data/` | Room: learned words per language, word pairs, blocked words, chords, expansions; imported word lists |
+| `onboarding/` | The enable flow and the two-thumb tutor |
 
 ### Algorithm notes
 
-- **Coordinates** are key-width units (px / key width): density-, height- and
-  layout-mode-independent.
-- **Swipe matching**: observed paths and ideal word paths (polylines through
-  key centers, consecutive duplicates removed) are resampled to 32 points at
-  uniform arc length, then compared with Sakoe-Chiba banded DTW (radius 4,
-  endpoint-anchored and endpoint-weighted, early-abandoning against the
-  current top-5 score floor).
-- **Candidate generation**: DFS over a flat-array trie (2 ints per node,
-  children contiguous and letter-sorted; ~1.4 MB for 46k words). Taps are
-  exact anchors; swipes are segments pruned by start/end key neighborhoods,
-  near-path membership, path-order monotonicity, and an ideal-path length
-  band. Each letter records one resample index per distinct pass of the path
-  within its radius (not a single global nearest index), so revisited letters
-  (the second e of "however") and keys the path merely flies over cannot
-  break the monotonicity prune. DTW runs only on complete surviving words.
-- **Dual-stream merge**: tokens sort by gesture start time. Cross-stream
-  tokens starting within 120 ms also try the swapped order; a tap landing
-  inside the other thumb's swipe also tries a split of that swipe around the
-  tap (this is how a cross-thumb tap doubles a letter: `h-e-l-o` swipe + `l`
-  tap decodes as `hel + l + o` = hello).
-- **Scoring**: `frequency_weight * geometric_term(d) * bigram_multiplier *
-  personal_boost`, where `geometric_term(d) = 1 / (1 + min(d, 0.50))^3.75`
-  saturates: inside half a key width the shape of your gesture is informative
-  and is scored steeply, and past that a d=0.6 match and a d=1.5 match are both
-  "this is not the shape you drew", so frequency decides between them. Both
-  multipliers are then weighted by the fit of the candidate they apply to -
-  full strength inside the saturation cap, fading to nothing one whole key
-  width out - so a frequent or heavily reinforced word cannot out-argue a
-  clearly better-fitting one. Frequencies are log-quantized from the corpus and
-  bigram boosts are normalized per preceding word.
-- **Accents**: the trie stores accent-folded keys (a-z + apostrophe); nodes
-  whose spelling differs from the folded key, or that several spellings share
-  ("senti"/"sentì"), carry per-variant display forms with their own
-  frequencies, emitted as separate candidates.
-- Decode latency budget is < 100 ms from pointer lift; measured single-digit
-  milliseconds on the full dictionary (see `RealDictionaryTest`).
-- **Reversible backspace slide**: the staged-deletion preview is drawn inside
-  the IME's own window (a chip above the backspace key showing the span
-  struck-through), NOT via `setComposingRegion` on the editor. Kinetica's
-  text model is deliberately commit-only, and composing-region styling is
-  unreliable across apps (some editors drop or restyle composing spans;
-  autocomplete fields react to composition changes as if the user typed).
-  The trade-off: the highlight appears above the keyboard, not inside the
-  text field itself, but it renders identically in every app. In password
-  fields the preview shows bullets, never the actual characters.
+- **Coordinates** are in key widths, so density, height and layout mode drop out.
+- **Swipe matching**: the observed path and each word's ideal path (through key centres) are
+  resampled to 32 points by arc length and compared with Sakoe-Chiba banded DTW (radius 4, endpoints
+  anchored and weighted, abandoned early against the current floor).
+- **Candidates**: a search over a flat trie (two ints per node, children sorted, a 6-bit letter code
+  so Cyrillic and Arabic fit). Taps are exact anchors; a swipe is a segment pruned by its start and
+  end keys, the path's order, and an ideal-length band. A letter records every pass of the path near
+  it, so a revisited letter (the second `e` of "however") still matches. DTW runs on complete words
+  only.
+- **Two thumbs**: tokens are ordered by contact time, and a near-tie (120 ms) also tries the swapped
+  order. A further pass gives each thumb its own cursor and a short hand-back, and a best-first beam
+  reads both thumbs in one search; their readings join the same ranked list.
+- **Scoring**: `frequency_weight * geometric_term(d) * bigram_multiplier * personal_boost`, with
+  `geometric_term(d) = 1 / (1 + min(d, 0.50))^3.75`. Inside half a key width the shape of the gesture
+  is scored steeply; past it, a d=0.6 and a d=1.5 match both mean "not this shape", and frequency
+  decides. The context and personal multipliers fade with the candidate's fit, so a common or
+  heavily learned word cannot beat a clearly better match.
+- **Accents**: the trie stores accent-folded keys per script; spellings that differ from their key
+  ("senti", "sentì") carry their own frequencies and come out as separate candidates.
+- Decoding runs in single-digit milliseconds on the JVM against a 100 ms budget (see
+  `RealDictionaryTest`).
+- **The backspace slide** shows the marked text in a chip above the key, not as a composing region in
+  the editor: the text model is commit-only because composing spans behave differently from app to
+  app. In password fields the chip shows bullets.
 
 ## Data sources
 
-Regenerate the bundled dictionaries with `python3 tools/generate_assets.py
---lang en|it|es|pl|cs|de` (add `--dry-run` to preview):
+Regenerate a language's dictionary with
+`python3 tools/generate_assets.py --lang <code>` (`--dry-run` to preview); the codes are
+en, it, es, pl, cs, nl, de, fr, no, ru, uk, he and ar.
 
-- Word frequencies (all languages):
-  [hermitdave/FrequencyWords](https://github.com/hermitdave/FrequencyWords)
-  `en_50k` / `it_50k` / `es_50k` / `pl_50k` / `cs_50k` / `de_50k`
-  (OpenSubtitles2018), MIT License.
-- Bigrams (all languages): counted from the [Tatoeba](https://tatoeba.org)
-  per-language sentence corpora (`eng_sentences.tsv` ~2.03M sentences,
-  `ita_sentences.tsv` ~975k, `spa_sentences.tsv` ~441k,
-  `pol_sentences.tsv` ~137k, `ces_sentences.tsv` ~90, `deu_sentences.tsv`),
-  licensed[CC BY 2.0 FR](https://creativecommons.org/licenses/by/2.0/fr/),
-  attribution: tatoeba.org. Conversational register, which matches the
-  OpenSubtitles-derived unigrams. (English previously used Peter Norvig's
-  `count_2w.txt`; that data derives from the LDC-distributed Google Web
-  Trillion Word Corpus and carries no explicit redistribution license, so it
-  was regenerated from Tatoeba before the public release.)
-- Emoji data: hand-curated `assets/emoji_data.json` (478 plain Unicode emoji
-  with names and search keywords, through Unicode 15); no external dataset. ZWJ
-  sequences are deliberately excluded, which is also why Unicode 15.1 is absent:
-  a device that cannot render one draws its parts, which is worse than a tofu
-  box. The picker checks each entry against the device font at load, so an emoji
-  this Android version cannot draw is left out rather than shown as tofu.
+- Word frequencies: [hermitdave/FrequencyWords](https://github.com/hermitdave/FrequencyWords)
+  (OpenSubtitles 2018), MIT. The 50k list per language; Ukrainian from the full list.
+- Word pairs: counted from the [Tatoeba](https://tatoeba.org) sentence corpus of each language,
+  [CC BY 2.0 FR](https://creativecommons.org/licenses/by/2.0/fr/), attribution tatoeba.org. The same
+  conversational register as the word lists. Tatoeba also decides which accent-less spellings stay
+  and which German nouns are capitalized.
+- Emoji: a hand-curated `assets/emoji_data.json` (478 emoji with names and keywords, up to
+  Unicode 15). No ZWJ sequences, because a phone that cannot render one draws its
+  parts; an emoji the phone's font cannot draw is left out.
 
-### Open keyboard dictionaries: licensing survey
+### Open keyboard dictionaries
 
-Considered as higher-quality replacements for the OpenSubtitles-derived
-wordlists (July 2026):
+Considered as replacements for the OpenSubtitles word lists (July 2026):
 
-| Project | Code license | Dictionary data | Verdict |
+| Project | Code licence | Dictionary data | Verdict |
 |---|---|---|---|
-| [HeliBoard](https://github.com/Helium314/HeliBoard) | Apache-2.0 | [Helium314/aosp-dictionaries](https://codeberg.org/Helium314/aosp-dictionaries) (repo LICENSE: GPL-3.0); the `main_*` wordlists are AOSP LatinIME dictionaries (Apache-2.0 at origin) mirrored via OpenBoard; experimental lists CC BY 4.0 | Cleanest import path: raw `wordlist.combined` format with per-word `f=0..255` log frequency, `flags` (abbreviation, possibly_offensive) and per-word next-word bigram ranks; `main_en_US`, `main_it`, `main_pl`,`main_cs`, and `main_de` exist |
-| [FUTO Keyboard](https://github.com/futo-org/android-keyboard) | FUTO Source First 1.1 (non-commercial redistribution limits, not OSI-open) | Same restrictive terms apply to repo contents | Rejected: incompatible with open redistribution |
-| [FlorisBoard](https://github.com/florisboard/florisboard) | Apache-2.0 | Ships no frequency wordlists usable for import | Nothing to import |
+| [HeliBoard](https://github.com/Helium314/HeliBoard) | Apache-2.0 | [Helium314/aosp-dictionaries](https://codeberg.org/Helium314/aosp-dictionaries): the `main_*` lists are AOSP LatinIME dictionaries (Apache-2.0) | The import path: `wordlist.combined` with per-word frequency and flags |
+| [FUTO Keyboard](https://github.com/futo-org/android-keyboard) | FUTO Source First 1.1, not OSI-open | Same terms | Rejected: incompatible with open redistribution |
+| [FlorisBoard](https://github.com/florisboard/florisboard) | Apache-2.0 | No frequency word lists | Nothing to import |
 
-`tools/generate_assets.py --merge-aosp <wordlist.combined>` can merge an
-AOSP-derived list into the primary wordlist (frequencies are de-quantized
-onto the raw-count scale, abbreviation/offensive entries dropped). The same
-merge now also runs on-device: Settings > Dictionary > "Import improved
-dictionary" accepts a user-supplied `wordlist.combined` through the system
-file picker (`DictionaryMerger` is a Kotlin port of the Python logic), writes
-the merged list to app-internal storage, and loads it instead of the bundled
-asset; "Remove imported dictionary" reverts. The bundled assets intentionally
-remain pure OpenSubtitles/Tatoeba until a merged dictionary has been
-validated on-device against the golden decode tests. Attribution for an AOSP
-merge is Apache-2.0 (retain the license notice; this section serves as that
-notice).
+`tools/generate_assets.py --merge-aosp <wordlist.combined>` merges an AOSP list into a primary word
+list; the same merge runs on the phone from Settings > Dictionary, written to app storage and loaded
+in place of the bundled list. Abbreviations, offensive entries and spellings that drop a bundled
+word's accents are left out. The bundled lists stay OpenSubtitles and Tatoeba: AOSP's Italian list,
+merged in, decoded worse in the project's tests. An AOSP merge is Apache-2.0; this section is its
+notice.
 
-### Adaptive personal weighting
+### Personal weighting
 
-`personal_boost = 1 + 0.15 * ln(1 + personal_count)`, applied to the score
-above and weighted by the candidate's own geometric fit like every other
-multiplier.
+`personal_boost = 1 + 0.15 * ln(1 + personal_count)`, weighted by the candidate's fit like every
+other multiplier.
 
-Every final commit increments the word's personal count (Room-persisted per
-language - counts never mix across languages - capped at the top 5000
-words at load). Correcting a commit through the suggestion bar transfers the
-weight: the replacement earns the count and the replaced word gives its back.
-The constants: the frequency-weight gap between a top-frequency word and a
-mid-frequency rival is ~1.4x, so 20 commits (`1 + 0.15*ln(21) = 1.46`) flip
-such a ranking, 5 commits produce a visible climb, and the logarithm keeps
-any single word from swallowing the strip (bigram context tops out at 2.5x
-and stays competitive). Because the boost is weighted by the candidate's own
-fit, a heavily reinforced word can show a full badge and still not take a
-gesture it does not match - reinforcement buys ranking among plausible words,
-not against geometry. Long-pressing a suggestion adds a configurable boost
-(+1/+5/+10) immediately. Reinforced words show a tiered badge of up to 7
-dots (1 center + 6 hexagon corners); tier thresholds double per level
-(counts 1, 2, 4, 8, 16, 32, 64), so early uses advance visibly, tier 7 lands
-at 64 uses, and equal visual steps match the ln-shaped ranking boost - a +10
-manual boost jumps several tiers at once by construction. Learned counts also
-merge into the trie at load (`count * 1000` against raw corpus counts) so
-out-of-vocabulary words become first-class candidates.
+- Every commit adds to the word's count for its language; counts never mix across languages. A
+  correction on the bar moves the count to the replacement.
+- 20 commits (`1 + 0.15 * ln(21) = 1.46`) overturn the frequency gap between a common word and a
+  middling one; the logarithm keeps any one word from taking over.
+- Badges show up to 7 dots; each tier doubles the count (1, 2, 4 ... 64), which matches the
+  logarithm. A slide on the bar moves one tier per step.
+- Learned words merge into the trie at load, so a word the dictionary lacks becomes a full
+  candidate.
 
 ## License
 
@@ -482,53 +348,44 @@ A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 You should have received a copy of the GNU General Public License along with
 this program. If not, see <https://www.gnu.org/licenses/>.
 
-The full text is in [LICENSE](LICENSE); the SPDX identifier is
-`GPL-3.0-or-later`. Bundled dictionary data carries its own permissive
-licenses (MIT for the FrequencyWords wordlists, CC BY 2.0 FR for the
-Tatoeba-derived bigrams); the full attributions live in
-[THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES) and in-app under
-Settings > Open-source licenses.
+The full text is in [LICENSE](LICENSE); the SPDX identifier is `GPL-3.0-or-later`. The bundled
+dictionary data carries its own permissive licences (MIT for the FrequencyWords lists, CC BY 2.0 FR
+for the Tatoeba word pairs); the attributions are in [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES) and
+in the app under Settings > Open-source licenses.
 
 ### Attribution requirements
 
-If you redistribute Kinetica, modified or not, the GPL asks you to keep the
-license notice, state your changes, and make the corresponding source
-available to whoever receives your build. On top of that the bundled data
-carries its own obligations, all of which are satisfied by shipping
-`THIRD_PARTY_NOTICES` (the in-app licenses screen renders that same file, so
-an unmodified build already complies):
+If you redistribute Kinetica, modified or not, the GPL asks you to keep the licence notice, state
+your changes and make the source available to whoever receives your build. The bundled data adds its
+own obligations, all met by shipping `THIRD_PARTY_NOTICES` (the in-app licences screen shows that
+file, so an unmodified build already complies):
 
 | What | Licence | What you must do |
 |---|---|---|
-| Word frequencies (`*_wordlist.txt`) | MIT (hermitdave/FrequencyWords) | Retain the MIT notice |
-| Bigrams (`*_bigrams.txt`) | CC BY 2.0 FR (Tatoeba) | Credit `tatoeba.org` |
-| An AOSP dictionary you merge in | Apache-2.0 | Retain the Apache-2.0 notice |
-| The app itself | GPL-3.0 | Licence notice, source offer, state changes |
+| Word frequencies (`*_wordlist.txt`) | MIT (hermitdave/FrequencyWords) | Keep the MIT notice |
+| Word pairs (`*_bigrams.txt`) | CC BY 2.0 FR (Tatoeba) | Credit `tatoeba.org` |
+| An AOSP dictionary you merge in | Apache-2.0 | Keep the Apache-2.0 notice |
+| The app | GPL-3.0 | Licence notice, source offer, state changes |
 
-Emoji metadata is hand-curated for this project and carries no third-party
-obligation.
+The emoji metadata was written for this project and carries no third-party obligation.
 
-### A note on the name and icon
+### The name and the icon
 
-Kinetica is the name I use for this project, and the launcher icon is my own
-artwork. The GPL covers the code, and forks are welcome - please
-rebrand them. Use a different app name and a different icon so users can tell
-your build from mine, and so bug reports and reviews land in the right place.
+Kinetica is the name I use for this project, and the launcher icon is my own artwork. The GPL covers
+the code and forks are welcome: please give them a different name and icon, so users can tell your
+build from mine and bug reports land in the right place.
 
-No trademark is registered and none is being asserted; this is a request for
-clarity, not a legal restriction. The code itself is yours to use under the
-GPL, name aside.
+No trademark is registered or asserted; this is a request for clarity, not a legal restriction.
 
 ## Support
 
 If Kinetica is useful to you, you can [buy me a coffee](https://ko-fi.com/ez_eta).
 
-Entirely optional. The app is and stays free, declares no network permission,
-shows no ads, and will never ask you for anything at runtime.
+Entirely optional. The app is free and stays free, has no network permission, shows no ads, and
+never asks for anything.
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the build/test/lint gate, commit
-conventions, and the regression-test rules;
-[ADDING_A_LANGUAGE.md](ADDING_A_LANGUAGE.md) documents the end-to-end recipe for
-contributing a new language.
+[CONTRIBUTING.md](CONTRIBUTING.md) has the build, test and lint gate, the commit format, the test
+rules and how to translate the settings;
+[ADDING_A_LANGUAGE.md](ADDING_A_LANGUAGE.md) is the recipe for a new language.

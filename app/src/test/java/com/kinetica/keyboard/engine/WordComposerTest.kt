@@ -57,6 +57,19 @@ class WordComposerTest {
     }
 
     @Test
+    fun aRecentWordSwappedOnTheBarIsSwappedInTheContextToo() {
+        val composer = WordComposer(predictor, direct, direct, Capture())
+        composer.commitWord("word")
+        composer.commitWord("is")
+        composer.replaceCommit(1, "word", "world")
+        assertEquals(listOf("world", "is"), composer.contextSnapshot())
+        // Only where the context still holds the word the bar showed.
+        composer.replaceCommit(1, "word", "ward")
+        composer.replaceCommit(4, "is", "was")
+        assertEquals(listOf("world", "is"), composer.contextSnapshot())
+    }
+
+    @Test
     fun commitUpdatesContextWindow() {
         val cap = Capture()
         val composer = WordComposer(predictor, direct, direct, cap)
@@ -80,17 +93,11 @@ class WordComposerTest {
 
     @Test
     fun aWordOnlyTheOtherLanguageHasCarriesItsOwnProvenance() {
-        // Renamed from secondaryLanguageSwapIsFlagged when the swap was
-        // replaced by the merged ranking. It
-        // used to assert a whole-list swap set a `fromSecondary` flag, which
-        // KineticaIME read to skip learnWord entirely - a foreign word must
-        // never enter the active language's personal dictionary (the
-        // "sonore"/"imposte" poisoning captured on a live trace). Provenance
-        // now rides on the candidate itself, so the commit path can learn the
-        // word into the dictionary it actually came from instead of skipping.
-        //
-        // The active dictionary represents the swipe POORLY ("tee", d=1.136 on
-        // the t-h-e path) while the other language holds the exact word.
+        // A foreign word must not enter the active language's personal dictionary, which is
+        // how "sonore" and "imposte" got in. Provenance rides on the candidate, so the commit
+        // path learns the word into the dictionary it came from.
+        // The active dictionary fits the swipe poorly ("tee", d=1.136 on the t-h-e path)
+        // while the other language holds the exact word.
         val active = WordPredictor(
             Trie.build(listOf("tee" to 100)), BigramTable.EMPTY, g, language = "it",
         )
@@ -158,10 +165,9 @@ class WordComposerTest {
 
     @Test
     fun pendingDecodesAreCoalescedToTheLatestGeneration() {
-        // Queue the worker without running it, then type several more letters.
-        // Only one executor task should exist: running it must jump directly to
-        // the latest snapshot instead of burning one full decode per stale
-        // prefix first.
+        // Queue the worker without running it, then type several more letters. Only one
+        // executor task should exist, and running it decodes the latest snapshot, not one
+        // stale prefix after another.
         val queued = ArrayList<Runnable>()
         val manual = Executor { queued.add(it) }
         val cap = Capture()

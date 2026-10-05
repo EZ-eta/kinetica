@@ -12,11 +12,11 @@ import org.junit.Test
 /**
  * Regression suite for the reversal-split bug: a swipe that reverses direction
  * (u->i->n->i) is interrupted mid-reversal by the other thumb's tap. The
- * tap-split cuts the swipe at the raw sample nearest the tap - mid-travel,
- * between keys - so the FIRST half used to end more than R_ENDPOINT_KW from
- * its real last letter and failed the matcher's isEnd gate: "quindi" pruned
- * in the only representable interleave, empty decode, literal taps left as
- * "QD". Mirror image of the resume bug, which treated only the second half's START;
+ * tap-split cuts the swipe at the raw sample nearest the tap, mid-travel
+ * between keys, so the first half ended more than R_ENDPOINT_KW from its last
+ * letter and failed the matcher's isEnd gate: "quindi" was pruned in the only
+ * representable interleave, the decode was empty and the taps stayed as "QD".
+ * Mirror image of the resume bug, which treated only the second half's start;
  * fixed by the symmetric softEnd relaxation on split first halves.
  */
 class ReversalSplitTest {
@@ -44,7 +44,7 @@ class ReversalSplitTest {
         WordPredictor(dict(), BigramTable.EMPTY, g).decode(tokens, emptyList()).map { it.word }
 
     // ---- timelines -----------------------------------------------------------
-    // TestData.swipe timestamps are linear over sample INDEX (10 per leg), so
+    // TestData.swipe timestamps are linear over sample index (10 per leg), so
     // the tap time selects the cut sample: for "uini" (3 legs, 31 samples over
     // 600 ms starting at t0=200) sample k sits at 200 + 20*k and the reversal
     // leg n->i is samples 20..30. Cut fraction along the leg = (k - 20) / 10.
@@ -73,7 +73,7 @@ class ReversalSplitTest {
 
     /** Sloppy fixture: overshoot vertices make the reversal leg samples 40..50
      *  of 51 over 1200 ms starting at 200; tapT=1304 cuts at 0.6 of the leg,
-     *  ~1.7 kw from N - the same isEnd kill with realistic geometry. */
+     *  ~1.7 kw from N: the same isEnd kill with realistic geometry. */
     private fun quindiSloppy(tapT: Long) = listOf(
         TestData.tap('q', g, 0, StreamId.LEFT),
         TestData.sloppySwipe("uini", g, t0 = 200, durMs = 1200, overshootKw = 0.25f, stream = StreamId.RIGHT),
@@ -85,7 +85,8 @@ class ReversalSplitTest {
     @Test
     fun quindiMidReversalTapDecodesTop1() {
         // Cut fractions 0.5 and 0.6 of the n->i reversal leg: the cut point is
-        // 1.5-1.8 kw from N, so isEnd('n') was false and pre-fix decode empty.
+        // 1.5-1.8 kw from N, so isEnd('n') is false; without softEnd the decode
+        // was empty.
         for (tapT in listOf(700L, 719L)) {
             val words = decode(quindi(tapT))
             assertTrue("quindi (tapT=$tapT) top-1 was ${words.take(3)}", words.firstOrNull() == "quindi")
@@ -94,15 +95,15 @@ class ReversalSplitTest {
 
     @Test
     fun quindiLateReversalTapDecodesTop1() {
-        // The late-cut regime the softEnd fix did NOT cover and real typing
-        // still hits: a reaction-timed D tap lands
-        // LATE in the reversal (thumb almost back to I). tapT 740/760/780 =
-        // cut fractions 0.7/0.8/0.9 of the n->i leg. Two gates conspire:
-        //   - sequences() never fires the split (tap within SPLIT_MARGIN_MS of
+        // The late-cut regime softEnd alone does not cover, and real typing hits:
+        // a reaction-timed D tap lands late in the reversal (thumb almost back to
+        // I). tapT 740/760/780 = cut fractions 0.7/0.8/0.9 of the n->i leg. Two
+        // gates conspired:
+        //   - sequences did not fire the split (tap within SPLIT_MARGIN_MS of
         //     the swipe's end: 740 >= tEnd 800 - 80),
-        //   - even if it did, splitSwipe's head trim leaves the remaining leg
-        //     under MIN_SPLIT_HALF_ARC_KW so the second half is rejected.
-        // Result: empty decode, literal "QD". Must now decode "quindi" top-1.
+        //   - had it fired, splitSwipe's head trim left the remaining leg under
+        //     MIN_SPLIT_HALF_ARC_KW, so the second half was rejected.
+        // The decode was empty with "QD" left; it must decode "quindi" top-1.
         for (tapT in listOf(740L, 760L, 780L)) {
             val words = decode(quindi(tapT))
             assertTrue("quindi (late tapT=$tapT) top-1 was ${words.take(3)}", words.firstOrNull() == "quindi")
@@ -124,15 +125,15 @@ class ReversalSplitTest {
 
     @Test
     fun quindiEarlyTapDecodesTop1() {
-        // The early-tap regime (live-trace-confirmed): the
-        // reaction-timed D tap lands at ~52-54% of the swipe INTERVAL - on the
-        // forward i->n leg or in the apex dwell, 270+ ms before the swipe
-        // ends. tapT 480/520/560 = cut samples 14/16/18 (40/60/80% of the
+        // The early-tap regime, seen on device: the reaction-timed D tap lands
+        // at ~52-54% of the swipe interval, on the forward i->n leg or in the
+        // apex dwell, 270+ ms before the swipe ends. tapT 480/520/560 = cut
+        // samples 14/16/18 (40/60/80% of the
         // forward leg). The V1 split resumes half2 at the apex distance peak
         // (N), so half2 spans the whole ~3 kw reversal leg: minLetters=2
         // (arcLen >= MIN_SWIPE_ARC_KW at Matcher.buildSegment) and the
         // close-side length band both forbid the single trailing letter "i",
-        // q|uin|d|i is unrepresentable, decode is empty, literal "QD" stays.
+        // so q|uin|d|i is unrepresentable and the decode is empty, "QD" left.
         // The endpoint-trimmed (V2) and apex-snapped (V3) split variants must
         // make it decode; at tapT=480 the cut sits ~1.8 kw before N, so half1
         // loses even the 'n' pass (R_INNER) and only V3 can save it.
@@ -146,9 +147,9 @@ class ReversalSplitTest {
     fun sloppyEarlyTapSurvives() {
         // Sloppy fixture, cut at 40% of the forward over(i)->n leg (sample 24
         // of 51, t=776): the cut sits ~1.86 kw from N, killing both the isEnd
-        // mark and the R_INNER 'n' pass for half1 - the V3 apex-snapped cut
-        // (the apex is the overshoot vertex 0.25 kw past N, still well inside
-        // R_ENDPOINT) is the only rescue with realistic geometry.
+        // mark and the R_INNER 'n' pass for half1. The V3 apex-snapped cut
+        // (the apex is the overshoot vertex 0.25 kw past N, inside R_ENDPOINT)
+        // is the only rescue with realistic geometry.
         val words = decode(quindiSloppy(776L))
         assertTrue("sloppy early quindi top-1 was ${words.take(3)}", words.firstOrNull() == "quindi")
     }
@@ -156,11 +157,11 @@ class ReversalSplitTest {
     @Test
     fun sloppyApexDwellTapSurvives() {
         // Tap during the apex dwell itself (sample 35, t=1040, between N and
-        // its overshoot vertex): half1 ends essentially ON n (real isEnd), but
+        // its overshoot vertex): half1 ends on n (real isEnd), but
         // the leftover reversal leg is ~2.6 kw even after the fixed head trim,
         // so V1's half2 still demands two letters. V2's endpoint-trimmed tail
-        // is what admits the single trailing "i" here (no interior distance
-        // peak follows the cut, so V3 does not exist for this timing).
+        // admits the single trailing "i" here (no interior distance peak
+        // follows the cut, so V3 does not exist for this timing).
         val words = decode(quindiSloppy(1040L))
         assertTrue("sloppy apex-dwell quindi top-1 was ${words.take(3)}", words.firstOrNull() == "quindi")
     }
@@ -168,8 +169,8 @@ class ReversalSplitTest {
     @Test
     fun sloppyLateReversalSurvives() {
         // Sloppy fixture, deep cut: reversal leg is samples 40..50 of 51 over
-        // 1200 ms from t0=200, so tapT 1352 cuts at ~0.8 of the leg - past both
-        // the old generator gate (tEnd 1400 - 80 = 1320) and the head-trim floor.
+        // 1200 ms from t0=200, so tapT 1352 cuts at ~0.8 of the leg, past both
+        // the generator gate (tEnd 1400 - 80 = 1320) and the head-trim floor.
         val words = decode(quindiSloppy(1352L))
         assertTrue("sloppy late quindi top-1 was ${words.take(3)}", words.firstOrNull() == "quindi")
     }
@@ -177,7 +178,7 @@ class ReversalSplitTest {
     @Test
     fun shallowReversalCutStillDecodes() {
         // Cut at 0.4 of the leg (1.2 kw from N, inside R_ENDPOINT): decoded
-        // correctly even pre-fix; locks that the fix leaves it undisturbed.
+        // correctly before softEnd, and the fix must leave it so.
         val words = decode(quindi(680L))
         assertTrue("quindi (shallow cut) top-1 was ${words.take(3)}", words.firstOrNull() == "quindi")
     }

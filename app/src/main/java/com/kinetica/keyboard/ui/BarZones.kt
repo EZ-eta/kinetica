@@ -3,33 +3,21 @@ package com.kinetica.keyboard.ui
 /**
  * How many candidate words share one page of the suggestion bar.
  *
- * The bar used to cut the strip into five equal zones whatever the words were, so
- * anything long was ellipsized: four candidates differing only in their endings showed
- * as four identical stems, which is the one thing a suggestion list must never do. A
- * page holds as many words as fit at their own measured width instead, and the rest go
- * to the next page, which the bar already pages between.
+ * A page holds as many words as fit at their measured width and the rest go to the next page;
+ * fixed fifths ellipsized long words until candidates that differ only in their endings looked
+ * the same. Zones stay equal within a page so a tap target never shrinks with its word, and the
+ * packing is greedy from the left, so the leading candidates get the room. A word wider than the
+ * bar gets a page of its own and is ellipsized there.
  *
- * Zones stay equal WITHIN a page, because the tap target should not shrink with the
- * word and because an uneven row is harder to aim at. So a page of n words needs
- * `available / n` to clear the widest word on it, and the packing is greedy from the
- * left: the leading candidates are the ones that matter, so they are the ones that get
- * the room.
- *
- * A page of one is not a policy, it is what the geometry says when the next word cannot
- * share. A word wider than the whole bar still gets a page and is ellipsized there,
- * which is the only case left where that happens.
- *
- * Pure, so the partition is testable without a view. [widths] already include whatever
- * padding and badge allowance each word needs; this only divides.
+ * Pure, so the partition is testable without a view. [widths] already include padding and badges.
  */
 object BarZones {
 
     /**
      * The size of each page, in order, summing to `widths.size`.
      *
-     * [available] of zero or less means the view has not been laid out yet. There is no
-     * measurement to pack against then, so it falls back to the fixed [maxZones] the bar
-     * used before, rather than emitting one page per word.
+     * [available] of zero or less means the view is not laid out yet, so pages hold a fixed
+     * [maxZones] words instead of one page per word.
      */
     fun pages(widths: List<Float>, available: Float, maxZones: Int): List<Int> {
         if (widths.isEmpty()) return emptyList()

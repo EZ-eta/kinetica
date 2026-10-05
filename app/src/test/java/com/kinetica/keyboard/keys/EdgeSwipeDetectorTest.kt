@@ -8,13 +8,12 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 /**
- * The directional-shortcut thresholds, and the top-row up-flick they refused.
+ * The directional-shortcut thresholds, and the top-row up-flick.
  *
- * Reported from the field: swiping up on `y` for `6` typed `to` about half the
- * time. The mechanism is that the test read the pointer's LIFT displacement, and
- * a flick off the top row has nowhere to go - it is short, and a thumb pivoting
- * from the knuckle curves, so abs(dx) grows until the 1.5x dominance test fails
- * and the path falls through to the word decoder.
+ * Read at the lift alone, swiping up on `y` for `6` typed `to` about half the time: a flick
+ * off the top row is short, and a thumb pivoting from the knuckle curves, so abs(dx) grows
+ * until the 1.5x dominance test fails and the path falls through to the word decoder. The
+ * furthest point decides when the lift refuses.
  *
  * Densities here are 1f so the 30dp minimum reads directly as 30 units.
  */
@@ -54,24 +53,23 @@ class EdgeSwipeDetectorTest {
     fun aCurvedUpFlickIsReadAtItsFurthestPointNotItsLift() {
         // The reported gesture: the thumb reaches 38 units up and 6 across, then
         // slides back down and out to the right before lifting. At the lift there
-        // is no dominant axis at all; at the peak there plainly is.
+        // is no dominant axis at all; at the peak there is.
         assertNull("the lift alone must not resolve this", detect(y, dx = 22f, dy = -14f))
         assertEquals("6", detect(y, dx = 22f, dy = -14f, px = 6f, py = -38f))
     }
 
     @Test
     fun aShortUpFlickThatRetractedStillFires() {
-        // 34 units up at the peak, 18 at the lift - under the 30 minimum, which is
-        // the other half of "half the times the number does not register".
+        // 34 units up at the peak, 18 at the lift: under the 30 minimum, the other half of
+        // "half the times the number does not register".
         assertEquals("6", detect(y, dx = 1f, dy = -18f, px = 2f, py = -34f))
     }
 
     @Test
     fun aLiftThatResolvesToADirectionStillDecidesAlone() {
-        // Deliberately narrow: the peak is consulted only for a gesture the lift
-        // refused outright. Here the lift reads RIGHT, which `y` has no binding
-        // for, and the upward peak must NOT be substituted - otherwise a gesture
-        // that works today could change meaning.
+        // The peak is consulted only for a gesture the lift refused outright. Here the lift
+        // reads RIGHT, which `y` has no binding for, and the upward peak must not be
+        // substituted, or a gesture that already works could change meaning.
         assertNull(detect(y, dx = 44f, dy = -2f, px = 6f, py = -38f))
     }
 
@@ -94,11 +92,10 @@ class EdgeSwipeDetectorTest {
         assertNull(detect(y, dx = 0f, dy = 40f))
     }
 
-    // ---- R59: a shortcut leaves one key, a word crosses the board --------------------
+    // ---- A shortcut leaves one key, a word crosses the board --------------------
     //
-    // Reported: binding `c` up to a degree sign turned `Connecticut` into `On°Cicut`. The
-    // word starts on a bound key and ends two rows higher, so the lift reads as a clean
-    // up-flick and nothing downstream could tell the two apart.
+    // With `c` bound up to a degree sign, `Connecticut` became `On°Cicut`: the word starts on
+    // a bound key and ends two rows higher, so the lift reads as a clean up-flick.
 
     @Test
     fun aSwipedWordThatEndsUpwardIsNotAShortcut() {
@@ -111,9 +108,9 @@ class EdgeSwipeDetectorTest {
 
     @Test
     fun aFlickThatLeavesItsOwnKeyStillFires() {
-        // 30dp against a row pitch near 1.6kw: a real flick routinely enters the next row,
-        // so the threshold cannot be one. This is the case a naive guard would break, and
-        // it is the one the reporter actually binds.
+        // 30dp against a row pitch near 1.6kw: a real flick often enters the next row, so the
+        // threshold cannot be one contact. A naive guard would break this case, the one the
+        // reporter binds.
         assertEquals(".", detect(b, dx = 0f, dy = 36f, contacts = 2))
         assertEquals("6", detect(y, dx = 2f, dy = -40f, contacts = 2))
     }

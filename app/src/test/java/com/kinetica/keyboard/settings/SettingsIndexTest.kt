@@ -8,8 +8,8 @@ import org.junit.Test
  * Finding a setting by typing what you call it.
  *
  * The rows come from the inflated preference tree, which no JVM test can build, so the
- * fixtures below are hand-written in that shape. What is decided here is which rows match
- * and in what order, which is the part that can be got wrong quietly.
+ * fixtures below are hand-written in that shape. This decides which rows match and in what
+ * order, which can go wrong silently.
  */
 class SettingsIndexTest {
 
@@ -31,9 +31,9 @@ class SettingsIndexTest {
 
     @Test
     fun anEmptyQueryIsNothingRatherThanEverything() {
-        // The one deliberate difference from PersonalWordRows.filtered, where blank is the
-        // whole list. A search field showing all sixty rows is the settings screen with an
-        // extra step, and the caller reads the empty result as "close the overlay".
+        // Unlike PersonalWordRows.filtered, where blank is the whole list: a search field
+        // showing every row is the settings screen with an extra step, and the caller reads
+        // the empty result as "close the overlay".
         assertEquals(emptyList<SettingsIndex.Entry>(), SettingsIndex.match(tree, ""))
         assertEquals(emptyList<SettingsIndex.Entry>(), SettingsIndex.match(tree, "   "))
     }
@@ -58,8 +58,8 @@ class SettingsIndexTest {
 
     @Test
     fun aSynonymReachesARowThatSaysTheWordNowhere() {
-        // What the synonym half of R82 is for. Nothing in "Keyboard height" or its
-        // summary contains "size", and "size" is what people type.
+        // Synonyms: nothing in "Keyboard height" or its summary contains "size", and
+        // "size" is what people type.
         val hits = SettingsIndex.match(tree, "size")
         assertEquals(listOf("pref_keyboard_height_pct"), hits.map { it.key })
     }

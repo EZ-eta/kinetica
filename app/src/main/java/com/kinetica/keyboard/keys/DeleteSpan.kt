@@ -12,26 +12,20 @@ object DeleteSpan {
     /**
      * Leftward travel, in dp, that stages one more unit.
      *
-     * A character is a much smaller edit than a word, so its step is smaller -
-     * but not proportionally. It stays above the touch slop and above one key
-     * width at every density, so a staged count is still reached deliberately
-     * rather than by hand tremor, and a full keyboard width of travel spans a
-     * long word rather than a whole sentence. Ten characters cost 180dp, about
-     * the travel of 4-5 words, which is the granularity trade the mode exists
-     * for.
+     * A character's step is smaller than a word's, but not proportionally. It stays above the
+     * touch slop at every density, so a staged count is reached by intent and not by hand
+     * tremor, and a full keyboard width spans a long word, not a sentence. Ten characters cost
+     * 180dp, about the travel of 4-5 words.
      */
     fun slideDpPerUnit(charMode: Boolean): Float = if (charMode) 18f else 40f
 
     /**
-     * Characters a staged slide of [units] covers when the editor already holds a
-     * selection of [selectionLength] characters, counting back from the
-     * selection's END.
+     * Characters a staged slide of [units] covers when the editor already holds a selection of
+     * [selectionLength] characters, counting back from the selection's end.
      *
-     * A selection is the first unit, whatever the granularity: the user selected
-     * it as one thing, so one step of the slide removes exactly it and further
-     * steps continue into [before] (the text preceding the selection start). With
-     * no selection this is the shipped word or character walk unchanged, which is
-     * what keeps the no-selection path byte-identical.
+     * A selection is the first unit, whatever the granularity: the user selected it as one
+     * thing, so one step removes it and further steps continue into [before] (the text preceding
+     * the selection start). With no selection this is the plain word or character walk.
      */
     fun staged(selectionLength: Int, before: CharSequence, units: Int, charMode: Boolean): Int {
         if (units <= 0) return 0
@@ -44,9 +38,8 @@ object DeleteSpan {
 
     /**
      * Length of the tail of [text] holding the last [units] whitespace-delimited
-     * words, trailing whitespace included. Punctuation is part of a word, which
-     * is what makes one slide step remove "word," rather than leaving the comma
-     * behind.
+     * words, trailing whitespace included. Punctuation is part of a word, so one slide step
+     * removes "word," and leaves no comma behind.
      */
     fun words(text: CharSequence, units: Int): Int {
         if (units <= 0) return 0
@@ -62,19 +55,15 @@ object DeleteSpan {
 
     /**
      * Length of the head of [text] holding the first [units] whitespace-delimited words,
-     * leading whitespace included - the forward mirror of [words].
+     * leading whitespace included: the forward mirror of [words], for the spacebar's word-wise
+     * cursor slide. Kept beside [words] so both agree on what a word is; punctuation belongs to
+     * it, so `word,` is one step either way.
      *
-     * Written for the spacebar's word-wise cursor slide, which needs the same walk in the
-     * other direction. Kept beside [words] so both agree on what a word is - punctuation
-     * belongs to it, so `word,` is one step either way.
-     *
-     * The two are NOT inverses and must not be made so. This one takes the whitespace
-     * BEFORE the word, so moving right lands after a word; [words] takes the whitespace
-     * after it, so moving left lands before one. That asymmetry is the ordinary editor
-     * convention - ctrl-right stops at word ends, ctrl-left at word starts - and it also
-     * happens to be exactly what [words] needs for deletion, where the trailing space has
-     * to go with the word it followed. A round trip therefore does not return to its
-     * starting offset, which DeleteSpanTest asserts on purpose.
+     * The two are not inverses and must not be made so. This one takes the whitespace before the
+     * word, so moving right lands after a word; [words] takes the whitespace after it, so moving
+     * left lands before one. That is the usual editor convention (ctrl-right stops at word ends,
+     * ctrl-left at word starts), and deletion needs the trailing space to go with its word. A
+     * round trip does not return to its starting offset, and DeleteSpanTest asserts it.
      */
     fun wordsForward(text: CharSequence, units: Int): Int {
         if (units <= 0) return 0
@@ -89,12 +78,11 @@ object DeleteSpan {
     }
 
     /**
-     * Length of the tail of [text] holding the last [units] characters, counting
-     * a surrogate pair as ONE - so a slide step removes a whole emoji rather than
-     * half of one and leaving an unpaired surrogate behind.
+     * Length of the tail of [text] holding the last [units] characters, counting a surrogate pair
+     * as one, so a slide step removes a whole emoji and leaves no unpaired surrogate.
      *
-     * Tap backspace still deletes a single `char`; that asymmetry is pre-existing
-     * and is not something this rule should quietly change on one path only.
+     * Tap backspace still deletes a single `char`; that asymmetry predates this rule, which
+     * should not change it on one path only.
      */
     fun chars(text: CharSequence, units: Int): Int {
         if (units <= 0) return 0

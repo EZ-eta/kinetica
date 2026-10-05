@@ -5,9 +5,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * The suggestion bar's ornament scaling. Two things worth locking: that the
- * shipped 44dp rendering did not move when the sizes became relative, and that
- * the furniture still fits at the floor - the reason the change exists.
+ * The suggestion bar's ornament scaling: the 44dp reference renders as it did before sizes
+ * became relative, and the furniture still fits at the floor.
  */
 class BarMetricsTest {
 
@@ -16,7 +15,7 @@ class BarMetricsTest {
     @Test
     fun theShippedHeightIsUnchangedToThePixel() {
         // scale == 1 at the reference height, at every density, so every
-        // `dp * density * scale` is exactly the `dp * density` it replaced.
+        // `dp * density * scale` equals the `dp * density` it replaced.
         for (d in densities) {
             val h = BarMetrics.REFERENCE_DP * d
             assertEquals("density $d", 1f, BarMetrics.scale(h, d), 1e-6f)
@@ -42,9 +41,8 @@ class BarMetricsTest {
 
     @Test
     fun everyOrnamentKeepsAConstantRatioToTheWordText() {
-        // This is the property the scaling exists for, and the one a fixed dp size
-        // does not have: the badge is the word's own annotation, so it must read at
-        // the same weight whatever the bar height.
+        // The property a fixed dp size lacks: the badge is the word's own annotation, so it
+        // must read at the same weight whatever the bar height.
         val d = 2.625f
         val ratios = HashMap<Float, MutableList<Float>>()
         for (dp in listOf(BarMetrics.MIN_DP, 32f, BarMetrics.REFERENCE_DP, 60f, BarMetrics.MAX_DP)) {
@@ -63,9 +61,8 @@ class BarMetricsTest {
 
     @Test
     fun theFurnitureFitsInsideTheBarAtEveryHeight() {
-        // An invariant rather than a regression: solving the geometry says a fixed
-        // ornament never clipped either, so this locks the property against a
-        // future change to the fractions rather than recording a fixed bug.
+        // An invariant, not a regression: a fixed ornament never clipped either, so this
+        // guards against a future change to the fractions.
         for (d in densities) {
             for (dp in listOf(BarMetrics.MIN_DP, BarMetrics.REFERENCE_DP, BarMetrics.MAX_DP)) {
                 val h = dp * d

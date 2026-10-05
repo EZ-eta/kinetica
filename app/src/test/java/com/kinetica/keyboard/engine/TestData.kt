@@ -14,19 +14,18 @@ object TestData {
 
     /**
      * Standard QWERTY grid, 1000px wide, 150px row height (kw: keys 1.0 wide,
-     * rows 1.5 tall) - same proportions as assets/layouts/qwerty.json.
+     * rows 1.5 tall), the proportions of assets/layouts/qwerty.json.
      */
     fun qwertyGeometry(): KeyboardGeometry = qwertyGeometry(DEFAULT_ROW_PITCH_KW)
 
     /**
      * The same grid at an arbitrary row pitch, because `kw` is derived from key
-     * WIDTH alone: rows are 1.5 kw apart on this fixture, 1.94 on a Pixel 7 at 35%
+     * width alone: rows are 1.5 kw apart on this fixture, 1.94 on a Pixel 7 at 35%
      * height, and near 0.5 on an unfolded foldable at the height floor, where two
-     * vertically adjacent keys are CLOSER than two horizontally adjacent ones.
+     * vertically adjacent keys are closer than two horizontally adjacent ones.
      *
-     * Swept once already (KNOWN_ISSUES item 14, 1.94 down to 0.31) and it moved no
-     * word off the top: what it compresses is the MARGIN to the nearest wrong word.
-     * The overload exists so that stays a measurement rather than a memory.
+     * From 1.94 down to 0.31 the pitch moves no word off the top; it compresses the
+     * margin to the nearest wrong word.
      */
     fun qwertyGeometry(rowPitchKw: Float): KeyboardGeometry = letterGeometry(
         listOf(
@@ -62,9 +61,58 @@ object TestData {
         DEFAULT_ROW_PITCH_KW,
     )
 
+    /**
+     * Russian ЙЦУКЕН, mirroring assets/layouts/native_ru.json: 12 / 11 / 9, each key a
+     * twelfth of the board. At one keyboard height the rows sit 1.2 times further apart in
+     * kw than on a ten-key board, since kw is the narrower key.
+     */
+    fun jcukenGeometry(): KeyboardGeometry = letterGeometry(
+        listOf(
+            "йцукенгшщзхъ" to 0.0f,
+            "фывапролджэ" to 0.5f,
+            "ячсмитьбю" to 1.5f,
+        ),
+        DEFAULT_ROW_PITCH_KW * 1.2f,
+        Alphabet.CYRILLIC,
+    )
+
+    /** Ukrainian, mirroring assets/layouts/native_uk.json: Russian's rows with ї, і and є. */
+    fun ukrainianGeometry(): KeyboardGeometry = letterGeometry(
+        listOf(
+            "йцукенгшщзхї" to 0.0f,
+            "фівапролджє" to 0.5f,
+            "ячсмитьбю" to 1.5f,
+        ),
+        DEFAULT_ROW_PITCH_KW * 1.2f,
+        Alphabet.UKRAINIAN,
+    )
+
+    /** Hebrew, mirroring assets/layouts/native_he.json: 8 / 10 / 9, ten-key widths. */
+    fun hebrewGeometry(): KeyboardGeometry = letterGeometry(
+        listOf(
+            "קראטוןםפ" to 0.0f,
+            "שדגכעיחלךף" to 0.0f,
+            "זסבהנמצתץ" to 0.5f,
+        ),
+        DEFAULT_ROW_PITCH_KW,
+        Alphabet.HEBREW,
+    )
+
+    /** Arabic, mirroring assets/layouts/native_ar.json: 12 / 11 / 10, twelfth widths. */
+    fun arabicGeometry(): KeyboardGeometry = letterGeometry(
+        listOf(
+            "ضصثقفغعهخحجد" to 0.0f,
+            "شسيبلاتنمكط" to 0.5f,
+            "ذئءؤرىةوزظ" to 0.0f,
+        ),
+        DEFAULT_ROW_PITCH_KW * 1.2f,
+        Alphabet.ARABIC,
+    )
+
     private fun letterGeometry(
         rows: List<Pair<String, Float>>,
         rowPitchKw: Float,
+        alphabet: Alphabet = Alphabet.LATIN,
     ): KeyboardGeometry {
         val rowH = rowPitchKw * KEY_W
         val rects = ArrayList<FloatArray>()
@@ -75,10 +123,10 @@ object TestData {
             for ((i, ch) in letters.withIndex()) {
                 val left = (offsetKeys + i) * KEY_W
                 rects.add(floatArrayOf(left, top, left + KEY_W, top + rowH))
-                codes.add(ch - 'a')
+                codes.add(alphabet.codeOf(ch))
             }
         }
-        return KeyboardGeometry.fromPx(KEY_W, 1000f, rects, codes.toIntArray())
+        return KeyboardGeometry.fromPx(KEY_W, 1000f, rects, codes.toIntArray(), alphabet)
     }
 
     const val DEFAULT_ROW_PITCH_KW = 1.5f
@@ -99,7 +147,7 @@ object TestData {
 
     /** Tap at the exact key center. */
     fun tap(c: Char, g: KeyboardGeometry, t0: Long, stream: StreamId = StreamId.LEFT): TapToken {
-        val code = c - 'a'
+        val code = g.alphabet.codeOf(c)
         return TapToken(stream, code, g.centerX(code), g.centerY(code), false, t0, t0 + 60)
     }
 
@@ -117,7 +165,7 @@ object TestData {
         val centers = ArrayList<Pair<Float, Float>>()
         var prev = -1
         for (ch in letters) {
-            val code = ch - 'a'
+            val code = g.alphabet.codeOf(ch)
             if (code == prev) continue
             centers.add(g.centerX(code) to g.centerY(code))
             prev = code
@@ -172,7 +220,7 @@ object TestData {
         val centers = ArrayList<Pair<Float, Float>>()
         var prev = -1
         for (ch in letters) {
-            val code = ch - 'a'
+            val code = g.alphabet.codeOf(ch)
             if (code == prev) continue
             centers.add(g.centerX(code) to g.centerY(code))
             prev = code
@@ -220,10 +268,9 @@ object TestData {
      * [before]'s key centers, rests on the last of them across a time gap
      * (many stationary samples), then resumes from that rest position through
      * [after]'s key centers. Models a thumb that pauses mid-word while the
-     * other thumb acts - the resume-after-interruption pattern the merge's
-     * split generators exist to cover. [overshootKw] adds turn overshoot so
-     * the fixture is not a perfect-center path, per the sloppy-fixture
-     * discipline.
+     * other thumb acts, the resume-after-interruption pattern the merge's
+     * split generators cover. [overshootKw] adds turn overshoot so the fixture
+     * is not a perfect-center path.
      */
     fun dwellSwipe(
         before: String,
@@ -236,10 +283,10 @@ object TestData {
         overshootKw: Float = 0f,
         stream: StreamId = StreamId.LEFT,
         /**
-         * Attach the [Dwell] marker GestureStream would have produced for the
-         * rest span. Off by default so every pre-existing fixture stays a
-         * dwell-free Tier-1 control: those goldens must keep proving the six
-         * geometric split mechanisms without any dwell help.
+         * Attach the [Dwell] marker GestureStream would produce for the rest
+         * span. Off by default so the other fixtures stay dwell-free controls:
+         * those goldens must keep proving the geometric split mechanisms
+         * without dwell help.
          */
         markDwell: Boolean = false,
     ): SwipeToken {
@@ -286,15 +333,13 @@ object TestData {
         )
     }
 
-    /** Key centers for a string, dropping consecutive duplicates. */
     /**
      * Key contacts along [path], the way a real gesture carries them.
      *
-     * A device token gets these from GestureStream, which applies hysteresis; a
-     * fixture had none at all, so anything reading them was untestable. This is the
-     * simpler approximation - nearest key per sample, consecutive samples on the same
-     * key grouped into one contact - which is close enough for the merge, whose only
-     * use of a contact is the moment it began.
+     * A device token gets these from GestureStream, which applies hysteresis. This is
+     * a simpler approximation (nearest key per sample, consecutive samples on the same
+     * key grouped into one contact), close enough for the merge, which uses a contact
+     * only for the moment it began.
      */
     fun contactsAlong(path: List<PathPoint>, g: KeyboardGeometry): List<KeyContact> {
         val out = ArrayList<KeyContact>()
@@ -312,11 +357,12 @@ object TestData {
         return out
     }
 
+    /** Key centers for a string, dropping consecutive duplicates. */
     private fun uniqueCenters(letters: String, g: KeyboardGeometry): List<Pair<Float, Float>> {
         val out = ArrayList<Pair<Float, Float>>()
         var prev = -1
         for (ch in letters) {
-            val code = ch - 'a'
+            val code = g.alphabet.codeOf(ch)
             if (code == prev) continue
             out.add(g.centerX(code) to g.centerY(code))
             prev = code

@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <!-- An entries array is translated with the same count and order as its values array, which
+         holds what is stored and is never translated. -->
     <!-- Step tables for SteppedSliderPreference, in ms. Dense where a few milliseconds
          are felt, sparse where they are not; each holds its setting's default exactly and
          ends where the old linear slider ended. TimingStepsTest reads them. -->
-    <string-array name="timing_steps_autospace">
+    <string-array name="timing_steps_autospace" translatable="false">
         <item>10</item>
         <item>15</item>
         <item>20</item>
@@ -40,7 +42,7 @@
         <item>750</item>
         <item>800</item>
     </string-array>
-    <string-array name="timing_steps_retract">
+    <string-array name="timing_steps_retract" translatable="false">
         <item>10</item>
         <item>15</item>
         <item>20</item>
@@ -89,7 +91,7 @@
         <item>1900</item>
         <item>2000</item>
     </string-array>
-    <string-array name="timing_steps_long_press">
+    <string-array name="timing_steps_long_press" translatable="false">
         <item>25</item>
         <item>30</item>
         <item>35</item>
@@ -124,47 +126,28 @@
         <item>700</item>
     </string-array>
 
-    <string-array name="bar_action_entries">
-        <item>Settings</item>
-        <item>Next language</item>
-        <item>One-handed mode</item>
-        <item>Automatic space on/off</item>
-        <item>Undo</item>
-        <item>Redo</item>
-        <item>Paste</item>
-        <item>Copy</item>
-        <item>Cut</item>
-        <item>Select all</item>
-        <item>Retype the word</item>
-        <item>Expand a shortcut</item>
-        <item>Today\'s date</item>
-        <item>The time</item>
-        <item>Enter</item>
-        <item>Copy the whole line</item>
+    <string-array name="popup_shape_entries">
+        <item>Single row</item>
+        <item>3 x 3</item>
+        <item>4 x 3</item>
+        <item>5 x 3</item>
     </string-array>
-    <string-array name="bar_action_values">
-        <item>SETTINGS</item>
-        <item>NEXT_LANGUAGE</item>
-        <item>ONE_HANDED</item>
-        <item>TOGGLE_AUTOSPACE</item>
-        <item>UNDO</item>
-        <item>REDO</item>
-        <item>PASTE</item>
-        <item>COPY</item>
-        <item>CUT</item>
-        <item>SELECT_ALL</item>
-        <item>RETYPE</item>
-        <item>EXPANDIFY</item>
-        <item>DATE</item>
-        <item>TIME</item>
-        <item>ENTER</item>
-        <item>COPY_LINE</item>
+    <string-array name="popup_shape_values" translatable="false">
+        <item>row</item>
+        <item>3</item>
+        <item>4</item>
+        <item>5</item>
     </string-array>
-    <string-array name="bar_action_defaults">
-        <item>SETTINGS</item>
-        <item>NEXT_LANGUAGE</item>
-        <item>ONE_HANDED</item>
-        <item>TOGGLE_AUTOSPACE</item>
+
+    <string-array name="landscape_arrangement_entries">
+        <item>Split to the edges</item>
+        <item>Centred</item>
+        <item>Full width</item>
+    </string-array>
+    <string-array name="landscape_arrangement_values" translatable="false">
+        <item>split</item>
+        <item>centered</item>
+        <item>stretch</item>
     </string-array>
 
     <string-array name="layout_mode_entries">
@@ -174,7 +157,7 @@
         <item>Split</item>
         <item>One-handed</item>
     </string-array>
-    <string-array name="layout_mode_values">
+    <string-array name="layout_mode_values" translatable="false">
         <item>full</item>
         <item>right</item>
         <item>left</item>
@@ -190,9 +173,9 @@
         <item>Cyan</item>
         <item>Violet</item>
         <item>Custom hue</item>
-        <item>Theme color</item>
+        <item>Theme colour</item>
     </string-array>
-    <string-array name="trail_color_values">
+    <string-array name="trail_color_values" translatable="false">
         <item>rainbow</item>
         <item>red</item>
         <item>orange</item>
@@ -206,9 +189,9 @@
     <string-array name="theme_mode_entries">
         <item>Kinetica dark (default)</item>
         <item>Material You (Android 12+)</item>
-        <item>Custom color</item>
+        <item>Custom colour</item>
     </string-array>
-    <string-array name="theme_mode_values">
+    <string-array name="theme_mode_values" translatable="false">
         <item>default</item>
         <item>dynamic</item>
         <item>custom</item>
@@ -229,7 +212,7 @@
         <item>Orange</item>
         <item>Brown</item>
     </string-array>
-    <string-array name="theme_color_values">
+    <string-array name="theme_color_values" translatable="false">
         <item>#5468FF</item>
         <item>#F44336</item>
         <item>#E91E63</item>
@@ -250,7 +233,7 @@
         <item>Medium (+5)</item>
         <item>Large (+10)</item>
     </string-array>
-    <string-array name="reinforce_values">
+    <string-array name="reinforce_values" translatable="false">
         <item>small</item>
         <item>medium</item>
         <item>large</item>
@@ -264,7 +247,7 @@
         <item>Paste</item>
         <item>Select all</item>
     </string-array>
-    <string-array name="comma_mode_values">
+    <string-array name="comma_mode_values" translatable="false">
         <item>keep</item>
         <item>remove</item>
         <item>char</item>
@@ -278,7 +261,7 @@
         <item>Normal</item>
         <item>Aggressive</item>
     </string-array>
-    <string-array name="autocorrect_values">
+    <string-array name="autocorrect_values" translatable="false">
         <item>off</item>
         <item>normal</item>
         <item>aggressive</item>
@@ -294,8 +277,28 @@
         <item>Deutsch</item>
         <item>Français</item>
         <item>Norsk</item>
+        <item>Русский (experimental)</item>
+        <item>Українська (experimental)</item>
+        <item>עברית (experimental)</item>
+        <item>العربية (experimental)</item>
     </string-array>
-    <string-array name="language_values">
+    <string-array name="language_values" translatable="false">
+        <item>en</item>
+        <item>it</item>
+        <item>es</item>
+        <item>pl</item>
+        <item>cs</item>
+        <item>nl</item>
+        <item>de</item>
+        <item>fr</item>
+        <item>no</item>
+        <item>ru</item>
+        <item>uk</item>
+        <item>he</item>
+        <item>ar</item>
+    </string-array>
+    <!-- The enabled set's default: every language but the experimental ones (Prefs). -->
+    <string-array name="language_default_values" translatable="false">
         <item>en</item>
         <item>it</item>
         <item>es</item>
@@ -307,31 +310,13 @@
         <item>no</item>
     </string-array>
 
-    <string-array name="lang_cycle_key_entries">
-        <item>Off</item>
-        <item>A</item><item>B</item><item>C</item><item>D</item><item>E</item>
-        <item>F</item><item>G</item><item>H</item><item>I</item><item>J</item>
-        <item>K</item><item>L</item><item>M</item><item>N</item><item>O</item>
-        <item>P</item><item>Q</item><item>R</item><item>S</item><item>T</item>
-        <item>U</item><item>V</item><item>W</item><item>X</item><item>Y</item>
-        <item>Z</item>
-    </string-array>
-    <string-array name="lang_cycle_key_values">
-        <item>none</item>
-        <item>a</item><item>b</item><item>c</item><item>d</item><item>e</item>
-        <item>f</item><item>g</item><item>h</item><item>i</item><item>j</item>
-        <item>k</item><item>l</item><item>m</item><item>n</item><item>o</item>
-        <item>p</item><item>q</item><item>r</item><item>s</item><item>t</item>
-        <item>u</item><item>v</item><item>w</item><item>x</item><item>y</item>
-        <item>z</item>
-    </string-array>
 
     <string-array name="theme_brightness_entries">
         <item>Dark</item>
         <item>Light</item>
         <item>Follow system</item>
     </string-array>
-    <string-array name="theme_brightness_values">
+    <string-array name="theme_brightness_values" translatable="false">
         <item>dark</item>
         <item>light</item>
         <item>system</item>
@@ -343,7 +328,7 @@
         <item>QZERTY (Z and W swapped)</item>
         <item>AZERTY (French layout)</item>
     </string-array>
-    <string-array name="key_arrangement_values">
+    <string-array name="key_arrangement_values" translatable="false">
         <item>qwerty</item>
         <item>qwertz</item>
         <item>qzerty</item>

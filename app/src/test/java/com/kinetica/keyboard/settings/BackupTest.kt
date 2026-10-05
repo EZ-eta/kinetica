@@ -7,8 +7,8 @@ import org.junit.Test
 /**
  * The backup format, round-tripped.
  *
- * A restore rewrites every setting a user has, and unlike the personal-dictionary export
- * this format checks its own version rather than writing a field nobody reads.
+ * A restore rewrites every setting a user has, so this format checks its own version, unlike
+ * the personal-dictionary export.
  *
  * Pure because [Backup] is: no Android, no `org.json` (which the JVM runtime stubs), no file.
  */
@@ -25,7 +25,11 @@ class BackupTest {
         ),
         words = listOf(Backup.Word("en", "keyboard", 12), Backup.Word("it", "biologia", 3)),
         blocked = listOf(Backup.Blocked("en", "teh")),
-        chords = listOf(Backup.Chord("v", "action:paste"), Backup.Chord("s", "supercalifragilistic")),
+        chords = listOf(
+            Backup.Chord("v", "action:paste"), Backup.Chord("s", "supercalifragilistic"),
+            // A spacebar chord travels as its stored key.
+            Backup.Chord("space:t", "action:tab"),
+        ),
         expansions = listOf(
             Backup.Expand("vv", 0, "✅"),
             Backup.Expand("Today", 0, "Today:\n• \n• "),
@@ -38,8 +42,8 @@ class BackupTest {
      * Through a file, not through the Sequence.
      *
      * The activity writes each line followed by "\n" and reads it back with
-     * lineSequence(), and that split is the whole reason a newline in a value is fatal.
-     * Handing decode() the encoder's own Sequence skips it, so a raw newline would
+     * lineSequence, and that split is why a newline in a value is fatal.
+     * Handing decode the encoder's own Sequence skips it, so a raw newline would
      * round-trip in the test and be destroyed on a real device.
      */
     private fun viaFile(d: Backup.Data): Sequence<String> =
@@ -66,8 +70,8 @@ class BackupTest {
 
     @Test
     fun anEmptyBackupIsStillAValidOne() {
-        // A user who has changed nothing must get a file that restores to nothing, rather
-        // than a file that fails to parse on the other device.
+        // A user who has changed nothing must get a file that restores to nothing, not one
+        // that fails to parse on the other device.
         val back = roundTrip(Backup.Data())
         assertEquals(Backup.Data(), back)
     }
@@ -85,7 +89,7 @@ class BackupTest {
 
     @Test
     fun aChordExpansionKeepsItsReservedCommand() {
-        // action: strings are how a chord runs paste rather than typing the word "paste".
+        // action: strings are how a chord runs paste instead of typing the word "paste".
         assertEquals("action:paste", roundTrip(sample()).chords.first { it.chord == "v" }.expansion)
     }
 
@@ -109,8 +113,8 @@ class BackupTest {
 
     @Test
     fun aNewerBackupIsRefusedRatherThanGuessedAt() {
-        // The whole reason the version is read. Doing our best with a file we do not
-        // understand means silently dropping settings a later build wrote.
+        // Reading a file this build does not understand would silently drop settings a later
+        // build wrote.
         val res = Backup.decode(sequenceOf("${Backup.FORMAT}\t99", "pref\tbool\tpref_autospace\ttrue"))
         assertEquals(Backup.Result.TooNew(99), res)
     }
@@ -144,7 +148,7 @@ class BackupTest {
     @Test
     fun aValueCarryingASeparatorIsDroppedRatherThanMangled() {
         // Tabs and newlines are the record structure, so a value holding one cannot be
-        // written. Nothing real does - but a corrupted preference must not silently shift
+        // written. Nothing real does, but a corrupted preference must not silently shift
         // every field after it on the way back in.
         val d = Backup.Data(
             prefs = listOf(
@@ -183,9 +187,7 @@ class BackupTest {
 
     @Test
     fun anExportFilenameCarriesItsOwnDate() {
-        // R80. It was one constant, so every export offered the same name and the second
-        // one overwrote the first unless the user noticed and renamed it. A backup that
-        // silently replaces the previous backup is one backup, not a history.
+        // With one fixed name, each export overwrote the last unless the user renamed it.
         assertEquals(
             "kinetica_backup_2026-09-18_0746.txt",
             Backup.filename(java.time.LocalDateTime.of(2026, 9, 18, 7, 46)),
@@ -199,8 +201,8 @@ class BackupTest {
 
     @Test
     fun twoExportsInOneMinuteShareAName() {
-        // Deliberate: seconds would make the name unreadable, and two exports inside one
-        // minute are the same export. The picker's own overwrite prompt covers it.
+        // Seconds would make the name unreadable, and two exports inside one minute are the
+        // same export; the picker's overwrite prompt covers it.
         assertEquals(
             Backup.filename(java.time.LocalDateTime.of(2026, 9, 18, 7, 46, 1)),
             Backup.filename(java.time.LocalDateTime.of(2026, 9, 18, 7, 46, 59)),
@@ -210,9 +212,9 @@ class BackupTest {
     // ---- expansions, the one record whose value may hold the separators ---------------
     //
     // A target may be a bullet block. The line format cannot carry a newline, so this one
-    // record escapes rather than refusing - and VERSION stays at 1 deliberately, because
-    // decode() refuses a newer file outright and a bump would make every backup taken
-    // from here unreadable, in full, by every build already installed.
+    // record escapes instead of refusing. VERSION stays at 1: decode refuses a newer file
+    // outright, so a bump would make every new backup unreadable, in full, by every build
+    // already installed.
 
     @Test
     fun aMultiLineTargetSurvivesTheRoundTrip() {
@@ -224,7 +226,7 @@ class BackupTest {
 
     @Test
     fun anActionTargetSurvivesTheRoundTrip() {
-        // Expansions may fire actions now (#19), stored in the same `action:` form chords use.
+        // Expansions may fire actions (#19), stored in the same `action:` form chords use.
         val d = Backup.Data(expansions = listOf(Backup.Expand("v", 0, "action:paste")))
         assertEquals("action:paste", roundTrip(d).expansions.single().target)
     }
@@ -238,8 +240,8 @@ class BackupTest {
 
     @Test
     fun aMultiLineTargetIsNotCountedAsDropped() {
-        // encodable() still refuses newlines for every other record, so the export's
-        // "N dropped" line would have lied about this one.
+        // encodable refuses newlines for every other record, so the export's "N dropped"
+        // line must not count this one.
         val d = Backup.Data(expansions = listOf(Backup.Expand("t", 0, "a\nb")))
         assertEquals(0, Backup.unencodable(d))
     }
@@ -258,8 +260,8 @@ class BackupTest {
 
     @Test
     fun theVersionIsUnchangedSoOlderBuildsStillReadWhatWeWrite() {
-        // The whole reason for escaping instead of bumping. An old build skips the
-        // record type it does not know and restores everything else.
+        // Why expansions escape instead of bumping: an old build skips the record type it
+        // does not know and restores everything else.
         assertEquals(1, Backup.VERSION)
         val header = Backup.encode(sample()).first()
         assertEquals("${Backup.FORMAT}\t1", header)

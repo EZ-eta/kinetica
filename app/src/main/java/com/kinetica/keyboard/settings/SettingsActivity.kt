@@ -22,17 +22,15 @@ import com.kinetica.keyboard.R
 /**
  * Hosts the preference screen, its submenus and the search over them.
  *
- * The settings were one flat list of 52 rows, which a user reported as impossible to
- * navigate. They are five nested screens now, and nesting needs this callback: without it
- * androidx routes a subscreen tap to nothing at all and the row looks dead.
+ * The settings are nested screens, three levels at most, and nesting needs this callback: without
+ * it androidx routes a subscreen tap to nothing and the row looks dead.
  *
- * Each subscreen is the same fragment re-inflated with a root key, so the tree lives in one
- * XML and nothing has to be kept in sync. The fragment sets the toolbar title from its own
- * root, which is what keeps it right after a rotation as well as after Back.
+ * Each subscreen is the same fragment re-inflated with a root key, so the tree lives in one XML.
+ * The fragment sets the toolbar title from its own root, so the title stays right after a
+ * rotation and after Back.
  *
- * Grouping then produced the opposite report - things were now hidden - which is R82 and
- * why there is a search field. It is offered on the top level only, because that is the
- * fragment that has the whole tree inflated to read.
+ * Nesting hides rows, so there is a search field. It is on the top level only, the fragment
+ * with the whole tree inflated to read.
  */
 class SettingsActivity :
     AppCompatActivity(),
@@ -49,6 +47,12 @@ class SettingsActivity :
                 .beginTransaction()
                 .replace(android.R.id.content, KeyboardPrefsFragment())
                 .commit()
+            // The keyboard can ask for one screen and one row: a letter's long-press list (#8).
+            // The activity is exported, so only a screen this app has is opened.
+            intent?.getStringExtra(EXTRA_SCREEN)?.takeIf { it in OPENABLE_SCREENS }?.let { screen ->
+                supportFragmentManager.executePendingTransactions()
+                openScreen(screen, intent?.getStringExtra(EXTRA_REVEAL))
+            }
         }
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         // Search belongs to the top level, so the item has to come and go with the stack.
@@ -76,7 +80,7 @@ class SettingsActivity :
         return true
     }
 
-    // ---------------------------------------------------------------------- search (R82)
+    // ---------------------------------------------------------------------- search
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.settings, menu)
@@ -117,8 +121,8 @@ class SettingsActivity :
         supportFragmentManager.findFragmentById(android.R.id.content) as? KeyboardPrefsFragment
 
     /**
-     * The whole searchable tree: every inflated row, plus the three settings that have no
-     * row of their own because they were gathered onto the chord screen.
+     * The whole searchable tree: every inflated row, plus the chord-screen settings that have no
+     * row of their own.
      */
     private fun entries(): List<SettingsIndex.Entry> {
         val walked = topFragment()?.searchEntries() ?: emptyList()
@@ -142,9 +146,13 @@ class SettingsActivity :
         }
         val list = resultsView()
         val blank = empty ?: return
+        // A fragment replace appends its view after the overlay, so after opening a result and
+        // coming Back the settings list would sit on top and both would draw.
+        blank.bringToFront()
+        list.bringToFront()
         if (shown.isEmpty()) {
             // The list is drawn over the note and has its own background, so an empty list
-            // would hide the note rather than sit above it.
+            // would hide the note.
             list.visibility = View.GONE
             blank.visibility = View.VISIBLE
             return
@@ -174,26 +182,30 @@ class SettingsActivity :
     /**
      * Opens the result's own screen and asks for its row.
      *
-     * A subscreen result commits the same transaction a tap on that screen would, then
-     * asks the new fragment for the row; the fragment holds the request until it has a list
-     * to scroll, so the order of the two does not matter. A top-level result pops back to a
-     * fragment that already exists and asks it directly. Results are addressed by
-     * `android:key` throughout - never by list position, which is the bug class
-     * [PersonalWordRows.checkedPositions] is written to document.
+     * A subscreen result commits the same transaction a tap on that screen would, then asks the
+     * new fragment for the row; the fragment holds the request until it has a list to scroll, so
+     * the order of the two does not matter. A top-level result pops back to the existing
+     * fragment and asks it directly. Results are addressed by `android:key`, never by list
+     * position (see [PersonalWordRows.checkedPositions]).
      */
     private fun openResult(entry: SettingsIndex.Entry) {
         closeSearch()
-        if (entry.screenKey == null) {
+        revealSetting(entry.screenKey, entry.key)
+    }
+
+    /** Opens [screenKey] (null: the top level) and flashes its row [key]; a search hit or a tip. */
+    fun revealSetting(screenKey: String?, key: String) {
+        if (screenKey == null) {
             supportFragmentManager.popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE)
             supportFragmentManager.executePendingTransactions()
-            topFragment()?.revealPreference(entry.key)
+            topFragment()?.revealPreference(key)
             return
         }
-        if (entry.screenKey == CHORD_SCREEN) {
+        if (screenKey == CHORD_SCREEN) {
             startActivity(Intent(this, ChordSettingsActivity::class.java))
             return
         }
-        openScreen(entry.screenKey, revealKey = entry.key)
+        openScreen(screenKey, revealKey = key)
     }
 
     private fun openScreen(screenKey: String?, revealKey: String?) {
@@ -255,25 +267,29 @@ class SettingsActivity :
         return if (tv.resourceId != 0) ContextCompat.getColor(this, tv.resourceId) else tv.data
     }
 
-    private companion object {
+    internal companion object {
         const val ROW_TITLE = "title"
         const val ROW_SCREEN = "screen"
 
         /** The screen key a chord-screen result navigates to. */
         const val CHORD_SCREEN = "pref_chords"
 
+        /** A screen key to open on arrival, and a row in it to reveal. */
+        const val EXTRA_SCREEN = "com.kinetica.keyboard.settings.SCREEN"
+        const val EXTRA_REVEAL = "com.kinetica.keyboard.settings.REVEAL"
+
+        /** Screens the keyboard may ask for by extra. */
+        val OPENABLE_SCREENS = setOf(SettingsSynonyms.LONGPRESS_GROUP)
+
         /**
-         * Title and summary for the settings that live inside [ChordSettingsActivity] and
-         * therefore appear in no preference XML. Without these three, the only way to find
-         * the chord lead-in is to already know it is on the chord screen.
+         * Title and summary for the settings inside [ChordSettingsActivity], which appear in no
+         * preference XML; without them search cannot find the chord lead-ins.
          */
         val EXTRA_ROWS: List<Pair<String, Pair<Int, Int>>> = listOf(
             Prefs.CHORD_ARM_MS to
                 (R.string.pref_chord_arm_title to R.string.pref_chord_arm_summary),
-            Prefs.LANG_CYCLE_KEY to
-                (R.string.pref_lang_cycle_key_title to R.string.pref_lang_cycle_key_summary),
-            Prefs.PECK_CHORD_KEY to
-                (R.string.pref_peck_chord_key_title to R.string.pref_peck_chord_key_summary),
+            Prefs.SPACE_CHORD_ARM_MS to
+                (R.string.pref_space_chord_arm_title to R.string.pref_space_chord_arm_summary),
         )
     }
 }

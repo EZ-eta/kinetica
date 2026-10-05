@@ -8,7 +8,7 @@ object SliderSteps {
     /**
      * The index of the step nearest [value], the lower one on a tie. A stored value that is
      * not a step, from the old linear slider or a derived default, shows where it is closest
-     * rather than jumping to an end.
+     * instead of jumping to an end.
      */
     fun nearestIndex(steps: IntArray, value: Int): Int {
         require(steps.isNotEmpty()) { "no steps" }

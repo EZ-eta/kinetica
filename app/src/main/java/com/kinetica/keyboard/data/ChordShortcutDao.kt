@@ -26,4 +26,11 @@ interface ChordShortcutDao {
         deleteByChord(chord)
         insert(ChordShortcut(chord = chord, expansion = expansion))
     }
+
+    /** An edit as one step: the old row goes and the new key takes its binding, or neither. */
+    @Transaction
+    fun replace(old: ChordShortcut?, chord: String, expansion: String) {
+        if (old != null) delete(old)
+        assign(chord, expansion)
+    }
 }

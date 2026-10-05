@@ -29,7 +29,7 @@ so	813903
 hat	799017
 hier	754243
 haben	742327
-für	735252
+für	736571
 sind	727078
 war	712337
 von	706490
@@ -68,7 +68,7 @@ mein	384765
 bist	381498
 doch	381456
 alles	366575
-weiß	357869
+weiß	367206
 keine	349315
 oder	341214
 nach	326208
@@ -93,7 +93,7 @@ hab	252697
 warum	251177
 vor	247840
 los	242543
-können	240905
+können	241352
 wieder	240508
 sagen	236702
 machen	228412
@@ -116,12 +116,12 @@ diese	208607
 euch	206931
 einer	202097
 komm	201117
-über	196855
+über	197318
 gibt	196771
 okay	196683
 wissen	192456
 deine	191923
-müssen	191257
+müssen	191579
 soll	191100
 werde	187290
 nie	185925
@@ -133,7 +133,7 @@ Weg	97276
 weg	77848
 würde	175047
 tut	172752
-am	170913
+am	171022
 des	169182
 einfach	168892
 Leben	120239
@@ -151,7 +151,7 @@ damit	150635
 ganz	149683
 wäre	149557
 wollte	148643
-weißt	147614
+weißt	151836
 Ok	63783
 ok	83408
 sicher	145360
@@ -161,11 +161,11 @@ nun	143552
 bis	142166
 wurde	141236
 leid	140641
-na	140395
+na	140483
 kannst	136795
 macht	134768
 dieser	134205
-zurück	133326
+zurück	133554
 lassen	131393
 Hallo	66289
 hallo	62272
@@ -216,10 +216,10 @@ Sir	80510
 sir	11502
 dieses	91148
 selbst	90135
-gehört	89459
+gehört	89619
 möchte	89068
 ohne	88934
-hör	88336
+hör	88471
 her	87571
 sag	87203
 meiner	86264
@@ -231,7 +231,7 @@ diesen	83932
 gute	83835
 wirst	83791
 lange	82872
-natürlich	82710
+natürlich	82855
 Ach	53222
 ach	29030
 meinem	82233
@@ -250,16 +250,16 @@ ihren	76796
 richtig	76789
 Ordnung	76635
 vom	76597
-hören	76109
+hören	76249
 sieht	75968
 davon	75947
-dafür	75302
+dafür	75426
 geh	74468
 diesem	74234
 wegen	74062
 Hause	73059
 sollten	72777
-Mädchen	72685
+Mädchen	72845
 hin	72272
 sollen	71445
 Abend	61289
@@ -383,7 +383,7 @@ dad	46472
 gab	46178
 Uhr	46117
 Stadt	45812
-Männer	45451
+Männer	45535
 Baby	45434
 fahren	45060
 Namen	44998
@@ -392,8 +392,8 @@ Kopf	44851
 hi	44653
 gehe	44502
 kleine	44338
-später	44320
-Glück	44295
+später	44440
+Glück	44439
 letzte	44246
 Freunde	43913
 n	43890
@@ -413,7 +413,7 @@ weit	41558
 Ahnung	41525
 seiner	41478
 bisschen	41471
-Tür	41457
+Tür	41605
 Auto	41372
 Jungs	40783
 eure	40647
@@ -422,7 +422,7 @@ Polizei	40572
 stehen	40469
 sterben	40334
 hätten	40190
-draußen	40075
+draußen	41464
 kenne	39750
 fast	39542
 runter	39290
@@ -433,7 +433,7 @@ dran	38593
 wurden	38564
 arbeiten	38510
 mom	38250
-verrückt	38126
+verrückt	38198
 neue	38119
 ging	38051
 hinter	37964
@@ -450,7 +450,7 @@ drin	36941
 ruhig	36940
 sah	36936
 ganzen	36929
-spät	36834
+spät	36930
 ziemlich	36820
 solltest	36770
 Name	36668
@@ -467,14 +467,14 @@ lang	36029
 Job	35995
 keiner	35951
 seinem	35907
-hört	35796
+hört	35985
 verstehen	35693
 spielen	35600
-überhaupt	35566
+überhaupt	35635
 Teufel	35421
 verstanden	35353
 verloren	35282
-große	35255
+große	36427
 Hand	35247
 Grund	35243
 Jahr	35092
@@ -562,9 +562,9 @@ guter	29956
 Chance	29888
 Freundin	29850
 Krieg	29815
-gefällt	29665
+gefällt	29801
 kleinen	29378
-erzählen	29301
+erzählen	29365
 anderes	29170
 Tage	29111
 entschuldigen	29089
@@ -592,7 +592,7 @@ Gesicht	27489
 Falls	14531
 falls	12916
 neuen	27364
-bloß	27288
+bloß	28009
 unten	27259
 Teil	22361
 teil	4882
@@ -648,7 +648,7 @@ früher	24599
 Jungen	17276
 jungen	7222
 wohin	24373
-außer	24306
+außer	25133
 früh	24189
 setzen	24061
 zuerst	24005
@@ -661,7 +661,7 @@ tue	23560
 kennst	23541
 willkommen	23375
 Plan	23291
-großen	23269
+großen	23856
 retten	23258
 hierher	23229
 wär	23099
@@ -672,9 +672,9 @@ Dollar	22913
 zehn	22855
 allem	22790
 Pass	22790
-nächste	22714
+nächste	22783
 Stunde	22665
-Hände	22645
+Hände	22738
 gegeben	22620
 Menge	22618
 langsam	22581
@@ -691,8 +691,8 @@ Ruf	17947
 ruf	4000
 schaffen	21929
 leider	21867
-Scheiß	21719
-Hölle	21656
+Scheiß	22522
+Hölle	21784
 trotzdem	21476
 Doktor	21392
 tja	21330
@@ -725,7 +725,7 @@ alleine	20359
 erinnern	20326
 völlig	20317
 kleines	20305
-könnt	20255
+könnt	20544
 Stelle	17419
 stelle	2805
 Kumpel	20189
@@ -761,7 +761,7 @@ wert	11489
 Arzt	19080
 froh	19077
 versuche	18964
-Straße	18963
+Straße	19846
 rufen	18953
 heiraten	18905
 super	18808
@@ -793,7 +793,7 @@ halte	18121
 hält	18118
 glaub	18114
 irgendwo	18104
-Stück	18090
+Stück	18220
 genauso	18069
 kennt	17994
 genommen	17993
@@ -814,7 +814,7 @@ angerufen	17582
 sitzen	17556
 daß	17517
 Erde	17474
-großer	17433
+großer	17936
 Schlüssel	17425
 Rest	17407
 passieren	17383
@@ -840,7 +840,7 @@ Sex	16739
 Waffen	16732
 Wohnung	16722
 weh	16694
-heißen	16650
+heißen	17101
 Krankenhaus	16645
 bringe	16621
 höre	16609
@@ -849,7 +849,7 @@ Klasse	16595
 hart	16572
 worden	16568
 Sinn	16557
-außerdem	16556
+außerdem	17030
 verletzt	16552
 ändern	16487
 erfahren	16462
@@ -859,17 +859,17 @@ vorsichtig	16349
 daddy	16329
 stolz	16247
 stark	16208
-fällt	16206
+fällt	16431
 möchtest	16205
 Leuten	16172
 besonders	16170
-schöne	16144
+schöne	16302
 schicken	16123
 Person	16074
 schätze	16063
 solange	16060
 länger	15996
-großartig	15979
+großartig	16342
 lacht	15975
 anrufen	15965
 stand	15933
@@ -890,7 +890,7 @@ kämpfen	15639
 wisst	15636
 Lachen	6929
 lachen	8706
-hörst	15623
+hörst	16167
 Zeug	15621
 lustig	15572
 umbringen	15552
@@ -1064,7 +1064,7 @@ herum	12404
 Finger	12399
 Ehe	12381
 Rolle	12375
-ließ	12333
+ließ	12639
 gleiche	12325
 Monat	12325
 Hochzeit	12310
@@ -1100,11 +1100,11 @@ steckt	11978
 jedenfalls	11973
 schreit	11962
 tolle	11960
-rüber	11953
+rüber	12043
 tschüss	11927
 nennt	11927
 Raum	11906
-heiß	11903
+heiß	12292
 Foto	11901
 kalt	11893
 Paul	11876
@@ -1123,7 +1123,7 @@ nahm	11707
 aller	11704
 freut	11693
 Seele	11638
-schießen	11613
+schießen	12023
 müde	11612
 dauert	11606
 magst	11603
@@ -1223,7 +1223,7 @@ ans	10646
 de	10624
 and	10618
 links	10601
-großes	10593
+großes	10862
 welches	10579
 beschützen	10577
 geboren	10558
@@ -1287,7 +1287,7 @@ offensichtlich	9998
 naja	9996
 Henry	9995
 Gefühle	9980
-Fuß	9974
+Fuß	10358
 Show	9970
 Überraschung	9952
 Geheimnis	9948
@@ -1359,7 +1359,6 @@ Armee	9395
 Jim	9391
 Tee	9380
 entweder	9358
-weiss	9337
 Don	9335
 detective	9333
 aufhalten	9329
@@ -1507,7 +1506,7 @@ stopp	8367
 Übel	3489
 übel	4873
 Schlampe	8361
-schöner	8358
+schöner	8448
 Adresse	8356
 Unsinn	8340
 Messer	8335
@@ -1542,7 +1541,7 @@ Eis	8082
 danken	8074
 Erfolg	8064
 zufrieden	8061
-schließen	8059
+schließen	8328
 besorgen	8059
 Wochenende	8041
 worüber	8041
@@ -1567,7 +1566,7 @@ gleichen	7932
 Fernsehen	6797
 fernsehen	1118
 wünsche	7912
-schließlich	7900
+schließlich	8130
 gefangen	7896
 Schätzchen	7887
 seh	7880
@@ -1847,7 +1846,7 @@ gilt	6460
 Held	6458
 daraus	6456
 erstes	6444
-Fräulein	6438
+Fräulein	6522
 Rachel	6434
 prima	6417
 brauchte	6401
@@ -1871,7 +1870,7 @@ taten	1968
 Lord	6360
 dringend	6359
 commander	6353
-Großvater	6351
+Großvater	6545
 Sommer	6351
 gezeigt	6347
 hinterlassen	6347
@@ -1892,7 +1891,7 @@ Stein	6301
 Atmen	1905
 atmen	4386
 Hose	6273
-weiße	6272
+weiße	6502
 sprichst	6271
 größer	6270
 schickt	6270
@@ -1963,7 +1962,7 @@ Fisch	6038
 eurem	6037
 Füße	6035
 stehst	6021
-erschießen	6009
+erschießen	6170
 Kuchen	6004
 versuchte	6004
 Zustand	6003
@@ -1982,7 +1981,7 @@ abgesehen	5981
 fair	5977
 vertraut	5962
 Koffer	5956
-hieß	5955
+hieß	6110
 Kurs	5950
 wirkt	5950
 Idioten	5948
@@ -2069,9 +2068,9 @@ Scott	5658
 Karriere	5655
 Akte	5633
 Erinnerung	5621
-Großmutter	5603
+Großmutter	5815
 erzähle	5600
-lösen	5597
+lösen	5827
 bravo	5590
 Griff	2272
 griff	3313
@@ -2124,7 +2123,7 @@ klug	5435
 Kräfte	5432
 Verlangen	1927
 verlangen	3501
-außerhalb	5424
+außerhalb	5597
 Opa	5423
 selbstverständlich	5421
 aufstehen	5420
@@ -2257,7 +2256,7 @@ Hexe	5039
 erwachsen	5037
 Jerry	5016
 Pistole	5014
-saß	5013
+saß	5120
 dreht	5012
 Aussage	5010
 liebte	5006
@@ -2600,7 +2599,6 @@ find	4232
 erkannt	4227
 Beerdigung	4227
 Müll	4223
-weisst	4222
 möge	4222
 stellte	4221
 Mitte	4219
@@ -2831,7 +2829,7 @@ Dunkelheit	3799
 spazieren	3797
 Angel	3794
 hiermit	3792
-schließt	3790
+schließt	4113
 phoebe	3788
 vieles	3785
 erfüllt	3784
@@ -2932,7 +2930,7 @@ lecker	3616
 Klinik	3615
 dicht	3605
 befinden	3597
-ließen	3596
+ließen	3687
 Bürger	3593
 verursacht	3593
 Hammer	3590
@@ -3005,7 +3003,7 @@ kämpfe	3493
 ergeben	3491
 China	3489
 fange	3487
-Häuser	3487
+Häuser	3748
 verliere	3487
 Gedanke	3487
 Tausende	2737
@@ -3066,7 +3064,7 @@ Schweine	3400
 nettes	3399
 house	3396
 Verlust	3396
-verließ	3396
+verließ	3490
 wirf	3395
 wenige	3392
 willie	3392
@@ -3164,7 +3162,7 @@ loslassen	3283
 berichten	3283
 verabschieden	3283
 Antrag	3283
-schieß	3282
+schieß	3420
 abby	3278
 Benehmen	1822
 benehmen	1454
@@ -3690,7 +3688,7 @@ gewöhnlich	2691
 Seil	2691
 Bär	2690
 Euro	2690
-großartige	2689
+großartige	2773
 Beth	2686
 Ware	2685
 traurige	2684
@@ -3845,7 +3843,7 @@ geklappt	2562
 Hintergrund	2560
 erwähnen	2558
 Tipp	2557
-reißen	2556
+reißen	2645
 keins	2554
 genial	2554
 Berichte	2553
@@ -4152,7 +4150,7 @@ unangenehm	2329
 Ausrüstung	2327
 Segen	2327
 präsentiert	2326
-schließ	2326
+schließ	2399
 Kehle	2324
 Krone	2322
 garantiert	2322
@@ -4245,7 +4243,7 @@ murphy	2256
 Raumschiff	2256
 Dummen	838
 dummen	1418
-weißer	2256
+weißer	2320
 Ausbildung	2255
 Klavier	2255
 Hauptsache	2254
@@ -4449,7 +4447,7 @@ Papst	2135
 Toast	2134
 Matthew	2134
 einsteigen	2133
-Löwen	2132
+Löwen	2241
 einsetzen	2132
 Gewinn	2132
 schüchtern	2132
@@ -4868,7 +4866,7 @@ Verletzungen	1902
 special	1902
 Zwillinge	1902
 mia	1901
-reißt	1901
+reißt	1982
 zeigst	1900
 stirb	1900
 Justin	1899
@@ -5095,7 +5093,7 @@ lebten	1781
 Sieger	1781
 Verfassung	1780
 küsst	1780
-Fußball	1779
+Fußball	1899
 geschnitten	1778
 Master	1778
 quietschen	1778
@@ -5540,7 +5538,7 @@ empfinden	1595
 J	957
 j	638
 bereite	1595
-täte	1594
+täte	2064
 benutzte	1594
 Halloween	1594
 abgesagt	1594
@@ -5697,7 +5695,7 @@ Wiederhören	1544
 Passagiere	1543
 Diebe	1542
 guckst	1542
-fließt	1541
+fließt	1604
 Elend	1100
 elend	440
 andauernd	1540
@@ -6206,7 +6204,6 @@ lena	1390
 beiseite	1390
 umgekehrt	1389
 Geschworenen	1389
-draussen	1389
 ausgesprochen	1389
 beseitigen	1388
 Burg	1387
@@ -6488,7 +6485,6 @@ Pedro	1320
 Konferenz	1320
 Länder	1320
 Flecken	1319
-fur	1319
 neal	1319
 Sonnenaufgang	1319
 reed	1319
@@ -7657,7 +7653,6 @@ chang	1058
 lynette	1058
 feine	1058
 Home	1057
-grosse	1057
 schickten	1057
 Überreste	1057
 how	1057
@@ -8213,7 +8208,7 @@ abstellen	959
 pornos	959
 erklärte	959
 produzieren	959
-Müller	958
+Müller	1076
 gehängt	958
 weinte	958
 Routine	958
@@ -8728,7 +8723,6 @@ lesbe	884
 cordelia	884
 Konten	883
 schleichen	883
-Strasse	883
 Höschen	883
 jüngsten	883
 niedrig	883
@@ -9143,7 +9137,6 @@ abgerissen	828
 halber	828
 anvertraut	827
 Leder	827
-ausser	827
 verfehlt	827
 verehrte	827
 Schmutz	827
@@ -9345,7 +9338,6 @@ illegalen	804
 Schuft	804
 rückt	804
 drohte	804
-scheiss	803
 zurückkehrt	803
 verlangst	803
 zünden	803
@@ -10150,7 +10142,6 @@ Hengst	721
 schwanzlutscher	721
 löse	721
 Banane	721
-bloss	721
 gavin	721
 skinner	721
 Schurken	721
@@ -11702,7 +11693,6 @@ murdock	587
 cut	587
 kriminell	587
 Praktikum	587
-grossen	587
 Angebote	587
 Märtyrer	587
 blutest	586
@@ -12294,7 +12284,6 @@ Erfinder	544
 kraftfeld	544
 unbesiegbar	544
 Niete	544
-horst	544
 beinah	544
 schwing	544
 schneit	544
@@ -12950,7 +12939,6 @@ beteiligten	168
 neville	503
 Springer	503
 angus	503
-grosser	503
 Übungen	503
 Mittelalter	503
 skript	503
@@ -13499,7 +13487,6 @@ verträgt	474
 unmittelbar	474
 erhängt	474
 hinab	474
-ausserdem	474
 albernen	474
 grässlich	474
 aufgibt	474
@@ -13569,7 +13556,6 @@ eliminiert	471
 leah	471
 Sitte	470
 rene	470
-tate	470
 byron	470
 philly	470
 erlaubst	470
@@ -13733,7 +13719,6 @@ erhört	463
 frustrierend	463
 erlöse	463
 forderte	463
-uber	463
 Anleitung	463
 cover	463
 vergiß	462
@@ -13981,7 +13966,6 @@ Gespür	451
 Aktenkoffer	451
 erfülle	451
 zubereitet	451
-heissen	451
 Erdboden	451
 hüa	451
 reinbringen	451
@@ -14069,7 +14053,6 @@ undankbar	447
 sequenz	447
 Weges	447
 erworben	447
-konnen	447
 salem	447
 griechische	447
 harmon	447
@@ -14933,7 +14916,6 @@ strömen	86
 bestehst	410
 zurückgeholt	410
 abrechnung	410
-schiessen	410
 Finanzamt	410
 Rampenlicht	410
 geschleppt	410
@@ -15488,7 +15470,6 @@ heimkommen	389
 talk	389
 frachtraum	389
 unangemessen	389
-heiss	389
 bombardiert	389
 Bündel	389
 außenposten	389
@@ -15659,7 +15640,6 @@ ser	384
 mercy	384
 Träne	384
 grunzt	384
-fuss	384
 politisches	384
 Zimmermann	384
 almanzo	384
@@ -16262,7 +16242,6 @@ Blitze	363
 Notwendige	192
 notwendige	171
 Westküste	363
-grossartig	363
 loge	363
 Verwechslung	363
 bashir	363
@@ -17562,7 +17541,6 @@ webb	323
 gläubig	323
 Abbruch	323
 Motorräder	323
-schliesst	323
 geschworene	323
 herzfrequenz	323
 mads	323
@@ -17592,7 +17570,6 @@ falles	322
 raul	322
 wah	322
 gallo	322
-mussen	322
 barriere	322
 dotty	322
 kräftigen	322
@@ -18182,7 +18159,6 @@ Katrin	306
 Schlitz	306
 chucky	306
 comeback	306
-liess	306
 glorreichen	306
 formuliert	306
 danvers	306
@@ -18832,7 +18808,6 @@ put	290
 Zimt	290
 Anmeldung	290
 statuieren	289
-konnt	289
 fantastisches	289
 Moslems	289
 Kritiken	289
@@ -19829,7 +19804,6 @@ Kadaver	269
 milos	269
 kommuniziert	269
 alden	269
-grosses	269
 giorgio	269
 unsensibel	269
 widerwärtig	269
@@ -19843,7 +19817,6 @@ potenzielle	269
 Gewerkschaften	269
 Berufe	269
 hoff	269
-schliessen	269
 Residenz	268
 weitergeleitet	268
 Match	268
@@ -20221,7 +20194,6 @@ investor	261
 montags	261
 diplomatischen	261
 erregend	261
-hauser	261
 Polizeistation	261
 Größen	261
 pr	261
@@ -21917,7 +21889,6 @@ klimpern	230
 geeignete	230
 unbewusst	230
 wusch	230
-losen	230
 Fluggesellschaft	230
 clair	230
 Genen	230
@@ -21928,7 +21899,6 @@ blaze	230
 entsprechende	230
 bettelt	230
 Amtszeit	230
-schliesslich	230
 feierten	230
 monterey	230
 auswirken	230
@@ -21957,7 +21927,6 @@ Krächzen	144
 krächzen	86
 clave	230
 arrangiere	230
-weisse	230
 verringert	230
 klapsmühle	229
 tosh	229
@@ -22049,7 +22018,6 @@ Ozeans	228
 vermessen	228
 Abhängigkeit	228
 Steg	228
-zuruck	228
 nützlicher	228
 Dörfern	228
 Kaktus	228
@@ -22200,7 +22168,6 @@ runtergekommen	225
 herholen	225
 Violine	225
 künftige	225
-fallt	225
 devereaux	225
 weitergemacht	225
 recep	225
@@ -23113,7 +23080,6 @@ perseus	212
 kolonisten	212
 Autofahrer	212
 Bahre	212
-grossmutter	212
 Möglichstes	212
 vorzugehen	212
 gewandert	212
@@ -24499,7 +24465,6 @@ rentier	194
 anspielungen	194
 egoistischer	194
 worth	194
-grossvater	194
 woah	194
 dmitri	194
 Laus	194
@@ -24880,7 +24845,6 @@ aufgefangen	189
 ergo	189
 unerbittlich	189
 dew	189
-hort	189
 weiterzuleben	189
 Pfadfindern	189
 vorstellst	189
@@ -26341,7 +26305,6 @@ zahlreich	174
 küchenchef	174
 Geigen	127
 geigen	46
-ausserhalb	173
 intern	173
 blamage	173
 vorbehalten	173
@@ -27685,7 +27648,6 @@ arcadia	161
 rasseln	161
 wehrst	161
 zartes	161
-erschiessen	161
 geschuldet	161
 steigend	161
 Reform	161
@@ -27755,8 +27717,6 @@ verbrecherin	160
 Zauberwort	160
 beerdigungsinstitut	160
 tampon	160
-madchen	160
-gehort	160
 Komödien	160
 kurieren	160
 remember	160
@@ -27932,7 +27892,6 @@ verschlägt	158
 endstadium	158
 fool	158
 speedster	158
-schone	158
 trenton	158
 marvel	158
 Armenier	158
@@ -28268,7 +28227,6 @@ ablesen	155
 Tafeln	155
 entführern	155
 zerstreuen	155
-hiess	155
 getrocknet	155
 cersei	155
 weißte	155
@@ -29187,7 +29145,6 @@ Flausen	148
 akkord	148
 mylords	148
 Fühler	148
-tur	148
 Muttermilch	148
 beliebigen	148
 bohrinsel	148
@@ -29626,7 +29583,6 @@ nighthorse	145
 transplantat	145
 commandant	145
 Gesandte	145
-naturlich	145
 einlauf	145
 schleuder	145
 prägen	145
@@ -29652,7 +29608,6 @@ schmaler	144
 berät	144
 friedensrichter	144
 Rekonstruktion	144
-gluck	144
 Pfannen	144
 verfaulen	144
 rojas	144
@@ -30230,7 +30185,6 @@ Augenarzt	140
 petrelli	140
 Versammlungen	140
 Schusswaffe	140
-horen	140
 shooter	140
 eilte	140
 vorzuweisen	140
@@ -30575,7 +30529,6 @@ unhörbar	138
 verwunderlich	138
 gue	138
 unsereins	138
-schiess	138
 Akkorde	138
 geisterstadt	138
 schnuppern	138
@@ -30734,7 +30687,6 @@ nachlaufen	136
 überhitzt	136
 hari	136
 aufgeschoben	136
-gefallt	136
 Schimpfwörter	136
 kapitalverbrechen	136
 hochgejagt	136
@@ -30866,7 +30818,6 @@ schmier	135
 versank	135
 überrumpeln	135
 abstinenz	135
-hor	135
 schwerwiegende	135
 Hauptfigur	135
 konservative	135
@@ -31715,7 +31666,6 @@ geburtsrecht	130
 indischer	130
 heimatplaneten	130
 grischa	130
-stuck	130
 sprengladungen	130
 majors	130
 hud	130
@@ -32080,7 +32030,6 @@ kontroverse	43
 kniescheibe	128
 anzurichten	128
 kilian	128
-holle	128
 achso	128
 Begierden	128
 belgische	128
@@ -32600,7 +32549,6 @@ Marika	125
 beizutragen	125
 entwarnung	125
 Geschirrspüler	124
-dafur	124
 verzaubern	124
 Entfernungen	124
 mohamed	124
@@ -33460,11 +33408,9 @@ unterzeichnung	120
 verabschiedung	120
 zyanid	120
 einleuchtend	120
-spater	120
 meat	120
 bosses	120
 maulesel	120
-fussball	120
 debattieren	120
 überlegene	120
 eat	120
@@ -33709,7 +33655,6 @@ geflüster	118
 Pechvogel	118
 makoto	118
 respektierte	118
-muller	118
 tropischen	118
 Schneeball	118
 gesuchter	118
@@ -34369,7 +34314,6 @@ fanta	115
 Mongolei	115
 coo	115
 festgemacht	115
-grösse	115
 hannahs	115
 sinan	115
 reserviere	115
@@ -35458,7 +35402,6 @@ spaniern	109
 loyalen	109
 Schmeichelei	109
 tap	109
-lowen	109
 flair	109
 ofelia	109
 zaubert	109
@@ -35611,7 +35554,6 @@ Ströme	109
 Feldes	109
 khaleesi	109
 Eisbär	109
-äm	109
 jeffersonian	109
 Ausrufezeichen	109
 zoes	109
@@ -35980,7 +35922,6 @@ jc	107
 überträger	107
 überraschungsangriff	107
 hachi	107
-sass	107
 rotterdam	107
 schützengräben	107
 Ämter	107
@@ -38592,7 +38533,6 @@ individuellen	96
 bewachte	96
 zählten	96
 Kontaktdaten	96
-spat	96
 verschrieb	96
 macgregor	96
 ausgebaut	96
@@ -39062,7 +39002,6 @@ erholst	94
 wahrheitsserum	94
 gebührenden	94
 schwielen	94
-verliess	94
 raider	94
 weiterzugehen	94
 rangeht	94
@@ -39245,7 +39184,6 @@ aufwuchsen	93
 airline	93
 milizen	93
 paranoiden	93
-hande	93
 schoko	93
 spätere	93
 kniescheiben	93
@@ -39771,7 +39709,6 @@ Eierkuchen	91
 wegnahm	91
 angelehnt	91
 shun	91
-liessen	91
 probelauf	91
 babineaux	91
 schaurig	91
@@ -39952,7 +39889,6 @@ rai	90
 Bildnis	90
 efraim	90
 raufen	90
-ruber	90
 Ansporn	90
 ausgewachsene	90
 Semmeln	90
@@ -40108,7 +40044,6 @@ sniper	90
 juanito	90
 laroche	90
 nahestehen	90
-schoner	90
 waffengeschäft	90
 entgegengesetzte	90
 codiert	90
@@ -40166,7 +40101,6 @@ eindeutiger	89
 kaltherzig	89
 aussortiert	89
 Salate	89
-reissen	89
 Portugiesen	89
 titelsong	89
 bundesbehörden	89
@@ -40648,7 +40582,6 @@ vampirs	88
 rauskriege	88
 fußnägel	88
 aurelio	88
-nä	88
 Piratenschiff	88
 umhaut	88
 friedvoll	88
@@ -41707,7 +41640,6 @@ fredo	84
 sole	84
 snickers	84
 fruchtbare	84
-fraulein	84
 sashi	84
 crime	84
 freibrief	84
@@ -41766,7 +41698,6 @@ ausstopfen	84
 sartre	84
 genossenschaft	84
 sojamilch	84
-grossartige	84
 särgen	84
 arischen	84
 tauber	84
@@ -41798,7 +41729,6 @@ feldflasche	84
 bonsai	84
 angewöhnt	84
 ausgeladen	84
-manner	84
 vikings	84
 erdrosseln	84
 Ernsthaftigkeit	84
@@ -42763,7 +42693,6 @@ merc	81
 floor	81
 Bronchitis	81
 erzog	81
-reisst	81
 mikrowellen	81
 symbolik	81
 bouquet	81
@@ -45642,7 +45571,6 @@ tinas	73
 weihnachtsgeld	73
 verneigt	73
 seco	73
-schliess	73
 Plackerei	73
 privatunterricht	73
 narcos	73
@@ -45999,7 +45927,6 @@ oates	72
 pappy	72
 destabilisieren	72
 Selbstlosigkeit	72
-verruckt	72
 newly	72
 provozierst	72
 hanley	72
@@ -47080,7 +47007,6 @@ schicktest	69
 abschiedsfeier	69
 gefestigt	69
 blacklock	69
-uberhaupt	69
 goldschatz	69
 Übersetzungen	69
 sonderkommission	69
@@ -47221,7 +47147,6 @@ elementare	69
 begrab	69
 solonius	69
 entzweien	69
-nachste	69
 gezwitschert	69
 lauerte	69
 wicket	69
@@ -49360,7 +49285,6 @@ nahmt	64
 angedroht	64
 bösartigkeit	64
 plastischer	64
-weisser	64
 sekundäre	64
 gerad	64
 unrechtmäßig	64
@@ -49445,7 +49369,6 @@ aufzusammeln	64
 auszüge	64
 wählerschaft	64
 unbefangen	64
-erzahlen	64
 kapellmeister	64
 diskus	64
 anfällt	64
@@ -49916,7 +49839,6 @@ schlaufe	63
 jawort	63
 mobiliar	63
 unerschrocken	63
-fliesst	63
 abschriften	63
 lykos	63
 Urteilskraft	63

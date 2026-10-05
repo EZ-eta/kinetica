@@ -14,8 +14,8 @@ class ActionRowTest {
 
     @Test
     fun everyActionIsOfferable() {
-        // A row that could not offer an action would be a silent gap between the pickers
-        // and this list, which is exactly the bug the edge-swipe editor had.
+        // An action the row could not offer would be a silent gap between the pickers and
+        // this list, the bug the edge-swipe editor once had.
         assertEquals(EditorAction.entries.toSet(), ActionRow.ALL.toSet())
         assertEquals(ActionRow.ALL.size, ActionRow.ALL.distinct().size)
     }
@@ -23,7 +23,7 @@ class ActionRowTest {
     @Test
     fun everyGlyphIsShortAndDistinct() {
         // The ?123 popup draws a cell with no measuring and no clipping, so a long label
-        // overlaps its neighbours rather than shrinking. Three characters is the widest
+        // overlaps its neighbours instead of shrinking. Three characters is the widest
         // thing proven to work there.
         val glyphs = ActionRow.ALL.map { ActionRow.glyph(it) }
         for (g in glyphs) {
@@ -34,8 +34,7 @@ class ActionRowTest {
 
     @Test
     fun theDefaultsAreTheFourAtTheFront() {
-        // New actions append rather than rearrange, so turning one on does not move the
-        // cells a user already knows the position of.
+        // New actions append, so turning one on does not move cells a user already knows.
         assertEquals(ActionRow.DEFAULT, ActionRow.ALL.take(4).map { it.name }.toSet())
         for (name in ActionRow.DEFAULT) {
             assertTrue(name, ActionRow.ALL.any { it.name == name })
@@ -43,9 +42,53 @@ class ActionRowTest {
     }
 
     @Test
+    fun theUsersOrderIsTheRowsOrder() {
+        val chosen = setOf("EXPANDIFY", "SETTINGS", "UNDO")
+        assertEquals(
+            listOf(EditorAction.UNDO, EditorAction.EXPANDIFY, EditorAction.SETTINGS),
+            ActionRow.resolve(chosen, 2, 10, order = listOf("UNDO", "EXPANDIFY", "SETTINGS")),
+        )
+    }
+
+    @Test
+    fun aChosenActionTheOrderMissesComesAfterInCanonicalOrder() {
+        // A selection made before ordering existed, or an action turned on elsewhere.
+        assertEquals(
+            listOf(EditorAction.UNDO, EditorAction.SETTINGS, EditorAction.EXPANDIFY),
+            ActionRow.ordered(setOf("EXPANDIFY", "SETTINGS", "UNDO"), listOf("UNDO")),
+        )
+    }
+
+    @Test
+    fun unknownAndUnchosenNamesInTheOrderAreDropped() {
+        // An order written by another build, or naming an action turned off since.
+        assertEquals(
+            listOf(EditorAction.PASTE, EditorAction.SETTINGS),
+            ActionRow.ordered(setOf("SETTINGS", "PASTE"), listOf("GONE", "PASTE", "UNDO", "PASTE", "SETTINGS")),
+        )
+    }
+
+    @Test
+    fun theOrderIsCutAfterOrderingNotBefore() {
+        // The first ones the user put in front are the ones a narrow bar keeps.
+        assertEquals(
+            listOf(EditorAction.PASTE),
+            ActionRow.resolve(setOf("SETTINGS", "PASTE"), 2, maxCells = 1, order = listOf("PASTE")),
+        )
+    }
+
+    @Test
+    fun anOrderRoundTripsThroughItsStoredForm() {
+        val order = listOf(EditorAction.TIME, EditorAction.PASTE)
+        assertEquals(listOf("TIME", "PASTE"), ActionRow.decodeOrder(ActionRow.encodeOrder(order)))
+        assertEquals(emptyList<String>(), ActionRow.decodeOrder(null))
+        assertEquals(emptyList<String>(), ActionRow.decodeOrder(" , "))
+    }
+
+    @Test
     fun theRowIsCanonicallyOrderedWhateverOrderItIsChosenIn() {
-        // The set carries membership and the order is imposed, exactly as the enabled
-        // languages do it. A Set has no iteration order to trust.
+        // With no stored order, the set carries membership and the order is ALL's.
+        // A Set has no iteration order to trust.
         val chosen = setOf("EXPANDIFY", "SETTINGS", "UNDO")
         assertEquals(
             listOf(EditorAction.SETTINGS, EditorAction.UNDO, EditorAction.EXPANDIFY),
@@ -75,8 +118,8 @@ class ActionRowTest {
 
     @Test
     fun theRowIsCutToWhatFits() {
-        // A cell narrower than a thumb is not a shortcut. The bar holds the front of the
-        // row rather than shrinking all of it.
+        // A cell narrower than a thumb is not a shortcut. The bar keeps the front of the row
+        // instead of shrinking all of it.
         assertEquals(2, ActionRow.resolve(ActionRow.DEFAULT, 2, maxCells = 2).size)
         assertEquals(emptyList<EditorAction>(), ActionRow.resolve(ActionRow.DEFAULT, 2, 0))
     }
@@ -177,5 +220,40 @@ class ActionRowTest {
         assertEquals("en", ActionRow.nextLanguage(listOf("en", "it"), "cs"))
         assertEquals(null, ActionRow.nextLanguage(listOf("en"), "en"))
         assertEquals(null, ActionRow.notice(EditorAction.NEXT_LANGUAGE, state(languages = listOf("en"))))
+    }
+
+    @Test
+    fun aShortcutSymbolInALetterListNamesItsAction() {
+        // Every glyph is its own action's and no other's, and letters are no action.
+        val plainText = setOf(
+            EditorAction.SELECT_ALL, EditorAction.TOGGLE_NUMBER_ROW, EditorAction.EXPANDIFY,
+            EditorAction.TOGGLE_TYPING_SPEED, EditorAction.TOGGLE_PECK_MODE,
+            EditorAction.ARROW_UP, EditorAction.ARROW_DOWN, EditorAction.ARROW_LEFT, EditorAction.ARROW_RIGHT,
+        )
+        for (a in EditorAction.entries) {
+            assertEquals(if (a in plainText) null else a, ActionRow.actionForGlyph(ActionRow.glyph(a)))
+        }
+        // `123`, `ALL` and the French quote `»` are text a list may hold, never an action.
+        for (t in listOf("123", "ALL", "»", "wpm", "→", "←", "TAP")) assertEquals(null, ActionRow.actionForGlyph(t))
+        assertEquals(EditorAction.entries.size, EditorAction.entries.map { ActionRow.glyph(it) }.toSet().size)
+        for (t in listOf("a", "é", "1", "?", "", "all")) assertEquals(null, ActionRow.actionForGlyph(t))
+    }
+
+    @Test
+    fun aSettingToggledFromTheKeyboardSaysTheStateItLeaves() {
+        val off = ActionRow.KeyboardState(true, listOf("en"), "en", "full", null)
+        assertEquals(ActionRow.Notice.Toggle(EditorAction.TOGGLE_NUMBER_ROW, true), ActionRow.notice(EditorAction.TOGGLE_NUMBER_ROW, off))
+        val on = off.copy(nextWord = true, recentWords = true, tidySpaces = true)
+        assertEquals(ActionRow.Notice.Toggle(EditorAction.TOGGLE_NEXT_WORD, false), ActionRow.notice(EditorAction.TOGGLE_NEXT_WORD, on))
+        assertEquals(ActionRow.Notice.Toggle(EditorAction.TOGGLE_RECENT_WORDS, false), ActionRow.notice(EditorAction.TOGGLE_RECENT_WORDS, on))
+        assertEquals(ActionRow.Notice.Toggle(EditorAction.TOGGLE_TIDY_SPACES, false), ActionRow.notice(EditorAction.TOGGLE_TIDY_SPACES, on))
+    }
+
+    @Test
+    fun anActionWrittenByNameBecomesItsSymbol() {
+        assertEquals("⎘", ActionRow.glyphForToken(":paste"))
+        assertEquals(null, ActionRow.glyphForToken(":select_all"))
+        assertEquals("↶", ActionRow.glyphForToken(":UNDO"))
+        for (t in listOf("paste", ":", ":nothing", "a", "")) assertEquals(null, ActionRow.glyphForToken(t))
     }
 }

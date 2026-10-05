@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="popup_shape_entries">
+        <item>Riga singola</item>
+        <item>3 x 3</item>
+        <item>4 x 3</item>
+        <item>5 x 3</item>
+    </string-array>
+    <string-array name="landscape_arrangement_entries">
+        <item>Divisa ai bordi</item>
+        <item>Centrata</item>
+        <item>Larghezza piena</item>
+    </string-array>
+    <string-array name="layout_mode_entries">
+        <item>Larghezza piena</item>
+        <item>Allineata a destra</item>
+        <item>Allineata a sinistra</item>
+        <item>Divisa</item>
+        <item>A una mano</item>
+    </string-array>
+    <string-array name="trail_color_entries">
+        <item>Arcobaleno</item>
+        <item>Rosso</item>
+        <item>Arancione</item>
+        <item>Verde</item>
+        <item>Ciano</item>
+        <item>Viola</item>
+        <item>Tonalità a scelta</item>
+        <item>Colore del tema</item>
+    </string-array>
+    <string-array name="theme_mode_entries">
+        <item>Kinetica scuro (predefinito)</item>
+        <item>Material You (Android 12+)</item>
+        <item>Colore a scelta</item>
+    </string-array>
+    <string-array name="theme_color_entries">
+        <item>Blu Kinetica</item>
+        <item>Rosso</item>
+        <item>Rosa</item>
+        <item>Porpora</item>
+        <item>Viola scuro</item>
+        <item>Indaco</item>
+        <item>Blu</item>
+        <item>Ciano</item>
+        <item>Verde acqua</item>
+        <item>Verde</item>
+        <item>Ambra</item>
+        <item>Arancione</item>
+        <item>Marrone</item>
+    </string-array>
+    <string-array name="reinforce_entries">
+        <item>Piccolo (+1)</item>
+        <item>Medio (+5)</item>
+        <item>Grande (+10)</item>
+    </string-array>
+    <string-array name="comma_mode_entries">
+        <item>Virgola (predefinito)</item>
+        <item>Tolta (la barra spaziatrice si allarga)</item>
+        <item>Carattere a scelta</item>
+        <item>Testo a scelta</item>
+        <item>Incolla</item>
+        <item>Seleziona tutto</item>
+    </string-array>
+    <string-array name="autocorrect_entries">
+        <item>Spenta</item>
+        <item>Normale</item>
+        <item>Aggressiva</item>
+    </string-array>
+    <string-array name="language_entries">
+        <item>English</item>
+        <item>Italiano</item>
+        <item>Español</item>
+        <item>Polski</item>
+        <item>Čeština</item>
+        <item>Nederlands</item>
+        <item>Deutsch</item>
+        <item>Français</item>
+        <item>Norsk</item>
+        <item>Русский (sperimentale)</item>
+        <item>Українська (sperimentale)</item>
+        <item>עברית (sperimentale)</item>
+        <item>العربية (sperimentale)</item>
+    </string-array>
+    <string-array name="theme_brightness_entries">
+        <item>Scuro</item>
+        <item>Chiaro</item>
+        <item>Segui il sistema</item>
+    </string-array>
+    <string-array name="key_arrangement_entries">
+        <item>QWERTY</item>
+        <item>QWERTZ (Y e Z scambiate)</item>
+        <item>QZERTY (Z e W scambiate)</item>
+        <item>AZERTY (disposizione francese)</item>
+    </string-array>
+</resources>

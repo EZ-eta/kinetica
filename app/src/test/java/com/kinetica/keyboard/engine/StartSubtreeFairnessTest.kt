@@ -5,18 +5,15 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Regression for the start-subtree starvation found via "siempre"
- * emit attempts count against a single global budget
- * (MAX_CANDIDATES) while children are explored frequency-first, so one giant
- * start-letter subtree adjacent to the path start (es: d-, holding "de")
- * could exhaust the whole budget before the intended word's subtree was even
- * visited - the word was never reached, not outranked. The budget must be
- * sliced across admissible start subtrees so the cap bites within a subtree,
- * never across one.
+ * Regression for start-subtree starvation, found on "siempre": emit attempts count against one
+ * global budget (MAX_CANDIDATES) while children are explored frequency-first, so a giant
+ * start-letter subtree beside the path start (es: d-, holding "de") could spend the whole
+ * budget before the intended word's subtree was visited. The budget is sliced across admissible
+ * start subtrees so the cap bites within a subtree, never across one.
  *
- * Synthetic so the lock is dictionary-independent: a d- subtree stuffed with
- * hundreds of path-admissible fillers, all outranking the s- subtree in
- * frequency order, must not starve the exact-overlay target word.
+ * Synthetic so the lock is dictionary-independent: a d- subtree stuffed with hundreds of
+ * path-admissible fillers, all ahead of the s- subtree in frequency order, must not starve the
+ * exact-overlay target word.
  */
 class StartSubtreeFairnessTest {
 

@@ -7,9 +7,8 @@ import org.junit.Test
 /**
  * The line COPY_LINE puts on the clipboard (#19: "copy whole line").
  *
- * Read out of the editor either side of the cursor in the same call, with no selection made
- * and no remembered offset used, which is what keeps item 69's class of mistake out of it.
- * A line that runs past the read is refused, never cut.
+ * Read either side of the cursor in one call, with no selection and no remembered offset, so
+ * a remembered offset cannot eat text. A line that runs past the read is refused, never cut.
  */
 class LineAroundCursorTest {
 

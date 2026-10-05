@@ -20,8 +20,6 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.setPadding
 import androidx.preference.PreferenceManager
-import java.io.File
-import java.time.LocalDateTime
 import com.kinetica.keyboard.R
 import com.kinetica.keyboard.data.DictionaryStore
 import com.kinetica.keyboard.data.KineticaDb
@@ -30,6 +28,7 @@ import com.kinetica.keyboard.engine.KineticaConstants
 import java.io.IOException
 import java.text.DateFormat
 import java.util.Date
+import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import org.json.JSONArray
@@ -37,11 +36,10 @@ import org.json.JSONException
 import org.json.JSONObject
 
 /**
- * Dictionary management per language: shows the active base dictionary
- * (bundled or imported AOSP merge) and the personal overlay, imports an
- * AOSP-format wordlist.combined via the system file picker (merged on-device,
- * no Python and no network), and exports/imports/resets the personal
- * dictionary. Any change bumps [Prefs.DICT_GENERATION] so the IME reloads.
+ * Dictionary management per language: shows the active base dictionary (bundled or imported AOSP
+ * merge) and the personal overlay, imports an AOSP-format wordlist.combined via the system file
+ * picker (merged on-device, no network), and exports, imports and resets the personal dictionary.
+ * Any change bumps [Prefs.DICT_GENERATION] so the IME reloads.
  */
 class DictionarySettingsActivity : AppCompatActivity() {
 
@@ -50,10 +48,9 @@ class DictionarySettingsActivity : AppCompatActivity() {
     private lateinit var container: LinearLayout
     private var pendingLang = "en"
 
-    // Language rows follow the canonical registry (Prefs.ALL_LANGUAGES) with
-    // display names from the language_entries/values arrays, so a language
-    // registered per ADDING_A_LANGUAGE.md §4 appears here automatically.
-    // Lazy: resources are not attached at field-init time.
+    // Language rows follow the canonical registry (Prefs.ALL_LANGUAGES) with display names from
+    // the language_entries/values arrays, so a language registered per ADDING_A_LANGUAGE.md §4
+    // appears here automatically. Lazy: resources are not attached at field-init time.
     private val langs: List<Pair<String, String>> by lazy {
         val values = resources.getStringArray(R.array.language_values)
         val entries = resources.getStringArray(R.array.language_entries)
@@ -75,17 +72,6 @@ class DictionarySettingsActivity : AppCompatActivity() {
         registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
             if (uri != null) importPersonal(pendingLang, uri)
         }
-    private val createBackup =
-        registerForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
-            if (uri != null) exportBackup(uri, includePhrases)
-        }
-    private val pickBackup =
-        registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-            if (uri != null) importBackup(uri)
-        }
-
-    /** Ticked in the export dialog; phrases ride only when it is. */
-    private var includePhrases = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -102,6 +88,17 @@ class DictionarySettingsActivity : AppCompatActivity() {
     override fun onSupportNavigateUp(): Boolean {
         finish()
         return true
+    }
+
+    /** The run end this screen last drew: a restore on the Backup screen changes these counts. */
+    private var seenEnd = BackupRun.progress.ended
+
+    override fun onStart() {
+        super.onStart()
+        if (seenEnd != BackupRun.progress.ended) {
+            seenEnd = BackupRun.progress.ended
+            refresh()
+        }
     }
 
     override fun onDestroy() {
@@ -183,23 +180,32 @@ class DictionarySettingsActivity : AppCompatActivity() {
         0
     }
 
+    /** Languages open on this screen; all start closed. */
+    private val expanded = HashSet<String>()
+    private var lastStates: List<LangState> = emptyList()
+
     private fun render(states: List<LangState>) {
+        lastStates = states
         container.removeAllViews()
         val pad = (8 * resources.displayMetrics.density).toInt()
         val active = activeLanguage()
 
-        for (s in states) {
+        // By name, as a reader looks for one; the registry order is the cycle order.
+        for (s in DictionaryRows.byName(states, { it.label }, Locale.getDefault())) {
+            val open = s.lang in expanded
             container.addView(
                 TextView(this).apply {
-                    text = if (s.lang == active) {
-                        getString(R.string.dict_lang_header_active, s.label)
-                    } else {
-                        s.label
-                    }
+                    val label = if (s.lang == active) getString(R.string.dict_lang_header_active, s.label) else s.label
+                    text = getString(if (open) R.string.dict_lang_open else R.string.dict_lang_closed, label)
                     textSize = 20f
                     setPadding(0, pad * 2, 0, pad / 2)
+                    setOnClickListener {
+                        if (!expanded.remove(s.lang)) expanded.add(s.lang)
+                        render(lastStates)
+                    }
                 },
             )
+            if (!open) continue
             val updated = s.updatedAt?.let {
                 DateFormat.getDateTimeInstance().format(Date(it))
             } ?: getString(R.string.dict_updated_bundled)
@@ -273,9 +279,8 @@ class DictionarySettingsActivity : AppCompatActivity() {
                     }
                 },
             )
-            // Learned phrases are a separate store and a separate consent, so they get a
-            // separate reset: someone who turns phrase learning off should be able to throw
-            // away what it already recorded without losing their learned words.
+            // Learned phrases are a separate store and a separate consent, so they get their own
+            // reset: turning phrase learning off can discard what it recorded and keep the words.
             container.addView(
                 Button(this).apply {
                     text = getString(R.string.dict_clear_phrases)
@@ -339,366 +344,24 @@ class DictionarySettingsActivity : AppCompatActivity() {
             },
         )
 
-        // Whole-keyboard backup, below the per-language rows because it is not per language:
-        // it carries every setting, every learned word in every language, the blocked words,
-        // the chords and the edge swipes. Asked for as the single top priority by someone
-        // moving between phones.
-        container.addView(
-            TextView(this).apply {
-                text = getString(R.string.backup_heading)
-                setPadding(0, pad * 2, 0, 0)
-                textSize = 16f
-            },
-        )
-        container.addView(
-            TextView(this).apply {
-                text = getString(R.string.backup_note)
-                setPadding(0, pad / 2, 0, 0)
-                textSize = 13f
-            },
-        )
-        container.addView(
-            Button(this).apply {
-                text = getString(R.string.backup_export)
-                setOnClickListener { askPhrasesThenExport() }
-            },
-        )
-        container.addView(
-            Button(this).apply {
-                text = getString(R.string.backup_import)
-                setOnClickListener {
-                    pickBackup.launch(arrayOf("text/plain", "text/*", "*/*"))
-                }
-            },
-        )
-        // Only once there is something to undo. A restore button that is always there and
-        // usually does nothing is the guard-that-looks-broken shape this project has hit
-        // before (KNOWN_ISSUES item 69's two guards).
-        val snapshot = snapshotFile()
-        if (snapshot.exists()) {
-            container.addView(
-                Button(this).apply {
-                    text = getString(
-                        R.string.backup_restore,
-                        java.text.DateFormat.getDateTimeInstance(
-                            java.text.DateFormat.SHORT, java.text.DateFormat.SHORT,
-                        ).format(java.util.Date(snapshot.lastModified())),
-                    )
-                    setOnClickListener { confirmRestoreSnapshot() }
-                },
-            )
-        }
-    }
-
-    // ------------------------------------------------------- whole-keyboard backup
-
-    /**
-     * Phrases are the one thing that needs asking about.
-     *
-     * Learned word pairs are opt-in in the first place because a pair is a fragment of a
-     * sentence, and a backup file can be copied anywhere. Leaving them out silently would be
-     * a backup that loses data; putting them in silently would undo the consent. So the
-     * export asks, unticked, every time.
-     */
-    private fun askPhrasesThenExport() {
-        io.execute {
-            val pairs = try {
-                Prefs.ALL_LANGUAGES.sumOf { KineticaDb.get(this).userBigrams().countForLanguage(it) }
-            } catch (e: RuntimeException) {
-                0
-            }
-            main.post {
-                if (isDestroyed) return@post
-                if (pairs == 0) {
-                    includePhrases = false
-                    createBackup.launch(Backup.filename(LocalDateTime.now()))
-                    return@post
-                }
-                val checked = booleanArrayOf(false)
-                AlertDialog.Builder(this)
-                    .setTitle(R.string.backup_export)
-                    .setMultiChoiceItems(
-                        arrayOf(getString(R.string.backup_include_phrases, pairs)),
-                        checked,
-                    ) { _, _, isChecked -> checked[0] = isChecked }
-                    .setPositiveButton(android.R.string.ok) { _, _ ->
-                        includePhrases = checked[0]
-                        createBackup.launch(Backup.filename(LocalDateTime.now()))
-                    }
-                    .setNegativeButton(android.R.string.cancel, null)
-                    .show()
-            }
-        }
-    }
-
-    private fun exportBackup(uri: Uri, withPhrases: Boolean) {
-        io.execute {
-            try {
-                val data = collectBackup(withPhrases)
-                val dropped = Backup.unencodable(data)
-                var lines = 0
-                contentResolver.openOutputStream(uri)?.bufferedWriter()?.use { w ->
-                    for (line in Backup.encode(data)) {
-                        w.write(line)
-                        w.write(NEWLINE)
-                        lines++
-                    }
-                } ?: throw IOException("cannot open $uri")
-                if (dropped > 0) {
-                    toastLater(R.string.backup_export_partial, lines - 1, dropped)
-                } else {
-                    toastLater(R.string.backup_export_done, lines - 1)
-                }
-            } catch (e: IOException) {
-                toastLater(R.string.backup_export_failed)
-            } catch (e: RuntimeException) {
-                toastLater(R.string.backup_export_failed)
-            }
-        }
-    }
-
-    /** Everything worth carrying, read on the io thread. */
-    private fun collectBackup(withPhrases: Boolean): Backup.Data {
-        val p = prefs()
-        val prefRows = ArrayList<Backup.Pref>()
-        for ((key, value) in p.all) {
-            // A change counter, not a setting: copying it would leave the new device's
-            // generation ahead of or behind its own data.
-            if (key == Prefs.DICT_GENERATION || key == Prefs.EXPANSION_GENERATION) continue
-            val row = when (value) {
-                is Boolean -> Backup.Pref(key, Backup.PrefType.BOOL, value.toString())
-                is Int -> Backup.Pref(key, Backup.PrefType.INT, value.toString())
-                is String -> Backup.Pref(key, Backup.PrefType.STRING, value)
-                is Set<*> -> Backup.Pref(
-                    key, Backup.PrefType.SET,
-                    value.filterIsInstance<String>().sorted().joinToString(","),
-                )
-                else -> null
-            }
-            if (row != null) prefRows.add(row)
-        }
-        val db = KineticaDb.get(this)
-        val words = ArrayList<Backup.Word>()
-        val blocked = ArrayList<Backup.Blocked>()
-        val phrases = ArrayList<Backup.Phrase>()
-        val base = ArrayList<String>()
-        for (lang in Prefs.ALL_LANGUAGES) {
-            for (r in db.userWords().allForLanguage(lang)) {
-                words.add(Backup.Word(lang, r.word, r.frequency))
-            }
-            for (r in db.blockedWords().allForLanguage(lang)) {
-                blocked.add(Backup.Blocked(lang, r.word))
-            }
-            if (withPhrases) {
-                for (r in db.userBigrams().topN(lang, Int.MAX_VALUE)) {
-                    phrases.add(Backup.Phrase(lang, r.prev, r.next, r.count))
-                }
-            }
-            if (DictionaryStore.readInfo(this, lang) != null) base.add(lang)
-        }
-        val chords = db.chordShortcuts().all().map { Backup.Chord(it.chord, it.expansion) }
-        val expansions = db.expansions().all().map {
-            Backup.Expand(it.trigger, it.position, it.target)
-        }
-        return Backup.Data(prefRows, words, blocked, chords, expansions, phrases, base)
-    }
-
-    private fun importBackup(uri: Uri) {
-        AlertDialog.Builder(this)
-            .setTitle(R.string.backup_import)
-            .setMessage(R.string.backup_import_message)
-            .setPositiveButton(R.string.dict_personal_import_merge) { _, _ ->
-                runBackupImport(uri, replace = false)
-            }
-            .setNegativeButton(R.string.dict_personal_import_replace) { _, _ ->
-                runBackupImport(uri, replace = true)
-            }
-            .setNeutralButton(android.R.string.cancel, null)
-            .show()
-    }
-
-    /**
-     * Where the pre-import snapshot lives.
-     *
-     * Internal storage rather than a document the user picks: a snapshot nobody chose to
-     * take is a snapshot nobody will be asked to file, and it has to be written without a
-     * picker standing between the user and the import they asked for.
-     */
-    private fun snapshotFile(): File = File(filesDir, SNAPSHOT_FILENAME)
-
-    /**
-     * Writes the keyboard as it stands, before an import replaces it (R80).
-     *
-     * [applyBackup] clears every language's learned words and overwrites every preference,
-     * and until this existed a mistaken replace-import was unrecoverable. Failure is
-     * swallowed on purpose: a snapshot that cannot be written must not stop the import the
-     * user actually asked for, and the restore button will not appear.
-     */
-    private fun writeSnapshot() {
-        try {
-            val data = collectBackup(withPhrases = true)
-            snapshotFile().bufferedWriter().use { w ->
-                for (line in Backup.encode(data)) {
-                    w.write(line)
-                    w.write(NEWLINE)
-                }
-            }
-        } catch (e: IOException) {
-            snapshotFile().delete()
-        } catch (e: RuntimeException) {
-            snapshotFile().delete()
-        }
-    }
-
-    private fun confirmRestoreSnapshot() {
-        AlertDialog.Builder(this)
-            .setTitle(R.string.backup_restore_title)
-            .setMessage(R.string.backup_restore_message)
-            .setPositiveButton(android.R.string.ok) { _, _ -> restoreSnapshot() }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
-    }
-
-    private fun restoreSnapshot() {
-        io.execute {
-            val file = snapshotFile()
-            val result = try {
-                file.bufferedReader().use { Backup.decode(it.lineSequence()) }
-            } catch (e: IOException) {
-                toastLater(R.string.backup_restore_failed)
-                null
-            } catch (e: RuntimeException) {
-                toastLater(R.string.backup_restore_failed)
-                null
-            }
-            // Never snapshots itself: the slot holds the state before the last IMPORT, and
-            // overwriting it here would spend the only undo on the undo.
-            if (result is Backup.Result.Ok) {
-                applyBackup(result, replace = true, snapshot = false)
-                toastLater(R.string.backup_restore_done)
-            } else if (result != null) {
-                toastLater(R.string.backup_restore_failed)
-            }
-        }
-    }
-
-    private fun runBackupImport(uri: Uri, replace: Boolean) {
-        io.execute {
-            val result = try {
-                contentResolver.openInputStream(uri)?.bufferedReader()?.use {
-                    Backup.decode(it.lineSequence())
-                } ?: throw IOException("cannot open $uri")
-            } catch (e: IOException) {
-                toastLater(R.string.dict_import_failed)
-                null
-            } catch (e: RuntimeException) {
-                toastLater(R.string.dict_import_failed)
-                null
-            }
-            when (result) {
-                null -> Unit
-                is Backup.Result.NotABackup -> toastLater(R.string.backup_import_not_backup)
-                is Backup.Result.TooNew -> toastLater(R.string.backup_import_too_new)
-                is Backup.Result.Ok -> applyBackup(result, replace)
-            }
-        }
-    }
-
-    /**
-     * Writes a decoded backup back into prefs and Room.
-     *
-     * Two orderings are load-bearing. The preferences go on the MAIN thread, because the
-     * IME's change listener runs on whoever writes and it repaints views; and
-     * [bumpGeneration] goes LAST, because it is the only thing that makes the running
-     * keyboard re-read the database, so it has to see finished tables.
-     */
-    private fun applyBackup(ok: Backup.Result.Ok, replace: Boolean, snapshot: Boolean = true) {
-        // Before anything is cleared, and on the io thread runBackupImport already put us
-        // on, so the undo exists even if the rest of this throws.
-        if (snapshot) writeSnapshot()
-        val db = KineticaDb.get(this)
-        val now = System.currentTimeMillis()
-        if (replace) {
-            for (lang in Prefs.ALL_LANGUAGES) {
-                db.userWords().clearLanguage(lang)
-                db.userBigrams().clearLanguage(lang)
-            }
-        }
-        for (w in ok.data.words) {
-            db.userWords().upsertAdd(
-                w.word, w.lang,
-                w.count.coerceIn(KineticaConstants.PERSONAL_MERGE_MIN_COUNT, MAX_IMPORT_COUNT),
-                now,
-            )
-        }
-        for (b in ok.data.blocked) db.blockedWords().block(b.word, b.lang, now)
-        for (c in ok.data.chords) db.chordShortcuts().assign(c.chord, c.expansion)
-        // Grouped so one trigger's targets are written as one list, the way the DAO owns
-        // them: a per-row assign would delete the trigger's earlier positions each time.
-        for ((trigger, rows) in ok.data.expansions.groupBy { it.trigger }) {
-            db.expansions().assign(trigger, rows.sortedBy { it.position }.map { it.target })
-        }
-        for (p in ok.data.phrases) {
-            db.userBigrams().upsertAdd(p.prev, p.next, p.lang, p.count.coerceAtMost(MAX_IMPORT_COUNT), now)
-        }
-        val missing = ok.data.importedBase.filter { DictionaryStore.readInfo(this, it) == null }
-        main.post {
-            if (isDestroyed) return@post
-            val e = prefs().edit()
-            for (pref in ok.data.prefs) {
-                when (pref.type) {
-                    Backup.PrefType.BOOL -> e.putBoolean(pref.key, pref.value == "true")
-                    Backup.PrefType.INT -> pref.value.toIntOrNull()?.let { e.putInt(pref.key, it) }
-                    Backup.PrefType.STRING -> e.putString(pref.key, pref.value)
-                    Backup.PrefType.SET -> e.putStringSet(
-                        pref.key,
-                        pref.value.split(",").filter { it.isNotEmpty() }.toSet(),
-                    )
-                }
-            }
-            e.apply()
-            bumpGeneration()
-            // Its own counter, and after the tables are written for the same reason
-            // bumpGeneration is: a restore that signalled first would reload an empty one.
-            bumpExpansionGeneration()
-            refresh()
-            val msg = if (missing.isEmpty()) {
-                getString(R.string.backup_import_done, ok.data.words.size, ok.data.prefs.size)
-            } else {
-                getString(R.string.backup_import_done_missing_base, missing.joinToString(", "))
-            }
-            Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
-        }
     }
 
     // ------------------------------------------------- per-word personal edit
 
     /**
-     * Per-word delete for the personal dictionary. Until now the only way to
-     * remove a learned word was resetting the whole language, and every
-     * historical need was for exactly one word: a misfire that got committed,
-     * learned, and then won the same gesture again ("cuñado" at 6, "quinndi",
-     * "qd"). `UserWordDao.delete` already existed and
-     * had no caller.
+     * Per-word edit for the personal dictionary: a misfire that got committed, learned and then
+     * won the same gesture again ("cuñado" at 6, "quinndi", "qd") is removed without resetting the
+     * language.
      *
-     * A dialog rather than a screen of its own: the list is read-only apart from
-     * the delete and nothing here needs to survive a rotation.
+     * A dialog, not a screen of its own: nothing here needs to survive a rotation.
      *
-     * The search field is what makes the delete reachable. The
-     * list is count-ordered on purpose - the word you are looking for is the one
-     * distorting your ranking - and that is exactly what makes scrolling to a
-     * NAMED word painful once the dictionary is real: a measured personal
-     * dictionary held 4,266 learned Italian words.
-     * Filtering is client-side because `allForLanguage` already returned every
-     * row before this dialog was built, so a `WHERE word LIKE` would be a round
-     * trip per keystroke for data already in memory.
+     * The list is count-ordered (see [PersonalWordRows.sortedForDisplay]), so a named word needs
+     * the search field: one personal dictionary held 4,266 learned Italian words. Filtering is
+     * client-side because `allForLanguage` already returned every row.
      *
-     * `setItems` and an adapter are mutually exclusive, which is why this uses
-     * the latter: the visible list has to be rebuilt as the query changes.
-     * **The click handler resolves through `shown`, never through `rows`** -
-     * an index taken against the unfiltered list would delete whatever happens
-     * to sit at that visual position, which on this screen means deleting the
-     * wrong learned word (`PersonalWordRowsTest`
+     * An adapter, not `setItems`, because the visible list is rebuilt as the query changes. The
+     * click handler resolves through `shown`, never `rows`: an index into the unfiltered list
+     * would delete the wrong word (`PersonalWordRowsTest`
      * .tappingAFilteredRowResolvesToTheWordUnderTheFinger pins it).
      */
     private fun showPersonalWords(lang: String, label: String) {
@@ -726,13 +389,11 @@ class DictionarySettingsActivity : AppCompatActivity() {
     /**
      * The block list for one language: add a spelling, tap a row to lift it.
      *
-     * Deliberately a plain list with no search box, unlike the learned words -
-     * that list runs to thousands of rows, this one holds the handful of things
-     * a user has actually objected to.
+     * A plain list with no search box: unlike the learned words, which run to thousands, it holds
+     * the handful of words a user has objected to.
      *
-     * Every change bumps DICT_GENERATION, which is what makes the running
-     * keyboard rebuild its trie; without it a blocked word stays decodable until
-     * the next dictionary load.
+     * Every change bumps DICT_GENERATION so the running keyboard rebuilds its trie; otherwise a
+     * blocked word stays decodable until the next dictionary load.
      */
     private fun showBlockedWords(lang: String, label: String) {
         io.execute {
@@ -782,8 +443,8 @@ class DictionarySettingsActivity : AppCompatActivity() {
         }
         dialog.setView(view)
         dialog.show()
-        // Overridden after show() so adding a word does not dismiss the dialog -
-        // blocking several in a row is the normal case.
+        // Overridden after show so adding a word does not dismiss the dialog: blocking several
+        // in a row is the normal case.
         dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
             val word = entry.text.toString().trim().lowercase()
             if (word.isEmpty()) return@setOnClickListener
@@ -801,15 +462,12 @@ class DictionarySettingsActivity : AppCompatActivity() {
     /**
      * Blocks or unblocks [word] in every enabled language, not only [lang].
      *
-     * The table stays keyed on (word, lang) and that is deliberate - blocking a junk
-     * name out of the English corpus must not also remove a real Italian word spelled
-     * the same. What was wrong is which rows one action wrote: a word held by two
-     * dictionaries stayed available from the other one, so blocking `kyra` (English
-     * rank 27341, Italian 33065) left it being offered from Italian and it kept
-     * appearing.
+     * The table stays keyed on (word, lang), so a later language is unaffected, but one action
+     * writes every enabled language: a word held by two dictionaries would otherwise stay on offer
+     * from the other one (`kyra` is English rank 27341 and Italian 33065).
      *
-     * Only the languages enabled right now, so a word blocked while English is the only
-     * one enabled does not silently disappear from a language added later.
+     * Only the languages enabled now, so a word blocked while English is the only one enabled
+     * does not silently disappear from a language added later.
      */
     private fun setBlocked(lang: String, word: String, blocked: Boolean) {
         val now = System.currentTimeMillis()
@@ -832,14 +490,15 @@ class DictionarySettingsActivity : AppCompatActivity() {
         }
     }
 
-    private fun labelFor(row: Pair<String, Int>): String = getString(
-        if (PersonalWordRows.isInDecode(row.second)) {
-            R.string.dict_word_row_active
-        } else {
-            R.string.dict_word_row_inactive
-        },
-        row.first, row.second,
-    )
+    private fun labelFor(row: Pair<String, Int>): String = when (PersonalWordRows.rowState(row.second)) {
+        PersonalWordRows.RowState.SUGGESTED ->
+            resources.getQuantityString(R.plurals.dict_word_row_suggested, row.second, row.first, row.second)
+        PersonalWordRows.RowState.BELOW_FLOOR -> resources.getQuantityString(
+            R.plurals.dict_word_row_below_floor, row.second, row.first, row.second,
+            KineticaConstants.PERSONAL_MERGE_MIN_COUNT,
+        )
+        PersonalWordRows.RowState.TAKEN_BACK -> getString(R.string.dict_word_row_taken_back, row.first)
+    }
 
     private fun showPersonalWordsDialog(
         lang: String,
@@ -858,23 +517,23 @@ class DictionarySettingsActivity : AppCompatActivity() {
             setPadding(pad)
             visibility = android.view.View.GONE
         }
+        val help = TextView(this).apply {
+            text = getString(R.string.dict_words_help, KineticaConstants.PERSONAL_MERGE_MIN_COUNT)
+            setPadding(pad, pad / 2, pad, 0)
+        }
         val list = ListView(this)
         list.choiceMode = ListView.CHOICE_MODE_MULTIPLE
-        // Half the screen, fixed. The list used to size to its content, so the dialog
-        // changed height and re-centred after every delete and every keystroke in the
-        // search box, which put the buttons somewhere new each time.
+        // Half the screen, fixed: a list sized to its content re-centres the dialog after every
+        // delete and keystroke, moving the buttons each time.
         list.layoutParams = LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT,
             resources.displayMetrics.heightPixels / 2,
         )
-        // `shown` is the single source of truth for what the finger can hit, and
-        // the adapter and the click handler both read it. Keeping one list
-        // rather than re-deriving the filter on click is what makes the
-        // index-mismatch bug unrepresentable rather than merely tested for.
+        // `shown` is the single source of truth for what the finger can hit; the adapter and the
+        // click handler both read it, so the index cannot mismatch.
         val shown = ArrayList(rows)
-        // The selection is words, not positions. A tick is a position in the FILTERED
-        // list, so after the query changes that position holds a different word; see
-        // PersonalWordRows.checkedPositions.
+        // The selection is words, not positions: a position is in the filtered list, so after the
+        // query changes it holds a different word (see PersonalWordRows.checkedPositions).
         val checked = LinkedHashSet<String>()
         val adapter = ArrayAdapter(
             this,
@@ -885,6 +544,7 @@ class DictionarySettingsActivity : AppCompatActivity() {
 
         val view = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
+            addView(help)
             addView(search)
             addView(empty)
             addView(list)
@@ -893,6 +553,7 @@ class DictionarySettingsActivity : AppCompatActivity() {
             .setTitle(getString(R.string.dict_manage_personal_title, label))
             .setView(view)
             .setPositiveButton(R.string.dict_word_delete_checked, null)
+            .setNeutralButton(R.string.dict_word_raise_checked, null)
             .setNegativeButton(android.R.string.cancel, null)
             .create()
 
@@ -900,6 +561,7 @@ class DictionarySettingsActivity : AppCompatActivity() {
             val positions = PersonalWordRows.checkedPositions(shown, checked)
             for (i in shown.indices) list.setItemChecked(i, i in positions)
             dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.isEnabled = checked.isNotEmpty()
+            dialog.getButton(AlertDialog.BUTTON_NEUTRAL)?.isEnabled = checked.isNotEmpty()
         }
 
         list.setOnItemClickListener { _, _, which, _ ->
@@ -926,9 +588,8 @@ class DictionarySettingsActivity : AppCompatActivity() {
         })
         dialog.show()
         repaintChecks()
-        // Overridden after show() so a delete does not dismiss the dialog: clearing out
-        // several words in a row is the normal case, and the dialog closing after each one
-        // was the reported complaint.
+        // Overridden after show so a delete does not dismiss the dialog: clearing out several
+        // words in a row is the normal case.
         dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
             val words = PersonalWordRows.wordsToDelete(rows, checked)
             if (words.isEmpty()) return@setOnClickListener
@@ -937,15 +598,49 @@ class DictionarySettingsActivity : AppCompatActivity() {
                 dialog.dismiss()
             }
         }
+        dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
+            val words = PersonalWordRows.wordsToDelete(rows, checked)
+            if (words.isEmpty()) return@setOnClickListener
+            raiseWords(lang, words)
+            checked.clear()
+            dialog.dismiss()
+        }
+    }
+
+    /**
+     * One commit more for each of [words], as sliding it up on the bar would give. Not
+     * confirmed: it is one step and the same list takes it back.
+     */
+    private fun raiseWords(lang: String, words: List<String>) {
+        io.execute {
+            try {
+                val dao = KineticaDb.get(this).userWords()
+                val now = System.currentTimeMillis()
+                for (w in words) dao.upsertAdd(w, lang, 1, now)
+            } catch (e: RuntimeException) {
+                toastLater(R.string.dict_db_error)
+                return@execute
+            }
+            main.post {
+                if (!isDestroyed) {
+                    bumpGeneration()
+                    Toast.makeText(
+                        this,
+                        resources.getQuantityString(R.plurals.dict_words_raised, words.size, words.size),
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                    refresh()
+                }
+            }
+        }
     }
 
     /**
      * One confirmation for a whole batch, then one pass on [io].
      *
-     * [bumpGeneration] is what makes the running keyboard rebuild its trie: without it the
-     * rows are gone from Room but the words survive in the resident trie and in the live
-     * personalCounts map until the next load, so the weight they were deleted for keeps
-     * applying. Bumped once for the batch rather than once per word.
+     * [bumpGeneration] makes the running keyboard rebuild its trie: otherwise the rows leave Room
+     * but the words survive in the resident trie and the live personalCounts map until the next
+     * load, and the weight they were deleted for keeps applying. Bumped once per batch.
      */
     private fun confirmDeleteWords(lang: String, words: List<String>, onDone: () -> Unit) {
         AlertDialog.Builder(this)
@@ -988,8 +683,8 @@ class DictionarySettingsActivity : AppCompatActivity() {
     private fun importBase(lang: String, uri: Uri) {
         io.execute {
             try {
-                // Merge against the BUNDLED primary, never against a previous
-                // import, so re-importing can only replace, not compound.
+                // Merge against the bundled primary, never a previous import, so re-importing
+                // replaces and never compounds.
                 val primary = assets.open("dictionaries/${lang}_wordlist.txt")
                     .bufferedReader().use { DictionaryMerger.readPrimary(it) }
                 val result = contentResolver.openInputStream(uri)?.bufferedReader()?.use {
@@ -1055,10 +750,8 @@ class DictionarySettingsActivity : AppCompatActivity() {
     }
 
     private fun importPersonal(lang: String, uri: Uri) {
-        // The original spec asked the user merge-vs-replace at import time:
-        // merging is the safe default for topping up from a backup, but
-        // restoring a curated export onto a polluted dictionary needs a clean
-        // slate (accumulated pollution, stale misfire words).
+        // Merge or replace, asked at import time: merging is the safe default for topping up from
+        // a backup, but restoring a curated export onto a polluted dictionary needs a clean slate.
         AlertDialog.Builder(this)
             .setTitle(R.string.dict_personal_import_mode_title)
             .setMessage(R.string.dict_personal_import_mode_message)
@@ -1082,8 +775,8 @@ class DictionarySettingsActivity : AppCompatActivity() {
                 val words = doc.getJSONArray("words")
                 val dao = KineticaDb.get(this).userWords()
                 val now = System.currentTimeMillis()
-                // Clear only after the file parsed as a personal export, so a
-                // wrong file picked in replace mode cannot wipe the language.
+                // Clear only after the file parsed as a personal export, so a wrong file picked in
+                // replace mode cannot wipe the language.
                 if (replace) dao.clearLanguage(lang)
                 var imported = 0
                 for (i in 0 until words.length()) {
@@ -1092,9 +785,8 @@ class DictionarySettingsActivity : AppCompatActivity() {
                     val count = o.getInt("count")
                     if (word.isEmpty() || word.length > 24 || count < 1) continue
                     if (!WORD_RE.matches(word)) continue
-                    // An import is a deliberate act: clamp up to the merge
-                    // floor so every imported word decodes immediately instead
-                    // of waiting out the anti-accident gate
+                    // An import is deliberate: clamp up to the merge floor so every imported word
+                    // decodes at once instead of waiting out the anti-accident gate
                     // (KineticaConstants.PERSONAL_MERGE_MIN_COUNT).
                     dao.upsertAdd(
                         word, lang,
@@ -1138,9 +830,6 @@ class DictionarySettingsActivity : AppCompatActivity() {
     private companion object {
         // Same shape the IME accepts when learning; keeps imports sane.
         val WORD_RE = Regex("^\\p{L}+(?:'\\p{L}+)*$")
-        const val MAX_IMPORT_COUNT = 10_000
-        /** Where the pre-import snapshot lives. One slot: the last import is what is undoable. */
-        const val SNAPSHOT_FILENAME = "kinetica_pre_import_backup.txt"
-        const val NEWLINE = "\n"
+        const val MAX_IMPORT_COUNT = BackupRun.MAX_IMPORT_COUNT
     }
 }

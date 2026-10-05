@@ -1,0 +1,9 @@
+Two thumbs read with one cursor each: more words right first time
+Next-word suggestions; optional recent words on the bar
+Tap inside a word to swap it for another
+Chords on ?123 or the spacebar, on any key; Ctrl + key shortcuts
+Optional numbers row and wider middle row
+Long-press menus as grids, with your own lists
+Backspace right after an autocorrect undoes it
+Russian, Ukrainian, Hebrew, Arabic (experimental)
+Settings regrouped, in Italian too, with tips

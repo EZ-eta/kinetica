@@ -10,21 +10,16 @@ import kotlin.math.min
 /**
  * Resolved color roles for every keyboard surface.
  *
- * Two independent choices, deliberately kept orthogonal rather than folded into
- * one list of named themes. WHERE the colors come from:
+ * Two independent choices, not one list of named themes. Where the colors come from:
  *  - "default": the bundled palette in colors.xml
- *  - "dynamic": Android 12+ Material You system palette, read straight from
- *    android.R.color.system_* resources (no Material Components dependency -
- *    the keyboard is a Canvas surface, not a themed view hierarchy)
- *  - "custom": every role derived from one user-picked hue via fixed HSV
- *    transforms
- * and independently, whether they land LIGHT or DARK (the BRIGHTNESS_* values).
+ *  - "dynamic": the Android 12+ Material You palette, read from android.R.color.system_*
+ *    (no Material Components dependency: the keyboard is a Canvas surface, not themed views)
+ *  - "custom": every role derived from one user-picked hue by fixed HSV transforms
  *
- * Crossing the two is what makes "Material You but light" and "my own hue but
- * light" expressible; a flat list of named themes would need six entries to say
- * the same thing and nine as soon as a third source appears.
+ * and, separately, light or dark (the BRIGHTNESS_* values). Crossing the two gives "Material
+ * You but light" and "my own hue but light" without a named theme for every pair.
  *
- * Purely static colors: zen mode's animation gating is untouched by theming.
+ * Static colors only: zen mode's animation gating is untouched by theming.
  */
 class KeyboardTheme(
     val background: Int,
@@ -54,17 +49,15 @@ class KeyboardTheme(
         const val BRIGHTNESS_SYSTEM = "system"
 
         /**
-         * Saturation and value the custom hue is rendered at. The hue is the only
-         * thing the user picks: a full HSV picker is three sliders to get wrong,
-         * and the roles below re-derive saturation per surface anyway, so the two
-         * extra degrees of freedom bought nothing.
+         * Saturation and value the custom hue is rendered at. The user picks the hue alone:
+         * the roles below re-derive saturation per surface, so two more sliders would add
+         * nothing but ways to get it wrong.
          */
         private const val CUSTOM_SAT = 0.72f
         private const val CUSTOM_VAL = 1.0f
 
-        // The dark table's three text roles, unchanged from the first ship and
-        // written as literals so no android.graphics.Color call reaches the JVM
-        // test runtime, where every one of its statics throws "not mocked".
+        // The dark table's three text roles, as literals so no android.graphics.Color call
+        // reaches the JVM test runtime, where its statics throw "not mocked".
         private const val DARK_KEY_TEXT = 0xFFEDEDF2.toInt()
         private const val DARK_SUGGESTION_TEXT = 0xFFD8D8E0.toInt()
         private const val DARK_SUGGESTION_PRIMARY = 0xFFFFFFFF.toInt()
@@ -86,9 +79,8 @@ class KeyboardTheme(
         fun primaryForHue(hue: Float): Int = Hsv.toColor(hue, CUSTOM_SAT, CUSTOM_VAL)
 
         /**
-         * True when the accent-hue setting has any effect in [mode]. The bundled
-         * and Material You palettes ignore it, so a settings preview that moved
-         * with the slider in those modes would be lying about what it does.
+         * True when the accent-hue setting has any effect in [mode]. The bundled and Material
+         * You palettes ignore it, so the settings preview must not move with the slider there.
          */
         fun hueAffects(mode: String): Boolean = mode == MODE_CUSTOM
 
@@ -120,10 +112,9 @@ class KeyboardTheme(
 
         fun fromResources(context: Context, light: Boolean = false): KeyboardTheme {
             fun c(id: Int) = ContextCompat.getColor(context, id)
-            // Explicit *_light ids rather than a values-night split: the bundled
-            // look is dark and must stay dark for anyone who never opens this
-            // setting, which a night-qualified resource would silently reverse
-            // for every user whose phone is in light mode.
+            // Explicit *_light ids, not a values-night split: the bundled look stays dark for
+            // anyone who never opens this setting, which a night-qualified resource would
+            // reverse on every phone in light mode.
             return if (light) {
                 KeyboardTheme(
                     background = c(R.color.kbd_background_light),
@@ -159,10 +150,9 @@ class KeyboardTheme(
 
         private fun fromDynamic(context: Context, light: Boolean): KeyboardTheme {
             fun c(id: Int) = ContextCompat.getColor(context, id)
-            // Same role mapping read off opposite ends of the wallpaper-derived
-            // tonal ramps: neutral1 carries surfaces, neutral2 muted text,
-            // accent1 the highlight. Light needs a DARKER accent tone than dark
-            // does (300 -> 600) or the highlight vanishes into a pale surface.
+            // One role mapping read off opposite ends of the wallpaper-derived tonal ramps:
+            // neutral1 for surfaces, neutral2 for muted text, accent1 for the highlight. Light
+            // takes a darker accent tone (600 against 300) or it vanishes into a pale surface.
             return if (light) {
                 KeyboardTheme(
                     background = c(android.R.color.system_neutral1_50),
@@ -197,16 +187,13 @@ class KeyboardTheme(
         }
 
         /**
-         * One primary color spreads across the role set by pinning value
-         * (brightness) per role and damping saturation on large surfaces so a
-         * screaming primary still yields readable surfaces.
+         * One primary color spreads across the role set by pinning value (brightness) per role
+         * and damping saturation on large surfaces, so a loud primary still yields readable
+         * surfaces.
          *
-         * Two tone tables, one per brightness. The dark table is UNCHANGED,
-         * hard-coded near-white text constants included: deriving those from the
-         * hue would have been tidier and would have shifted every existing custom
-         * dark theme by a few units for no benefit anyone asked for. The light
-         * table has to derive them - a near-white constant on a near-white
-         * surface is the one thing that would make a light custom theme unusable.
+         * Two tone tables, one per brightness. The dark table keeps fixed near-white text
+         * constants so existing custom dark themes do not shift; the light table derives its
+         * text, since near-white on a near-white surface would be unreadable.
          */
         fun fromPrimary(primary: Int, light: Boolean = false): KeyboardTheme {
             val h = Hsv.hueOf(primary)
@@ -215,10 +202,9 @@ class KeyboardTheme(
             val surfaceSat = min(s, 0.55f)
             return if (light) {
                 KeyboardTheme(
-                    // Surfaces near white, tinted just enough to read as the
-                    // chosen hue; keys sit BRIGHTER than the background so the
-                    // gaps between them read as the darker line, which is the
-                    // relationship the dark palette has rather than its inverse.
+                    // Surfaces near white, tinted enough to read as the hue. Keys sit brighter
+                    // than the background so the gaps read as the darker line, as in the dark
+                    // palette.
                     background = tone(surfaceSat * 0.22f, 0.90f),
                     key = tone(surfaceSat * 0.10f, 1.00f),
                     keySpecial = tone(surfaceSat * 0.20f, 0.94f),

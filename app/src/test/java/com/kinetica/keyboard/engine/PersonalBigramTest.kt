@@ -8,13 +8,12 @@ import org.junit.Test
 /**
  * The personal pair boost: what a word earns for having followed this one before.
  *
- * The point of the store is the 65% of real transitions the bundled tables do not hold - on
- * one capture, only 35% of the developer's prose pairs were in the shipped assets, over
- * 7 600 distinct preceding words in English. So the fixtures here are pairs no corpus would
- * carry, which is exactly the population this exists for.
+ * The store is for the transitions the bundled tables do not hold: on one capture only 35% of
+ * prose pairs were in the shipped assets, which cover 7 600 distinct preceding words in
+ * English. So the fixtures are pairs no corpus would carry.
  *
- * The commit side is not testable from the JVM (the service has no reach), so what is pinned
- * here is the arithmetic and the two invariants the boost must not break.
+ * The commit side has no JVM reach, so this pins the arithmetic and the two invariants the
+ * boost must not break.
  */
 class PersonalBigramTest {
 
@@ -31,6 +30,26 @@ class PersonalBigramTest {
 
     private fun taps(word: String): List<InputToken> =
         word.mapIndexed { i, c -> TestData.tap(c, g, 100L * i) }
+
+    @Test
+    fun aPairBoostedWordIsScoredBeforeTheHeapCanAbandonIt() {
+        // The DTW abandon bound is the best score a node can still reach, so it must carry
+        // every boost that can raise it. Without the pair boost, `cab` after `taxi`, rare on
+        // its own, was abandoned against a full heap of common `ca` completions it outscores
+        // once the pair counts.
+        val trie = Trie.build(
+            listOf(
+                "can" to 10_000, "car" to 9_000, "cat" to 8_000, "cap" to 7_000, "cane" to 6_000,
+                "card" to 5_000, "care" to 4_000, "case" to 3_000, "cast" to 2_500,
+                "cash" to 2_000, "cab" to 2,
+            ),
+        )
+        fun decode(pairs: Map<String, Int>) =
+            WordPredictor(trie, BigramTable.EMPTY, g, personalBigrams = pairs)
+                .decode(taps("ca"), listOf("taxi")).map { it.word }
+        assertTrue("without the pair, `cab` stays out of a full list", "cab" !in decode(emptyMap()))
+        assertTrue("with the pair it must be scored and kept", "cab" in decode(mapOf(key("taxi", "cab") to 30)))
+    }
 
     @Test
     fun aPairNeverSeenChangesNothing() {
@@ -93,10 +112,9 @@ class PersonalBigramTest {
 
     @Test
     fun aPairIsNotAllowedToRescueAHopelessFit() {
-        // The invariant every boost in this engine shares: past one key width the geometry
-        // says the gesture is somewhere else entirely, and no amount of context is evidence
-        // about it. appliedBoost is what enforces it; this pins that the pair boost goes
-        // through it like the others.
+        // The invariant every boost in this engine shares: past one key width the gesture is
+        // somewhere else, and no context is evidence about it. appliedBoost enforces it; this
+        // pins that the pair boost goes through it like the others.
         for (raw in listOf(1.1f, 1.5f, 2.0f)) {
             assertEquals(
                 "a pair boost must be gone by one key hop",
@@ -109,10 +127,9 @@ class PersonalBigramTest {
 
     // ------------------------------------------------- the two-sighting floor
     //
-    // A commit is not proof the decode was right. On a live capture the developer typed
-    // "i don't oboe know", left the wrong word in and carried on, so `don't -> oboe` was
-    // learned in full from one commit. The retype button takes the last pair back out, but
-    // only for an error the user actually retypes, and that was the hole.
+    // A commit is not proof the decode was right: "i don't oboe know" was typed with the
+    // wrong word left in, so `don't -> oboe` was learned from one commit. The retype button
+    // takes a pair back out only for an error the user retypes.
 
     @Test
     fun aPairSeenOnceDoesNotBoost() {

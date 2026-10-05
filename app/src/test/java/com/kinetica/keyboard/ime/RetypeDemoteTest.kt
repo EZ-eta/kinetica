@@ -9,10 +9,9 @@ import org.junit.Test
 /**
  * What the retype button does to the word it just rejected.
  *
- * Priced before it was built (KNOWN_ISSUES item 56): over 78 retype presses in one capture,
- * 12 handed back the word just rejected, eleven of them one chain, and an alternate was
- * always available. But the word the user actually wanted was among those alternates in only
- * 5 of the 12. So this demotes rather than hides, and it is off by default.
+ * Of 78 retype presses in one capture, 12 handed back the word just rejected, but the wanted
+ * word was among the alternates in only 5 of the 12. So this demotes
+ * instead of hiding, and it is off by default.
  */
 class RetypeDemoteTest {
 
@@ -30,8 +29,8 @@ class RetypeDemoteTest {
 
     @Test
     fun theRejectedWordIsStillReachable() {
-        // The hazard item 56 names: a retype aimed at fixing a SPACE rather than a word
-        // must not be denied the word it had. Demoted, never dropped.
+        // The hazard: a retype aimed at fixing a space, not a word, must keep the word it
+        // had. Demoted, never dropped.
         val out = demoteRejected(list, "word")
         assertEquals(list.size, out.size)
         assertTrue("word must survive the demotion", out.any { it.word == "word" })

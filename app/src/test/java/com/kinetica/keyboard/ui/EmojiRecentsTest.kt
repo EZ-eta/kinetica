@@ -9,8 +9,7 @@ class EmojiRecentsTest {
 
     @Test
     fun ordersByCountNotByRecency() {
-        // The daily emoji is the older one. A recency ordering would put the
-        // one-off first, which is the mistake this ordering exists to avoid.
+        // The daily emoji is the older one; ordering by recency would put the one-off first.
         val daily = Use("😀", count = 40, updatedAt = 1_000L)
         val onceEver = Use("🦄", count = 1, updatedAt = 9_000L)
         assertEquals(listOf(daily.emoji, onceEver.emoji), EmojiRecents.ordered(listOf(onceEver, daily)))
@@ -54,8 +53,7 @@ class EmojiRecentsTest {
 
     @Test
     fun aMultiCodepointEmojiSurvivesWhole() {
-        // U+2708 U+FE0F - the reason the store is keyed on the string and not
-        // on a single Int codepoint.
+        // U+2708 U+FE0F: why the store is keyed on the string, not on a single Int codepoint.
         val plane = "✈️"
         assertEquals(listOf(plane), EmojiRecents.ordered(listOf(Use(plane, 1, 1L))))
     }

@@ -6,12 +6,16 @@ import kotlin.math.max
 /**
  * Dictionary trie stored as one flat IntArray, two ints per node:
  *
- *  int0: bits 0-4  letter code (0-25 a-z, 26 apostrophe)
- *        bit  5    isWord
- *        bits 6-13 freqByte (log-quantized unigram frequency, word nodes only)
- *        bits 14-21 maxDescendantFreq (max freqByte in this subtree, incl. self)
- *  int1: bits 0-23 first child node id
- *        bits 24-28 child count (0-27)
+ *  int0: bits 0-5   letter code in [alphabet] (Latin: 0-25 a-z, 26 apostrophe)
+ *        bit  6     isWord
+ *        bits 7-14  freqByte (log-quantized unigram frequency, word nodes only)
+ *        bits 15-22 maxDescendantFreq (max freqByte in this subtree, incl. self)
+ *        bits 23-27 maxWordLen (the longest word at or below, in letters)
+ *  int1: bits 0-23  first child node id
+ *        bits 24-29 child count (0-63)
+ *
+ * Six bits for the letter and the count, not five: Cyrillic has 32 letters and Arabic 33, and
+ * a root with 32 children wraps a five-bit count to zero. Latin decodes are unchanged.
  *
  * Children of a node are contiguous and sorted by letter (guaranteed by BFS id
  * assignment at build time), so child lookup is a short linear scan over
@@ -22,16 +26,24 @@ import kotlin.math.max
 class Trie private constructor(
     private val nodes: IntArray,
     val wordCount: Int,
+    /** The letters this trie is spelled in; its codes are this alphabet's. */
+    val alphabet: Alphabet,
 ) {
     val nodeCount: Int get() = nodes.size / 2
     val root: Int get() = 0
 
-    fun letter(node: Int): Int = nodes[node * 2] and 0x1F
-    fun isWord(node: Int): Boolean = (nodes[node * 2] shr 5 and 1) == 1
-    fun frequency(node: Int): Int = nodes[node * 2] shr 6 and 0xFF
-    fun maxDescendantFreq(node: Int): Int = nodes[node * 2] shr 14 and 0xFF
+    fun letter(node: Int): Int = nodes[node * 2] and 0x3F
+    fun isWord(node: Int): Boolean = (nodes[node * 2] shr 6 and 1) == 1
+    fun frequency(node: Int): Int = nodes[node * 2] shr 7 and 0xFF
+    fun maxDescendantFreq(node: Int): Int = nodes[node * 2] shr 15 and 0xFF
+
+    /**
+     * The longest word at or below [node], in letters from the root, so a search can skip a
+     * subtree too short for the input it still has to spell.
+     */
+    fun maxWordLen(node: Int): Int = nodes[node * 2] ushr 23 and 0x1F
     fun firstChild(node: Int): Int = nodes[node * 2 + 1] and 0xFFFFFF
-    fun childCount(node: Int): Int = nodes[node * 2 + 1] shr 24 and 0x1F
+    fun childCount(node: Int): Int = nodes[node * 2 + 1] shr 24 and 0x3F
 
     /** Child of [node] with letter [code], or -1. */
     fun child(node: Int, code: Int): Int {
@@ -50,7 +62,7 @@ class Trie private constructor(
     fun nodeFor(word: CharSequence): Int {
         var node = root
         for (ch in word) {
-            val code = Alphabet.codeOf(ch)
+            val code = alphabet.codeOf(ch)
             if (code < 0) return -1
             node = child(node, code)
             if (node == -1) return -1
@@ -64,18 +76,44 @@ class Trie private constructor(
      * The node [prefix] reaches, word or not, or -1 if the path runs out.
      *
      * [nodeFor] cannot answer this: it ends on `if (isWord(node)) node else -1`, so it
-     * says no to every half-typed word. That distinction is the whole of the autospace
-     * retraction gate - `autom` has to answer yes and `automaticop` no.
+     * says no to every half-typed word. The autospace retraction gate needs the
+     * difference: `autom` has to answer yes and `automaticop` no.
      */
     fun prefixNode(prefix: CharSequence): Int {
         var node = root
         for (ch in prefix) {
-            val code = Alphabet.codeOf(ch)
+            val code = alphabet.codeOf(ch)
             if (code < 0) return -1
             node = child(node, code)
             if (node == -1) return -1
         }
         return node
+    }
+
+    /** The node [node] hangs from, or -1 for the root. Ids are breadth-first, so a parent's id is smaller. */
+    fun parentOf(node: Int): Int {
+        if (node <= 0) return -1
+        var lo = 0
+        var hi = node - 1
+        while (lo < hi) {
+            val mid = (lo + hi + 1) ushr 1
+            if (firstChild(mid) <= node) lo = mid else hi = mid - 1
+        }
+        return lo
+    }
+
+    /** The letters from the root to [node]: the trie's own spelling, folded and lowercase. */
+    fun wordOf(node: Int): String {
+        val codes = IntArray(KineticaConstants.MAX_WORD_LEN)
+        var n = 0
+        var x = node
+        while (x > 0 && n < codes.size) {
+            codes[n++] = letter(x)
+            x = parentOf(x)
+        }
+        val sb = StringBuilder(n)
+        for (i in n - 1 downTo 0) sb.append(alphabet.charOf(codes[i]))
+        return sb.toString()
     }
 
     /** Approximate retained size for the memory-budget test. */
@@ -96,12 +134,12 @@ class Trie private constructor(
          * bytes: prediction needs frequency *ranks* spanning orders of
          * magnitude, not absolute counts.
          */
-        fun build(words: List<Pair<String, Int>>): Trie {
+        fun build(words: List<Pair<String, Int>>, alphabet: Alphabet = Alphabet.LATIN): Trie {
             val valid = ArrayList<Pair<IntArray, Int>>(words.size)
             var maxCount = 1L
             for ((w, c) in words) {
                 if (w.isEmpty() || w.length > KineticaConstants.MAX_WORD_LEN) continue
-                val codes = Alphabet.encode(w) ?: continue
+                val codes = alphabet.encode(w) ?: continue
                 valid.add(codes to c)
                 maxCount = max(maxCount, c.toLong())
             }
@@ -119,6 +157,7 @@ class Trie private constructor(
             var firstChild = IntArray(cap)
             var lastChild = IntArray(cap)
             var nextSibling = IntArray(cap)
+            var depthOf = IntArray(cap)    // letters from the root
             var size = 0
 
             fun newNode(l: Int): Int {
@@ -129,6 +168,7 @@ class Trie private constructor(
                     firstChild = firstChild.copyOf(cap)
                     lastChild = lastChild.copyOf(cap)
                     nextSibling = nextSibling.copyOf(cap)
+                    depthOf = depthOf.copyOf(cap)
                 }
                 letter[size] = l
                 flags[size] = 0
@@ -150,6 +190,7 @@ class Trie private constructor(
                 stackDepth = common
                 for (d in common until codes.size) {
                     val node = newNode(codes[d])
+                    depthOf[node] = d + 1
                     val parent = stack[stackDepth]
                     if (firstChild[parent] == NO_NODE) firstChild[parent] = node
                     else nextSibling[lastChild[parent]] = node
@@ -164,8 +205,9 @@ class Trie private constructor(
                 prevCodes = codes
             }
 
-            // maxDescendantFreq, post-order via explicit stack.
+            // maxDescendantFreq and the longest word below, post-order via explicit stack.
             val maxDesc = IntArray(size)
+            val maxLen = IntArray(size)
             run {
                 val st = IntArray(size + 1)
                 val visited = BooleanArray(size)
@@ -183,12 +225,15 @@ class Trie private constructor(
                     } else {
                         sp--
                         var m = flags[n] shr 1
+                        var len = if (flags[n] and 1 == 1) depthOf[n] else 0
                         var c = firstChild[n]
                         while (c != NO_NODE) {
                             m = max(m, maxDesc[c])
+                            len = max(len, maxLen[c])
                             c = nextSibling[c]
                         }
                         maxDesc[n] = m
+                        maxLen[n] = len
                     }
                 }
             }
@@ -225,13 +270,26 @@ class Trie private constructor(
                 }
                 val isWord = flags[tmp] and 1
                 val freq = flags[tmp] shr 1
-                packed[id * 2] = (letter[tmp] and 0x1F) or
-                    (isWord shl 5) or
-                    ((freq and 0xFF) shl 6) or
-                    ((maxDesc[tmp] and 0xFF) shl 14)
-                packed[id * 2 + 1] = (firstId and 0xFFFFFF) or ((count and 0x1F) shl 24)
+                packed[id * 2] = (letter[tmp] and 0x3F) or
+                    (isWord shl 6) or
+                    ((freq and 0xFF) shl 7) or
+                    ((maxDesc[tmp] and 0xFF) shl 15) or
+                    ((maxLen[tmp] and 0x1F) shl 23)
+                packed[id * 2 + 1] = (firstId and 0xFFFFFF) or ((count and 0x3F) shl 24)
             }
-            return Trie(packed, uniqueWords)
+            // A childless node takes the next id to be handed out, so first-child ids never
+            // decrease in id order and parentOf is one binary search. Nothing reads the field
+            // on a node with no children.
+            var nextFree = 1
+            for (id in 0 until size) {
+                val count = packed[id * 2 + 1] ushr 24 and 0x3F
+                if (count == 0) {
+                    packed[id * 2 + 1] = nextFree and 0xFFFFFF
+                } else {
+                    nextFree = (packed[id * 2 + 1] and 0xFFFFFF) + count
+                }
+            }
+            return Trie(packed, uniqueWords, alphabet)
         }
 
         private fun common(a: IntArray, b: IntArray): Int {

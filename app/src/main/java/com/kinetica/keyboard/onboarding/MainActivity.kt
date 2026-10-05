@@ -74,6 +74,14 @@ class MainActivity : AppCompatActivity() {
 
         root.addView(
             Button(this).apply {
+                text = getString(R.string.tutor_title)
+                setOnClickListener {
+                    startActivity(Intent(this@MainActivity, TutorActivity::class.java))
+                }
+            },
+        )
+        root.addView(
+            Button(this).apply {
                 text = getString(R.string.onboarding_open_settings)
                 setOnClickListener {
                     startActivity(Intent(this@MainActivity, SettingsActivity::class.java))
@@ -94,12 +102,10 @@ class MainActivity : AppCompatActivity() {
         if (done) getString(R.string.onboarding_step_done, getString(labelRes))
         else getString(labelRes)
 
-    // Reading Settings.Secure.ENABLED_INPUT_METHODS directly throws a
-    // SecurityException on targetSdk > 33 ("only readable to apps with
-    // targetSdkVersion <= 33"), which crashed this screen on launch on
-    // Android 14. The InputMethodManager list is the supported query and needs
-    // no permission. DEFAULT_INPUT_METHOD is still readable, but is guarded so
-    // a future platform tightening degrades to "not selected" instead of a crash.
+    // Settings.Secure.ENABLED_INPUT_METHODS throws a SecurityException on targetSdk > 33,
+    // so the enabled check uses the InputMethodManager list, which needs no permission.
+    // DEFAULT_INPUT_METHOD is still readable but guarded, so a future restriction reads as
+    // "not selected" instead of a crash.
     private fun isImeEnabled(): Boolean {
         val imm = getSystemService(InputMethodManager::class.java) ?: return false
         return imm.enabledInputMethodList.any { it.packageName == packageName }

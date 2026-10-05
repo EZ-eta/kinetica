@@ -30,8 +30,8 @@ class AccentFoldingTest {
         // French: ÿ folds like the other y-accents, œ is the second digraph.
         assertEquals("soeur", AccentFolder.fold("sœur"))
         assertEquals("moyen", AccentFolder.fold("moÿen"))
-        // Norwegian: æ and å onto "a", ø onto "o". These are alphabet letters
-        // rather than accents, and each folds onto the key it is drawn on.
+        // Norwegian: æ and å onto "a", ø onto "o". They are letters of the alphabet, not
+        // accents, and each folds onto the key it is drawn on.
         assertEquals("vare", AccentFolder.fold("være"))
         assertEquals("for", AccentFolder.fold("før"))
         assertEquals("mate", AccentFolder.fold("måte"))
@@ -83,8 +83,8 @@ class AccentFoldingTest {
 
     @Test
     fun accentedLetterCodeAcceptsOnlyRealAccents() {
-        // What KineticaIME composes into the word instead of committing it
-        // An accent, in either case:
+        // What KineticaIME composes into the word instead of committing it: an accent, in
+        // either case.
         assertEquals('o' - 'a', AccentFolder.accentedLetterCode("ó"))
         assertEquals('a' - 'a', AccentFolder.accentedLetterCode("à"))
         assertEquals('n' - 'a', AccentFolder.accentedLetterCode("ñ"))
@@ -94,8 +94,8 @@ class AccentFoldingTest {
         assertEquals('e' - 'a', AccentFolder.accentedLetterCode("É"))
         assertEquals('r' - 'a', AccentFolder.accentedLetterCode("Ř"))
         assertEquals('t' - 'a', AccentFolder.accentedLetterCode("ť"))
-        // The popup's own base cell is a letter but not an accented one: it keeps
-        // the shipped commit-then-insert path, deliberately.
+        // The popup's own base cell is a letter but not an accented one: it keeps the
+        // commit-then-insert path.
         assertEquals(-1, AccentFolder.accentedLetterCode("o"))
         assertEquals(-1, AccentFolder.accentedLetterCode("O"))
         // Everything else a popup, an edge swipe or the enter strip can insert.
@@ -114,8 +114,8 @@ class AccentFoldingTest {
     fun foldAlsoFoldsCase() {
         // The trie alphabet has no capitals: Alphabet.codeOf admits only a-z
         // and an apostrophe, so a capitalized entry would encode to null and be
-        // dropped silently. Case folding here is what lets a wordlist carry a
-        // capitalized display form on a lowercase key.
+        // dropped silently. Case folding here lets a wordlist carry a capitalized
+        // display form on a lowercase key.
         assertEquals("haus", AccentFolder.fold("Haus"))
         assertEquals("strasse", AccentFolder.fold("Straße"))
         assertEquals("uber", AccentFolder.fold("Über"))

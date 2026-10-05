@@ -4,12 +4,12 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /**
- * A pick from a bar the stale timeout kept up (R91).
+ * A pick from a bar the stale timeout kept up.
  *
- * The timeout closes the buffer and zeroes the word state, and the bar stays because its
- * words came from the other language and are exactly what the user is reading. So a pick
- * arrives with no tentative length to trust, and item 69 is what counting from a remembered
- * one does. The span is re-proved against the editor instead, or the pick is refused.
+ * The timeout zeroes the word state but keeps a bar whose words came from the other language,
+ * since the user is reading them. A pick then has no tentative length to trust, and counting
+ * from a remembered one once ate text, so the span is re-proved against the editor or the pick is
+ * refused.
  */
 class KeptBarPickTest {
 

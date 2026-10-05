@@ -3,31 +3,27 @@ package com.kinetica.keyboard.settings
 /**
  * The whole of a user's keyboard, as lines of text.
  *
- * A line format rather than one JSON document, encoded and decoded a record at a time, so a
- * large personal dictionary cannot exhaust memory. Nothing is held whole but the caller's own
+ * A line format, not one JSON document, encoded and decoded a record at a time so a large
+ * personal dictionary cannot exhaust memory. Nothing is held whole but the caller's own
  * collections.
  *
- * **Pure on purpose, and no `org.json`.** The JVM test runtime stubs Android's JSON classes,
- * so a document built on them could not be tested at all. Everything here is `String` in,
- * `String` out; the activity does the file picking and the database reads.
+ * Pure, with no `org.json`: the JVM test runtime stubs Android's JSON classes, so a document
+ * built on them could not be tested. Everything here is `String` in, `String` out; the activity
+ * does the file picking and the database reads.
  *
- * Tabs separate fields and newlines separate records, so any value containing either is
- * refused rather than escaped. Preference values, words, chords and language codes cannot
- * contain a tab. A multi-line chord expansion would need the format version to go up.
+ * Tabs separate fields and newlines separate records. Expansion targets are escaped ([esc]);
+ * any other value holding either is refused.
  */
 object Backup {
 
     const val FORMAT = "kinetica-backup"
 
     /**
-     * Suggested export filename, stamped with [at] (R80).
+     * Suggested export filename, stamped with [at].
      *
-     * It used to be one constant, so every export offered the same name and the second one
-     * overwrote the first unless the user noticed and renamed it. A backup that silently
-     * replaces the previous backup is one backup, not a history.
-     *
-     * Minutes, not seconds: two exports in the same minute are the same export, and the
-     * name has to stay readable enough to sort by eye in a file picker.
+     * Stamped so a second export does not overwrite the first under the same name. Minutes, not
+     * seconds: two exports in the same minute are the same export, and the name stays readable
+     * enough to sort by eye in a file picker.
      */
     fun filename(at: java.time.LocalDateTime): String =
         "kinetica_backup_" +
@@ -61,9 +57,9 @@ object Backup {
         /** Empty unless the user ticked the box; see [Data.phrases] at the call site. */
         val phrases: List<Phrase> = emptyList(),
         /**
-         * Imported base dictionaries present on the source device, by language. Recorded but
-         * NOT carried: a merged wordlist is tens of megabytes and the user still has the file
-         * it came from, so the restore names what is missing instead of moving it.
+         * Imported base dictionaries present on the source device, by language. Recorded but not
+         * carried: a merged wordlist is tens of megabytes and the user still has the file it came
+         * from, so the restore names what is missing instead of moving it.
          */
         val importedBase: List<String> = emptyList(),
     )
@@ -74,15 +70,11 @@ object Backup {
     /**
      * A value with its separators written out, for the one record type that may hold them.
      *
-     * An expansion target may legitimately be several lines - a bullet block is the
-     * example its own reporter leads with - and the line format cannot carry that. Every
-     * OTHER record still refuses rather than escapes, so nothing already written changes
-     * meaning and [VERSION] stays where it is.
-     *
-     * That last part is the whole reason for escaping rather than bumping the version.
-     * [decode] refuses a file newer than it understands outright, so a bump would make
-     * every backup taken from here unreadable by every build already installed, in full.
-     * A new record type is skipped and counted instead, and the rest of the file restores.
+     * An expansion target may be several lines, a bullet block for example, which the line
+     * format cannot carry. Every other record still refuses instead of escaping, so nothing
+     * already written changes meaning and [VERSION] stays at 1. [decode] refuses a newer file
+     * outright, so a bump would make every new backup unreadable in full by every installed
+     * build; a new record type is skipped and counted instead, and the rest of the file restores.
      */
     fun esc(s: String): String = s
         .replace("\\", "\\\\")
@@ -90,7 +82,7 @@ object Backup {
         .replace("\n", "\\n")
         .replace("\r", "\\r")
 
-    /** Inverse of [esc]. An unknown escape keeps its backslash rather than losing it. */
+    /** Inverse of [esc]. An unknown escape keeps its backslash. */
     fun unesc(s: String): String {
         if (!s.contains('\\')) return s
         val out = StringBuilder(s.length)
@@ -115,9 +107,8 @@ object Backup {
     }
 
     /**
-     * The backup as lines, header first. A record whose fields cannot survive the separators
-     * is dropped rather than mangled, which is the only lossy thing here and is reported by
-     * [encodeCounted].
+     * The backup as lines, header first. A record whose fields cannot survive the separators is
+     * dropped, not mangled; that is the only loss here, and [unencodable] counts it.
      */
     fun encode(data: Data): Sequence<String> = sequence {
         yield("$FORMAT\t$VERSION")
@@ -136,8 +127,8 @@ object Backup {
             if (encodable(c.chord) && encodable(c.expansion)) yield("chord\t${c.chord}\t${c.expansion}")
         }
         for (e in data.expansions) {
-            // The target is escaped, so the only way this drops a row is a trigger with a
-            // separator in it - which the editor refuses to save in the first place.
+            // The target is escaped, so only a trigger with a separator drops a row, and the
+            // editor refuses to save one.
             if (encodable(e.trigger)) {
                 yield("expand\t${e.trigger}\t${e.position}\t${esc(e.target)}")
             }
@@ -152,7 +143,7 @@ object Backup {
         }
     }
 
-    /** How many records [encode] would drop, so the export can say so rather than lie. */
+    /** How many records [encode] would drop, so the export can say so. */
     fun unencodable(data: Data): Int =
         data.prefs.count { !encodable(it.key) || !encodable(it.value) } +
             data.words.count { !encodable(it.lang) || !encodable(it.word) } +
@@ -175,13 +166,10 @@ object Backup {
     /**
      * Reads a backup back.
      *
-     * The version IS checked, unlike `kinetica-personal-1`, whose `format` field is written
-     * and never read, so a file claiming any version at all imports identically there. A
-     * restore rewrites every setting the user has, so it refuses what it does not recognise
-     * rather than doing its best.
+     * The version is checked, unlike `kinetica-personal-1`'s `format` field: a restore rewrites
+     * every setting the user has, so it refuses a version it does not know.
      *
-     * Unknown record types and malformed lines are skipped and counted, not fatal: a backup
-     * from a later version that fails the check above is refused outright, but a line this
+     * Unknown record types and malformed lines are skipped and counted, not fatal: a line this
      * build has no use for should not lose the user their dictionary.
      */
     fun decode(lines: Sequence<String>): Result {
@@ -232,8 +220,8 @@ object Backup {
     }
 
     private fun parseExpand(f: List<String>): Expand? {
-        // The target is the last field and is escaped, so it can never look like extra
-        // fields; a size check of exactly four is therefore safe here, unlike for a pref.
+        // The target is the last field and is escaped, so it never looks like extra fields and
+        // an exact size check is safe here, unlike for a pref.
         if (f.size != 4 || f[1].isEmpty()) return null
         val position = f[2].toIntOrNull() ?: return null
         if (position < 0) return null
@@ -243,8 +231,8 @@ object Backup {
     }
 
     private fun parsePref(f: List<String>): Pref? {
-        // A pref value may legitimately be empty (pref_comma_custom), so only the key is
-        // required. Split with a limit so a value can never be mistaken for extra fields.
+        // A pref value may be empty (pref_comma_custom), so only the key is required. Fields
+        // after the key are joined back, so a value is never mistaken for extra fields.
         if (f.size < 3) return null
         val type = PrefType.entries.firstOrNull { it.name.equals(f[1], ignoreCase = true) } ?: return null
         if (f[2].isEmpty()) return null

@@ -12,9 +12,8 @@ import androidx.core.content.ContextCompat
 import com.kinetica.keyboard.R
 
 /**
- * Vertical stack: drag handle, suggestion bar, keyboard. The handle resizes
- * the keyboard live during the drag (25-50% of screen height) and reports the
- * final height on release for persistence.
+ * Vertical stack: drag handle, suggestion bar, keyboard, bottom gap. The handle resizes the
+ * keyboard live during the drag and reports the final height on release for persistence.
  */
 class InputContainerView(
     context: Context,
@@ -23,14 +22,9 @@ class InputContainerView(
     barHeightPx: Int,
     keyboardHeightPx: Int,
     /**
-     * Height of the resize handle strip, in px, zero for none. It sits above the
-     * suggestion bar where the height percentage cannot reach, and two reporters
-     * wanted that space back; at zero the keyboard is resized from Settings
-     * instead, so the capability moves rather than disappearing.
-     *
-     * The strip is added whatever this is, so that a change in it can be applied
-     * to the live view like the bar's height rather than forcing the whole input
-     * view to be rebuilt. At zero the view has no area and so takes no touches.
+     * Height of the resize handle strip, in px, zero for none; at zero the keyboard is resized
+     * from Settings. The strip is added whatever the value, so a change applies to the live
+     * view like the bar's height without rebuilding the input view; at zero it takes no touches.
      */
     handleHeightPx: Int,
     minKeyboardPx: Int,
@@ -39,15 +33,20 @@ class InputContainerView(
     private val onHeightCommitted: (px: Int) -> Unit,
 ) : LinearLayout(context) {
 
-    // The bounds come from screen-percentage math and a dp floor; on short
-    // screens the pair can arrive inverted, and coerceIn over an empty range
-    // throws. Normalize once so no caller can crash the IME process.
-    private val minKeyboardPx = minOf(minKeyboardPx, maxKeyboardPx)
-    private val maxKeyboardPx = maxOf(minKeyboardPx, maxKeyboardPx)
+    // The bounds come from screen percentages and a dp floor, so a short screen can invert
+    // them, and coerceIn over an empty range throws. Normalized once so no caller can crash
+    // the IME.
+    private var minKeyboardPx = minOf(minKeyboardPx, maxKeyboardPx)
+    private var maxKeyboardPx = maxOf(minKeyboardPx, maxKeyboardPx)
+
+    /** New drag bounds, as the numbers row changes them; normalized the same way. */
+    fun setHeightBounds(min: Int, max: Int) {
+        minKeyboardPx = minOf(min, max)
+        maxKeyboardPx = maxOf(min, max)
+    }
 
     private val handle = HandleView(context)
-    // Plain, themed by the window background behind it: this is empty space
-    // below the keys, not chrome to look at.
+    // Plain, showing the window background: empty space below the keys, not chrome.
     private val bottomGap = View(context)
     private var dragStartRawY = 0f
     private var dragStartHeight = 0
@@ -79,15 +78,9 @@ class InputContainerView(
     /**
      * Height of the gap below the keyboard, in pixels.
      *
-     * ADDS to the container's height rather than taking anything from the
-     * keys, which is what the request asked for: the reporter wanted the keys
-     * lifted off the bottom edge because their thumbs aim high, "not made
-     * smaller". So key rects, `keyWidthPx` and every kw distance are untouched
-     * by this.
-     *
-     * A child view like the handle strip rather than a padding call, for the
-     * same reason the handle is: it can then be resized live instead of
-     * forcing the input view to be rebuilt.
+     * Adds to the container's height and takes nothing from the keys, which are lifted off the
+     * bottom edge, not made smaller: key rects, `keyWidthPx` and every kw distance stay as they
+     * are. A child view, like the handle strip, so it resizes live without a rebuild.
      */
     fun setBottomGap(px: Int) {
         val h = px.coerceAtLeast(0)

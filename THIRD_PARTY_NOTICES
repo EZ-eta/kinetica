@@ -8,7 +8,8 @@ application code is licensed under the GNU General Public License v3.0
 1. Word frequency lists
    (en_wordlist.txt, it_wordlist.txt, es_wordlist.txt, pl_wordlist.txt,
    cs_wordlist.txt, nl_wordlist.txt, de_wordlist.txt, fr_wordlist.txt,
-   no_wordlist.txt, and en_gb_variants.txt, which is derived from
+   no_wordlist.txt, ru_wordlist.txt, he_wordlist.txt, ar_wordlist.txt,
+   uk_wordlist.txt, and en_gb_variants.txt, which is derived from
    en_wordlist.txt by orthographic rule and adds no new data)
 
 Derived from hermitdave/FrequencyWords (OpenSubtitles 2018 frequency lists):
@@ -40,10 +41,15 @@ THE SOFTWARE.
 2. Bigram tables
    (en_bigrams.txt, it_bigrams.txt, es_bigrams.txt, pl_bigrams.txt,
    cs_bigrams.txt, nl_bigrams.txt, de_bigrams.txt, fr_bigrams.txt,
-   no_bigrams.txt)
+   no_bigrams.txt, ru_bigrams.txt, he_bigrams.txt, ar_bigrams.txt,
+   uk_bigrams.txt)
 
    German noun capitalization in de_wordlist.txt is also derived from this
    corpus: the display spellings come from the case Tatoeba preserves.
+   So are the Ukrainian words with an apostrophe in uk_wordlist.txt, and
+   which Ukrainian words it keeps: a word is kept by its use in the
+   Ukrainian sentences. In the accented languages, which spellings with
+   the accents left off a wordlist keeps is decided the same way.
 
 Word-pair counts derived from the Tatoeba sentence corpora:
 https://tatoeba.org
@@ -53,7 +59,7 @@ https://creativecommons.org/licenses/by/2.0/fr/
 Attribution: tatoeba.org
 
 --------------------------------------------------------------------------
-3. AOSP LatinIME wordlists (on-device import only, NOT bundled)
+3. AOSP LatinIME wordlists (on-device import only, not bundled)
 
 Kinetica can import an AOSP-format "wordlist.combined" dictionary supplied
 by the user (Settings > Dictionary). The AOSP LatinIME main_* wordlists are

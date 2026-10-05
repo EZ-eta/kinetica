@@ -21,23 +21,21 @@ import androidx.core.view.setPadding
 import androidx.preference.PreferenceManager
 import com.kinetica.keyboard.R
 import com.kinetica.keyboard.data.ChordShortcut
-import com.kinetica.keyboard.keys.EditorAction
 import com.kinetica.keyboard.data.KineticaDb
+import com.kinetica.keyboard.keys.ChordKey
+import com.kinetica.keyboard.keys.ChordTrigger
+import com.kinetica.keyboard.keys.EditorAction
+import com.kinetica.keyboard.keys.KeyCombo
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 /**
- * Every `?123` chord setting, on one screen: the two reserved keys, then the list of
- * letter -> expansion bindings with add/edit/delete.
+ * Every chord setting on one screen: the two lead-ins, then the chords grouped by the key they are
+ * held with, `?123` or the spacebar, with add, edit and delete.
  *
- * Chords are opt-in per letter; an empty list keeps the feature inert. The keyboard
- * re-reads the table on every input start, so changes apply on the next focused field
- * without restarting the IME.
- *
- * The two reserved keys were separate entries in the preference screen, which a user
- * reported as three places to look for one feature. They are shown here and still STORED
- * as the same two preferences: KeyboardConfig reads them unchanged, and a backup written
- * before this change restores into it.
+ * The language switch and peck-type are ordinary chords here, `l` and `p` by default
+ * ([ChordDefaults]); there are no reserved keys. The keyboard re-reads the table on every input
+ * start, so a change applies on the next focused field.
  */
 class ChordSettingsActivity : AppCompatActivity() {
 
@@ -58,28 +56,18 @@ class ChordSettingsActivity : AppCompatActivity() {
             setPadding(pad)
         }
         root.addView(
-            TextView(this).apply {
-                text = getString(R.string.chord_reserved_heading)
-                setPadding(0, 0, 0, pad / 2)
-            },
-        )
-        root.addView(
-            reservedKeyRow(
-                R.string.pref_lang_cycle_key_title,
-                R.string.pref_lang_cycle_key_summary,
-                Prefs.LANG_CYCLE_KEY,
-                Prefs.DEFAULT_LANG_CYCLE_KEY,
+            leadInRow(
+                R.string.pref_chord_arm_title, R.string.pref_chord_arm_summary,
+                Prefs.CHORD_ARM_MS, Prefs.DEFAULT_CHORD_ARM_MS, KeyboardConfig.CHORD_ARM_MAX_MS,
             ),
         )
         root.addView(
-            reservedKeyRow(
-                R.string.pref_peck_chord_key_title,
-                R.string.pref_peck_chord_key_summary,
-                Prefs.PECK_CHORD_KEY,
-                Prefs.DEFAULT_PECK_CHORD_KEY,
+            leadInRow(
+                R.string.pref_space_chord_arm_title, R.string.pref_space_chord_arm_summary,
+                Prefs.SPACE_CHORD_ARM_MS, Prefs.DEFAULT_SPACE_CHORD_ARM_MS,
+                KeyboardConfig.SPACE_CHORD_ARM_MAX_MS,
             ),
         )
-        root.addView(leadInRow())
         root.addView(
             TextView(this).apply {
                 text = getString(R.string.chord_settings_title)
@@ -111,79 +99,25 @@ class ChordSettingsActivity : AppCompatActivity() {
     }
 
     /**
-     * One reserved-key setting: a label and a Spinner over the same entries the preference
-     * screen used, writing the same string value back to the same key.
-     *
-     * Deliberately not a Room row. KeyboardConfig.chordLetterCode reads these two
-     * preferences, the backup format carries them as preferences, and moving the storage
-     * would have meant a migration for a change that is only about where the control sits.
+     * How long a trigger must be held before a key tap counts as a chord. The spacebar has its own,
+     * longer one: it is pressed every word, and a thumb is often still on it when the other taps.
      */
-    /**
-     * How long `?123` must be held before a letter tap counts as a chord.
-     *
-     * On this screen rather than in the preference list because everything about chords
-     * belongs in one place, and because the number only means anything next to the chords it
-     * gates. Same preference key as before, so a backup written earlier restores into it.
-     *
-     * 150 is the shipped default and was never a measured value: a user reported the wait as
-     * a delay between the two presses, which is what made it a setting.
-     */
-    private fun leadInRow(): LinearLayout {
+    private fun leadInRow(titleRes: Int, summaryRes: Int, prefKey: String, default: Int, max: Int): LinearLayout {
         val pad = (8 * resources.displayMetrics.density).toInt()
         val prefs = PreferenceManager.getDefaultSharedPreferences(this)
-        val value = prefs.getInt(Prefs.CHORD_ARM_MS, Prefs.DEFAULT_CHORD_ARM_MS)
-            .coerceIn(0, CHORD_ARM_MAX_MS)
+        val value = prefs.getInt(prefKey, default).coerceIn(0, max)
         val readout = TextView(this).apply { text = getString(R.string.chord_lead_in_value, value) }
         val bar = SeekBar(this).apply {
-            max = CHORD_ARM_MAX_MS
+            this.max = max
             progress = value
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(sb: SeekBar?, p: Int, fromUser: Boolean) {
                     readout.text = getString(R.string.chord_lead_in_value, p)
-                    if (fromUser) prefs.edit().putInt(Prefs.CHORD_ARM_MS, p).apply()
+                    if (fromUser) prefs.edit().putInt(prefKey, p).apply()
                 }
                 override fun onStartTrackingTouch(sb: SeekBar?) = Unit
                 override fun onStopTrackingTouch(sb: SeekBar?) = Unit
             })
-        }
-        return LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(0, pad, 0, pad)
-            addView(TextView(context).apply { setText(R.string.pref_chord_arm_title) })
-            addView(
-                TextView(context).apply {
-                    setText(R.string.pref_chord_arm_summary)
-                    textSize = 13f
-                },
-            )
-            addView(readout)
-            addView(bar)
-        }
-    }
-
-    private fun reservedKeyRow(
-        titleRes: Int,
-        summaryRes: Int,
-        prefKey: String,
-        default: String,
-    ): LinearLayout {
-        val pad = (8 * resources.displayMetrics.density).toInt()
-        val values = resources.getStringArray(R.array.lang_cycle_key_values)
-        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
-        val current = prefs.getString(prefKey, default) ?: default
-        val spinner = Spinner(this).apply {
-            adapter = ArrayAdapter(
-                this@ChordSettingsActivity,
-                android.R.layout.simple_spinner_dropdown_item,
-                resources.getStringArray(R.array.lang_cycle_key_entries),
-            )
-            setSelection(values.indexOf(current).coerceAtLeast(0))
-            onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-                override fun onItemSelected(p: AdapterView<*>?, v: View?, pos: Int, id: Long) {
-                    prefs.edit().putString(prefKey, values[pos]).apply()
-                }
-                override fun onNothingSelected(p: AdapterView<*>?) = Unit
-            }
         }
         return LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -195,7 +129,8 @@ class ChordSettingsActivity : AppCompatActivity() {
                     textSize = 13f
                 },
             )
-            addView(spinner)
+            addView(readout)
+            addView(bar)
         }
     }
 
@@ -213,16 +148,17 @@ class ChordSettingsActivity : AppCompatActivity() {
 
     private fun refresh() {
         io.execute {
-            val rows = ChordRows.sorted(dao().all(), sort)
-            main.post { if (!isDestroyed) render(rows) }
+            // Before the read, so the old reserved keys show as the chords they now are.
+            ChordDefaults.applyTo(this)
+            val groups = ChordRows.grouped(dao().all(), sort)
+            main.post { if (!isDestroyed) render(groups) }
         }
     }
 
-    private fun render(rows: List<ChordShortcut>) {
+    private fun render(groups: List<Pair<ChordTrigger, List<ChordShortcut>>>) {
         listContainer.removeAllViews()
-        emptyHint.text = getString(
-            if (rows.isEmpty()) R.string.chord_empty_hint else R.string.chord_list_hint,
-        )
+        val count = groups.sumOf { it.second.size }
+        emptyHint.text = getString(if (count == 0) R.string.chord_empty_hint else R.string.chord_list_hint)
         sortButton.text = getString(
             when (sort) {
                 ChordRows.Sort.KEY_ASC -> R.string.chord_sort_key_asc
@@ -231,172 +167,179 @@ class ChordSettingsActivity : AppCompatActivity() {
             },
         )
         // Nothing to order until there are at least two of them.
-        sortButton.visibility = if (rows.size < 2) View.GONE else View.VISIBLE
+        sortButton.visibility = if (count < 2) View.GONE else View.VISIBLE
         val pad = (8 * resources.displayMetrics.density).toInt()
-        for (row in rows) {
-            val line = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                setPadding(0, pad, 0, pad)
-            }
-            line.addView(
+        for ((trigger, rows) in groups) {
+            listContainer.addView(
                 TextView(this).apply {
-                    text = getString(R.string.chord_row, row.chord, row.expansion)
-                    textSize = 16f
-                },
-                LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f),
-            )
-            line.addView(
-                Button(this).apply {
-                    text = getString(R.string.chord_edit)
-                    setOnClickListener { showEditor(row) }
+                    text = getString(groupTitle(trigger))
+                    setPadding(0, pad * 2, 0, 0)
                 },
             )
-            line.addView(
-                Button(this).apply {
-                    text = getString(R.string.chord_delete)
-                    setOnClickListener {
-                        io.execute {
-                            dao().delete(row)
-                            main.post { if (!isDestroyed) refresh() }
-                        }
-                    }
-                },
-            )
-            listContainer.addView(line)
+            for (row in rows) listContainer.addView(rowView(row, pad))
         }
+    }
+
+    private fun groupTitle(trigger: ChordTrigger): Int = when (trigger) {
+        ChordTrigger.MODE -> R.string.chord_group_mode
+        ChordTrigger.SPACE -> R.string.chord_group_space
+    }
+
+    private fun rowView(row: ChordShortcut, pad: Int): LinearLayout {
+        val line = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, pad, 0, pad)
+        }
+        val key = ChordRows.keyLabel(row)
+        // An action by its name, never the stored `action:` string.
+        val action = EditorAction.of(row.expansion)
+        val combo = KeyCombo.parse(row.expansion)
+        line.addView(
+            TextView(this).apply {
+                text = if (combo != null) {
+                    getString(R.string.chord_row, key, combo.label())
+                } else if (action != null) {
+                    getString(R.string.chord_row, key, getString(ActionLabels.labelRes(action)))
+                } else {
+                    getString(R.string.chord_row_text, key, row.expansion)
+                }
+                textSize = 16f
+            },
+            LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f),
+        )
+        line.addView(
+            Button(this).apply {
+                text = getString(R.string.chord_edit)
+                setOnClickListener { showEditor(row) }
+            },
+        )
+        line.addView(
+            Button(this).apply {
+                text = getString(R.string.chord_delete)
+                setOnClickListener {
+                    io.execute {
+                        dao().delete(row)
+                        main.post { if (!isDestroyed) refresh() }
+                    }
+                }
+            },
+        )
+        return line
     }
 
     private fun showEditor(existing: ChordShortcut?) {
         io.execute {
-            val taken = dao().all().map { it.chord }.toSet()
+            val taken = dao().all().mapNotNull { ChordKey.decode(it.chord) }.toSet()
             main.post { if (!isDestroyed) showEditorDialog(existing, taken) }
         }
     }
 
-    private fun showEditorDialog(existing: ChordShortcut?, taken: Set<String>) {
-        // Offer unassigned letters, plus the edited chord's own letter.
-        val letters = ('a'..'z').map { it.toString() }
-            .filter { it !in taken || it == existing?.chord }
-        if (letters.isEmpty()) return
+    private fun showEditorDialog(existing: ChordShortcut?, taken: Set<ChordKey>) {
         val pad = (16 * resources.displayMetrics.density).toInt()
+        val was = existing?.let { ChordKey.decode(it.chord) }
 
-        val spinner = Spinner(this).apply {
+        // The trigger first: it decides which keys are already taken.
+        val triggers = ChordTrigger.entries
+        val triggerSpinner = Spinner(this).apply {
             adapter = ArrayAdapter(
                 this@ChordSettingsActivity,
                 android.R.layout.simple_spinner_dropdown_item,
-                letters,
+                triggers.map {
+                    getString(
+                        when (it) {
+                            ChordTrigger.MODE -> R.string.chord_trigger_mode
+                            ChordTrigger.SPACE -> R.string.chord_trigger_space
+                        },
+                    )
+                },
             )
-            setSelection(letters.indexOf(existing?.chord).coerceAtLeast(0))
+            setSelection(triggers.indexOf(was?.trigger ?: ChordTrigger.MODE))
         }
-        // What the chord DOES. Free text was the only option, and the reserved
-        // "action:" outputs were undiscoverable - a user could only reach them by
-        // guessing the magic string, which until now inserted itself as literal
-        // text instead of running.
-        val existingAction = existing?.expansion?.let { EditorAction.of(it) }
-        // Built from EditorAction.entries rather than hand-listed, so a new action cannot
-        // be added without appearing here. The hand-listed version silently omitted RETYPE
-        // for three releases, which left its own KDoc's "two triggers for one
-        // implementation" half true - the suggestion-bar button worked and the chord could
-        // not be assigned. The `when` below is exhaustive, so the omission is now a
-        // compile error instead of an invisible gap.
-        val kinds = listOf<EditorAction?>(null) + EditorAction.entries
-        val kindLabels = kinds.map { action ->
-            if (action == null) {
-                getString(R.string.chord_kind_text)
-            } else {
-                getString(ActionLabels.labelRes(action))
-            }
+        // Typed, not picked: any key of any board, a symbol page's included.
+        val keyField = EditText(this).apply {
+            hint = getString(R.string.shortcut_key_hint)
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+            isSingleLine = true
+            setText(was?.key?.toString().orEmpty())
         }
+        // What the chord does, from ShortcutKinds, which builds it from EditorAction.entries so a
+        // new action cannot be missing.
+        val kinds = ShortcutKinds.chords
+        val (wasKind, wasField) = ShortcutKinds.decode(existing?.expansion)
+        val expansion = EditText(this).apply {
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
+            setText(wasField)
+        }
+        fun showFieldFor(kind: ShortcutKind) {
+            expansion.visibility = if (ShortcutKinds.usesField(kind)) View.VISIBLE else View.GONE
+            expansion.hint = getString(ShortcutKinds.hintRes(kind, R.string.chord_expansion_hint))
+        }
+        showFieldFor(wasKind)
         val kindSpinner = Spinner(this).apply {
             adapter = ArrayAdapter(
                 this@ChordSettingsActivity,
                 android.R.layout.simple_spinner_dropdown_item,
-                kindLabels,
+                kinds.map { getString(ShortcutKinds.labelRes(it)) },
             )
-            setSelection(kinds.indexOfFirst { it == existingAction }.coerceAtLeast(0))
-        }
-        val expansion = EditText(this).apply {
-            hint = getString(R.string.chord_expansion_hint)
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
-            // A command chord has no text, so an existing one leaves this blank
-            // rather than showing its reserved output back to the user.
-            setText(if (existingAction == null) existing?.expansion.orEmpty() else "")
-            visibility = if (existingAction == null) View.VISIBLE else View.GONE
+            setSelection(kinds.indexOf(wasKind).coerceAtLeast(0))
         }
         kindSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(p: AdapterView<*>?, v: View?, pos: Int, id: Long) {
-                expansion.visibility =
-                    if (kinds[pos] == null) View.VISIBLE else View.GONE
-            }
-            override fun onNothingSelected(p: AdapterView<*>?) = Unit
-        }
-        // Reserved chords (language cycle, peck toggle) take precedence over
-        // text chords on the same letter (KineticaIME.onChordTriggered), so a
-        // colliding assignment would sit silently dead. Saving is still
-        // allowed - the language reservation only bites while >1 language is
-        // enabled - but the collision must be visible at assignment time.
-        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
-        fun reserved(key: String, default: String): String? =
-            (prefs.getString(key, default) ?: default)
-                .takeIf { it.length == 1 && it[0] in 'a'..'z' }
-        val langLetter = reserved(Prefs.LANG_CYCLE_KEY, Prefs.DEFAULT_LANG_CYCLE_KEY)
-        val peckLetter = reserved(Prefs.PECK_CHORD_KEY, Prefs.DEFAULT_PECK_CHORD_KEY)
-        val warning = TextView(this).apply {
-            visibility = View.GONE
-            setPadding(0, pad / 2, 0, 0)
-        }
-        fun updateWarning(letter: String) {
-            val text = when (letter) {
-                langLetter -> getString(R.string.chord_reserved_lang, letter)
-                peckLetter -> getString(R.string.chord_reserved_peck, letter)
-                else -> null
-            }
-            warning.text = text.orEmpty()
-            warning.visibility = if (text == null) View.GONE else View.VISIBLE
-        }
-        spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(p: AdapterView<*>?, v: View?, pos: Int, id: Long) {
-                updateWarning(letters[pos])
+                showFieldFor(kinds[pos])
+                expansion.error = null
             }
             override fun onNothingSelected(p: AdapterView<*>?) = Unit
         }
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(pad)
+            addView(TextView(context).apply { text = getString(R.string.chord_trigger_label) })
+            addView(triggerSpinner)
             addView(TextView(context).apply { text = getString(R.string.chord_letter_label) })
-            addView(spinner)
-            addView(warning)
+            addView(keyField)
             addView(TextView(context).apply { text = getString(R.string.chord_kind_label) })
             addView(kindSpinner)
             addView(expansion)
         }
-        AlertDialog.Builder(this)
-            .setTitle(
-                if (existing == null) R.string.chord_add else R.string.chord_edit,
-            )
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(if (existing == null) R.string.chord_add else R.string.chord_edit)
             .setView(content)
-            .setPositiveButton(android.R.string.ok) { _, _ ->
-                val letter = spinner.selectedItem as String
-                val action = kinds[kindSpinner.selectedItemPosition]
-                val text = action?.output ?: expansion.text.toString()
-                if (text.isEmpty()) return@setPositiveButton
-                io.execute {
-                    // Editing to a different letter frees the old binding.
-                    if (existing != null && existing.chord != letter) {
-                        dao().delete(existing)
-                    }
-                    dao().assign(letter, text)
-                    main.post { if (!isDestroyed) refresh() }
-                }
-            }
+            // Set again once shown, so a refused key keeps the dialog open with its reason.
+            .setPositiveButton(android.R.string.ok, null)
             .setNegativeButton(android.R.string.cancel, null)
             .show()
-    }
-
-    private companion object {
-        /** Matches the bound KeyboardConfig coerces to; above this the guard stops helping. */
-        const val CHORD_ARM_MAX_MS = 300
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+            val key = when (val r = ShortcutKeyInput.parse(keyField.text)) {
+                ShortcutKeyInput.Result.Blank -> {
+                    keyField.error = getString(R.string.shortcut_key_error_blank)
+                    return@setOnClickListener
+                }
+                is ShortcutKeyInput.Result.TooMany -> {
+                    keyField.error = getString(R.string.shortcut_key_error_many, r.typed)
+                    return@setOnClickListener
+                }
+                is ShortcutKeyInput.Result.One -> r.key
+            }
+            val chord = ChordKey(triggers[triggerSpinner.selectedItemPosition], key)
+            if (chord in taken && chord != was) {
+                keyField.error = getString(R.string.chord_key_taken, key.toString())
+                return@setOnClickListener
+            }
+            val kind = kinds[kindSpinner.selectedItemPosition]
+            val text = ShortcutKinds.encode(kind, expansion.text.toString())
+            if (text == null) {
+                expansion.error = getString(
+                    if (kind == ShortcutKind.CtrlKey) R.string.combo_key_unsendable else R.string.chord_expansion_hint,
+                )
+                return@setOnClickListener
+            }
+            io.execute {
+                dao().replace(existing, chord.encode(), text)
+                main.post { if (!isDestroyed) refresh() }
+            }
+            dialog.dismiss()
+        }
     }
 
 }

@@ -15,21 +15,16 @@ import org.junit.Test
 
 /**
  * Cross-language ranking against the real bundled it/es assets, with Italian
- * active - the configuration in which three swipe words committed in Spanish.
+ * active, the configuration in which three swipe words committed in Spanish.
  *
  * The failing buffers are rebuilt from the `keys=` contact letters the trace
- * prints, which is what that field was added for: a captured gesture is
- * reconstructible as a fixture. The reconstruction is a polyline through those
- * contacts' key centers, so distances differ from the device's by a few
- * hundredths - the mechanism, not the exact number, is what these lock. The
- * device's own candidate tuples are pinned separately and dictionary-free in
+ * prints, as a polyline through those contacts' key centers, so distances
+ * differ from the device's by a few hundredths: these lock the mechanism, not
+ * the number. The device's own candidate tuples are pinned dictionary-free in
  * LanguagePreferenceTest.
  *
- * Rewritten when the whole-list swap became one ranked
- * list. The question each case asks is unchanged - would this gesture hand the
- * editor to the wrong language - but it is now asked of the merged list's lead
- * rather than of a swap decision, and the losing language stays pickable
- * instead of being discarded.
+ * Each case asks whether the gesture hands the editor to the wrong language,
+ * of the merged list's lead; the losing language stays pickable.
  */
 class LanguageDetectGoldenTest {
 
@@ -70,12 +65,12 @@ class LanguageDetectGoldenTest {
 
     @Test
     fun sudareGestureStaysItalian() {
-        // Trace lines 69-73: LEFT swipe with contacts s,d,f,t,y,u,y,t,f,d,s,a,s,
-        // e,r,e after committing "quindi", intending "sudare"; "ayudarte"
-        // committed instead. Italian ranks "state" first by score here too (the
-        // quindi->state bigram), and its best FIT is "sudare" at d=0.278.
-        // Pre-fix the gate read the heads - it 0.954 vs es 0.454, so
-        // pConf 0.512 < 0.75 and oConf 0.688 > 0.589 - and swapped.
+        // A left swipe with contacts s,d,f,t,y,u,y,t,f,d,s,a,s,e,r,e after
+        // "quindi", meant as "sudare"; "ayudarte" committed instead. Italian
+        // ranks "state" first by score here too (the quindi->state bigram), and
+        // its best fit is "sudare" at d=0.278. A whole-list swap read the heads,
+        // it 0.954 against es 0.454 (pConf 0.512 < 0.75, oConf 0.688 > 0.589),
+        // and swapped.
         val ctx = listOf("sempre", "quindi")
         val clean = listOf(TestData.swipe(CASE_A, g, 0, 1416, StreamId.LEFT))
         assertFalse("clean path led in Spanish", leadsInSpanish(clean, ctx))
@@ -89,21 +84,16 @@ class LanguageDetectGoldenTest {
 
     @Test
     fun sareiGestureStaysItalianEndToEnd() {
-        // Trace lines 81-85: LEFT swipe s,e,r,t,r,e with a simultaneous RIGHT
-        // tap of "i" 78 ms in, intending "sarei" (developer-confirmed).
-        //
-        // This asserted top-1 = "sarei" until 2026-08-23, and that assertion was an
-        // accident of the fixture's own clock rather than a behaviour: swept against the
-        // unmodified engine, the tap at 40/60/78/79/80 ms gives "sarei" and at 81 ms
-        // gives "siete", because SPLIT_MARGIN_MS is 80 and the mid-swipe split only fires
-        // above it. The same gesture three milliseconds later already lost. What this
-        // test was built for survives the whole sweep and is what it asserts now - the
-        // editor never takes a Spanish word, and "sarei" stays pickable - and the
-        // sarei/siete contest itself is KNOWN_ISSUES item 39.
-        // "sergei" committed - a word BOTH dictionaries hold at the same
-        // distance, so the swap could not add information. Pre-fix the Spanish
-        // head "odette" (d=0.334) beat the Italian head "sarei" (d=0.804) and
-        // the whole Italian list, "sarei" included, was thrown away.
+        // A left swipe s,e,r,t,r,e with a simultaneous right tap of "i" 78 ms in,
+        // meant as "sarei".
+        // Top-1 depends on the tap's clock: 40-80 ms gives "sarei" and 81 ms
+        // "siete", because SPLIT_MARGIN_MS is 80 and the mid-swipe split fires only
+        // above it. So this asserts what holds at every offset: the editor never
+        // takes a Spanish word, and "sarei" stays pickable. The sarei/siete
+        // contest is
+        // On device "sergei" committed, a word both dictionaries hold at the same
+        // distance. A whole-list swap let the Spanish head "odette" (d=0.334) beat
+        // the Italian head "sarei" (d=0.804) and threw the Italian list away.
         // Runs through WordComposer so the wiring is covered too.
         val cap = Capture()
         val composer = WordComposer(italian(), direct, direct, cap)
@@ -120,12 +110,11 @@ class LanguageDetectGoldenTest {
 
     @Test
     fun theSareiBufferHoldsItsInvariantsAtEveryTapOffset() {
-        // The guard that keeps the edge above from being re-hidden by a constant. Only
-        // the two claims that are true of the gesture, asserted across the whole range a
-        // thumb can land in: the reading may change with the offset - measured
-        // 2026-08-23 as sarei to 80 ms, siete from 81, serie from 300 - but the language
-        // must not, and the word the developer meant must stay reachable so a pick can
-        // teach it.
+        // Keeps the edge above from being hidden again by a constant: the two claims
+        // true of the gesture, asserted across the range a thumb can land in. The
+        // reading may change with the offset (sarei to 80 ms, siete from 81, serie from
+        // 300), but the language must not, and the word meant must stay reachable so a
+        // pick can teach it.
         for (offset in listOf(40L, 60L, 78L, 81L, 90L, 200L, 300L, 500L)) {
             val cap = Capture()
             val composer = WordComposer(italian(), direct, direct, cap)
@@ -147,33 +136,22 @@ class LanguageDetectGoldenTest {
 
     @Test
     fun sieteGestureIsReachableAndSpanishLeadsOnlyOnTheReconstruction() {
-        // Trace lines 86-90 (unreported; repaired from the correction strip,
-        // so ctx became [sergei, siete]): "suerte" committed
-        // over the intended "siete".
-        //
-        // Narrowed deliberately, on the same precedent as the scoring goldens: a
-        // reconstruction is a reachability fixture, not a ranking fixture.
-        // On this polyline-through-key-centres path Spanish "suerte" (d=0.188)
-        // fits better than Italian "siete" (d=0.301), so the merged
-        // list leads in Spanish and rule 2 cannot say otherwise - the foreign
-        // candidate is inside the informative zone AND fits strictly better,
-        // which is exactly the positive evidence the rule asks for.
-        //
-        // The DEVICE row does not behave that way, and it is what this gesture
-        // actually does in use: both dictionaries returned "siete" at d=0.229
-        // (measured), so the shared-word filter
-        // drops the Spanish entry and Italian leads by construction. That row
-        // is pinned dictionary-free in
-        // LanguagePreferenceTest.sieteGestureKeepsItalianAndSuerteNeverLeads.
-        // The gap between the two is the measured reconstruction bias: a path
-        // through exact key centres is cleaner than the
-        // gesture it stands for, and here it flatters a word the real gesture
-        // never favoured.
-        //
-        // What must hold on both is that the intended word stays REACHABLE and
-        // one tap away, which is what the merged list buys and the swap did
-        // not: under the old gate a wrong decision discarded the Italian list
-        // wholesale and this word had to be retyped.
+        // "suerte" committed over the intended "siete".
+        // Narrowed, like the scoring goldens: a reconstruction is a reachability
+        // fixture, not a ranking fixture. On this polyline-through-key-centres path
+        // Spanish "suerte" (d=0.188) fits better than Italian "siete" (d=0.301), so
+        // the merged list leads in Spanish and rule 2 cannot say otherwise: the
+        // foreign candidate is inside the informative zone and fits strictly better,
+        // the positive evidence the rule asks for.
+        // The device row differs: both dictionaries returned "siete" at d=0.229, so
+        // the shared-word filter drops the Spanish entry and Italian leads by
+        // construction. That row is pinned dictionary-free in
+        // LanguagePreferenceTest.sieteGestureKeepsItalianAndSuerteNeverLeads. The gap
+        // is the reconstruction bias: a path through exact key centres is cleaner
+        // than the gesture and here flatters a word the real gesture never favoured.
+        // What must hold on both is that the intended word stays reachable and one
+        // tap away; a whole-list swap discarded the Italian list on a wrong decision
+        // and the word had to be retyped.
         val ctx = listOf("sudare", "sergei")
         val tokens = listOf(TestData.swipe(CASE_C, g, 0, 1421, StreamId.LEFT))
         val m = merged(tokens, ctx)
@@ -193,16 +171,12 @@ class LanguageDetectGoldenTest {
         // The guarantee that matters for daily use: typing Italian must never
         // hand the editor to Spanish. 23 words x (clean, sloppy) = 46 decodes.
         //
-        // This used to be a statement about LANG_DETECT_MARGIN's headroom, and
-        // the headroom was the problem: these synthetic paths ceiling at a ratio
-        // of exactly 1.0 (a word bundled in both dictionaries gets identical
-        // geometry from both) while device-reconstructed geometry reached 1.095,
-        // leaving 0.055 - which is why the gate was declared at its design
-        // limit. With no ratio to clear the property is structural instead: an
-        // Italian word bundled in both lists is dropped from the Spanish one by
-        // the shared-word filter, and one bundled only in Italian is compared
-        // like with like on fit. MergedRankingSweepTest carries the same check
-        // at scale and in both directions.
+        // With no ratio to clear the property is structural: an Italian word
+        // bundled in both lists is dropped from the Spanish one by the
+        // shared-word filter, and one bundled only in Italian is compared like
+        // with like on fit. A ratio gate had 0.055 of headroom here (synthetic
+        // paths at 1.0, device geometry up to 1.095). MergedRankingSweepTest
+        // carries the same check at scale and in both directions.
         for (w in IT_WORDS) {
             for (sloppy in listOf(false, true)) {
                 val tokens = listOf(swipeFor(w, sloppy))
@@ -213,9 +187,8 @@ class LanguageDetectGoldenTest {
 
     @Test
     fun bundledLoanwordsStayItalian() {
-        // Borrowed words that live IN the Italian asset must keep decoding from
-        // Italian: the gate asks whether the active language can explain the
-        // path, and here it explains it exactly (d=0.0).
+        // Borrowed words that live in the Italian asset must keep decoding from
+        // Italian: the active language explains the path exactly (d=0.0).
         for (w in listOf("computer", "weekend", "internet", "film")) {
             val tokens = listOf(TestData.swipe(w, g, 0, 100L * w.length, StreamId.RIGHT))
             assertFalse("loanword '$w' led in Spanish", leadsInSpanish(tokens))
@@ -225,20 +198,14 @@ class LanguageDetectGoldenTest {
 
     @Test
     fun spanishOnlyWordsLeadTheMergedList() {
-        // The other half of the contract. Under the swap this needed the active
-        // language to have NO comparable explanation - a much rarer event
-        // between two Romance languages than a foreign word is, which is why
-        // the sweep measured detection at only 23 of 38 rows.
-        // Ranking the languages together asks nothing of the sort: the Spanish
-        // word has to fit better.
-        //
-        // "cuando" is back on this list, and it is the clearest evidence of the
-        // difference. It was removed once the recall fix
-        // gave Italian a genuine explanation of that path ("curando", d=0.132,
-        // see theRecallFixGivesItalianAnExplanationOfTheCuandoPath), capping the
-        // achievable ratio at 1.132 - under the old 1.15 margin, so the swap
-        // became structurally unreachable. With no ratio to clear, better
-        // Italian recall stops costing Spanish anything.
+        // The other half of the contract: the Spanish word has to fit better,
+        // nothing more. A whole-list swap needed the active language to have no
+        // comparable explanation, much rarer between two Romance languages than a
+        // foreign word, and reached only 23 of 38 rows.
+        // "cuando" is the clearest case: Italian explains that path with "curando"
+        // (d=0.132, see theRecallFixGivesItalianAnExplanationOfTheCuandoPath),
+        // which capped the swap's ratio at 1.132, under its 1.15 margin. With no
+        // ratio to clear, better Italian recall costs Spanish nothing.
         for (w in listOf("ayudarte", "trabajo", "siempre", "mujer", "nosotros", "cuando")) {
             val tokens = listOf(TestData.swipe(w, g, 0, 100L * w.length, StreamId.LEFT))
             val m = merged(tokens)
@@ -254,19 +221,11 @@ class LanguageDetectGoldenTest {
 
     @Test
     fun theRecallFixGivesItalianAnExplanationOfTheCuandoPath() {
-        // The budget split is what removed "cuando" from the swap list above,
-        // and this locks the CAUSE rather than the consequence: Italian holds
-        // "curando" at d=0.132 on that path. Pre-fix the same decode offered
-        // nothing better than d=0.39 ("citando" on the device path), because the
-        // p-/c- subtree spent its whole slice on DTW-abandoned words.
-        //
-        // Before the merged ranking this number was also what made the cuando swap
-        // unreachable: pConf = 1/1.132 = 0.883 capped the best ratio ANY Spanish
-        // word could reach at 1.132, below the 1.15 margin. The merged list has
-        // no ratio, so that cost is gone (spanishOnlyWordsLeadTheMergedList
-        // covers cuando again) - but the recall property itself still matters,
-        // so this stays: if a future change starves the subtree again, this test
-        // goes red first and names the reason.
+        // Italian holds "curando" at d=0.132 on the cuando path. Without the budget
+        // split the same decode offered nothing better than d=0.39 ("citando" on the
+        // device path), because the p-/c- subtree spent its whole slice on
+        // DTW-abandoned words. If a change starves the subtree again, this goes red
+        // first and names the reason.
         val tokens = listOf(TestData.swipe("cuando", g, 0, 600, StreamId.LEFT))
         val top3 = italian().decode(tokens, emptyList()).take(3)
         val curando = top3.firstOrNull { it.word == "curando" }
@@ -276,15 +235,12 @@ class LanguageDetectGoldenTest {
 
     @Test
     fun aForeignLeadCarriesItsLanguageAndLeavesItalianPickable() {
-        // The learning guard depends on provenance, not on a swap flag: the
-        // committed word must be attributable to a dictionary so KineticaIME
-        // learns it into that one rather than into the active language (the
-        // "sonore"/"imposte" poisoning captured on a live trace).
-        //
-        // The second assertion is the recoverability property the merged
-        // ranking exists for: the swap used to discard
-        // the Italian list wholesale, so a wrong detection could only be undone
-        // by retyping. Italian candidates now survive a correct detection too.
+        // The learning guard depends on provenance: the committed word must be
+        // attributable to a dictionary so KineticaIME learns it into that one,
+        // not the active language ("sonore"/"imposte" got in that way).
+        // The second assertion is the recoverability the merged ranking exists
+        // for: Italian candidates survive a correct detection too, so a wrong one
+        // is undone with a pick, not a retype.
         val cap = Capture()
         val composer = WordComposer(italian(), direct, direct, cap)
         composer.alternatePredictor = spanish()
@@ -315,7 +271,7 @@ class LanguageDetectGoldenTest {
     }
 
     private companion object {
-        /** Contact letters of the failing LEFT swipes, verbatim from the trace. */
+        /** Contact letters of the failing left-thumb swipes, verbatim from the trace. */
         const val CASE_A = "sdftyuytfdsasere"
         const val CASE_C = "sdftyuytrertre"
 

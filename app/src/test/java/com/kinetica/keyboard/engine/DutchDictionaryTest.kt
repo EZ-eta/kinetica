@@ -11,10 +11,9 @@ import org.junit.Assume.assumeTrue
 import org.junit.Test
 
 /**
- * Dutch real-asset goldens (ADDING_A_LANGUAGE.md §6). Dutch is the one new
- * language whose accents are all loans rather than letters of its own
- * alphabet, so the diaeresis words are the whole forms surface: "efficient"
- * is not a Dutch spelling and only reaches "efficiënt" by folding.
+ * Dutch real-asset goldens (ADDING_A_LANGUAGE.md §6). Dutch accents are loans, not letters of
+ * its alphabet, so the diaeresis words are its whole forms surface: "efficient" is not a Dutch
+ * spelling and reaches "efficiënt" only by folding.
  */
 class DutchDictionaryTest {
 

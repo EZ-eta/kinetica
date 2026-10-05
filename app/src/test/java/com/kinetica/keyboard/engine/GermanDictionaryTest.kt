@@ -12,8 +12,8 @@ import org.junit.Test
 
 /**
  * German real-asset goldens (ADDING_A_LANGUAGE.md §6). Common words run on
- * both the base QWERTY geometry and the Y/Z swap, since QWERTZ is what a
- * German user will actually select. Eszett folds to two letters, so "grosse"
+ * both the base QWERTY geometry and the Y/Z swap, since a German user selects
+ * QWERTZ. Eszett folds to two letters, so "grosse"
  * and "große" share one node and the forms table decides which is shown.
  */
 class GermanDictionaryTest {
@@ -129,16 +129,15 @@ class GermanDictionaryTest {
 
     @Test
     fun nounsCommitWithTheirCapital() {
-        // The point of the case pass, end to end on the real asset: German
+        // The case pass end to end on the real asset: German
         // capitalizes every noun, FrequencyWords is lowercased, and the capital
         // rides back as a display form on the lowercase trie key.
         val dict = loadDict()
         val g = TestData.qwertyGeometry()
         val predictor = WordPredictor(dict.trie, BigramTable.EMPTY, g, dict.forms)
-        // Measured, not assumed: every pair below leads at all four overshoot
-        // values. "mann" is deliberately absent - it loses to "man", which is a
-        // real German word, on the doubled n, and that is the double-letter
-        // problem rather than anything to do with case.
+        // Every pair below leads at all four overshoot values. "mann" is left
+        // out: it loses to "man", a real German word, on the doubled n, which is
+        // the double-letter problem and not case.
         for ((folded, expected) in listOf(
             "haus" to "Haus", "zeit" to "Zeit", "arbeit" to "Arbeit",
             "kind" to "Kind", "welt" to "Welt", "vater" to "Vater",
@@ -153,13 +152,13 @@ class GermanDictionaryTest {
         }
         // "morgen" is the adverb "tomorrow" more often than the noun
         // "Morgen", ratio 0.32, so the lowercase reading must lead. This is
-        // the two-spelling path picking the corpus's own order.
+        // the two-spelling path following the corpus's own order.
         val morgen = predictor.decode(
             listOf(TestData.swipe("morgen", g, 0, 600)), emptyList(),
         )
         assertTrue("morgen produced no candidates", morgen.isNotEmpty())
         assertEquals("morgen", morgen[0].word)
-        // A function word must NOT have been capitalized.
+        // A function word must not be capitalized.
         assertTrue("nicht was capitalized", dict.trie.contains("nicht"))
         val nicht = dict.forms[dict.trie.nodeFor("nicht")]?.map { it.display }
         assertTrue("nicht carries a capital: $nicht", nicht == null || nicht.contains("nicht"))
@@ -188,7 +187,7 @@ class GermanDictionaryTest {
     fun eszettFoldsToTwoLettersAndShareSitsOnOneNode() {
         // ß folds to "ss", so "große" and the Swiss "grosse" are one trie key.
         // Asserted because it is the only fold in the map that changes a word's
-        // LENGTH, which the swipe path has to agree with.
+        // length, which the swipe path has to agree with.
         assertEquals("grosse", AccentFolder.fold("große"))
         val dict = loadDict()
         val node = dict.trie.nodeFor("grosse")

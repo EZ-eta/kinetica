@@ -6,8 +6,8 @@ import androidx.room.Transaction
 
 @Dao
 interface EmojiUseDao {
-    // Two statements instead of INSERT..ON CONFLICT DO UPDATE, as in
-    // UserWordDao: that upsert syntax needs SQLite 3.24+ and API 26 ships 3.18.
+    // Two statements, not INSERT..ON CONFLICT DO UPDATE: that syntax needs SQLite 3.24+ and
+    // API 26 ships 3.18.
     @Query("INSERT OR IGNORE INTO emoji_uses (emoji, count, updatedAt) VALUES (:emoji, 0, :now)")
     fun insertIfAbsent(emoji: String, now: Long)
 

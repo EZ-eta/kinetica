@@ -1,19 +1,17 @@
 package com.kinetica.keyboard.engine
 
 /**
- * Maps accented Latin letters onto the 27-symbol trie alphabet (a-z plus
- * apostrophe). Gesture geometry only knows base keys - an Italian user swipes
- * the same path for "perche" and "perché" - so accented dictionary words are
- * stored under their folded key and resurface as display variants at emit
- * time (see [LoadedDictionary.forms]).
+ * Maps accented letters onto the trie alphabet's base letters. Gesture geometry knows only base
+ * keys (an Italian user swipes the same path for "perche" and "perché"), so accented words are
+ * stored under their folded key and come back as display variants at emit time (see
+ * [LoadedDictionary.forms]).
  */
 object AccentFolder {
 
     /**
-     * Letters that fold to two a-z letters rather than one. Kept apart from
-     * [FOLD] because a two-letter fold is not a key, so these are excluded from
-     * [accentedLetterCode] by construction and cannot be inserted mid-word from
-     * a long-press popup.
+     * Letters that fold to two letters. Kept apart from [FOLD] because a two-letter fold is not a
+     * key, so [accentedLetterCode] never returns one and a long-press popup cannot insert one
+     * mid-word.
      */
     private val DIGRAPHS = mapOf('ß' to "ss", 'œ' to "oe")
 
@@ -32,48 +30,53 @@ object AccentFolder {
         put('ś', 's'); put('š', 's')
         put('ť', 't')
         put('ž', 'z'); put('ź', 'z'); put('ż', 'z')
+        // Russian writes ё on е's key and most text writes е for it.
+        put('ё', 'е')
+        // Ukrainian writes ґ on г's key, and its apostrophe often as the modifier letter.
+        put('ґ', 'г')
+        put('\u02BC', '\'')
+        // Arabic: the alef-hamza forms and wasla sit on alef's key.
+        "أإآٱ".forEach { put(it, 'ا') }
     }
 
     /**
-     * Letter code of [text] when it is a single ACCENTED letter of this
-     * alphabet, else -1.
-     *
-     * Exists because an accented letter inserted from a long-press popup is part
-     * of the word being written, while every other thing that popup can insert -
-     * a digit, a symbol, an emoji - ends it. The predicate is deliberately
-     * narrow: one character, folding to exactly one a-z letter, and actually
-     * different from it. So the popup's own base cell ("o" under "ó") keeps the
-     * shipped commit-then-insert behaviour, and the digraphs "ß" and "œ" (which
-     * fold to two letters, i.e. not a key) are excluded by construction.
-     *
-     * Pure and Android-free so the composing decision is JVM-testable, unlike
-     * the buffer plumbing in KineticaIME that acts on it.
+     * Marks a folded key never carries: Arabic tatweel and short vowels. Text almost always omits
+     * them, and a key cannot be drawn for a mark.
      */
-    fun accentedLetterCode(text: String): Int {
+    private val DROPPED: Set<Char> = HashSet<Char>().apply {
+        add('\u0640')
+        for (c in '\u064B'..'\u0652') add(c)
+        add('\u0670')
+    }
+
+    /**
+     * Letter code of [text] when it is a single accented letter of this alphabet, else -1.
+     *
+     * An accented letter from a long-press popup continues the word; a digit, symbol or emoji
+     * from the same popup ends it. Only one character folding to one different letter qualifies,
+     * so the popup's base cell ("o" under "ó") still commits and then inserts, and "ß" and "œ"
+     * never match.
+     *
+     * Pure so the composing decision is JVM-testable, unlike the buffer code in KineticaIME.
+     */
+    fun accentedLetterCode(text: String, alphabet: Alphabet = Alphabet.LATIN): Int {
         if (text.length != 1) return -1
         val lower = text[0].lowercaseChar()
         val folded = FOLD[lower] ?: return -1
-        return Alphabet.codeOf(folded)
+        return alphabet.codeOf(folded)
     }
 
     /**
      * Folded form of [word]; returns the same instance when nothing folds.
      *
-     * Case folds too, because the trie alphabet has no capitals:
-     * [Alphabet.codeOf] admits only a-z and an apostrophe, so an entry written
-     * "Haus" would encode to null and [Trie.build] would drop it with no error
-     * at all. Folding case here is what lets a wordlist carry a capitalized
-     * DISPLAY form on a lowercase key, which is how German noun capitalization
-     * rides the same forms mechanism that turns "perche" into "perché".
-     *
-     * Inert for every language whose asset is already lowercase, which was all
-     * of them before German: an all-lowercase unaccented word still returns the
-     * same instance it was given.
+     * Case folds too: the trie alphabet has no capitals, so "Haus" would encode to null and
+     * [Trie.build] would drop it silently. A wordlist can then carry a capitalized display form on
+     * a lowercase key, and German nouns use the same forms mechanism as "perché".
      */
     fun fold(word: String): String {
         var needsFold = false
         for (ch in word) {
-            if (ch in DIGRAPHS || FOLD.containsKey(ch) || ch.isUpperCase()) {
+            if (ch in DIGRAPHS || FOLD.containsKey(ch) || ch.isUpperCase() || ch in DROPPED) {
                 needsFold = true
                 break
             }
@@ -81,9 +84,9 @@ object AccentFolder {
         if (!needsFold) return word
         val sb = StringBuilder(word.length + 1)
         for (ch in word) {
-            // Lowercase FIRST, so the maps only need their lowercase keys and
-            // "Ä" folds as "ä" does.
+            // Lowercase first, so the maps need only lowercase keys and "Ä" folds as "ä" does.
             val lower = ch.lowercaseChar()
+            if (lower in DROPPED) continue
             val digraph = DIGRAPHS[lower]
             if (digraph != null) sb.append(digraph) else sb.append(FOLD[lower] ?: lower)
         }

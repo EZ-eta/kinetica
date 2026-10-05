@@ -3,11 +3,7 @@ package com.kinetica.keyboard.settings
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-/**
- * The pure enter-alternates parser. `parseEnterAlternates` is a pure
- * String? -> List<String> function, so it is JVM-testable directly without
- * SharedPreferences.
- */
+/** `parseEnterAlternates` is pure `String? -> List<String>`, testable without SharedPreferences. */
 class KeyboardConfigTest {
 
     private val default = listOf("?", "!", ",")

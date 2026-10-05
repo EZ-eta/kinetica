@@ -13,20 +13,17 @@ import org.junit.Assume.assumeTrue
 import org.junit.Test
 
 /**
- * `personalBoost` used to be an unbounded multiplier applied whatever the
- * candidate's shape, so a word committed dozens of times could take a gesture
- * it plainly did not fit.
- * It now applies only while the candidate's GEOMETRIC fit is inside
- * `GEO_SATURATION_KW` - see PERSONAL_BOOST's rationale for the measurement.
+ * `personalBoost` applies only while the candidate's geometric fit is inside
+ * `GEO_SATURATION_KW` (see PERSONAL_BOOST's rationale for the measurement).
+ * Unbounded, a word committed dozens of times could take a gesture it plainly
+ * did not fit.
  *
- * Three device instances drove it and only two are reachable; the third is
- * pinned below as impossible so nobody re-tunes for it. Both reachable ones are
- * end-to-end here rather than pinned as trace tuples, because unusually for
- * this project the polyline-through-contacts reconstruction DOES carry them:
- * the deciding distances are 0.32 against 1.17 and 0.38 against 0.97, gaps wide
- * enough to survive the measured reconstruction compression. The rows that
- * must NOT move are asserted here too, with a personal count present, since a
- * bound that quietly disabled the feature would otherwise pass everything.
+ * Of three device instances two are reachable, and they run end to end: their
+ * deciding distances, 0.32 against 1.17 and 0.38 against 0.97, are wide enough
+ * to survive the reconstruction's compression. The third is pinned as
+ * unreachable so nobody re-tunes for it. Rows that must not move are asserted
+ * too, with a personal count present, since a bound that disabled the feature
+ * would otherwise pass everything.
  */
 class PersonalBoostBoundTest {
 
@@ -58,12 +55,11 @@ class PersonalBoostBoundTest {
 
     @Test
     fun mujerSurvivesAPersonallyBoostedMe() {
-        // A device row. Spanish "mujer" fits at d=0.384, Italian "me" at 0.969 - a 2.5x
-        // geometric edge to the intended word - but "me" carries pb=1.614 from
+        // A device row. Spanish "mujer" fits at d=0.384, Italian "me" at 0.969, a
+        // 2.5x geometric edge to the intended word, but "me" carries pb=1.614 from
         // ~59 commits and 0.89*0.219*1.614 beat 0.81*0.296, so the merge saw an
-        // Italian head and returned native-lead. The merged ranking could not fix it:
-        // the merge rules decide WHICH candidate may lead, never the magnitude
-        // of a score.
+        // Italian head and returned native-lead. The merge rules decide which
+        // candidate may lead, never the magnitude of a score, so they cannot fix it.
         val active = predictor(IT, mapOf("me" to 59), "it")
         val other = predictor(ES, emptyMap(), "es")
         val tokens = swipe(MUJER_CONTACTS)
@@ -80,19 +76,15 @@ class PersonalBoostBoundTest {
 
     @Test
     fun theKeyboardGesturePutsKeyboardInsideTheCap() {
-        // A third device instance. The RANKING half is
-        // pinned on the trace's own numbers in ScoreWeightingTest's DEVICE_ROWS,
-        // because the polyline reconstruction does not carry that contest at
-        // all: rebuilt, "keyboard" already leads and "leonard" is not even in
-        // the window (d 1.64 for "lewis" gives the scale). Treat
-        // reconstructions as reachability fixtures, not ranking fixtures - that
-        // bias is measured elsewhere and holds here too.
-        //
-        // What the reconstruction CAN establish is the premise the device row
-        // turns on, and it is the one that would silently rot if the cap moved:
-        // on this gesture "keyboard" is inside GEO_SATURATION_KW and therefore
-        // keeps its boost, while "leonard" at d=1.17 on device is far outside
-        // and loses its own.
+        // A third device instance. The ranking half is pinned on the trace's own
+        // numbers in ScoreWeightingTest's DEVICE_ROWS, because the polyline
+        // reconstruction does not carry that contest: rebuilt, "keyboard" already
+        // leads and "leonard" is not in the window (d 1.64 for "lewis" gives the
+        // scale).
+        // What the reconstruction can establish is the premise the device row
+        // turns on, which would rot silently if the cap moved: on this gesture
+        // "keyboard" is inside GEO_SATURATION_KW and keeps its boost, while
+        // "leonard" at d=1.17 on device is far outside and loses its own.
         val p = predictor(EN, mapOf("leonard" to 3, "keyboard" to 1))
         val hit = p.decode(swipe(KEYBOARD_CONTACTS), listOf("keyboard", "leonard"))
             .first { it.word == "keyboard" }
@@ -115,9 +107,9 @@ class PersonalBoostBoundTest {
     fun theBoostFadesExactlyAsTheFitStopsCarryingInformation() {
         // Same word, same commit count, two paths: one the word's own, one a
         // different word's. Inside the cap the boost lifts it in full; a whole
-        // key out it is gone. This is the rule with no dictionary or device row
-        // in the way, so it fails loudly if the weight is ever moved to dTotal
-        // or given a constant of its own.
+        // key out it is gone. The rule with no dictionary or device row in the
+        // way, so it fails loudly if the weight moves to dTotal or gets a
+        // constant of its own.
         val counts = mapOf("vedere" to 40)
         val p = predictor(IT, counts)
         val own = p.decode(swipe("vedere", StreamId.LEFT), emptyList())
@@ -152,12 +144,11 @@ class PersonalBoostBoundTest {
 
     @Test
     fun aBoostSurvivesTheCapAndDiesOneKeyLater() {
-        // The step edge, stated on the numbers that
-        // produced it. "sempre" carries pb=1.54 and was observed BOTH boosted
-        // (d=0.37, 0.47) and stripped (d=0.50, 0.60) in a single capture, so the
-        // gate's discontinuity - not any factor - decided four rows. What the
-        // fade guarantees is that 0.03 kw of fit can no longer invert a 1.22x
-        // boost advantage.
+        // The step edge, on the numbers that produced it. "sempre" carries
+        // pb=1.54 and was seen both boosted (d=0.37, 0.47) and stripped (d=0.50,
+        // 0.60) in one capture, so the gate's discontinuity, not any factor,
+        // decided four rows. The fade guarantees that 0.03 kw of fit can no
+        // longer invert a 1.22x boost advantage.
         val cap = KineticaConstants.GEO_SATURATION_KW
         val raw = 1.54f
         val justInside = KineticaConstants.appliedBoost(raw, cap - 0.01f)
@@ -176,20 +167,19 @@ class PersonalBoostBoundTest {
                 KineticaConstants.appliedBoost(1.26f, 0.47f)
             assertTrue("sempre at d=$d lost to stremo: $sempre vs $stremo", sempre > stremo)
         }
-        // ...and a whole key out the same boost buys nothing, which is what lets
-        // an all-saturated row fall through to fw.
+        // ...and a whole key out the same boost buys nothing, so an
+        // all-saturated row falls through to fw.
         assertEquals("a boost a key out must be gone", 1f, KineticaConstants.appliedBoost(raw, 2f * cap), 1e-6f)
     }
 
     @Test
     fun comeStillBeatsComputerUnderEveryBoundedBoost() {
-        // A device row, and the reason two of the three instances are fixed
-        // rather than three. Past GEO_SATURATION_KW both candidates clamp to the
-        // same geometric term, so the contest reduces to fw: come 0.91 against
-        // computer 0.71 at d=0.988 and 0.710. "come" wins by 1.28x even with NO
-        // boost on either word, which means no bound on the personal term can
-        // reach this row - just as no function of d can. Both levers are closed
-        // on it; measured and rejected, do not re-derive.
+        // A device row, and the reason two of the three instances are fixed,
+        // not three. Past GEO_SATURATION_KW both candidates clamp to the same
+        // geometric term, so the contest reduces to fw: come 0.91 against
+        // computer 0.71 at d=0.988 and 0.710. "come" wins by 1.28x with no boost
+        // on either word, so no bound on the personal term can reach this row,
+        // just as no function of d can. Both levers were measured and rejected.
         val geo = KineticaConstants.geometricTerm(KineticaConstants.GEO_SATURATION_KW)
         val come = 0.91f * KineticaConstants.geometricTerm(0.988f)
         val computer = 0.71f * KineticaConstants.geometricTerm(0.710f)
@@ -202,10 +192,9 @@ class PersonalBoostBoundTest {
     @Test
     fun aWellFittingPersonalWordKeepsItsFullBoost() {
         // The bound must not become a general weakening of the feature. These
-        // are the device rows where the boost is doing its job: a flagship word
-        // with a large count and a fit inside the cap. Measured across the eight
-        // captures, all 54 such rows keep their top-1, and
-        // these three are the resume family's own.
+        // are device rows where the boost does its job: a flagship word with a
+        // large count and a fit inside the cap. Across the captured corpus all
+        // 54 such rows keep their top-1; these three are the resume family's own.
         for ((word, count) in listOf("quindi" to 45, "sempre" to 40, "interessante" to 35)) {
             val p = predictor(IT, mapOf(word to count))
             val c = p.decode(swipe(word, StreamId.LEFT), emptyList())
@@ -222,8 +211,8 @@ class PersonalBoostBoundTest {
     fun tapAndCompletionCandidatesAreNeverAttenuated() {
         // The condition reads the geometric mean, not dTotal, so a completion's
         // per-letter penalty and a fuzzy anchor's substitution charge cannot
-        // switch the boost off. "they" from the t,h prefix sits at dTotal
-        // exactly 0.50 - GEO_SATURATION_KW - so a dTotal-keyed rule would decide
+        // switch the boost off. "they" from the t,h prefix sits at dTotal 0.50,
+        // which is GEO_SATURATION_KW, so a dTotal-keyed rule would decide
         // PersonalWeightTest.reinforcedCompletionClimbs on a float comparison.
         val tokens = listOf(TestData.tap('t', g, 0), TestData.tap('h', g, 100))
         val c = WordPredictor(TestData.smallDictionary(), BigramTable.EMPTY, g, emptyMap(), mapOf("they" to 20))

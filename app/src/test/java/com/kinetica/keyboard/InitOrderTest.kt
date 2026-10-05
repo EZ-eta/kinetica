@@ -11,20 +11,19 @@ import org.junit.Test
 /**
  * No class-level property may be declared below its own `init` block.
  *
- * Kotlin runs property initializers and `init` blocks in DECLARATION order, so a property
- * written below `init` is still null while `init` runs. Anything `init` calls that reads it
- * throws out of the constructor, and for a view built on the key-handling path that means
- * the keyboard dies rather than the feature failing: `EmojiPickerView.glyphPaint` sat eleven
- * lines too low and the emoji panel took the whole IME down with it. KNOWN_ISSUES item 64.
+ * Kotlin runs property initializers and `init` blocks in declaration order, so a property
+ * written below `init` is still null while `init` runs and anything `init` calls that reads it
+ * throws out of the constructor. On the key-handling path that kills the keyboard:
+ * `EmojiPickerView.glyphPaint` sat eleven lines too low and the emoji panel took the whole IME
+ * down.
  *
- * Reads the source off disk, the same way [com.kinetica.keyboard.ui.EmojiDataTest] and
- * [com.kinetica.keyboard.settings.PreferenceTreeTest] read the assets, so **`--rerun-tasks`
- * is what makes a fail-first check here actually run.**
+ * Reads the source off disk, like [com.kinetica.keyboard.ui.EmojiDataTest] and
+ * [com.kinetica.keyboard.settings.PreferenceTreeTest], so a fail-first check here needs
+ * `--rerun-tasks`.
  *
- * **This is a heuristic and the escape is deliberate.** A property never touched from `init`
- * is safe anywhere, so a future case may trip this for real. The fix is to move the property
- * above `init` or to make it a function, which has no ordering problem at all. Relaxing the
- * test instead needs a stated reason, because what it prevents is a dead keyboard.
+ * A heuristic: a property never touched from `init` is safe anywhere, so a harmless case may
+ * trip it. Move the property above `init` or make it a function; relaxing the test needs a
+ * stated reason, because what it prevents is a dead keyboard.
  */
 class InitOrderTest {
 
@@ -37,13 +36,12 @@ class InitOrderTest {
     private val initBlock = Regex("""^ {4}init\s*\{""")
 
     /**
-     * A class-member property whose value is computed AT CONSTRUCTION, which is what carries
-     * the ordering. Two shapes qualify: an `=` initializer and a `by` delegate, since the
-     * delegate object is itself built by an initializer.
+     * A class-member property whose value is computed at construction, so its position matters.
+     * Two shapes qualify: an `=` initializer and a `by` delegate, whose delegate object is itself
+     * built by an initializer.
      *
-     * A type may not contain brackets here on purpose. That is what excludes
-     * `val x: Boolean get() = ...`, a computed property with no backing field, which is safe
-     * anywhere and was the first thing this caught.
+     * The type may not contain brackets, which excludes `val x: Boolean get = ...`: a computed
+     * property with no backing field is safe anywhere.
      */
     private val initialisedProperty =
         Regex("""^ {4}(?:private |internal |protected |public )?(?:@\w+\s+)?(?:val|var)\s+(\w+)\s*(?::\s*[\w<>?.,\s\[\]]+?)?\s*(?:=|\bby\b)\s""")

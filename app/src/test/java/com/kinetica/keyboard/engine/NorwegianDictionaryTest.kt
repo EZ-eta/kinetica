@@ -11,12 +11,11 @@ import org.junit.Assume.assumeTrue
 import org.junit.Test
 
 /**
- * Norwegian real-asset goldens (ADDING_A_LANGUAGE.md §6). Norwegian is the
- * first language whose own alphabet letters fold onto other letters that are
- * themselves common words: æ and å fold to "a", ø folds to "o", so "være"
- * shares a node with "vare" and "før" with "for". The collision tests below
- * pin which spelling the forms table shows, because that is the accepted cost
- * of the 27-symbol alphabet and it should fail loudly if it ever changes.
+ * Norwegian real-asset goldens (ADDING_A_LANGUAGE.md §6). Norwegian's own
+ * letters fold onto letters that spell common words: æ and å fold to "a", ø to
+ * "o", so "være" shares a node with "vare" and "før" with "for". The collision
+ * tests pin which spelling the forms table shows: it is the accepted cost of
+ * the 27-symbol alphabet and should fail loudly if it changes.
  */
 class NorwegianDictionaryTest {
 
@@ -149,8 +148,8 @@ class NorwegianDictionaryTest {
 
     @Test
     fun foldingCollisionsResolveToTheMoreFrequentSpelling() {
-        // The accepted cost of æ/ø/å folding onto a-z, measured rather than
-        // assumed: 630 of 49 123 Norwegian keys carry more than one spelling.
+        // The accepted cost of æ/ø/å folding onto a-z: 630 of 49 123 Norwegian
+        // keys carry more than one spelling.
         // In every pair below the frequency order is also the one a reader
         // wants, so the forms table shows the right word first.
         val dict = loadDict()
@@ -161,8 +160,8 @@ class NorwegianDictionaryTest {
         assertEquals("for", shown("for").first())
         assertEquals("så", shown("sa").first())
         assertEquals("måte", shown("mate").first())
-        // A lone "a" shows "å", the infinitive marker, which is what
-        // StandaloneLetters treats as a one-letter Norwegian word.
+        // A lone "a" shows "å", the infinitive marker, the word StandaloneLetters
+        // treats as a one-letter Norwegian word.
         assertEquals("å", shown("a").first())
     }
 

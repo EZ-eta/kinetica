@@ -1,5 +1,7 @@
 package com.kinetica.keyboard.layout
 
+import com.kinetica.keyboard.engine.Alphabet
+
 enum class KeyType {
     CHAR, SHIFT, BACKSPACE, ENTER, SPACE,
     MODE_SYMBOLS, MODE_SYMBOLS2, MODE_ALPHA, MODE_NUMPAD, EMOJI;
@@ -39,14 +41,28 @@ data class Key(
     /** Long-press choices; the first entry is the plain-long-press default. */
     val alternates: List<String> = emptyList(),
     /**
-     * Rendered without a key background/border (and no press highlight): only
-     * the label is painted on the keyboard background. The hit target is
-     * unchanged. Used for the optional apostrophe key, Nintype-style.
+     * Drawn as a bare label, with no background, border or press highlight; the hit target
+     * is unchanged. Used for the optional apostrophe key, Nintype-style.
      */
     val chromeless: Boolean = false,
+    /**
+     * The letters of the board this key belongs to. A key is a letter only in its board's own
+     * alphabet, so `π` on a symbol page stays a symbol and a Latin letter key is a-z.
+     */
+    val alphabet: Alphabet = Alphabet.LATIN,
 ) {
     val isLetter: Boolean =
-        type == KeyType.CHAR && output.length == 1 && output[0] in 'a'..'z'
+        type == KeyType.CHAR && output.length == 1 && alphabet.isLetter(output[0])
+
+    /** The letter's code in [alphabet], or -1 for anything that is not a letter key. */
+    val letterCode: Int = if (isLetter) alphabet.codeOf(output[0]) else -1
+
+    /**
+     * The character a chord is keyed by, or null for a key that types none of its own: any
+     * single-character key of any board, `й`, `1` and `,` alike. A letter is its lowercase, so
+     * a shifted board finds the same chord.
+     */
+    val chordChar: Char? = if (type == KeyType.CHAR && output.length == 1) output[0].lowercaseChar() else null
 
     /** Character painted small in the top-right corner of the key. */
     val hintChar: String? = hint ?: alternates.firstOrNull()

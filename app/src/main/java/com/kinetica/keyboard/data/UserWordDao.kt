@@ -11,8 +11,8 @@ interface UserWordDao {
     @Query("INSERT OR IGNORE INTO user_words (word, lang, frequency, updatedAt) VALUES (:word, :lang, 0, :now)")
     fun insertIfAbsent(word: String, lang: String, now: Long)
 
-    // MAX(0, ...) so negative amounts (a correction taking back a mistaken
-    // commit) can never drive a count below zero.
+    // MAX(0, ...) so a negative amount, a correction taking back a mistaken commit, never
+    // drives a count below zero.
     @Query("UPDATE user_words SET frequency = MAX(0, frequency + :amount), updatedAt = :now WHERE word = :word AND lang = :lang")
     fun addWeight(word: String, lang: String, amount: Int, now: Long)
 

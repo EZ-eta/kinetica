@@ -4,13 +4,12 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /**
- * Where the last committed word actually is.
+ * Where the last committed word is.
  *
- * Pure for the reason the rest of this package's rules are: the service has no JVM reach.
- * What is decided here is a delete count, and KNOWN_ISSUES item 69 is what a wrong one
- * does - the window started too far right and consumed the word it was meant to re-case,
- * so `be?` came back as `bBE` and `going...` as `goGOING.`. Every row below is the arithmetic
- * that produced one of those.
+ * Pure, like this package's other rules, because the service has no JVM reach. It decides a
+ * delete count, and a wrong one once ate text: the window started too far right and
+ * ate the word it was meant to re-case, so `be?` came back as `bBE` and `going...` as
+ * `goGOING.`.
  */
 class CommitSpanTest {
 
@@ -18,8 +17,8 @@ class CommitSpanTest {
 
     @Test
     fun aMarkAfterTheWordIsPartOfTheSpan() {
-        // The three reports, verbatim. The old arithmetic remembered no trailing at all
-        // for these and returned 2, 5 and 6 against the 3, 6 and 8 the editor holds.
+        // The three reported cases. Without the trailing marks the span was 2, 5 and 6 against
+        // the 3, 6 and 8 the editor holds.
         assertEquals(3, commitSpan("be?", "be", max))
         assertEquals(6, commitSpan("going.", "going", max))
         assertEquals(8, commitSpan("going...", "going", max))
@@ -34,9 +33,8 @@ class CommitSpanTest {
 
     @Test
     fun aWordAfterAHyphenTakesOnlyItsOwnHalf() {
-        // `half-hearted`: the hyphen is a boundary the walk stops at, so the span covers
-        // `hearted` and the text before it is not touched. This one was already right and
-        // the fix must not move it.
+        // `half-hearted`: the walk stops at the hyphen, so the span covers `hearted` and
+        // nothing before it.
         assertEquals(7, commitSpan("half-hearted", "hearted", max))
     }
 
@@ -53,10 +51,9 @@ class CommitSpanTest {
 
     @Test
     fun aCaseDifferenceIsNotARefusal() {
-        // Only the LENGTH is used, so case cannot change the answer - and refusing on it
-        // would kill the feature wherever auto-capitalization wrote a letter the caller
-        // does not carry. `e.g.` becoming `e.G.` is item 70, a different bug, and this
-        // must not corrupt the text while that one is open.
+        // Only the length is used, so case cannot change the answer; refusing on it would break
+        // the feature wherever auto-capitalization wrote a letter the caller does not carry.
+        // The `e.g.` case.
         assertEquals(2, commitSpan("e.g.", "G", max))
         assertEquals(2, commitSpan("e.g.", "g", max))
         assertEquals(3, commitSpan("BE?", "be", max))
@@ -64,10 +61,9 @@ class CommitSpanTest {
 
     @Test
     fun aWordTheEditorNoLongerHoldsIsRefused() {
-        // The correction strip outlives the commit it names, and commitWordInternal writes
-        // lastCommitWord inside its own learning guard, so a private field can leave the
-        // cached word pointing at text that has moved on. Refusing is the whole fix: the
-        // old arithmetic deleted five characters here.
+        // The correction strip outlives the commit it names, and commitWordInternal records
+        // the commit inside its learning guard, so a private field can leave the cached word
+        // pointing at text that has moved on. Counting from it would delete five characters here.
         assertEquals(-1, commitSpan("hello world ", "hello", max))
         assertEquals(-1, commitSpan("", "hello", max))
         assertEquals(-1, commitSpan("hi", "hello", max))
@@ -76,8 +72,8 @@ class CommitSpanTest {
     @Test
     fun aRunOfMarksLongerThanTheBoundIsRefused() {
         // The bound on what one mis-tracked commit can delete. Nothing the keyboard writes
-        // after a word reaches eight characters, so past it the word is not where the
-        // caller believes and a guess would be the corruption all over again.
+        // after a word reaches eight characters, so past it the word is not where the caller
+        // believes and a guess would corrupt the text.
         assertEquals(12, commitSpan("word!!!!!!!!", "word", max))
         assertEquals(-1, commitSpan("word!!!!!!!!!", "word", max))
     }

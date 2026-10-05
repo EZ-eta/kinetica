@@ -7,9 +7,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * The reserved-output parsing both the comma key and the chord shortcuts now
- * share. The defect this locks is the chord path inserting `action:paste` into
- * the user's document as literal text, because it never consulted the mapping.
+ * The reserved-output parsing shared by the comma key and the chord shortcuts. It keeps the
+ * chord path from inserting `action:paste` into the document as literal text.
  */
 class EditorActionTest {
 
@@ -22,8 +21,7 @@ class EditorActionTest {
 
     @Test
     fun ordinaryTextIsNotAnAction() {
-        // Including text that merely mentions one, and text that would be a
-        // plausible chord expansion.
+        // Including text that mentions one, and text that would be a plausible chord expansion.
         for (s in listOf(
             "", " ", "paste", "copy", "cut", "select_all", "Paste",
             "action", "actionpaste", "my action: paste", "https://example.com",
@@ -36,9 +34,8 @@ class EditorActionTest {
 
     @Test
     fun aMisspeltActionIsRecognizedAsOneRatherThanTyped() {
-        // The reason isUnknownAction exists: a typo in a chord expansion must be
-        // swallowed, not inserted. Someone who meant to paste would otherwise get
-        // "action:pate" in the middle of their message.
+        // isUnknownAction swallows a typo in a chord expansion, so someone who meant to paste
+        // never gets "action:pate" in the middle of their message.
         for (s in listOf("action:", "action:pate", "action:PASTE", "action:select all")) {
             assertNull(EditorAction.of(s))
             assertTrue("'$s' should be a malformed action", EditorAction.isUnknownAction(s))
@@ -59,7 +56,7 @@ class EditorActionTest {
         assertEquals(outputs.size, outputs.toSet().size)
         for (o in outputs) {
             assertTrue("$o lacks the prefix", o.startsWith(EditorAction.PREFIX))
-            // The prefix is what guarantees no collision with typeable text.
+            // The prefix keeps an output from colliding with typeable text.
             assertTrue("$o is not longer than the prefix", o.length > EditorAction.PREFIX.length)
         }
     }

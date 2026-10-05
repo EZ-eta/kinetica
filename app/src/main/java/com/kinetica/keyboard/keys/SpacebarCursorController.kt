@@ -3,19 +3,13 @@ package com.kinetica.keyboard.keys
 import kotlin.math.abs
 
 /**
- * Spacebar slide-to-move-cursor. Under 8dp of travel the touch is a plain
- * space tap; past that it becomes cursor mode, emitting one cursor step per
- * [stepDp] of horizontal movement from a moving anchor.
+ * Spacebar slide-to-move-cursor. Under 8dp of travel the touch is a plain space tap; past that
+ * it becomes cursor mode, emitting one cursor step per [stepDp] of horizontal movement from a
+ * moving anchor.
  *
- * Both the step and its granularity are settings, asked for in the field: "maybe a
- * setting could change it to scroll by word (like the delete) rather than by character?
- * Or just make the scroll sensitivity adjustable so it moves faster through characters."
- * Both halves are cheap here because the travel-to-steps arithmetic does not care what a
- * step means - [wordMode] is passed straight out to the listener, which is the only place
- * that has to know.
- *
- * The default step stays 20dp and the default granularity stays characters, so a keyboard
- * nobody has touched behaves exactly as it did.
+ * The step size and its granularity are settings. The travel-to-steps arithmetic does not care
+ * what a step means: [wordMode] is passed straight to the listener, the only place that needs to
+ * know. Defaults are 20dp and characters.
  */
 class SpacebarCursorController(
     private val density: Float,
@@ -24,28 +18,25 @@ class SpacebarCursorController(
     /**
      * Travel that advances the cursor by one step.
      *
-     * Lower is faster. Floored at the enter threshold: a step shorter than the travel
-     * that gets you INTO cursor mode would fire on the very sample that armed it, so the
-     * first movement would jump two.
+     * Lower is faster. Floored at the enter threshold: a shorter step would fire on the sample
+     * that armed cursor mode, so the first movement would jump two.
      */
     var stepDp = DEFAULT_STEP_DP
 
-    /** Whether a step is a word rather than a character, like the backspace slide's. */
+    /** Whether a step is a word instead of a character, like the backspace slide's. */
     var wordMode = false
 
     /**
      * Whether the left [SPACELESS_FRACTION] of the key ends the word without a space.
      *
-     * Off by default: it spends a third of the spacebar's tap area, which is a real cost
-     * for anyone who did not ask for it.
+     * Off by default: it spends a third of the spacebar's tap area.
      */
     var spacelessZone = false
 
     /**
-     * Whether a second space tap inside [DOUBLE_TAP_MS] ends the sentence instead (R69).
+     * Whether a second space tap inside [DOUBLE_TAP_MS] ends the sentence instead.
      *
-     * Off by default: it spends the second of two deliberate spaces, which anyone who
-     * types a double space on purpose would notice immediately.
+     * Off by default: anyone who types a double space on purpose would lose the second one.
      */
     var doubleSpacePeriod = false
 
@@ -55,10 +46,23 @@ class SpacebarCursorController(
     private var cursorMode = false
     private var inSpacelessZone = false
 
+    /** Whether this touch has become a cursor slide, which ends it as a chord trigger. */
+    val sliding: Boolean get() = cursorMode
+
+    /**
+     * Ends the touch as nothing: a chord used the spacebar as its trigger, so there is no space,
+     * no spaceless space and no slide, and the next tap cannot read as a double space.
+     */
+    fun consume() {
+        cursorMode = false
+        inSpacelessZone = false
+        lastSpaceAt = 0L
+    }
+
     /**
      * [keyLeft] and [keyWidth] are the spacebar's own rect, in the same coordinates as
-     * [x]. Zero width means the caller does not know it, and then no touch is ever in the
-     * zone - which is also what an unconfigured controller does.
+     * [x]. Zero width means the caller does not know it, and then no touch is ever in the zone,
+     * as with an unconfigured controller.
      */
     fun onDown(x: Float, keyLeft: Float = 0f, keyWidth: Float = 0f) {
         startX = x
@@ -88,9 +92,8 @@ class SpacebarCursorController(
     /**
      * What the lift was.
      *
-     * The slide always wins: a touch that starts in the spaceless zone and then travels
-     * past the enter threshold is a cursor slide, because that is the gesture the finger
-     * actually made and the zone is only ever a sub-decision of the tap.
+     * The slide always wins: a touch that starts in the spaceless zone and travels past the enter
+     * threshold is a cursor slide, since the zone only refines a tap.
      */
     fun onUp(nowMs: Long = 0L): Lift {
         val lift = when {
@@ -100,9 +103,9 @@ class SpacebarCursorController(
                 Lift.DOUBLE
             else -> Lift.SPACE
         }
-        // Only a plain space opens the window and a double closes it, so three taps are a
-        // sentence end followed by a fresh space rather than two sentence ends. A slide or
-        // a spaceless tap closes it too: neither wrote the space a period would replace.
+        // Only a plain space opens the window and a double closes it, so three taps are a sentence
+        // end and a fresh space, not two sentence ends. A slide or a spaceless tap closes it too:
+        // neither wrote the space a period would replace.
         lastSpaceAt = if (lift == Lift.SPACE) nowMs else 0L
         return lift
     }
@@ -118,8 +121,8 @@ class SpacebarCursorController(
         /**
          * Share of the spacebar, from the left, that is the spaceless zone.
          *
-         * 0.30, the figure the feature was requested with. Not swept: the cost is tap
-         * area rather than accuracy, and only a thumb can price that.
+         * 0.30, the figure the feature was requested with. Not swept: the cost is tap area, not
+         * accuracy, and only use on a device can price that.
          */
         const val SPACELESS_FRACTION = 0.30f
         const val DEFAULT_STEP_DP = 20f
@@ -128,9 +131,8 @@ class SpacebarCursorController(
         /**
          * Window for the second tap of a double space.
          *
-         * The same 300 ms ShiftState uses for caps lock, so the two double taps on this
-         * keyboard feel like one gesture. Deliberately a separate constant rather than a
-         * shared one: they are independent gestures and either could be retuned alone.
+         * The same 300 ms ShiftState uses for caps lock, so the two double taps feel alike. A
+         * separate constant, since either gesture could be retuned alone.
          */
         const val DOUBLE_TAP_MS = 300L
     }

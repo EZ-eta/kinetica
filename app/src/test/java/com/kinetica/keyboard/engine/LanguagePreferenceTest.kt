@@ -10,28 +10,18 @@ import org.junit.Test
 
 /**
  * Cross-language candidate ranking (`WordComposer.merge`), pinned with the
- * exact candidate tuples captured on device.
+ * candidate tuples captured on device.
  *
- * Dictionary-free on purpose (the StartSubtreeFairnessTest precedent): what is
- * under test is which candidate of which list may lead, so the regression must
- * be locked to that mechanism and not to a wordlist snapshot that a future
- * asset regeneration would shift out from under it. The real-asset end-to-end
- * behavior lives in LanguageDetectGoldenTest.
+ * Dictionary-free, like StartSubtreeFairnessTest: what is under test is which
+ * candidate of which list may lead, so it must not hang on a wordlist snapshot
+ * that an asset regeneration would shift. The real-asset end-to-end behavior
+ * lives in LanguageDetectGoldenTest.
  *
- * Rewritten when the merged ranking replaced the swap. This class used to test
- * `preferAlternate`, a whole-list swap gated by LANG_DETECT_LOW_CONF and
- * LANG_DETECT_MARGIN. Measurement took that gate to its design limit - the
- * same-language and foreign confidence-ratio populations overlap in
- * [1.000, 1.095] on real geometry, so no threshold separates them, and a wrong
- * swap discarded the active language's candidates entirely. Both languages now
- * rank into ONE list. Every case below keeps its original evidence and comment;
- * the assertion changes from "does the swap fire" to "which candidate leads,
- * and is the other language still reachable in the bar".
- *
- * Two cases invert deliberately, each with its reason on the test:
- * [aForeignFitPastTheCapCannotLeadEvenWhenItsListHoldsABetterOne] and
- * [aHopelessForeignFitCannotLead] (the last half of the hopeless-decode
- * defect, which the merged ranking closes).
+ * Both languages rank into one list. A whole-list swap gated on confidence
+ * ratios could not work: same-language and foreign ratios overlap in
+ * [1.000, 1.095] on real geometry, and a wrong swap discarded the active
+ * language's candidates. Each case asks which candidate leads and whether the
+ * other language stays reachable in the bar.
  */
 class LanguagePreferenceTest {
 
@@ -65,16 +55,14 @@ class LanguagePreferenceTest {
 
     @Test
     fun sudareGestureKeepsItalianDespiteFrequentPoorFitHead() {
-        // Trace lines 69-73, intended "sudare". Italian rank 1 by score was
-        // "state" (d=0.795, s=0.744 - carried there by the quindi->state bigram
-        // bm=1.54 plus one personal commit), while the SAME list held "sudare"
-        // at d=0.18. The old gate read the heads (pConf 0.557 vs oConf 0.699)
-        // and swapped, so "ayudarte" committed and the whole Italian list was
-        // discarded. Merged, Italian's own head outscores every Spanish
-        // candidate and leads - and "sudare" stays reachable.
-        //
-        // That "state" heads Italian here is a scoring question, not a
-        // language defect; the saturating geometric term is what fixed it.
+        // A device row, meant as "sudare". Italian rank 1 by score was "state"
+        // (d=0.795, s=0.744, carried by the quindi->state bigram bm=1.54 and one
+        // personal commit), while the same list held "sudare" at d=0.18. A swap
+        // on the heads (pConf 0.557 vs oConf 0.699) committed "ayudarte". Merged,
+        // Italian's own head outscores every Spanish candidate and leads, and
+        // "sudare" stays reachable.
+        // That "state" heads Italian is a scoring question, not a language
+        // defect; the saturating geometric term fixed it.
         val composer = composerWithActiveWords("state", "sudare", "stare", "siate", "due")
         val italian = listOf(
             it("state", 0.795f, 0.744f),
@@ -96,21 +84,17 @@ class LanguagePreferenceTest {
 
     @Test
     fun sareiKeepsItalianWhenTheForeignLeadIsPastTheCap() {
-        // Trace lines 81-85, intended "sarei" (developer-confirmed). Italian
-        // rank 1 by score was "sarei" (d=1.066, s=0.364) with "sergei" right
-        // behind at d=0.59/s=0.358; Spanish offered the very same "sergei" at
-        // d=0.5999, scoring marginally higher on Spanish frequency. The old
-        // gate swapped (0.484 vs 0.625), so "sergei" committed and "sarei" was
-        // not even left in the strip.
-        //
-        // Merged, the Spanish "sergei" does head the ranking - and is demoted,
-        // because at d=0.5999 it sits past GEO_SATURATION_KW: its score carries
-        // no geometric information, only foreign frequency, and frequency alone
-        // is not evidence that a word belongs to another language. "sarei"
-        // leads, which is the intended word.
-        //
-        // The active-language filter deliberately does NOT carry this case: the
-        // fixture's active dictionary does not contain "sergei".
+        // A device row, meant as "sarei". Italian rank 1 by score was "sarei"
+        // (d=1.066, s=0.364) with "sergei" behind at d=0.59/s=0.358; Spanish
+        // offered the same "sergei" at d=0.5999, scoring a little higher on
+        // Spanish frequency. A swap (0.484 vs 0.625) committed "sergei" and left
+        // no "sarei" in the strip.
+        // Merged, the Spanish "sergei" heads the ranking and is demoted, because
+        // at d=0.5999 it sits past GEO_SATURATION_KW: its score carries only
+        // foreign frequency, which is no evidence that a word belongs to another
+        // language. "sarei", the intended word, leads.
+        // The active-language filter does not carry this case: the fixture's
+        // active dictionary does not contain "sergei".
         val composer = composerWithActiveWords("sarei", "aerei", "seri", "atei")
         val italian = listOf(
             it("sarei", 1.0657f, 0.364f),
@@ -132,13 +116,12 @@ class LanguagePreferenceTest {
 
     @Test
     fun aWordTheActiveDictionaryAlreadyHasIsDroppedFromTheForeignList() {
-        // The shared-word filter, isolated - the isWord veto, now applied
-        // per candidate instead of to the list head. Real case: "sergei" is in
-        // it_wordlist at 947 and es_wordlist at 1765. Keeping the Spanish entry
-        // could only re-rank a word Italian already has by foreign frequency,
-        // which is exactly how the swap used to lose the intended "sarei".
-        // Here the Spanish "sergei" fits far better (d=0.2) and still must not
-        // appear: Italian's own ranking of its own word already had its say.
+        // The shared-word filter, isolated: the isWord veto, applied per
+        // candidate. Real case: "sergei" is in it_wordlist at 947 and es_wordlist
+        // at 1765. Keeping the Spanish entry could only re-rank a word Italian
+        // already has by foreign frequency, which is how "sarei" was lost. Here
+        // the Spanish "sergei" fits far better (d=0.2) and still must not appear:
+        // Italian's ranking of its own word already had its say.
         val composer = composerWithActiveWords("sarei", "sergei")
         val m = composer.merge(
             listOf(it("sarei", 1.0657f, 0.364f)),
@@ -151,20 +134,15 @@ class LanguagePreferenceTest {
 
     @Test
     fun sieteGestureKeepsItalianAndSuerteNeverLeads() {
-        // Trace lines 86-90 (unreported, repaired by hand from
-        // the correction strip - ctx became [sergei, siete]). Intended "siete",
-        // undershooting i to u. Italian rank 1 by score was the very frequent
-        // "due" (d=0.579, fw=0.85) while "siete" sat at d=0.33 in the same
-        // list; Spanish offered "suerte" at d=0.354. Old gate: 0.633 vs 0.739
-        // -> SWAP.
-        //
-        // This is the row that pinned LANG_DETECT_MARGIN, and the one place a
-        // merged list could plausibly steal a correctly-decoding Italian word:
-        // "suerte" is Spanish-only, so the shared-word filter does not remove
-        // it, and it fits marginally better than Italian's own "siete". It
-        // stays in the bar and does not lead - Italian's head outscores it.
-        // Spanish's own "siete" IS dropped, which is what keeps this row
-        // behaving exactly as it did before the merged ranking.
+        // A device row, meant as "siete", undershooting i to u. Italian rank 1
+        // by score was the very frequent "due" (d=0.579, fw=0.85) while "siete"
+        // sat at d=0.33 in the same list; Spanish offered "suerte" at d=0.354. A
+        // swap fired (0.633 vs 0.739).
+        // The one place a merged list could plausibly steal an Italian word:
+        // "suerte" is Spanish-only, so the shared-word filter keeps it, and it
+        // fits about as well as Italian's own "siete". It stays in the bar and
+        // does not lead, because Italian's head outscores it. Spanish's own
+        // "siete" is dropped as shared.
         val composer = composerWithActiveWords("due", "dire", "siete", "sue", "she")
         val italian = listOf(
             it("due", 0.579f, 0.741f),
@@ -190,10 +168,8 @@ class LanguagePreferenceTest {
 
     @Test
     fun foreignWordLeadsWhenTheActiveLanguageCannotExplainThePath() {
-        // The feature must survive the rewrite: a word that is NOT in the
-        // active dictionary leaves the active language with no geometric
-        // explanation of the path. Under the swap this was the low-confidence
-        // gate's job; under the merge it needs no gate at all - the foreign
+        // A word not in the active dictionary leaves the active language with
+        // no geometric explanation of the path. No gate is needed: the foreign
         // candidate outscores everything Italian offers, and its own fit
         // (d=0.19) is well inside the informative zone, so it may lead.
         val composer = composerWithActiveWords("sudare", "state", "sarei")
@@ -209,20 +185,13 @@ class LanguagePreferenceTest {
 
     @Test
     fun aForeignFitPastTheCapCannotLeadEvenWhenItsListHoldsABetterOne() {
-        // INVERTED deliberately, and the inversion is the point. This case used
-        // to assert that a swap SHOULD fire because the secondary's best FIT
-        // (trabajo, d=0.14) sits below its own score head - "judging both lists
-        // on their best fit is the only symmetric comparison". True as far as
-        // it went, but the swap then handed over the whole list, so the word
-        // the user actually received was the head "gracias" (d=0.95), not the
-        // good fit that justified the swap. That is precisely the defect the
-        // old gate recorded at a device row where a swap justified by "mujer"
-        // would have committed "me".
-        //
-        // Merged, there is no list to hand over. "gracias" leads on frequency
-        // and is demoted at the cap; Italian's "state" takes the editor; and
-        // "trabajo" - the fit that motivated the old swap - is right there in
-        // the bar, one tap away. Nothing is lost and nothing wrong is committed.
+        // The other list's best fit (trabajo, d=0.14) sits below its score head
+        // "gracias" (d=0.95). Handing over that whole list would commit
+        // "gracias", not the fit that justified it; a device row shows the same
+        // shape, where "mujer" justified a swap that would have committed "me".
+        // Merged, "gracias" leads on frequency and is demoted at the cap,
+        // Italian's "state" takes the editor, and "trabajo" is in the bar, one
+        // tap away. Nothing is lost and nothing wrong is committed.
         val composer = composerWithActiveWords("sudare", "state")
         val m = composer.merge(
             listOf(it("state", 0.9f, 0.4f)),
@@ -235,11 +204,9 @@ class LanguagePreferenceTest {
 
     @Test
     fun deviceForeignGestureLeadsWhenNoItalianWordComesClose() {
-        // A device row: "nosotros" swiped with Italian
-        // active - one of only two rows in that whole capture where the old
-        // gate got it right (ratio 1.361). Italian's entire list sits at
-        // d >= 1.19 against Spanish "nosotros" at 0.29. Scores are the device's
-        // own, restated under the saturating geometric term.
+        // A device row: "nosotros" swiped with Italian active. Italian's whole
+        // list sits at d >= 1.19 against Spanish "nosotros" at 0.29. Scores are
+        // the device's own, restated under the saturating geometric term.
         val composer = composerWithActiveWords("nella", "bella", "novita", "miseria")
         val italian = listOf(
             it("nella", 1.69f, 0.2429f),
@@ -261,24 +228,18 @@ class LanguagePreferenceTest {
 
     @Test
     fun theMujerRowCommitsMujerAndKeepsItalianPickable() {
-        // A device row, ctx [me, ne]. NOT a red-before-the-fix row, and
-        // deliberately labelled as such: the old gate detected this one
-        // correctly too (ratio 1.352). What is new is the second half of the
-        // assertion - the swap replaced the WHOLE list, so Italian "me" was
-        // thrown away and unrecoverable, leaving the user to retype it.
-        //
-        // It also carries device row 8's lesson without needing row 8's veto.
-        // The Spanish list is itself headed by "me" on score (fw 0.93 at
-        // d=0.91 beating fw 0.81 at d=0.27 - a scoring question inside Spanish), so a swap
-        // justified by "mujer" would have committed "me". Here the shared word
-        // drops out and "mujer" wins on its own fit.
-        //
-        // Not every mujer attempt in that capture is recovered, and the reason
-        // is not language: at line 50 the same word decoded at d=0.407 against
-        // an Italian "me" carrying a 1.61x personal boost, and 0.89 * 1.61
-        // beats 0.81 on a geometric edge of only 1.33x. That is a scoring
-        // question, recorded here rather than pinned
-        // here, because a golden that pins a miss cements it.
+        // A device row, ctx [me, ne]. A ratio gate got this one right too; what
+        // matters is the second half of the assertion: Italian "me" stays
+        // pickable instead of being thrown away with its list.
+        // The Spanish list is itself headed by "me" on score (fw 0.93 at d=0.91
+        // beating fw 0.81 at d=0.27, a scoring question inside Spanish), so a
+        // swap justified by "mujer" would have committed "me". Here the shared
+        // word drops out and "mujer" wins on its own fit.
+        // Not every mujer attempt in that capture is recovered, and not for
+        // language: one decoded at d=0.407 against an Italian "me" carrying a
+        // 1.61x personal boost, and 0.89 * 1.61 beats 0.81 on a geometric edge of
+        // only 1.33x. A scoring question, not pinned, because a golden that pins
+        // a miss cements it.
         val composer = composerWithActiveWords("me", "mie", "notte", "mille", "nome")
         val italian = listOf(
             it("me", 0.91f, 0.3127f),
@@ -303,14 +264,12 @@ class LanguagePreferenceTest {
 
     @Test
     fun theAyudarteRowNowCommitsAyudarte() {
-        // Red before the merged ranking. A device row: Italian holds a competing
-        // explanation at d=0.310 ("sudare", personally reinforced to pb=1.27)
-        // against Spanish "ayudarte" at 0.230, so the ratio is 1.063 and the
-        // margin blocked the swap. This is the shape measurement proved unrecoverable
-        // by tuning: between two Romance languages the active language almost
-        // always has SOMETHING, so "the active language has nothing at all" -
-        // which is all the gate could detect - is a much rarer event than a
-        // foreign word.
+        // A device row: Italian holds a competing explanation at d=0.310
+        // ("sudare", personally reinforced to pb=1.27) against Spanish "ayudarte"
+        // at 0.230, a ratio of 1.063 that no ratio margin can pass. Between two
+        // Romance languages the active language almost always has something, so
+        // "the active language has nothing at all" is much rarer than a foreign
+        // word.
         val composer = composerWithActiveWords("sudare", "stare", "siete", "siate", "aiutare")
         val italian = listOf(
             it("sudare", 0.31f, 0.3041f),
@@ -333,13 +292,10 @@ class LanguagePreferenceTest {
 
     @Test
     fun theCuandoRowNowCommitsCuando() {
-        // Red before the merged ranking. A device row: ratio 1.047, blocked.
-        // This row is also the recall fix's recorded cost - better recall gave Italian a
-        // real explanation of the cuando path, which pushed the ratio further
-        // below the margin and made the swap structurally unreachable
-        // (LanguageDetectGoldenTest.theRecallFixGivesItalianAnExplanationOfThe-
-        // CuandoPath). Ranking the languages together needs no ratio, so the
-        // recall fix stops costing anything here.
+        // A device row at a ratio of 1.047. Better Italian recall explains the
+        // cuando path (LanguageDetectGoldenTest.theRecallFixGivesItalianAnExplanationOfThe-
+        // CuandoPath) and pushes any ratio further down; ranking the languages
+        // together needs no ratio, so that recall costs nothing here.
         val composer = composerWithActiveWords(
             "chiedendo", "ciao", "cibando", "chiudendo", "chiamero",
         )
@@ -364,18 +320,14 @@ class LanguagePreferenceTest {
 
     @Test
     fun anEmptyActiveDecodeNeverHandsTheEditorToTheOtherLanguage() {
-        // the hopeless-decode defect, and the reason the empty case is a rule of the
-        // merge rather than a property of it. The old empty-primary rescue
-        // ("anything beats an empty bar") committed "patéale" off two empty
-        // "parlare" decodes and then poisoned the bigram context with it; a
-        // one-line fix closed that by refusing the swap. A merged
-        // list has no swap to refuse, so the same reasoning becomes rule 2's
-        // first clause: with nothing from the active language there is nothing
-        // to compare against, and an empty active decode is evidence the
-        // gesture was undecodable, not evidence about language.
-        //
-        // The candidates are still returned - the bar shows them and they are
-        // pickable. What must not happen is an automatic commit.
+        // The hopeless-decode defect, and why the empty case is a rule of the
+        // merge: "anything beats an empty bar" committed "patéale" off two empty
+        // "parlare" decodes and then poisoned the bigram context with it. Rule 2's
+        // first clause: with nothing from the active language there is nothing to
+        // compare against, and an empty active decode is evidence the gesture was
+        // undecodable, not evidence about language.
+        // The candidates are still returned and pickable; what must not happen is
+        // an automatic commit.
         val composer = composerWithActiveWords("parlare", "palese", "parlate")
         for (d in listOf(0.39504826f, 0.34980536f)) {
             val m = composer.merge(emptyList(), listOf(es("patéale", d, 0.349f)))
@@ -386,22 +338,45 @@ class LanguagePreferenceTest {
     }
 
     @Test
+    fun anEmptyActiveDecodeCommitsAForeignWordThatFitsTightly() {
+        // Italian spells nothing for the path and English fits it within 0.25 kw, as
+        // `anyway` did at d=0.176 on a device capture that committed nothing. The word
+        // the user drew commits; the loose `patéale` fits above still do not.
+        val composer = composerWithActiveWords("parlare", "palese")
+        val m = composer.merge(emptyList(), listOf(es("anyway", 0.176f, 0.6f), es("anywhere", 0.41f, 0.3f)))
+        assertEquals("anyway", m.tentative?.word)
+        assertEquals("no-native-lead", m.reason)
+        // A tapped word keeps its own letters: nothing leads it from another language here.
+        val tapped = composer.merge(emptyList(), listOf(es("anyway", 0.176f, 0.6f)), tapOnly = true)
+        assertNull(tapped.tentative)
+    }
+
+    @Test
+    fun anAccentedForeignSpellingIsNotTakenAsTheActiveLanguagesOwn() {
+        // English active, Italian beside it, a tapped `e`. English's `e` has no display
+        // forms, so `isWord("è")` folds onto it; the merge must not drop Italian `è` as
+        // shared.
+        val composer = composerWithActiveWords("e", "be", "see")
+        val m = composer.merge(
+            listOf(it("e", 0f, 3.0f)),
+            listOf(es("e", 0f, 2.9f), es("è", 0f, 2.7f)),
+        )
+        assertTrue("è dropped: ${m.candidates.words()}", m.candidates.words().contains("è"))
+        // The same fit keeps the active word in front.
+        assertEquals("e", m.tentative?.word)
+        // The plain `e` the other language also has is still shared.
+        assertEquals(1, m.candidates.count { it.word == "e" })
+    }
+
+    @Test
     fun aHopelessForeignFitCannotLead() {
-        // INVERTED: this used to assert the defect's remaining half was still
-        // open, and pinned it so the residual stayed visible. The merged
-        // ranking closes it.
-        //
-        // A device row, Spanish active: the
-        // primary was not empty - "verdugo" at d=1.270 - so the empty-primary
-        // rule never applied. The swap fired anyway, because pConf = 1/2.270 =
-        // 0.44 clears LANG_DETECT_LOW_CONF trivially while the Italian best fit
-        // ("cardini", 0.625) clears the 1.15 margin against it. Italian
-        // "credimi" committed for a gesture NEITHER language could read.
-        //
-        // Merged, no foreign candidate here is inside the informative zone
-        // (0.625 and 1.243 both past the cap), so none may lead: the active
-        // language keeps the editor and the gesture stays visibly unresolved,
-        // which is the right outcome when nothing fits.
+        // A device row: the active decode was not empty ("verdugo" at d=1.270),
+        // so the empty rule never applied, and a ratio gate swapped anyway
+        // (pConf 0.44, best foreign fit "cardini" 0.625), committing "credimi" for
+        // a gesture neither language could read.
+        // No foreign candidate here is inside the informative zone (0.625 and
+        // 1.243 both past the cap), so none may lead: the active language keeps
+        // the editor and the gesture stays visibly unresolved.
         val composer = composerWithActiveWords("verdugo", "cuando", "cariño")
         val m = composer.merge(
             listOf(it("verdugo", 1.2700267f, 0.31f)),
@@ -422,9 +397,9 @@ class LanguagePreferenceTest {
 
     @Test
     fun theMergedListIsBoundedByTopK() {
-        // Two full lists merge into one bar, not two. TOP_K is what the
-        // suggestion bar paginates over, so the merged list must
-        // respect it or the second page silently grows.
+        // Two full lists merge into one bar, not two. The suggestion bar
+        // paginates over TOP_K, so the merged list must respect it or the
+        // second page grows.
         val composer = composerWithActiveWords("zzz")
         val italian = (1..10).map { it("it$it", 0.2f, 1f - it * 0.01f) }
         val spanish = (1..10).map { es("es$it", 0.2f, 0.9f - it * 0.01f) }

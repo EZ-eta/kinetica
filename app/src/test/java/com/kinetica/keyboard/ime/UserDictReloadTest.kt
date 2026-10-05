@@ -8,11 +8,10 @@ import org.junit.Test
 /**
  * When learning a word has to rebuild the trie.
  *
- * A learned word reaches the ranking map at once and the trie only at the next dictionary
- * load, so before this predicate existed a word the dictionary did not hold stayed
- * undecodable for the rest of the session (KNOWN_ISSUES item 61). Measured on a device
- * capture: an eleven-letter word was committed three times and first appeared as a
- * candidate 4 277 trace lines later, after an unrelated reload.
+ * A learned word reaches the ranking map at once but the trie only at the next dictionary load,
+ * so without a reload a word the dictionary lacks stays undecodable for the session.
+ * On one capture an eleven-letter word was committed three times and
+ * first appeared as a candidate 4 277 trace lines later, after an unrelated reload.
  */
 class UserDictReloadTest {
 
@@ -25,8 +24,7 @@ class UserDictReloadTest {
 
     @Test
     fun aWordBelowTheFloorAsksForNothing() {
-        // The floor is the guard against a misdecode becoming a decodable trie citizen,
-        // so the first commit of a word must still change nothing.
+        // The floor keeps a misdecode out of the trie: a word's first commit changes nothing.
         assertFalse(userDictNeedsReload(0, floor - 1, trieHasWord = false))
     }
 
@@ -38,8 +36,8 @@ class UserDictReloadTest {
 
     @Test
     fun aWordReinforcedPastTheFloorAsksForNothing() {
-        // Only the crossing arms a reload. Without that, a word the reload cannot admit
-        // anyway - blocked, or past USER_DICT_LIMIT - would ask again on every commit.
+        // Only the crossing arms a reload; otherwise a word the reload cannot admit (blocked,
+        // or past USER_DICT_LIMIT) would ask again on every commit.
         assertFalse(userDictNeedsReload(floor, floor + 1, trieHasWord = false))
         assertFalse(userDictNeedsReload(floor + 8, floor + 9, trieHasWord = false))
     }

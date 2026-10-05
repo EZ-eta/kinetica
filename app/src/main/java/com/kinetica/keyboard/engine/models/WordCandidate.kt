@@ -9,15 +9,12 @@ data class WordCandidate(
     val dtwDistance: Float,         // mean per-step DTW cost plus tap-substitution penalties
     val frequencyWeight: Float,
     /**
-     * Bigram boost AS APPLIED to [score] - the table's
-     * `1 + BIGRAM_BOOST_MAX * byte/255` when this candidate's own geometry was
-     * inside `GEO_SATURATION_KW`, then faded with the fit and gone by one whole
-     * key (KineticaConstants.appliedBoost).
+     * Bigram boost as applied to [score]: the table's `1 + BIGRAM_BOOST_MAX * byte/255` when
+     * this candidate's own geometry was inside `GEO_SATURATION_KW`, then faded with the fit and
+     * gone by one whole key (KineticaConstants.appliedBoost).
      *
-     * Applied rather than raw for the same reason as [personalBoost]: a captured
-     * row must close arithmetically without inverting the score by hand, which
-     * every earlier tuning pass had to do. Read `BigramTable.multiplier` directly if you need
-     * the table's own value.
+     * Applied, not raw, so a captured row closes arithmetically without inverting the score by
+     * hand. `BigramTable.multiplier` gives the table's own value.
      */
     val bigramMultiplier: Float,
     val wordId: Int,                // trie terminal node id; keys the bigram table
@@ -26,47 +23,35 @@ data class WordCandidate(
      * Language code of the dictionary that produced this candidate, empty when
      * the predictor was built without one (every single-language test fixture).
      *
-     * Provenance is what lets enabled languages share ONE ranked list instead of
-     * one language's list replacing the other's wholesale: the merge needs it to
-     * decide what may lead (WordComposer.merge), the bar needs it to keep both
-     * languages pickable, and the commit path needs it to learn a word into the
-     * dictionary it actually came from rather than into the active one
-     * rather than into the active one.
+     * Provenance lets enabled languages share one ranked list: the merge uses it
+     * to decide what may lead (WordComposer.merge), the bar to keep both
+     * languages pickable, and the commit path to learn a word into the
+     * dictionary it came from, not the active one.
      */
     val language: String = "",
     /**
-     * Personal boost AS APPLIED to [score] - the raw
-     * `1 + PERSONAL_BOOST * ln(1 + count)` when this candidate's own geometry
-     * was inside `GEO_SATURATION_KW`, then faded with the fit and 1.0 once it
-     * is a whole key out (KineticaConstants.appliedBoost).
+     * Personal boost as applied to [score]: the raw `1 + PERSONAL_BOOST * ln(1 + count)` when
+     * this candidate's own geometry was inside `GEO_SATURATION_KW`, then faded with the fit and
+     * 1.0 once it is a whole key out (KineticaConstants.appliedBoost).
      *
-     * It is a field rather than something a trace reader derives because
-     * deriving it by hand is error-prone, and after the fit condition the
-     * arithmetic no longer distinguishes "never committed" from "committed but
-     * the fit was too poor to count" - exactly the distinction a capture has to
-     * show.
+     * A field because, after the fit condition, the arithmetic cannot tell "never committed"
+     * from "committed but the fit was too poor to count", and a capture has to show which.
      */
     val personalBoost: Float = 1f,
     /**
-     * The uncontacted-letter charge AS APPLIED to [score]:
-     * `UNCONTACTED_LETTER_KEEP` once per letter this reading takes from a segment
-     * whose own key contacts do not include it, so 1.0 means every letter was
-     * measurably touched (or the tokens carry no contacts at all, which charges
-     * nothing).
+     * The uncontacted-letter charge as applied to [score]: `UNCONTACTED_LETTER_KEEP` once per
+     * letter this reading takes from a segment whose own key contacts do not include it, so 1.0
+     * means every letter was touched (or the tokens carry no contacts, which charges nothing).
      *
-     * A field for the reason the two boosts are: without it the score is a product of
-     * five factors and a capture prints four, so establishing that the charge fired at
-     * all means dividing by hand - which is exactly what happened when the developer
-     * reported `happens` decoding as `happiness`, and the division is where a reading
-     * error gets introduced.
+     * A field like the two boosts: the score is a product of five factors, and without it a
+     * capture prints four and the charge can only be found by dividing by hand.
      */
     val contactKeep: Float = 1f,
     /**
-     * The personal PAIR boost as applied: what this word earned for having followed the
+     * The personal pair boost as applied: what this word earned for having followed the
      * previous one in this user's own typing. 1.0 when phrase learning is off.
      *
-     * A field for the reason every other factor is one: the score is a product and a
-     * captured row has to close by hand.
+     * A field like every other factor, so a captured row's product closes.
      */
     val personalBigram: Float = 1f,
 ) {
@@ -79,5 +64,11 @@ data class WordCandidate(
          * returns a COMPLETION, so a delimiter always keeps the typed letters.
          */
         COMPLETION,
+
+        /**
+         * Found only by the rescue pass, through a gate it relaxed. Pick-only when
+         * nothing else was found: 10 of 46 such leads were the word, so none auto-commits.
+         */
+        RESCUE,
     }
 }

@@ -9,7 +9,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * The commit-time miss line, item 44's third instrument iteration.
+ * The commit-time miss line.
  *
  * Format assertions, not decode assertions: the values it reports can only be judged
  * against a device, and this pins that the two marks mean what the attribution pass
@@ -28,6 +28,22 @@ class CommitMissTest {
     }
 
     @Test
+    fun aSwipeCarryingNoContactsReportsInsteadOfCrashing() {
+        // A Segment built from a token with no key contacts holds an empty `contacted` array,
+        // and the closest-approach walk indexed it by letter. Device swipes always carry a
+        // contact, so only a synthetic or reconstructed token could reach it, and only with a
+        // trace sink attached, which is when a probe runs.
+        val drawn = TestData.swipe("where", g, 0, 500)
+        val bare = com.kinetica.keyboard.engine.models.SwipeToken(
+            drawn.streamId, drawn.rawPath, drawn.resampled, emptyList(), drawn.arcLen,
+            drawn.tStart, drawn.tEnd,
+        )
+        val tokens: List<InputToken> = listOf(bare)
+        val pattern = Matcher.buildPattern(tokens, g)!!
+        assertNotNull(commitMissLine("where", tokens, pattern, g, "commit", -1L))
+    }
+
+    @Test
     fun aWordWhoseLettersWereAllTouchedInOrderReportsNoMiss() {
         val out = line("where", "where")
         assertNotNull(out)
@@ -42,8 +58,8 @@ class CommitMissTest {
     @Test
     fun aLetterTheThumbNeverTouchedReportsHowCloseItCame() {
         // The same word drawn without its `h`: the letter is gone from the contact list
-        // and the line has to say how far the path stayed from it, which is the number
-        // item 44 exists to collect.
+        // and the line has to say how far the path stayed from it, the number a missed
+        // contact is judged by.
         val out = line("where", "were")
         assertNotNull(out)
         println("COMMITMISS $out")
@@ -85,14 +101,13 @@ class CommitMissTest {
 
     @Test
     fun aContactedLetterCannotReportADistantPath() {
-        // The defect its own first capture caught: the mark came from the contact
-        // timeline and the distance from a position-constrained walk, so 146 of 1 506
-        // contacted letters reported over 1.8 kw, which a key the finger was on cannot do.
-        //
-        // The fixture has to leave the forward-only walk a distant tail to measure, which
-        // is how the capture produced `r2:5.01@28!`. A long left-to-right stroke, and a
-        // word ending on the letter it STARTED at: the walk is down to the last few
-        // samples over by `k` and reports six key widths, while a thumb was on the `a`.
+        // With the mark from the contact timeline and the distance from a
+        // position-constrained walk, 146 of 1 506 contacted letters reported over 1.8 kw,
+        // which a key the finger was on cannot do.
+        // The fixture leaves the forward-only walk a distant tail to measure, as in the
+        // captured `r2:5.01@28!`: a long left-to-right stroke and a word ending on the
+        // letter it started at. The walk is down to the last few samples, over by `k`, and
+        // reports six key widths while a thumb was on the `a`.
         val tokens: List<InputToken> = listOf(TestData.swipe("asdfghjk", g, 0, 800))
         val pattern = Matcher.buildPattern(tokens, g)!!
         val out = commitMissLine("asdfghja", tokens, pattern, g, "commit", -1L)!!
@@ -149,9 +164,9 @@ class CommitMissTest {
 
     @Test
     fun theSwipeTraceCarriesArcAndSampling() {
-        // Both are new, and arc is the field the reconstruction destroys: a replayed
-        // buffer is a clean polyline through the contacts, so its arc is shorter than
-        // the thumb's, and arc is what decides minLetters and the length bands.
+        // Arc is the field a reconstruction loses: a replayed buffer is a clean polyline
+        // through the contacts, so its arc is shorter than the thumb's, and arc decides
+        // minLetters and the length bands.
         val log = ArrayList<String>()
         DecodeTrace.sink = { log.add(it) }
         try {
@@ -164,7 +179,7 @@ class CommitMissTest {
         val input = log.first { it.startsWith("decode in") }
         assertTrue("arc in: $input", Regex("""arc=[0-9.]+""").containsMatchIn(input))
         assertTrue("sampling in: $input", Regex("""n=\d+/\d+ms""").containsMatchIn(input))
-        // The fields must stay AFTER keys=, or TraceReplay stops parsing every fixture.
+        // The fields must stay after keys=, or TraceReplay stops parsing every fixture.
         assertTrue("arc after keys in: $input", input.indexOf("arc=") > input.indexOf("keys="))
         assertEquals(
             "the buffer still replays: $input",

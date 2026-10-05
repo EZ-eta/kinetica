@@ -9,8 +9,7 @@ import org.junit.Test
 /**
  * The bar and the ?123 hold menu read separate shortcut sets.
  *
- * They shared one until the developer asked for them apart, and the shared set had a cost
- * nobody chose: taking the gear off the bar took it off the hold, which was the keyboard's
+ * With one shared set, taking the gear off the bar also took it off the hold, the keyboard's
  * only route to settings unless a chord or an edge swipe was bound to it.
  */
 class ShortcutSetsTest {
@@ -30,8 +29,8 @@ class ShortcutSetsTest {
 
     @Test
     fun anUntouchedMenuShowsTheShippedDefaultNotTheBarsChoice() {
-        // Nothing to migrate: the row has never been published, so the only customised
-        // bar set in existence is the developer's own gate build.
+        // Nothing to migrate: the row and the menu's own set shipped in the same release, so no
+        // published build has a customised bar set for the menu to inherit.
         val prefs = MapPrefs(mapOf(Prefs.BAR_ACTIONS to setOf(EditorAction.UNDO.name)) + HUE_SET)
         assertEquals(ActionRow.DEFAULT, KeyboardConfig.from(prefs).menuActions)
     }

@@ -8,21 +8,17 @@ private const val ACTION_PREFIX = "action:"
  * A command a key, a chord, a swipe or the suggestion bar can perform instead of
  * inserting text.
  *
- * Most are editor commands that the app carries out. The last few are the keyboard's own
- * state - the language, the autospace, where the keys sit - and they live here rather than
- * in a type of their own because this enum is what every trigger surface already reads:
- * one entry appears in the chord picker, the edge-swipe picker, the ?123 menu and the
- * suggestion bar's action row at once.
+ * Most are editor commands the app carries out. Others change the keyboard's own state (the
+ * language, the autospace, where the keys sit) and live here too, because every trigger surface
+ * reads this enum: one entry appears in the chord picker, the edge-swipe picker, the ?123 menu
+ * and the suggestion bar's action row at once.
  *
- * The reserved-output convention is the shipped one: a key whose `output` starts
- * with [PREFIX] is intercepted before the commit path and dispatched as a command,
- * and the prefix can never collide with typeable text. What is new is that the
- * mapping lives in one place, so the comma key and the chord shortcuts cannot
- * disagree about what `action:paste` means - they used to, and the chord path
- * inserted the string literally.
+ * A key whose `output` starts with [PREFIX] is intercepted before the commit path and dispatched
+ * as a command; the prefix cannot collide with typeable text. The mapping lives in one place, so
+ * the comma key and the chord shortcuts agree on what `action:paste` means.
  *
- * Pure on purpose: the platform ids these become (`android.R.id.paste` and
- * friends) are resolved by the caller, so parsing is testable without a device.
+ * Pure: the platform ids these become (`android.R.id.paste` and friends) are resolved by the
+ * caller, so parsing is testable without a device.
  */
 enum class EditorAction(val output: String) {
     PASTE("${ACTION_PREFIX}paste"),
@@ -31,41 +27,34 @@ enum class EditorAction(val output: String) {
     SELECT_ALL("${ACTION_PREFIX}select_all"),
 
     /**
-     * Delete the word in progress - or the one just committed - and start it again in
-     * place. Nintype's "re-type", asked for twice, and the only entry here that is not a
-     * platform context-menu action: it acts ON the pending word rather than after it, so
-     * the caller must not settle the word first. Living here anyway is the point - the
-     * suggestion bar's button and a `?123` chord are then two triggers for one
-     * implementation rather than two implementations.
+     * Delete the word in progress, or the one just committed, and start it again in place, as
+     * Nintype's "re-type" does. It acts on the pending word, not after it, so the caller must not
+     * settle the word first. Living here makes the suggestion bar's button and a `?123` chord two
+     * triggers for one implementation.
      */
     RETYPE("${ACTION_PREFIX}retype"),
 
     /**
      * Replace the trigger already written at the cursor with its stored expansion.
      *
-     * The second entry here that is not a platform context-menu action, and like [RETYPE]
-     * it acts ON text rather than after it - but on text the editor already holds rather
-     * than on a pending word, so unlike RETYPE it settles the word first.
-     *
-     * Living here is what makes it bindable from an edge swipe and from a `?123` chord at
-     * once, with no routing of its own, because both already dispatch through
-     * `performIfAction`.
+     * Like [RETYPE] it acts on text, not after it, but on text the editor already holds, so it
+     * settles the pending word first. Edge swipes and `?123` chords both dispatch through
+     * `performIfAction`, so it needs no routing of its own.
      */
     EXPANDIFY("${ACTION_PREFIX}expandify"),
 
     /**
      * Ask the app to undo, and to redo.
      *
-     * Platform context-menu commands like [PASTE], so the app does the work and the
-     * keyboard keeps no history of its own. `performContextMenuAction` reports that the
-     * call was delivered rather than that anything happened, so an editor that does not
-     * implement them is silently a no-op - the same contract paste has shipped under
-     * since v1.0.2. A stock text field has a real undo stack; a web view may not.
+     * Platform context-menu commands like [PASTE], so the app does the work and the keyboard
+     * keeps no history of its own. `performContextMenuAction` reports delivery, not effect, so in
+     * an editor without them they are a silent no-op, as paste is. A stock text field has an undo
+     * stack; a web view may not.
      */
     UNDO("${ACTION_PREFIX}undo"),
     REDO("${ACTION_PREFIX}redo"),
 
-    /** Open Kinetica's settings. The ?123 hold reached this and nothing else did. */
+    /** Open Kinetica's settings. */
     SETTINGS("${ACTION_PREFIX}settings"),
 
     /** Next enabled language, in the canonical cycle order. */
@@ -78,8 +67,7 @@ enum class EditorAction(val output: String) {
     ONE_HANDED("${ACTION_PREFIX}one_handed"),
 
     /**
-     * Write today's date, or the time, at the cursor, in the phone's own format. Named in
-     * the expandify request (#19) and useful from a chord or the bar as well.
+     * Write today's date, or the time, at the cursor, in the phone's own format (#19).
      */
     DATE("${ACTION_PREFIX}date"),
     TIME("${ACTION_PREFIX}time"),
@@ -92,6 +80,41 @@ enum class EditorAction(val output: String) {
      * to the clipboard directly, so nothing is selected and no remembered offset is used.
      */
     COPY_LINE("${ACTION_PREFIX}copy_line"),
+
+    /**
+     * Settings flipped from the keyboard itself: the idle bar's predictions, the recent words, the
+     * numbers row, tidy spaces and the typing speed.
+     */
+    TOGGLE_NEXT_WORD("${ACTION_PREFIX}toggle_next_word"),
+    TOGGLE_RECENT_WORDS("${ACTION_PREFIX}toggle_recent_words"),
+    TOGGLE_NUMBER_ROW("${ACTION_PREFIX}toggle_number_row"),
+    TOGGLE_TIDY_SPACES("${ACTION_PREFIX}toggle_tidy_spaces"),
+    TOGGLE_TYPING_SPEED("${ACTION_PREFIX}toggle_typing_speed"),
+
+    /** Peck-type on or off, an action like any other so any shortcut can carry it. */
+    TOGGLE_PECK_MODE("${ACTION_PREFIX}toggle_peck_mode"),
+
+    /**
+     * Keys the keyboard has no key for, sent as key events (SpecialKeys), as a hardware keyboard
+     * would: Tab indents where the editor takes tabs and moves focus where it does not.
+     */
+    TAB("${ACTION_PREFIX}tab"),
+    ESCAPE("${ACTION_PREFIX}escape"),
+    FORWARD_DELETE("${ACTION_PREFIX}forward_delete"),
+    HOME("${ACTION_PREFIX}home"),
+    END("${ACTION_PREFIX}end"),
+    ARROW_UP("${ACTION_PREFIX}arrow_up"),
+    ARROW_DOWN("${ACTION_PREFIX}arrow_down"),
+    ARROW_LEFT("${ACTION_PREFIX}arrow_left"),
+    ARROW_RIGHT("${ACTION_PREFIX}arrow_right"),
+    PAGE_UP("${ACTION_PREFIX}page_up"),
+    PAGE_DOWN("${ACTION_PREFIX}page_down"),
+
+    /** The keyboard's own backspace as a shortcut. */
+    BACKSPACE("${ACTION_PREFIX}backspace"),
+
+    /** Holds Ctrl for the next key tapped: then `a` sends Ctrl+A. */
+    CTRL_NEXT("${ACTION_PREFIX}ctrl_next"),
     ;
 
     companion object {
@@ -112,10 +135,9 @@ enum class EditorAction(val output: String) {
         }
 
         /**
-         * True for a string that looks like a command but names none of them.
-         * Worth telling apart from ordinary text: it is almost certainly a typo
-         * in a chord expansion, and inserting `action:pate` into someone's
-         * document is a worse answer than doing nothing.
+         * True for a string that looks like a command but names none of them: almost certainly a
+         * typo in a chord expansion, and inserting `action:pate` into a document is worse than
+         * doing nothing.
          */
         fun isUnknownAction(output: String): Boolean =
             output.startsWith(PREFIX) && of(output) == null

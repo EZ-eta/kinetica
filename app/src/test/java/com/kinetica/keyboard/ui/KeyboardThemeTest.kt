@@ -8,14 +8,12 @@ import org.junit.Test
 
 /**
  * The derived-palette half of theming. `fromResources` and `fromDynamic` need a
- * Context and are device-only; `fromPrimary` is pure, and it is the one that has
- * to work at an arbitrary user hue in both brightnesses.
+ * Context and are device-only; `fromPrimary` is pure and has to work at any user hue in
+ * both brightnesses.
  *
- * Colour arithmetic only, and it is testable at all because the maths moved into
- * [Hsv]: every static in android.graphics.Color throws "not mocked" in the JVM
- * test runtime, so a palette built on Color.HSVToColor could not be checked
- * without a device - which is how a near-white text constant on a near-white
- * light surface would have shipped unnoticed.
+ * The maths lives in [Hsv] because every static in android.graphics.Color throws "not mocked"
+ * in the JVM test runtime; built on Color.HSVToColor, near-white text on a near-white light
+ * surface could ship unnoticed.
  */
 class KeyboardThemeTest {
 
@@ -29,23 +27,22 @@ class KeyboardThemeTest {
 
     @Test
     fun theDarkCustomPaletteIsUnchanged() {
-        // The two near-white text roles are hard-coded on purpose: deriving them
-        // from the hue would have been tidier and would have shifted every
-        // existing custom dark theme. Locked so that stays a decision.
+        // The two near-white text roles are hard-coded: deriving them from the hue would shift
+        // every existing custom dark theme.
         for (h in hues) {
             val t = KeyboardTheme.fromPrimary(KeyboardTheme.primaryForHue(h), light = false)
             assertEquals("keyText at hue $h", 0xFFEDEDF2.toInt(), t.keyText)
             assertEquals("suggestionText at hue $h", 0xFFD8D8E0.toInt(), t.suggestionText)
             assertEquals("suggestionPrimary at hue $h", 0xFFFFFFFF.toInt(), t.suggestionPrimary)
-            // The accent IS the primary in dark, untouched.
+            // The accent is the primary in dark, untouched.
             assertEquals(KeyboardTheme.primaryForHue(h), t.accent)
         }
     }
 
     @Test
     fun textIsReadableOnItsOwnSurfaceInBothBrightnesses() {
-        // The failure this guards is specific: a near-white text constant on a
-        // near-white light surface. 4.5:1 is the WCAG AA body-text ratio.
+        // Guards near-white text on a near-white light surface. 4.5:1 is the WCAG AA body-text
+        // ratio.
         for (h in hues) {
             for (light in listOf(false, true)) {
                 val t = KeyboardTheme.fromPrimary(KeyboardTheme.primaryForHue(h), light)
@@ -137,23 +134,22 @@ class KeyboardThemeTest {
 
     @Test
     fun theHueOnlyAffectsTheCustomPalette() {
-        // What the settings preview caption is built on. A swatch that moved with
-        // the slider under the bundled or Material You palettes would be claiming
-        // an effect the hue does not have there.
+        // The settings preview caption relies on this: a swatch that moved with the slider
+        // under the bundled or Material You palettes would claim an effect the hue does not
+        // have there.
         assertTrue(KeyboardTheme.hueAffects(KeyboardTheme.MODE_CUSTOM))
         assertFalse(KeyboardTheme.hueAffects(KeyboardTheme.MODE_DEFAULT))
         assertFalse(KeyboardTheme.hueAffects(KeyboardTheme.MODE_DYNAMIC))
         // A stale or misspelt stored mode falls through to the bundled palette in
-        // resolve(), so it must report the same here.
+        // resolve, so it must report the same here.
         assertFalse(KeyboardTheme.hueAffects(""))
         assertFalse(KeyboardTheme.hueAffects("Custom"))
     }
 
     @Test
     fun movingTheHueMovesEverySurfaceOfTheCustomPalette() {
-        // The preview is only worth showing if the hue visibly changes something.
-        // Two hues a third of the wheel apart must differ in every derived role -
-        // if any stayed put, the swatch would under-report what the slider does.
+        // Two hues a third of the wheel apart must differ in every derived role, or the preview
+        // swatch would under-report what the slider does.
         for (light in listOf(false, true)) {
             val a = KeyboardTheme.fromPrimary(KeyboardTheme.primaryForHue(20f), light)
             val b = KeyboardTheme.fromPrimary(KeyboardTheme.primaryForHue(140f), light)

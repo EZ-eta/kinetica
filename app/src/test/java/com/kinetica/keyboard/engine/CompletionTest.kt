@@ -2,6 +2,8 @@ package com.kinetica.keyboard.engine
 
 import com.kinetica.keyboard.engine.models.StreamId
 import com.kinetica.keyboard.engine.models.WordCandidate
+import com.kinetica.keyboard.ime.literalZone
+import com.kinetica.keyboard.ime.notBlocked
 import com.kinetica.keyboard.ime.suggestionZoneWords
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -12,7 +14,7 @@ import org.junit.Test
  * Live tap-typing completions: an all-tap prefix surfaces its
  * dictionary extensions as pick-only Source.COMPLETION candidates. The two
  * hard rules locked here: exact-length matches always outrank their own
- * extensions, and a COMPLETION best candidate never autocorrects - space
+ * extensions, and a COMPLETION best candidate never autocorrects: space
  * after "th" must commit "th", never "the".
  */
 class CompletionTest {
@@ -68,8 +70,8 @@ class CompletionTest {
     @Test
     fun completionBestNeverAutocorrects() {
         // Hard product rule: completions are pick-only. The threshold here is
-        // deliberately permissive (0.5 < confidence 1/1.25 = 0.8) so this test
-        // fails against any implementation missing the COMPLETION guard.
+        // permissive (0.5 < confidence 1/1.25 = 0.8) so this test fails against
+        // any implementation missing the COMPLETION guard.
         val result = predictor.decode(taps("th"), emptyList())
         assertEquals(WordCandidate.Source.COMPLETION, result[0].source)
         assertNull(predictor.autocorrectTarget("th", result, 0.5f))
@@ -89,8 +91,8 @@ class CompletionTest {
     @Test
     fun swipeBearingBuffersEmitNoCompletions() {
         // Completions are an all-tap exact-pass feature; segment-bearing
-        // patterns (pure swipe and merged dual-stream) must be untouched -
-        // this locks the resume-family goldens against completion bleed.
+        // patterns (pure swipe and merged dual-stream) must be untouched, so
+        // completions cannot bleed into the resume-family goldens.
         val swipeOnly = predictor.decode(
             listOf(TestData.swipe("the", g, 0, 300)), emptyList(),
         )
@@ -111,8 +113,8 @@ class CompletionTest {
 
     @Test
     fun junkPrefixCompletesToNothing() {
-        // x,q,z reaches no trie path: no completions, no candidates at all in
-        // the small dictionary - the literal zone is the user's only way to
+        // x,q,z reaches no trie path: no completions and no candidates in the
+        // small dictionary, so the literal zone is the user's only way to
         // commit it (see suggestionZoneWords).
         val result = predictor.decode(taps("xqz"), emptyList())
         assertTrue(
@@ -140,10 +142,29 @@ class CompletionTest {
     }
 
     @Test
+    fun lettersWithoutAccentsAreNotOfferedWhileAutocorrectIsOn() {
+        // A spelling with the accents left off: `pojsc` is not offered beside `pójść`, unless
+        // autocorrect is off.
+        assertEquals("", literalZone("pojsc", autocorrects = true, leavesAccentsOff = true))
+        assertEquals("pojsc", literalZone("pojsc", autocorrects = false, leavesAccentsOff = true))
+        assertEquals("xqz", literalZone("xqz", autocorrects = true, leavesAccentsOff = false))
+    }
+
+    @Test
+    fun aBlockedWordIsNeverOfferedBack() {
+        // `anb` blocked for `and` must not come back as the typed letters, the strip's way back
+        // or a recent column, none of which the trie decides.
+        assertEquals("", literalZone("anb", autocorrects = false, leavesAccentsOff = false, blocked = true))
+        assertEquals("anb", literalZone("anb", autocorrects = false, leavesAccentsOff = false, blocked = false))
+        assertEquals(listOf("and", "an"), notBlocked(listOf("and", "Anb", "an"), setOf("anb")))
+        assertEquals(listOf("and", "anb"), notBlocked(listOf("and", "anb"), emptySet()))
+    }
+
+    @Test
     fun fuzzyPassStillRescuesTyposUnderCompletions() {
         // t,h,r has no exact path ("thr..." is empty in the small dict), so
-        // the fuzzy fallback must still surface "the" exactly as before
-        // completions existed.
+        // the fuzzy fallback must still surface "the" as it did before
+        // completions.
         val result = predictor.decode(taps("thr"), emptyList())
         assertTrue(words(result).contains("the"))
         assertEquals(

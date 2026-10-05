@@ -6,10 +6,9 @@ import org.junit.Test
 /**
  * Which drags across the suggestion bar are pages.
  *
- * The start zone used to be 36dp of the bar's right corner, which is what kept this
- * gesture away from the tap, the upward flick and the long-press slide that share the
- * strip. R54 widened it to the whole bar, so the separation is now arithmetic and this is
- * where it is checked. The travel is in pixels; the view multiplies by density.
+ * A page swipe can start anywhere on the bar, so only arithmetic separates it from
+ * the tap, the upward flick and the long-press slide that share the strip. The travel is in
+ * pixels; the view multiplies by density.
  */
 class BarPagingTest {
 
@@ -22,8 +21,7 @@ class BarPagingTest {
 
     @Test
     fun aRightwardDragGoesBack() {
-        // The half of the request the old gesture had no answer for: reaching page one
-        // from page two meant cycling forward through every other page.
+        // Without it, reaching page one from page two meant cycling forward through every page.
         assertEquals(0, BarPaging.pageFor(page = 1, pageCount = 3, dx = 40f, dy = 0f, travelPx = travel))
     }
 
@@ -41,9 +39,8 @@ class BarPagingTest {
 
     @Test
     fun aTapThatWandersStillCommitsItsWord() {
-        // The named cost of widening the start zone: every word zone is now a page-swipe
-        // start, so the travel threshold is the only thing between a drifting thumb and a
-        // page it did not ask for.
+        // Every word zone is also a page-swipe start, so only the travel threshold keeps a
+        // drifting thumb from paging.
         assertEquals(-1, BarPaging.pageFor(page = 0, pageCount = 3, dx = -29f, dy = 0f, travelPx = travel))
         assertEquals(1, BarPaging.pageFor(page = 0, pageCount = 3, dx = -30f, dy = 0f, travelPx = travel))
     }
@@ -59,8 +56,8 @@ class BarPagingTest {
 
     @Test
     fun aDiagonalGoesToWhicheverAxisIsLonger() {
-        // Equal travel on both axes is refused rather than guessed at, so the ambiguous
-        // gesture does nothing instead of doing the wrong one of two things.
+        // Equal travel on both axes is refused, so an ambiguous gesture does nothing instead of
+        // guessing.
         assertEquals(-1, BarPaging.pageFor(page = 0, pageCount = 3, dx = -40f, dy = 40f, travelPx = travel))
         assertEquals(1, BarPaging.pageFor(page = 0, pageCount = 3, dx = -40f, dy = 39f, travelPx = travel))
     }

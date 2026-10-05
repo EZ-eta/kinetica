@@ -5,13 +5,11 @@ import androidx.room.Entity
 /**
  * How often one emoji has been picked, so the picker can offer them back.
  *
- * Keyed on the whole emoji string, not on a codepoint: the bundled asset carries
- * ZWJ sequences and variation selectors (an aeroplane is U+2708 U+FE0F), and a
- * single Int cannot round-trip those.
+ * Keyed on the whole emoji string: the bundled asset carries ZWJ sequences and variation
+ * selectors (an aeroplane is U+2708 U+FE0F), which a single codepoint cannot hold.
  *
- * No language column, unlike [UserWord] and [BlockedWord]. Their (word, lang)
- * key exists to stop one language's list contaminating another's decode; emoji
- * belong to no language and are offered from one store whatever is being typed.
+ * No language column, unlike [UserWord] and [BlockedWord]: emoji belong to no language and
+ * come from one store whatever is being typed.
  */
 @Entity(tableName = "emoji_uses", primaryKeys = ["emoji"])
 data class EmojiUse(

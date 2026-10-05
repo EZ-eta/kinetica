@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
     <!--
-      Overrides for the developer build. The system keyboard picker is where the two
-      builds have to be told apart - that list shows ime_name, so a shared name there
-      would make switching between them guesswork.
+      Overrides for the developer build. The system keyboard picker lists ime_name, so the
+      two builds need different names there.
     -->
     <string name="app_name">Kinetica DEV</string>
     <string name="ime_name">Kinetica DEV Keyboard</string>

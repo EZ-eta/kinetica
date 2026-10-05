@@ -7,18 +7,14 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * The side inset must be geometrically INERT.
+ * The side inset must leave the decoder's geometry unchanged.
  *
- * This is the whole safety argument for the padding setting, and it cannot be
- * made by the golden decodes: TestData builds its geometry synthetically and
- * never goes through KeyboardView or LayoutTransforms, so no golden can see a
- * regression here. The claim is that scaling the key block on both axes leaves
- * every distance measured in kw exactly as it was, and that is what these
- * tests check directly.
+ * TestData builds its geometry directly and never goes through KeyboardView or
+ * LayoutTransforms, so no golden can see a regression here. Scaling the key block on both
+ * axes leaves every distance in kw as it was, and these tests check that directly.
  *
- * Shrinking width alone would not be inert. It would cut keyWidthPx while
- * leaving row height, moving row pitch in kw - item 14e's mechanism, measured,
- * and the reason a shorter keyboard is a less forgiving one.
+ * Shrinking width alone would cut keyWidthPx while leaving row height, moving row pitch in kw:
+ * the measured mechanism, and why a shorter keyboard is a less forgiving one.
  */
 class LayoutPaddingTest {
 
@@ -85,7 +81,7 @@ class LayoutPaddingTest {
 
     @Test
     fun rowPitchInKwIsUnchanged() {
-        // The number item 14e is about. If this moves, the decode's calibration
+        // The number this guards. If this moves, the decode's calibration
         // has moved with it and the setting is not free.
         val plain = geometryAt(0f)
         val plainPitch = plain.centerY('a' - 'a') - plain.centerY('q' - 'a')
@@ -109,8 +105,8 @@ class LayoutPaddingTest {
             viewW - padPx, LayoutTransforms.padX(viewW, padPx, viewW), 1e-3f,
         )
         assertEquals("block is not anchored to the top", 0f, LayoutTransforms.padY(0f, padPx, viewW), 1e-3f)
-        // The freed vertical space shows up below the keys, which is the bottom
-        // gap that side padding buys for free.
+        // The freed vertical space shows up below the keys: the bottom gap side padding buys
+        // for free.
         assertTrue(
             "no space freed below the block",
             LayoutTransforms.padY(viewH, padPx, viewW) < viewH,
@@ -141,9 +137,8 @@ class LayoutPaddingTest {
 
     @Test
     fun theMidlineFollowsTheKeyBlockNotTheView() {
-        // The one real correctness hazard: the dual-stream split assigns a
-        // thumb by comparing its x against this line, so on an inset board a
-        // view-centre line would put the divider off the keys' centre.
+        // The dual-stream split assigns a thumb by comparing its x against this line, so on an
+        // inset board a view-centre line would put the divider off the keys' centre.
         for (padPx in listOf(0f, 60f, 160f)) {
             val g = geometryAt(padPx)
             val blockCentre = viewW / 2f

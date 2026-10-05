@@ -6,9 +6,8 @@ import org.junit.Test
 /**
  * The joins in a smoothed trail.
  *
- * The thing that can go wrong is a gap: if one piece does not end where the next begins,
- * a fast swipe draws as a dotted line rather than a curve. That is the invariant here, and
- * it is reachable from the JVM because the arithmetic carries no Canvas.
+ * If one piece does not end where the next begins, a fast swipe draws as a dotted line instead
+ * of a curve. The arithmetic carries no Canvas, so that invariant is testable on the JVM.
  */
 class TrailPathTest {
 
@@ -57,8 +56,8 @@ class TrailPathTest {
 
     @Test
     fun theSampleIsTheControlPointNotACorner() {
-        // What makes it a curve: the piece bends THROUGH the sample and neither of its
-        // endpoints is the sample, except at the two ends of the run.
+        // The piece bends through the sample and neither endpoint is the sample, except at the
+        // two ends of the run, so the trail is a curve.
         val middle = quadFor(2)
         assertEquals(xs[2], middle[2], 0f)
         assertEquals(ys[2], middle[3], 0f)
@@ -71,7 +70,7 @@ class TrailPathTest {
 
     @Test
     fun aRunOfOneSegmentIsJustTheLine() {
-        // Both ends anchored, so a two-sample trail is drawn exactly where it used to be.
+        // Both ends anchored, so a two-sample trail is the plain line it always was.
         val out = FloatArray(TrailPath.SIZE)
         TrailPath.quadInto(out, 1f, 2f, 3f, 4f, 3f, 4f, isFirst = true, isLast = true)
         assertEquals(1f, out[0], 0f)

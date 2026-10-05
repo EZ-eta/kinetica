@@ -12,19 +12,17 @@ data class KeyContact(val code: Int, val tEnter: Long, val tExit: Long)
 /**
  * A stretch of a swipe where the pointer stopped moving.
  *
- * This is the user's own letter-boundary signal: in alternating dual-thumb
- * typing, a thumb parks while the other one produces letters. Recording it is
- * what lets a merge interleave gesture legs by *when they happened* instead of
- * inferring boundaries from path shape, which is what every Tier-1 split
- * mechanism has to do.
+ * The user's own letter-boundary signal: in alternating dual-thumb typing, a
+ * thumb parks while the other one produces letters. With it a merge can
+ * interleave gesture legs by when they happened instead of inferring
+ * boundaries from path shape.
  *
  * [enterIdx]/[exitIdx] index the owning token's `rawPath`; the times are the
  * run's real endpoints. A run qualifies as a dwell by staying within
  * DWELL_RADIUS_KW of its first sample for at least DWELL_MIN_MS, so its start
- * may sit up to that radius before the pointer fully settled (and its end the
- * same distance into the resumed leg). That imprecision is harmless by
- * construction: either side of the boundary still lands on the rest key, well
- * inside the matcher's endpoint radius.
+ * may sit up to that radius before the pointer settled (and its end the same
+ * distance into the resumed leg). Harmless: either side of the boundary still
+ * lands on the rest key, well inside the matcher's endpoint radius.
  */
 data class Dwell(val enterIdx: Int, val exitIdx: Int, val tEnter: Long, val tExit: Long)
 
@@ -41,7 +39,7 @@ sealed class InputToken {
 
 /**
  * Pointer lifted quickly without travelling: a literal letter. [code] is the
- * key under the DOWN position. [x]/[y] (kw) keep the exact touch point for the
+ * key under the down position. [x]/[y] (kw) keep the exact touch point for the
  * fuzzy-substitution fallback pass.
  */
 data class TapToken(
@@ -64,17 +62,17 @@ data class TapToken(
  * its first letter may sit anywhere along the resumed path rather than at the
  * path's start point, and the matcher relaxes its start-letter gate accordingly.
  *
- * [softEnd] is the symmetric flag on the FIRST half of a split: the cut lands
+ * [softEnd] is the symmetric flag on the first half of a split: the cut lands
  * at the raw sample nearest the interrupting tap, which is mid-travel whenever
  * the thumb was moving when the other thumb tapped ("quindi"), so the half's
- * last letter may sit anywhere along its path rather
- * than at the cut point, and the matcher relaxes its end-letter gate.
+ * last letter may sit anywhere along its path, and the matcher relaxes its
+ * end-letter gate.
  *
  * [dwells] are the pauses GestureStream observed inside this gesture, in time
- * order. Populated for whole gestures only (split halves inherit none - their
- * boundaries are already explicit). The decode path does not read this
- * directly: it exists so DecodeTrace can report real on-device dwell timings,
- * and so the merge can use them as a secondary cut source.
+ * order. Populated for whole gestures only; split halves inherit none, since
+ * their boundaries are explicit. The decode path does not read this directly:
+ * DecodeTrace reports the on-device dwell timings, and the merge uses them as
+ * a secondary cut source.
  */
 class SwipeToken(
     override val streamId: StreamId,

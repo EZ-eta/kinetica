@@ -9,11 +9,11 @@ import kotlin.math.sqrt
  *
  * Both the observed swipe and the ideal word path are resampled to N points at
  * uniform arc-length spacing before matching. That removes finger-speed
- * variation entirely, so the remaining warping is geometric (corner cutting,
+ * variation, so the remaining warping is geometric (corner cutting,
  * overshoot) and a narrow Sakoe-Chiba band suffices. Fixed N keeps the matrix
  * shape constant: two preallocated rolling rows, zero allocation per call.
  *
- * NOT thread-safe: one instance per decode thread (and per test).
+ * Not thread-safe: one instance per decode thread (and per test).
  */
 class DtwMatcher {
     private val n = KineticaConstants.RESAMPLE_N
@@ -71,7 +71,7 @@ class DtwMatcher {
         var prevCode = -1
         for (i in from until to) {
             val code = letters[i]
-            if (code == Alphabet.APOSTROPHE || !geometry.hasKey(code)) continue
+            if (code == geometry.alphabet.apostrophe || !geometry.hasKey(code)) continue
             if (code == prevCode) continue
             polyScratch[2 * m] = geometry.centerX(code)
             polyScratch[2 * m + 1] = geometry.centerY(code)
@@ -124,7 +124,7 @@ class DtwMatcher {
     /**
      * Banded DTW between two resampled paths. Both endpoints are anchored (the
      * gesture's start/end are the user's most deliberate positions, weighted
-     * x2). Returns ACCUMULATED cost, or +Inf once the running row minimum
+     * x2). Returns the accumulated cost, or +Inf once the running row minimum
      * exceeds [abandonAboveAccum]. Divide by N for the mean per-step cost.
      */
     fun distanceAccum(observed: FloatArray, ideal: FloatArray, abandonAboveAccum: Float): Float {
@@ -177,5 +177,49 @@ class DtwMatcher {
         val dx = x1 - x0
         val dy = y1 - y0
         return sqrt(dx * dx + dy * dy)
+    }
+
+    companion object {
+        /**
+         * The time at each of the N resample positions of [path], walked the same way [resample]
+         * walks the coordinates, so resample index k and `out[k]` name one instant. A path with
+         * no length spreads its N positions evenly over its own time span.
+         */
+        fun resampleTimes(path: List<PathPoint>, out: LongArray) {
+            val n = KineticaConstants.RESAMPLE_N
+            val count = path.size
+            if (count == 0) return
+            var arc = 0f
+            for (i in 1 until count) arc += segLen(path, i)
+            if (count == 1 || arc <= 1e-6f) {
+                val t0 = path[0].t
+                val span = path[count - 1].t - t0
+                for (k in 0 until n) out[k] = t0 + span * k / (n - 1)
+                return
+            }
+            val step = arc / (n - 1)
+            out[0] = path[0].t
+            var seg = 1
+            var segStartAcc = 0f
+            var segLen = segLen(path, 1)
+            for (k in 1 until n - 1) {
+                val target = k * step
+                while (segStartAcc + segLen < target && seg < count - 1) {
+                    segStartAcc += segLen
+                    seg++
+                    segLen = segLen(path, seg)
+                }
+                val f = if (segLen <= 1e-6f) 0f else (target - segStartAcc) / segLen
+                val a = path[seg - 1].t
+                out[k] = a + ((path[seg].t - a) * f).toLong()
+            }
+            out[n - 1] = path[count - 1].t
+        }
+
+        private fun segLen(path: List<PathPoint>, i: Int): Float {
+            val dx = path[i].x - path[i - 1].x
+            val dy = path[i].y - path[i - 1].y
+            return sqrt(dx * dx + dy * dy)
+        }
     }
 }

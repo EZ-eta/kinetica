@@ -1,6 +1,7 @@
 package com.kinetica.keyboard.layout
 
 import android.content.res.AssetManager
+import com.kinetica.keyboard.engine.Alphabet
 import org.json.JSONObject
 
 /** Parses the JSON files under assets/layouts into immutable [KeyboardLayout]s. */
@@ -13,12 +14,12 @@ object LayoutLoader {
 
     fun parse(json: String): KeyboardLayout {
         val root = JSONObject(json)
+        val alphabet = Alphabet.forScript(root.optString("script", "latin"))
         val keysJson = root.getJSONArray("keys")
         val keys = ArrayList<Key>(keysJson.length())
         for (i in 0 until keysJson.length()) {
             val k = keysJson.getJSONObject(i)
-            // "alternates" is the current name; "longPress" is accepted as a
-            // legacy alias from schema 1 layouts.
+            // "longPress" is the schema 1 name for "alternates", still accepted.
             val altKey = if (k.has("alternates")) "alternates" else "longPress"
             val alternates = if (k.has(altKey)) {
                 val arr = k.getJSONArray(altKey)
@@ -38,6 +39,7 @@ object LayoutLoader {
                     h = k.getDouble("h").toFloat(),
                     hint = if (k.has("hint")) k.getString("hint") else null,
                     alternates = alternates,
+                    alphabet = alphabet,
                 ),
             )
         }
@@ -45,14 +47,13 @@ object LayoutLoader {
             name = root.optString("name", "unnamed"),
             locale = root.optString("locale", "en_US"),
             keys = keys,
-            // Optional, so no schema bump and no existing layout needs editing:
-            // absent is "these accents are foreign", which is what the English
-            // layout and the plain-qwerty fallback both want.
+            // Optional, so no schema bump: absent means the accents are foreign, as the
+            // English layout and the plain-qwerty fallback want.
             nativeAccents = root.optBoolean("nativeAccents", false),
-            // Also optional: only a layout whose whole purpose is its letter
-            // arrangement declares it, and every QWERTY-derived layout wants
-            // the swap that absent-means-false leaves enabled.
+            // Optional too: absent leaves the arrangement swap enabled, as every
+            // QWERTY-derived layout wants.
             fixedArrangement = root.optBoolean("fixedArrangement", false),
+            alphabet = alphabet,
         )
     }
 }

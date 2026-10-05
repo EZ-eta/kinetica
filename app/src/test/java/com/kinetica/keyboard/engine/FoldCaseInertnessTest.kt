@@ -9,14 +9,10 @@ import org.junit.Assume.assumeTrue
 import org.junit.Test
 
 /**
- * AccentFolder.fold now folds case as well, so that a wordlist can carry a
- * capitalized display form on a lowercase trie key. That is a change to a
- * shared engine path, and the claim that earns it is that it is INERT for
- * every asset that was already lowercase, which was all of them before German.
- *
- * This asserts the claim directly rather than trusting it: no bundled asset
- * outside German may contain an uppercase letter, and every one must build the
- * same trie it built before.
+ * AccentFolder.fold folds case too, so a wordlist can carry a capitalized display form on a
+ * lowercase trie key. The fold is shared, so it must be inert for every lowercase asset, which
+ * is all of them but German: no bundled asset outside German may contain an uppercase letter,
+ * and every language still loads its full vocabulary.
  */
 class FoldCaseInertnessTest {
 

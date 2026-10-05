@@ -6,10 +6,9 @@ import org.junit.Test
 /**
  * The three-way case map and its inverse.
  *
- * Pure because the popup's whole job is to pick one of these and the service's is to apply
- * it: the edit around them is one `replaceBeforeCursor` and is on the device checklist.
- * The inverse is here for the popup's pre-selection, which has to open on the case the word
- * is already in.
+ * The popup picks one of these and the service applies it with one `replaceBeforeCursor`,
+ * which is checked on a device. The inverse gives the popup's pre-selection, which opens on
+ * the case the word is already in.
  */
 class WordCaseTest {
 
@@ -23,7 +22,7 @@ class WordCaseTest {
     @Test
     fun everyCaseIsReachableFromEveryOther() {
         // Applying a case must not depend on the case it starts from, or the popup would
-        // be a cycle instead of a choice - Abc from ABC is the one that would break.
+        // be a cycle instead of a choice; Abc from ABC is the case that would break.
         for (start in listOf("world", "World", "WORLD", "wORLD")) {
             assertEquals(start, "world", WordCase.LOWER.applyTo(start))
             assertEquals(start, "World", WordCase.TITLE.applyTo(start))
@@ -78,5 +77,16 @@ class WordCaseTest {
         assertEquals(WordCase.LOWER, WordCase.entries[0])
         assertEquals(WordCase.TITLE, WordCase.entries[1])
         assertEquals(WordCase.UPPER, WordCase.entries[2])
+    }
+
+    @Test
+    fun aSelectionIsRecasedWordByWord() {
+        // The shift popup on selected text.
+        assertEquals("Hello World, Again", WordCase.TITLE.applyToText("hELLO world, again"))
+        assertEquals("hello world", WordCase.LOWER.applyToText("Hello WORLD"))
+        assertEquals("HELLO WORLD", WordCase.UPPER.applyToText("hello world"))
+        assertEquals("Line One\nLine Two", WordCase.TITLE.applyToText("line one\nline two"))
+        assertEquals("(Quoted) Text", WordCase.TITLE.applyToText("(quoted) text"))
+        assertEquals("Don't Stop", WordCase.TITLE.applyToText("don't stop"))
     }
 }

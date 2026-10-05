@@ -26,10 +26,8 @@ class EmojiPickerView(
 ) : LinearLayout(context) {
 
     /**
-     * One emoji with the metadata the asset carries. [name] and [keywords] are
-     * unused by the tabs, and kept deliberately: emoji_data.json ships them, and
-     * a frequently-used or searchable panel needs them. Dropping them again would
-     * mean re-reading the asset differently later for no gain now.
+     * One emoji with the metadata the asset carries. The tabs do not read [name] and
+     * [keywords]; they are kept for a searchable panel.
      */
     private class Emoji(val ch: String, val name: String, val keywords: List<String>)
 
@@ -45,17 +43,12 @@ class EmojiPickerView(
     private var shownCategory = 0
 
     /**
-     * Whether this device's font can actually draw [ch].
+     * Whether this device's font can draw [ch]. The asset carries emoji up to Unicode 15 and
+     * the system font is fixed per OS version, so an undrawable emoji is left out, not shown
+     * as a tofu box. One Paint is reused because this runs once per entry at load.
      *
-     * The asset carries emoji up to Unicode 15 and the system emoji font is fixed per OS
-     * version, so an Android 8 phone cannot draw what an Android 14 one can. Without this
-     * the difference shows as a tofu box, which is worse than the emoji being absent. One
-     * Paint is reused because this runs once per entry at load.
-     *
-     * **This has to stay above the `init` block and it is not a style preference.** Property
-     * initializers run in declaration order, so declared below `init` it is still null when
-     * `init` calls [loadCategories], and `hasGlyph` throws out of the constructor: the
-     * picker showed for an instant and the whole keyboard died. KNOWN_ISSUES item 64.
+     * Must stay above the `init` block: initializers run in declaration order, and below it
+     * the Paint is still null when `init` calls [loadCategories], which kills the keyboard.
      */
     private val glyphPaint = Paint()
 
@@ -68,10 +61,9 @@ class EmojiPickerView(
     /**
      * The emoji this user picks most, best first, from [EmojiRecents].
      *
-     * Pushed when the panel is opened rather than after every tap, deliberately:
-     * re-ordering the first tab under a finger that is still tapping would move
-     * the next cell out from under it. The tab is absent entirely until there is
-     * something to put in it, so a fresh install sees exactly the shipped panel.
+     * Pushed when the panel opens, not after every tap, so the first tab never reorders under
+     * a finger still tapping. The tab is absent until it has contents, so a fresh install sees
+     * the plain panel.
      */
     var recents: List<String> = emptyList()
         set(value) {
@@ -86,14 +78,9 @@ class EmojiPickerView(
         }
 
     /**
-     * Resolved color roles, pushed from the service like [SuggestionBarView.theme]
-     * and [KeyboardView.theme].
-     *
-     * The panel used to paint itself from R.color.kbd_background directly, so it
-     * was wired to the bundled dark palette and never followed a custom hue or the
-     * light theme - and its two footer controls were platform Buttons, which an
-     * F-Droid reviewer saw rendering in the system light style inside a dark
-     * keyboard. Everything the panel draws now comes from here.
+     * Resolved color roles, pushed from the service like [SuggestionBarView.theme] and
+     * [KeyboardView.theme]. Everything the panel draws comes from here, so it follows a custom
+     * hue and the light theme.
      */
     var theme: KeyboardTheme = KeyboardTheme.fromResources(context)
         set(value) {
@@ -120,10 +107,8 @@ class EmojiPickerView(
         addView(gridScroll, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
 
         val bottom = LinearLayout(context).apply { orientation = HORIZONTAL }
-        // TextViews, not Buttons: a platform Button carries its own background and
-        // text colour from the app theme, which is how these came out light inside
-        // a dark keyboard. These are painted from the palette like every other
-        // surface here.
+        // TextViews, not Buttons: a platform Button takes its colours from the app theme and
+        // came out light inside a dark keyboard. These are painted from the palette.
         bottom.addView(
             footerControl(context.getString(R.string.emoji_back_to_letters)) { onClose() },
             LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f),
@@ -139,9 +124,8 @@ class EmojiPickerView(
     }
 
     /**
-     * What the tab strip addresses: the frequently-used panel when it has
-     * contents, then the asset's categories. Recomputed rather than stored so
-     * the tab index and the panel list can never disagree.
+     * What the tab strip addresses: the frequently-used panel when it has contents, then the
+     * asset's categories. Recomputed, not stored, so the tab index and the list always agree.
      */
     private fun panels(): List<Category> =
         if (recentEntries.isEmpty()) {
@@ -199,9 +183,8 @@ class EmojiPickerView(
     /**
      * The shipped set, minus anything this device cannot draw.
      *
-     * Never throws. A keyboard is the one app that must not die: an empty picker is a bad
-     * day, a dead IME means the user cannot type at all. Before this the method had no
-     * handling of any kind, so a malformed asset could take the service down.
+     * Never throws: an empty picker is an inconvenience, a dead IME leaves the user unable to
+     * type, and a malformed asset must not take the service down.
      */
     private fun loadCategories(): List<Category> = try {
         parseCategories()
@@ -232,8 +215,8 @@ class EmojiPickerView(
                 val ch = e.getString("ch")
                 if (canDraw(ch)) entries.add(Emoji(ch, e.optString("name", ""), kw))
             }
-            // A category the font cannot draw at all is dropped rather than left as an empty
-            // tab, and its own icon has to be drawable or the tab itself is a tofu box.
+            // A category with nothing drawable is dropped, not left as an empty tab, and its
+            // icon must be drawable too or the tab itself is a tofu box.
             val icon = c.getString("icon")
             if (entries.isNotEmpty() && canDraw(icon)) {
                 out.add(Category(c.getString("name"), icon, entries))

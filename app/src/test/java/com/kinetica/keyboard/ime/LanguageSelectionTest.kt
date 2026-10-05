@@ -33,13 +33,12 @@ class LanguageSelectionTest {
         assertEquals("pl", languageOnInputStart("pl", "pl", null))
         assertEquals("en", languageOnInputStart(null, null, null))
     }
-    // ---- R93: the sync is opt-out, and only the inbound half stops ------------------
+    // ---- The sync is opt-out, and only the inbound half stops ------------------
     //
     // Off, a stored choice always wins. Android assigns the subtype matching the system
-    // locale to any subtype the user never forced through its own picker, so the steady
-    // state above is exactly what pulled an English phone back to English every cold
-    // start. Nothing here touches the outbound half: KineticaIME still asks Android to
-    // follow when the language changes inside the keyboard.
+    // locale unless the user forced one through its picker, so following it pulled an English
+    // phone back to English at every cold start. The outbound half is untouched: KineticaIME
+    // still asks Android to follow when the language changes inside the keyboard.
 
     @Test
     fun aStoredLanguageSurvivesTheSystemLocaleWhenSyncIsOff() {
@@ -60,9 +59,8 @@ class LanguageSelectionTest {
 
     // ---- The Norwegian subtype code -------------------------------------------------
     //
-    // method.xml declares nb_NO, which is the right locale for Bokmal, while the asset
-    // and ALL_LANGUAGES use "no". Nothing matched either way, so Norwegian fell out of
-    // the synchronisation from the day it shipped.
+    // method.xml declares nb_NO, the right locale for Bokmal, while the asset and
+    // ALL_LANGUAGES use "no", so the two are folded together or Norwegian never syncs.
 
     @Test
     fun theNorwegianSubtypeResolvesToTheKineticaCode() {
@@ -83,12 +81,25 @@ class LanguageSelectionTest {
     fun everyDeclaredSubtypeFoldsOntoALanguageWeShip() {
         // The locales in method.xml, one per declared subtype. A code that is not in
         // ALL_LANGUAGES has no wordlist, so acceptSubtypeLanguage refuses it and the
-        // picker entry is dead - which is what nb_NO was.
-        val declared = listOf("en_US", "it_IT", "es_ES", "pl_PL", "cs_CZ", "nl_NL", "de_DE", "fr_FR", "nb_NO")
+        // picker entry is dead, as nb_NO once was.
+        val declared = listOf(
+            "en_US", "it_IT", "es_ES", "pl_PL", "cs_CZ", "nl_NL", "de_DE", "fr_FR", "nb_NO",
+            "ru_RU", "iw_IL", "ar",
+        )
         for (locale in declared) {
             val code = kineticaLanguageOf(locale.substringBefore('_'))
             assertTrue("$locale -> $code", code in Prefs.ALL_LANGUAGES)
         }
+    }
+
+    @Test
+    fun androidIsOfferedTheSubtypesOfTheEnabledLanguagesOnly() {
+        // English off, and the picker still said English (US).
+        val declared = listOf("en_US", "it_IT", "es_ES", "pl_PL", "cs_CZ", "nl_NL", "de_DE", "fr_FR", "nb_NO")
+        assertEquals(listOf(1, 3), subtypesFor(declared, listOf("it", "pl")))
+        assertEquals(listOf(8), subtypesFor(declared, setOf("no")))
+        assertEquals(emptyList<Int>(), subtypesFor(declared, emptyList()))
+        assertEquals(emptyList<Int>(), subtypesFor(listOf(null), listOf("en")))
     }
 
     // ---------------------------------------------- when the write is worth doing
@@ -118,11 +129,11 @@ class LanguageSelectionTest {
         assertTrue(languageSyncNeedsWrite(null, null, "en"))
     }
 
-    // ---- R83: the arrangement the language asks for ---------------------------------
+    // ---- The arrangement the language asks for ---------------------------------
     //
     // The setting is global and the AZERTY board is per-language, so a value written for
     // French and left behind would read "AZERTY" in Settings beside a German QWERTZ board.
-    // Both directions are decided here, and so is the case that must not move.
+    // Both directions are decided here, and so is the user's own choice, which never moves.
 
     @Test
     fun frenchTakesAzertyFromTheDefault() {

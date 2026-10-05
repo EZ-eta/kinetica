@@ -9,21 +9,15 @@ import java.io.IOException
 /**
  * Developer build: the decode trace goes to a file as well as to logcat.
  *
- * The trace was logcat-only until 2026-08-18, which meant it could not be read at all
- * from the build that matters - a release APK installs no sink, so every gate step
- * asking for an `fw` value has been unrunnable since the app was published
- * (KNOWN_ISSUES item 28). Writing to a file removes the computer from the loop
- * entirely: type normally for a week, then export.
- *
- * That last part is the point. A trace taken while tethered to a desk is a trace of
- * typing at a desk, and the open engine work is about how two thumbs actually move.
+ * A file takes the computer out of the loop: type normally for a week, then export. A trace taken
+ * tethered to a desk records typing at a desk, and the engine work is about how two thumbs move
+ * in ordinary use.
  */
 object TraceRecorder {
 
     /**
-     * One rotation at this size, so the file cannot grow without bound while still
-     * holding far more than a session: the largest capture in the project's history
-     * is 222 KB of a long deliberate run.
+     * One rotation at this size, so the file cannot grow without bound and still holds far more
+     * than a session: the largest capture so far is 222 KB.
      */
     private const val MAX_BYTES = 4L * 1024 * 1024
     private const val DIR = "trace"
@@ -39,8 +33,8 @@ object TraceRecorder {
         private set
 
     /**
-     * On by default. This build has one purpose and arming it by hand every time is
-     * how a week of ordinary typing turns into no data.
+     * On by default: this build has one purpose, and a recorder armed by hand gets forgotten and
+     * a week of typing yields no data.
      */
     @Volatile
     var recording: Boolean = true

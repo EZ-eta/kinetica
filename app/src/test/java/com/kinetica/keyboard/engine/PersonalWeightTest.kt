@@ -11,11 +11,8 @@ class PersonalWeightTest {
 
     private val g = TestData.qwertyGeometry()
 
-    // "you" dwarfs "thou" in corpus frequency; both decode from a y/t-adjacent
-    // tap pattern only via their own exact taps, so compare via swipes on the
-    // same node set instead: use two words with a shared tap pattern through
-    // fuzzy anchors. Simpler and deterministic: exact taps for each word, then
-    // compare candidate scores directly.
+    // "you" dwarfs "thou" in corpus frequency. Each word is decoded from its own exact taps
+    // and the candidate scores are compared directly, which keeps the geometry equal.
     private fun dict() = Trie.build(
         listOf("you" to 5_000_000, "thou" to 10_000, "the" to 6_000_000),
     )
@@ -80,7 +77,7 @@ class PersonalWeightTest {
 
     @Test
     fun reinforcedCompletionClimbs() {
-        // Personal boost applies to COMPLETION candidates through the
+        // Personal boost applies to completion candidates through the
         // same emit path as every other source. "then" (5000) edges out
         // "they" (4500) on corpus frequency; 20 commits of "they" must flip
         // the completion ranking for the t,h prefix.
@@ -105,7 +102,7 @@ class PersonalWeightTest {
     @Test
     fun downgradedToZeroScoresAsNeverCommitted() {
         // A word fully de-reinforced back to a clamped count of 0 must rank
-        // exactly like a word with no personal history at all.
+        // like a word with no personal history at all.
         val virgin = WordPredictor(dict(), BigramTable.EMPTY, g)
         val downgraded = WordPredictor(dict(), BigramTable.EMPTY, g, emptyMap(), mapOf("thou" to 0))
         assertEquals(scoreOf(virgin, "thou"), scoreOf(downgraded, "thou"), 1e-6f)

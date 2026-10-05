@@ -3,14 +3,13 @@ package com.kinetica.keyboard.settings
 /**
  * The words people use for a setting that the setting is not called.
  *
- * Curated rather than derived, because the useful entries are the ones no rule would
- * produce: "dark" for the theme mode, "size" for the height, "tall" and "short" for the
- * same row, "swipe" for gesture typing. A row whose title already contains the obvious
- * word gets nothing here - a synonym that duplicates the title only makes the list longer.
+ * Curated, because the useful entries are the ones no rule would produce: "dark" for the theme
+ * mode, "size" for the height, "tall" and "short" for the same row, "swipe" for gesture typing.
+ * A row whose title already holds the obvious word gets nothing here.
  *
- * Kept short on purpose. Every term is a word a user might type, not a description of the
- * feature, and [SettingsIndex] ranks synonym hits below title and summary hits so a
- * generous entry cannot push a better row down.
+ * Every term is a word a user might type, not a description of the feature, and [SettingsIndex]
+ * ranks synonym hits below title and summary hits so a generous entry cannot push a better row
+ * down.
  */
 object SettingsSynonyms {
 
@@ -18,16 +17,13 @@ object SettingsSynonyms {
      * Settings with no row in `keyboard_prefs.xml` at all, so no walk of the preference
      * tree can find them.
      *
-     * All three moved into [ChordSettingsActivity] when the chord settings were gathered
-     * onto one screen (a user had reported three places to look for one feature). They are
-     * still stored as preferences and are still what someone would search for, so the
-     * index adds them by hand. **An entry here with no terms is unreachable**, which is
-     * what `SettingsSynonymsTest` pins.
+     * Both lead-ins live in [ChordSettingsActivity], which holds every chord setting on one
+     * screen. They are still preferences someone would search for, so the index adds them by
+     * hand. An entry here with no terms is unreachable, which `SettingsSynonymsTest` pins.
      */
     val EXTRA_KEYS: List<String> = listOf(
         Prefs.CHORD_ARM_MS,
-        Prefs.LANG_CYCLE_KEY,
-        Prefs.PECK_CHORD_KEY,
+        Prefs.SPACE_CHORD_ARM_MS,
     )
 
     /** Extra words that should find the row [key], or an empty list. */
@@ -35,6 +31,9 @@ object SettingsSynonyms {
 
     /** The row key of the expansions screen; it is an intent row, not a preference. */
     const val EXPANSIONS_ROW = "pref_expansions_screen"
+
+    /** The long-press screen; its per-letter rows are built in code and are not searchable. */
+    const val LONGPRESS_GROUP = "pref_group_longpress"
 
     private val TERMS: Map<String, List<String>> = mapOf(
         EXPANSIONS_ROW to listOf(
@@ -50,23 +49,45 @@ object SettingsSynonyms {
         Prefs.VIBRATION to listOf("haptic", "buzz", "feedback"),
         Prefs.VIBRATION_INTENSITY to listOf("haptic", "buzz", "strength"),
 
-        // Size and keys
+        // Size, keys and the bar
         Prefs.KEYBOARD_HEIGHT_PCT to listOf("size", "tall", "short", "big", "small", "bigger"),
+        Prefs.KEYBOARD_HEIGHT_PCT_LANDSCAPE to
+            listOf("landscape", "rotate", "rotated", "sideways", "horizontal", "size", "tall"),
+        Prefs.LANDSCAPE_SPLIT_GAP_PCT to
+            listOf("gap", "apart", "space", "split", "landscape", "rotate", "sideways", "wider", "bigger"),
+        Prefs.LANDSCAPE_ARRANGEMENT to
+            listOf("landscape", "rotate", "rotated", "sideways", "horizontal", "split", "centre", "center"),
         Prefs.BAR_ACTIONS to listOf(
             "toolbar", "shortcut", "button", "undo", "clipboard", "one handed",
             "menu", "action", "language",
         ),
+        Prefs.NEXT_WORD to listOf("predict", "prediction", "next word", "suggest", "autocomplete", "context"),
+        Prefs.EDIT_FROM_MENU to listOf("long press", "long-press", "menu", "edit", "alternates", "accents"),
+        Prefs.NO_PRIMARY to listOf("language", "languages", "mix", "multilingual", "primary", "equal", "detect"),
+        Prefs.TYPING_SPEED to listOf("wpm", "speed", "words per minute", "typing speed", "fast"),
+        Prefs.ENTER_ACTION to listOf("enter", "return", "search", "send", "go", "newline", "action"),
+        Prefs.TIDY_SPACES to listOf("space", "spaces", "double space", "compress", "quote", "autospace"),
+        Prefs.NUMBER_ROW to listOf("digits", "numbers", "number row", "numeric", "1234"),
+        Prefs.RECENT_WORDS to listOf("thicc", "thick", "multi-row", "rows", "history", "previous word", "topbar", "swap"),
         Prefs.MENU_ACTIONS to listOf(
             "?123", "123", "hold", "long press", "shortcut", "gear", "undo", "menu",
             "action", "popup",
         ),
+        Prefs.BADGES_WHILE_ADJUSTING to listOf("badge", "rank", "dots", "tier", "weight", "clean"),
         Prefs.SUGGESTION_BAR_DP to listOf("size", "topbar", "toolbar", "candidates", "strip"),
+        Prefs.HOME_ROW_SPREAD_PCT to listOf("home row", "asdf", "spread", "wider", "edge", "indent"),
         Prefs.SIDE_PAD_DP to listOf("margin", "gap", "inset", "narrow", "edge", "width"),
         Prefs.BOTTOM_PAD_DP to listOf("margin", "gap", "inset", "navigation", "thumb"),
         Prefs.DRAG_HANDLE_DP to listOf("handle", "grip", "resize"),
         Prefs.KEY_ARRANGEMENT to listOf("qwerty", "qwertz", "qzerty", "azerty", "french", "german"),
         Prefs.LAYOUT_MODE to listOf("split", "one handed", "onehanded", "thumb", "compact"),
         Prefs.PLAIN_LETTER_ALTERNATES to listOf("accent", "long press", "popup", "alternates"),
+        Prefs.POPUP_SHAPE to
+            listOf("grid", "square", "3x3", "4x3", "5x3", "shape", "row", "long press", "popup", "menu", "accent"),
+        LONGPRESS_GROUP to listOf(
+            "accent", "accents", "diacritics", "long press", "hold", "secondary", "corner", "hint",
+            "popup", "symbols",
+        ),
         Prefs.NUMBER_PRIORITY to listOf("digits", "number row", "top row", "swipe", "1234", "accent"),
         Prefs.EMOJI_KEY to listOf("smiley", "emoticon"),
         Prefs.APOSTROPHE_KEY to listOf("quote", "contraction"),
@@ -109,17 +130,17 @@ object SettingsSynonyms {
         Prefs.SPACEBAR_STEP_DP to listOf("cursor", "slide", "speed", "sensitivity"),
 
         // Rows that open another screen
-        "pref_chords" to listOf("shortcut", "expansion", "macro", "abbreviation"),
+        "pref_chords" to listOf("shortcut", "expansion", "macro", "abbreviation", "language switch", "peck", "spacebar"),
         "pref_edge_swipes_screen" to listOf("shortcut", "edge", "border", "gesture"),
-        "pref_dictionary_screen" to listOf(
-            "words", "learned", "personal", "backup", "export", "import", "blocked",
-            "restore", "undo", "snapshot",
-        ),
+        "pref_dictionary_screen" to listOf("words", "learned", "personal", "export", "import", "blocked"),
+        "pref_backup_screen" to listOf("backup", "export", "import", "restore", "undo", "snapshot", "phone", "move"),
         "pref_licenses_screen" to listOf("legal", "attribution", "open source", "credits"),
+        "pref_contribute_screen" to listOf("donate", "donation", "coffee", "ko-fi", "kofi", "tip", "support"),
+        "pref_group_learn" to listOf("help", "tutorial", "how to", "practice", "practise", "tips"),
+        "pref_group_bar" to listOf("topbar", "toolbar", "candidates", "strip", "bar"),
 
-        // The three that have no row of their own
+        // The two that have no row of their own
         Prefs.CHORD_ARM_MS to listOf("chord", "lead in", "timing", "delay", "shortcut"),
-        Prefs.LANG_CYCLE_KEY to listOf("chord", "language", "switch", "shortcut", "cycle"),
-        Prefs.PECK_CHORD_KEY to listOf("chord", "peck", "literal", "shortcut"),
+        Prefs.SPACE_CHORD_ARM_MS to listOf("chord", "spacebar", "space", "lead in", "timing", "delay", "shortcut"),
     )
 }

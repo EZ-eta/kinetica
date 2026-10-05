@@ -53,10 +53,9 @@ class SpanishDictionaryTest {
         assertTrue("bigram count ${table.size}", table.size > 50_000)
         assertTrue("table bytes ${table.sizeBytes()}", table.sizeBytes() < 4 * 1024 * 1024)
         val boost = table.multiplier(dict.trie.nodeFor("de"), dict.trie.nodeFor("la"))
-        // Stated as a share of the available boost rather than as a literal: what is
-        // being asserted is that the table gives a very common pair most of what it
-        // has to give, which is a property of the asset. A literal here just pins
-        // whatever BIGRAM_BOOST_MAX happened to be when it was written.
+        // A share of the available boost, not a literal: the table must give a very
+        // common pair most of what it has, a property of the asset. A literal would
+        // pin whatever BIGRAM_BOOST_MAX was when it was written.
         val share = (boost - 1f) / KineticaConstants.BIGRAM_BOOST_MAX
         assertTrue("de->la boost $boost, share $share of the cap", share > 0.3f)
     }
@@ -66,11 +65,10 @@ class SpanishDictionaryTest {
         val dict = loadDict()
         val g = TestData.qwertyGeometry()
         val predictor = WordPredictor(dict.trie, BigramTable.EMPTY, g, dict.forms)
-        // "siempre" deliberately absent from THIS loop: it IS in the wordlist
-        // (rank ~125, freq 424363 - an earlier comment claiming otherwise was
-        // stale), but its clean synthetic path has a documented endpoint
-        // ambiguity against "dormir" (d starts within R_ENDPOINT_KW of s, r
-        // ends within reach of e). Its sloppy-path behavior is locked in
+        // "siempre" is left out of this loop: it is in the wordlist (rank ~125,
+        // freq 424363), but its clean synthetic path has an endpoint ambiguity
+        // against "dormir" (d starts within R_ENDPOINT_KW of s, r ends within
+        // reach of e). Its sloppy-path behavior is locked in
         // siempreSurvivesSloppySwipes below.
         for (word in listOf("hola", "gracias", "tiempo", "cuando", "trabajo", "casa")) {
             val result = predictor.decode(
@@ -83,20 +81,16 @@ class SpanishDictionaryTest {
 
     @Test
     fun cuandoOutranksPersonallyReinforcedCunado() {
-        // Live-poisoning regression, from a device capture: the misfire
-        // loop had learned "cuñado" to personal count 6 in the es dictionary.
-        // Even with that state merged in (freq +6000, personal count 6), a
-        // sloppy single-swipe c-u-a-n-d-o must keep "cuando" on top - fw still
-        // favors cuando ~1.5x and geometry must not close the gap through the
-        // a<->n multi-pass slack.
-        //
-        // Measured after the boost was fit-conditioned: on this path "cuñado" does not
-        // reach the ten-wide window at all, so what the golden rests on is
-        // frequency and the merge floor, NOT the boost - the earlier comment
-        // claiming a 1.29x boost had to be out-argued was describing a
-        // candidate that is not in the contest. The boost half of the
-        // acceptance set is carried by intendedCunadoStillDecodable below,
-        // where the word is on its own path and its boost must survive.
+        // Live-poisoning regression, from a device capture: a misfire loop had
+        // learned "cuñado" to personal count 6 in the es dictionary. Even with
+        // that state merged in (freq +6000, personal count 6), a sloppy
+        // single-swipe c-u-a-n-d-o must keep "cuando" on top: fw still favors
+        // cuando ~1.5x and geometry must not close the gap through the a<->n
+        // multi-pass slack.
+        // With the fit-conditioned boost, "cuñado" does not reach the ten-wide
+        // window on this path, so the golden rests on frequency and the merge
+        // floor, not the boost. intendedCunadoStillDecodable below covers the
+        // boost, with the word on its own path.
         val p = assetPath("es_wordlist.txt")
         assumeTrue("es wordlist asset not found", Files.exists(p))
         val extra = DictionaryLoader.userWordsForMerge(listOf("cuñado" to 6))
@@ -121,14 +115,10 @@ class SpanishDictionaryTest {
     fun intendedCunadoStillDecodable() {
         // Control for the poisoning golden: a c-u-n-a-d-o-ordered swipe (ñ
         // folds to n) must still surface "cuñado" near the top, unpoisoned.
-        //
-        // It carries a second job since the boost was fit-conditioned (which asks
-        // in as many words for acceptance rows "where the boost is doing its
-        // intended job"): with the SAME personal count the poisoning golden
-        // feeds in, the word on its OWN path fits at d=0.243 - inside
-        // GEO_SATURATION_KW - so the boost must survive in full. The pair is
-        // the whole rule in two tests: reinforcement counts where the shape
-        // agrees and nowhere else.
+        // With the same personal count the poisoning golden feeds in, the word
+        // on its own path fits at d=0.243, inside GEO_SATURATION_KW, so the
+        // boost must survive in full. The pair is the whole rule in two tests:
+        // reinforcement counts where the shape agrees and nowhere else.
         val dict = loadDict()
         val g = TestData.qwertyGeometry()
         val predictor = WordPredictor(dict.trie, BigramTable.EMPTY, g, dict.forms)
@@ -159,9 +149,9 @@ class SpanishDictionaryTest {
     @Test
     fun siempreSurvivesSloppySwipes() {
         // Companion to the poisoning goldens: realistic siempre paths must
-        // keep the word reachable. Top-1 is deliberately not asserted on the
-        // clean path (documented dormir endpoint ambiguity above); sloppy
-        // paths must at minimum surface it in the strip.
+        // keep the word reachable. Top-1 is not asserted on the clean path
+        // (the dormir endpoint ambiguity above); sloppy paths must at least
+        // surface it in the strip.
         val dict = loadDict()
         val g = TestData.qwertyGeometry()
         val predictor = WordPredictor(dict.trie, BigramTable.EMPTY, g, dict.forms)

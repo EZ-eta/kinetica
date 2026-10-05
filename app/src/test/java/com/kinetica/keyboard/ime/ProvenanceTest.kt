@@ -8,10 +8,9 @@ import org.junit.Test
 /**
  * The language a committed word is learned into, read off the candidate it came from.
  *
- * `languageOf` lowercases the word it is asked about, and the map used to be keyed by the
- * candidate's display form. German nouns are capitalized in the display form, so with German
- * as the second enabled language every noun missed the map and was learned into the active
- * language instead: R56's defect by a second route.
+ * `languageOf` lowercases the word it is asked about, so the map is keyed by the lowercase form.
+ * Keyed by display form, every capitalized German noun missed it and was learned into the active
+ * language.
  */
 class ProvenanceTest {
 

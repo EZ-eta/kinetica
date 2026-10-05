@@ -7,9 +7,9 @@ import org.junit.Test
 /**
  * Which characters take back an automatically inserted space.
  *
- * Swipe "Hi", let autospace add its space, tap "!" and the result read "Hi !".
- * Only the automatic space is taken back - a space the user typed is theirs - and
- * only for punctuation that sits against the word.
+ * Without it, swiping "Hi" and tapping "!" after the autospace gives "Hi !". Only the automatic
+ * space is taken back, since a space the user typed is theirs, and only for punctuation that
+ * sits against the word.
  */
 class HugsPreviousWordTest {
 
@@ -37,9 +37,8 @@ class HugsPreviousWordTest {
 
     @Test
     fun aDashKeepsItsSpace() {
-        // "one - two" is the common case, and an em dash is punctuation that
-        // takes a space either side - which is why this is an explicit list and
-        // not a character-class test.
+        // "one - two" is the common case, and an em dash takes a space either side, so this is
+        // an explicit list, not a character-class test.
         for (c in listOf("-", "–", "—", "_")) {
             assertFalse("$c should not hug", hugsPreviousWord(c))
         }

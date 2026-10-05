@@ -16,8 +16,7 @@ import org.junit.Test
  * floor is below its clamp shows a value the keyboard silently raises; one whose top is
  * below it loses the top users already have (#2 asked for lower floors, not lower ceilings).
  *
- * Read straight off disk like [BarActionArraysTest]: **`--rerun-tasks` is what makes a
- * fail-first check here actually run.**
+ * Read off disk like [PreferenceTreeTest], so a fail-first check here needs `--rerun-tasks`.
  */
 class TimingStepsTest {
 
@@ -51,7 +50,7 @@ class TimingStepsTest {
     }
 
     private fun steps(arrays: String, name: String): List<Int> {
-        val block = Regex("""<string-array name="$name">(.*?)</string-array>""", RegexOption.DOT_MATCHES_ALL)
+        val block = Regex("""<string-array name="$name"[^>]*>(.*?)</string-array>""", RegexOption.DOT_MATCHES_ALL)
             .find(arrays)?.groupValues?.get(1) ?: return emptyList()
         return Regex("""<item>\s*(\d+)\s*</item>""").findAll(block).map { it.groupValues[1].toInt() }.toList()
     }

@@ -11,22 +11,26 @@ import kotlin.math.sqrt
 class KeyboardGeometry private constructor(
     val keyWidthPx: Float,
     /**
-     * The x that divides the LEFT thumb's half of the board from the RIGHT
-     * one's, in view pixels. Its ONLY consumer is
-     * [GestureEngine.onPointerDown]'s stream assignment.
+     * The x that divides the left thumb's half of the board from the right
+     * one's, in view pixels. Used only by [GestureEngine.onPointerDown]'s
+     * stream assignment.
      *
-     * The centre of the LETTER BLOCK, not half the view width, and the
-     * difference is load-bearing once the board can be inset: with side
-     * padding the keys no longer span the view, so half the view width would
-     * put the divider off the board's actual centre and misassign a thumb.
+     * The centre of the letter block, not half the view width: with side
+     * padding the keys no longer span the view, and a divider at half the view
+     * would misassign a thumb.
      */
     val midlinePx: Float,
-    private val present: BooleanArray,       // [26]
-    private val centersX: FloatArray,        // [26] kw
-    private val centersY: FloatArray,        // [26] kw
-    private val rects: FloatArray,           // [26*4] kw: left, top, right, bottom
+    /** The board's letters; a code here is a code of this alphabet. */
+    val alphabet: Alphabet,
+    private val present: BooleanArray,       // [letterCount]
+    private val centersX: FloatArray,        // [letterCount] kw
+    private val centersY: FloatArray,        // [letterCount] kw
+    private val rects: FloatArray,           // [letterCount*4] kw: left, top, right, bottom
 ) {
-    fun hasKey(code: Int): Boolean = code in 0 until Alphabet.LETTERS && present[code]
+    /** Letters this geometry can place: the alphabet's, keyed or not. */
+    val letterCount: Int get() = alphabet.letterCount
+
+    fun hasKey(code: Int): Boolean = code in 0 until alphabet.letterCount && present[code]
 
     fun centerX(code: Int): Float = centersX[code]
     fun centerY(code: Int): Float = centersY[code]
@@ -46,7 +50,7 @@ class KeyboardGeometry private constructor(
 
     /** Letter code whose rect contains the point, or -1. */
     fun keyAt(xKw: Float, yKw: Float): Int {
-        for (code in 0 until Alphabet.LETTERS) {
+        for (code in 0 until alphabet.letterCount) {
             if (!present[code]) continue
             val base = code * 4
             if (xKw >= rects[base] && xKw < rects[base + 2] &&
@@ -67,7 +71,7 @@ class KeyboardGeometry private constructor(
     fun nearestKey(xKw: Float, yKw: Float): Int {
         var best = -1
         var bestD = Float.MAX_VALUE
-        for (code in 0 until Alphabet.LETTERS) {
+        for (code in 0 until alphabet.letterCount) {
             if (!present[code]) continue
             val d = distToCenter(xKw, yKw, code)
             if (d < bestD) {
@@ -89,16 +93,18 @@ class KeyboardGeometry private constructor(
             midlinePx: Float,
             letterRectsPx: List<FloatArray>,
             codes: IntArray,
+            alphabet: Alphabet = Alphabet.LATIN,
         ): KeyboardGeometry {
             require(keyWidthPx > 0f) { "keyWidthPx must be positive" }
             require(letterRectsPx.size == codes.size)
-            val present = BooleanArray(Alphabet.LETTERS)
-            val cx = FloatArray(Alphabet.LETTERS)
-            val cy = FloatArray(Alphabet.LETTERS)
-            val rects = FloatArray(Alphabet.LETTERS * 4)
+            val n = alphabet.letterCount
+            val present = BooleanArray(n)
+            val cx = FloatArray(n)
+            val cy = FloatArray(n)
+            val rects = FloatArray(n * 4)
             for (i in codes.indices) {
                 val code = codes[i]
-                if (code !in 0 until Alphabet.LETTERS) continue
+                if (code !in 0 until n) continue
                 val r = letterRectsPx[i]
                 val base = code * 4
                 rects[base] = r[0] / keyWidthPx
@@ -109,7 +115,7 @@ class KeyboardGeometry private constructor(
                 cy[code] = (rects[base + 1] + rects[base + 3]) / 2f
                 present[code] = true
             }
-            return KeyboardGeometry(keyWidthPx, midlinePx, present, cx, cy, rects)
+            return KeyboardGeometry(keyWidthPx, midlinePx, alphabet, present, cx, cy, rects)
         }
     }
 }

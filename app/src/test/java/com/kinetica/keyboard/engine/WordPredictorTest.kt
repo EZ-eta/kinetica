@@ -80,7 +80,7 @@ class WordPredictorTest {
 
     @Test
     fun orderSwapRescuesNearSimultaneousStarts() {
-        // E tap starts 50ms AFTER the THING swipe: the primary tStart order is
+        // E tap starts 50ms after the THING swipe: the primary tStart order is
         // wrong (s, om, thing, e) and only the swap alternative finds the word.
         val tokens = listOf(
             TestData.tap('s', g, 0, StreamId.LEFT),

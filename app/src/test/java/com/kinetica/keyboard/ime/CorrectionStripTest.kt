@@ -7,23 +7,17 @@ import org.junit.Test
 /**
  * When a commit puts the correction strip up.
  *
- * The defect, reported as "sometimes there are no suggestions while typing but after a
- * word is finished there is one and nothing happens after a tap": the strip was gated on
- * the same "teaches nothing" condition as the learning calls beside it, so a field
- * setting IME_FLAG_NO_PERSONALIZED_LEARNING lost it. DuckDuckGo, Molly and Firefox Focus
- * set that flag on ordinary text fields, which is the whole of R42 one layer down - the
- * bar filled while typing and then went blank at the commit with no way back.
- *
- * Both directions are pinned. A password field must still show nothing, because the
- * strip would put the password in the bar after it was typed.
+ * The strip is not gated on "teaches nothing" like the learning calls beside it: DuckDuckGo,
+ * Molly and Firefox Focus set IME_FLAG_NO_PERSONALIZED_LEARNING on ordinary text fields, and
+ * gating on it blanked the bar at every commit there. A password field
+ * still shows nothing, because the strip would put the password in the bar.
  */
 class CorrectionStripTest {
 
     @Test
     fun aNoLearningFieldStillOffersCorrections() {
-        // The reported case, and the whole of the fix: the field forbids learning and
-        // says nothing about the strip. Learning is refused separately, inside learnWord,
-        // unlearnWord and learnPair, each of which reads teachesNothing itself.
+        // The field forbids learning and says nothing about the strip. Learning is refused
+        // separately: learnWord, unlearnWord and learnPair each read teachesNothing.
         val field = EditorState.DEFAULT.copy(noLearning = true)
         assertTrue(field.teachesNothing)
         assertTrue(field.offersCorrections)
@@ -46,8 +40,8 @@ class CorrectionStripTest {
 
     @Test
     fun aStripOfOneIsSuppressed() {
-        // Its only zone is the selected one, and a tap on the selected zone is a no-op
-        // by design, so the strip would be a word offering nothing but itself.
+        // Its only zone is the selected one, and a tap there is a no-op, so the strip would
+        // offer nothing but the word itself.
         assertFalse(showsCorrectionStrip("hello", offersCorrections = true, optionCount = 1))
         assertFalse(showsCorrectionStrip("hello", offersCorrections = true, optionCount = 0))
     }

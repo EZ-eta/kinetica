@@ -1,6 +1,7 @@
 package com.kinetica.keyboard.ime
 
 import com.kinetica.keyboard.keys.EditorAction
+import com.kinetica.keyboard.keys.KeyCombo
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -8,10 +9,9 @@ import org.junit.Test
 /**
  * What firing an expansion does (#19: "replace the trigger with text, or do an action").
  *
- * Expandify wrote every target into the editor as text, so a stored `action:paste` came out
- * as those twelve characters. It now runs, as chords and edge swipes already do. Four actions
- * may not be fired by an expansion, and a misspelled one is refused before the trigger is
- * deleted, because a typo in a stored target must not cost the user their trigger.
+ * A stored `action:paste` runs, as it does from a chord or an edge swipe, instead of being typed
+ * as text. Four actions may not be fired by an expansion, and a misspelled one is refused before
+ * the trigger is deleted, so a typo in a stored target never costs the user their trigger.
  */
 class ExpansionEffectTest {
 
@@ -21,6 +21,13 @@ class ExpansionEffectTest {
         assertEquals(ExpansionEffect.Action(EditorAction.DATE), expansionEffect("action:date"))
         assertEquals(ExpansionEffect.Action(EditorAction.ENTER), expansionEffect("action:enter"))
         assertEquals(ExpansionEffect.Action(EditorAction.COPY_LINE), expansionEffect("action:copy_line"))
+    }
+
+    @Test
+    fun aKeyCombinationTargetIsSentNotTyped() {
+        // An expansion once wrote its stored `combo:` text into the editor.
+        assertEquals(ExpansionEffect.Combo(KeyCombo.parse("combo:ctrl+a")!!), expansionEffect("combo:ctrl+a"))
+        assertEquals(ExpansionEffect.Text("combo text"), expansionEffect("combo text"))
     }
 
     @Test

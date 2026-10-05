@@ -10,13 +10,11 @@ import org.junit.Test
 /**
  * Blocking a word removes it from the dictionary itself.
  *
- * The distinction this rests on: sliding a suggestion down adjusts the personal
- * count and `UserWordDao` clamps that at zero, which leaves the corpus frequency
- * underneath untouched - so a bundled word can be pushed off the bar but never
- * out of the trie. A user reported exactly that, unable to lose "seok" and "heo"
- * however often they de-prioritised them; both are real entries in the bundled
- * English list, at frequencies 1217 and 634, because an OpenSubtitles corpus is
- * full of transliterated names.
+ * Sliding a suggestion down only lowers the personal count, which `UserWordDao`
+ * clamps at zero, so a bundled word could leave the bar but never the trie. A user
+ * could not lose "seok" and "heo" however often they lowered them: both are in the
+ * bundled English list (1217 and 634), because subtitles are full of
+ * transliterated names.
  */
 class BlockedWordsTest {
 
@@ -39,8 +37,8 @@ class BlockedWordsTest {
 
         val trie = DictionaryLoader.load(corpus(), blocked = setOf("seok")).trie
         assertFalse(trie.contains("seok"))
-        // And it is gone rather than merely down-weighted: no node, so nothing
-        // to decode, complete or suggest.
+        // Gone, not down-weighted: no node, so nothing to decode, complete or
+        // suggest.
         assertEquals(-1, trie.nodeFor("seok"))
     }
 
@@ -65,9 +63,8 @@ class BlockedWordsTest {
 
     @Test
     fun aBlockedWordCannotReturnThroughThePersonalMerge() {
-        // The reason the filter applies to extraWords as well. A user who blocks
-        // a word they have already typed twice would otherwise see it merged
-        // straight back in at USER_FREQ_SCALE, which is worse than before.
+        // The filter applies to extraWords too: a word typed twice and then
+        // blocked would otherwise merge straight back in at USER_FREQ_SCALE.
         val learned = DictionaryLoader.userWordsForMerge(listOf("seok" to 5))
         assertTrue("precondition: it would be merged", learned.isNotEmpty())
 
@@ -101,7 +98,7 @@ class BlockedWordsTest {
             blocked = setOf("perche"),
         )
         // The folded node survives because the accented spelling is still there,
-        // and it is the surviving variant that the forms table now offers.
+        // and the forms table offers the surviving variant.
         assertTrue(out.trie.contains("perche"))
         val node = out.trie.nodeFor("perche")
         val displays = out.forms[node]?.map { it.display } ?: listOf("perche")

@@ -10,11 +10,10 @@ import java.io.BufferedReader
  */
 object DictionaryMerger {
 
-    // Mirror of the generator's per-language word shapes (WORD_RE in
-    // tools/generate_assets.py). A language missing here silently filters its
-    // accented words out of an AOSP import, so every registered language
-    // needs its entry (ADDING_A_LANGUAGE.md §4); unknown codes fall back to
-    // the plain ASCII shape rather than crash.
+    // Mirror of the generator's per-language word shapes (WORD_RE in tools/generate_assets.py).
+    // A language missing here silently loses its accented words from an AOSP import, so every
+    // registered language needs an entry (ADDING_A_LANGUAGE.md §4); unknown codes fall back to the
+    // plain ASCII shape.
     private val WORD_RES = mapOf(
         "en" to Regex("^[a-z]+(?:'[a-z]+)*$"),
         "it" to Regex("^[a-zàèéìíîòóùú]+(?:'[a-zàèéìíîòóùú]+)*$"),
@@ -25,6 +24,10 @@ object DictionaryMerger {
         "de" to Regex("^[a-zäöüß]+(?:'[a-zäöüß]+)*$"),
         "fr" to Regex("^[a-zàâäçéèêëîïôöùûüÿœæ]+(?:'[a-zàâäçéèêëîïôöùûüÿœæ]+)*$"),
         "no" to Regex("^[a-zæøåé]+(?:'[a-zæøåé]+)*$"),
+        "ru" to Regex("^[а-яё]+$"),
+        "he" to Regex("^[\u05D0-\u05EA]+(?:'[\u05D0-\u05EA]+)*$"),
+        "ar" to Regex("^[\u0621-\u063A\u0641-\u064A\u0671]+$"),
+        "uk" to Regex("^[абвгґдеєжзиіїйклмнопрстуфхцчшщьюя]+(?:'[абвгґдеєжзиіїйклмнопрстуфхцчшщьюя]+)*$"),
     )
 
     /** The generator caps at 20 even though the engine trie accepts 24. */
@@ -42,6 +45,10 @@ object DictionaryMerger {
     )
 
     fun wordPattern(lang: String): Regex = WORD_RES[lang] ?: WORD_RES.getValue("en")
+
+    /** Whether [word] is a key of [keys] written without the accents every spelling in [spellings] has. */
+    internal fun leavesAccentsOff(word: String, spellings: Set<String>, keys: Set<String>): Boolean =
+        AccentFolder.fold(word) == word && word !in spellings && word in keys
 
     /** Primary wordlist lines of "word&lt;TAB&gt;count"; invalid lines skipped. */
     fun readPrimary(reader: BufferedReader): List<Pair<String, Int>> {
@@ -67,9 +74,13 @@ object DictionaryMerger {
     fun merge(primary: List<Pair<String, Int>>, aosp: BufferedReader, lang: String): MergeResult {
         val wordRe = wordPattern(lang)
         val primaryWords = HashSet<String>(primary.size * 2)
+        val primarySpellings = HashSet<String>(primary.size * 2)
+        val primaryKeys = HashSet<String>(primary.size * 2)
         var maxCount = 1
         for ((w, c) in primary) {
             primaryWords.add(w)
+            primarySpellings.add(w.lowercase())
+            primaryKeys.add(AccentFolder.fold(w))
             if (c > maxCount) maxCount = c
         }
 
@@ -87,6 +98,10 @@ object DictionaryMerger {
             val f = m.groupValues[2].toIntOrNull() ?: return@forEachLine
             if (word in primaryWords) return@forEachLine
             if (word.length > MAX_WORD_LEN || !wordRe.matches(word)) return@forEachLine
+            // AOSP's Italian list carries `perche` and `cosi`: a plain spelling of a word the
+            // bundled list holds only with its accents would bring back pseudo-words the bundled
+            // lists drop.
+            if (leavesAccentsOff(word, primarySpellings, primaryKeys)) return@forEachLine
             val count = Math.max(
                 1.0,
                 Math.pow(maxCount.toDouble(), f.coerceIn(0, 255) / 255.0),

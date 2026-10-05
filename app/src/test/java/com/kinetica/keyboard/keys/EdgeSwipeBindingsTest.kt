@@ -10,9 +10,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * The implicit alternate-swipe layer synthesized from a layout.
- * Hand-builds [KeyboardLayout]/[Key] directly - the JVM test runtime stubs
- * org.json, so LayoutLoader/parse must never be touched here.
+ * The implicit alternate-swipe layer synthesized from a layout. Hand-builds [KeyboardLayout]
+ * and [Key], because the JVM test runtime stubs org.json and LayoutLoader cannot parse here.
  */
 class EdgeSwipeBindingsTest {
 
@@ -59,8 +58,7 @@ class EdgeSwipeBindingsTest {
         val b = EdgeSwipeBindings.withImplicitAlternates(layout(), empty)
         assertEquals("1", b.outputFor("q", Direction.UP))
         assertEquals("0", b.outputFor("p", Direction.UP))
-        // Vowels list accents before the digit; the predicate skips the accents.
-        // A vowel listing accents first DRAWS the accent, so that is what it types. Turning
+        // A vowel listing accents first draws the accent, so that is what it types. Turning
         // on "Prioritize numbers over accents" moves the hint and the swipe together.
         assertEquals("è", b.outputFor("e", Direction.UP))
         assertEquals("ù", b.outputFor("u", Direction.UP))
@@ -70,8 +68,8 @@ class EdgeSwipeBindingsTest {
 
     @Test
     fun bottomRowDownYieldsTheHintItShows() {
-        // The report this answers: the swipe used to insert the first NON-LETTER alternate
-        // while the key drew its first alternate, so "z" showed ž and typed \'.
+        // The swipe once inserted the first non-letter alternate while the key drew its first
+        // alternate, so "z" showed ž and typed \'.
         val b = EdgeSwipeBindings.withImplicitAlternates(layout(), empty)
         assertEquals("ž", b.outputFor("z", Direction.DOWN))
         assertEquals("ç", b.outputFor("c", Direction.DOWN))
@@ -89,7 +87,6 @@ class EdgeSwipeBindingsTest {
         assertNull(b.outputFor("a", Direction.DOWN))
         assertNull(b.outputFor("shift", Direction.DOWN))
         assertNull(b.outputFor("enter", Direction.UP))
-        // Top-row key whose only alternate is a letter yields nothing.
         // No alternates at all means no hint and nothing to type.
         assertNull(b.outputFor("k", Direction.UP))
         // But a letter hint is still a hint: what it draws is what it types.
@@ -98,7 +95,7 @@ class EdgeSwipeBindingsTest {
 
     @Test
     fun explicitBindingsShadowImplicitOnes() {
-        // A binding the USER set still wins over the hint. No shipped default does any more.
+        // A binding the user set still wins over the hint; no shipped default does.
         val mine = EdgeSwipeBindings(
             listOf(EdgeSwipeBinding("z", Direction.DOWN, "@")),
         )
@@ -111,9 +108,9 @@ class EdgeSwipeBindingsTest {
 
     @Test
     fun theShippedDefaultsNoLongerContradictAKeysLabel() {
-        // v drew ":" and typed ",", b drew "/" and typed ".", x drew a quote and opened the
-        // emoji picker. All three are gone so the rule has no exceptions to explain; the
-        // picker keeps its comma long-press route.
+        // Old defaults made v draw ":" and type ",", b draw "/" and type ".", and x draw a quote
+        // and open the emoji picker. Without them the rule has no exceptions; the picker keeps
+        // its comma long-press route.
         val d = EdgeSwipeBindings.DEFAULTS
         assertNull(d.outputFor("v", Direction.DOWN))
         assertNull(d.outputFor("b", Direction.DOWN))
@@ -149,8 +146,8 @@ class EdgeSwipeBindingsTest {
 
     @Test
     fun everyShippedDefaultIsSilent() {
-        // The property that makes the warning worth showing at all: it must never
-        // fire on a binding the app ships, or it is noise from the first launch.
+        // The warning must never fire on a binding the app ships, or it is noise from the
+        // first launch.
         for (b in EdgeSwipeBindings.DEFAULTS.bindings) {
             assertNull(
                 "default ${b.keyId}/${b.direction} flagged as a conflict",
@@ -186,9 +183,8 @@ class EdgeSwipeBindingsTest {
 
     @Test
     fun enterUpIsNotFlaggedBecauseItIsTheSameAnswerAsThePopup() {
-        // The shipped default binds enter-up to "?" and the popup's primary is
-        // "?" as well, deliberately. Flagging it would call the app's own design
-        // a conflict.
+        // The shipped default binds enter-up to "?", which is also the popup's primary, so
+        // flagging it would call the app's own design a conflict.
         assertNull(shadow("enter", EdgeSwipeBinding.Direction.UP))
         assertNull(shadow("backspace", EdgeSwipeBinding.Direction.UP))
     }
@@ -202,4 +198,42 @@ class EdgeSwipeBindingsTest {
         assertNull(shadow("", EdgeSwipeBinding.Direction.LEFT))
     }
 
+
+    @Test
+    fun aTypedKeyFiresWhereverThatCharacterIsAKey() {
+        // Bound by `1`, it fires on the symbols page's `d1`, the numpad's `n1` and the
+        // number row alike; bound by `,`, on the comma key. The id still wins where both exist.
+        val bindings = EdgeSwipeBindings(
+            listOf(
+                EdgeSwipeBinding("1", Direction.UP, "one"),
+                EdgeSwipeBinding(",", Direction.UP, "comma by char"),
+                EdgeSwipeBinding("comma", Direction.DOWN, "comma by id"),
+            ),
+        )
+        fun key(id: String, out: String) = Key(id, KeyType.CHAR, out, out, 0f, 0f, 0.1f, 0.25f)
+        assertEquals("one", bindings.outputFor(key("d1", "1"), Direction.UP))
+        assertEquals("one", bindings.outputFor(key("n1", "1"), Direction.UP))
+        assertEquals("comma by char", bindings.outputFor(key("comma", ","), Direction.UP))
+        assertEquals("comma by id", bindings.outputFor(key("comma", ","), Direction.DOWN))
+        assertNull(bindings.outputFor(key("q", "q"), Direction.UP))
+        assertNull(bindings.outputFor(Key("enter", KeyType.ENTER, "", "", 0f, 0f, 0.1f, 0.25f), Direction.UP))
+    }
+
+    @Test
+    fun aHorizontalBindingOnAnyLetterShadowsTyping() {
+        assertEquals(EdgeSwipeBindings.SHADOWS_TYPING_SWIPE, EdgeSwipeBindings.shadowedGesture("й", Direction.LEFT))
+        assertEquals(EdgeSwipeBindings.SHADOWS_TYPING_SWIPE, EdgeSwipeBindings.shadowedGesture("ש", Direction.RIGHT))
+        assertNull(EdgeSwipeBindings.shadowedGesture("1", Direction.LEFT))
+        assertNull(EdgeSwipeBindings.shadowedGesture("й", Direction.UP))
+    }
+
+    @Test
+    fun anEditedBindingKeepsItsKeyWhenTheKeyIsUnchanged() {
+        assertEquals(",", EdgeSwipeBindings.typedKeyFor("comma"))
+        assertEquals("v", EdgeSwipeBindings.typedKeyFor("v"))
+        assertNull(EdgeSwipeBindings.typedKeyFor("enter"))
+        assertEquals("comma", EdgeSwipeBindings.keyIdFor(',', existing = "comma"))
+        assertEquals(";", EdgeSwipeBindings.keyIdFor(';', existing = "comma"))
+        assertEquals("й", EdgeSwipeBindings.keyIdFor('й', existing = null))
+    }
 }

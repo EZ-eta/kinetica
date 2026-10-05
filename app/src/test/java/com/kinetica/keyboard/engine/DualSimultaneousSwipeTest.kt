@@ -12,24 +12,22 @@ import org.junit.Assume.assumeTrue
 import org.junit.Test
 
 /**
- * Regression suite for dual-thumb
- * words where the two streams interleave, which the single-cut merge
- * generators could not represent.
+ * Regression suite for dual-thumb words where the two streams interleave,
+ * which the single-cut merge generators could not represent.
  *
- * The fixtures' TIMINGS are transcribed from a device capture, so these are
- * the real failures, not
- * invented ones. Path GEOMETRY is synthetic: the trace records token intervals
+ * The fixtures' timings are transcribed from a device capture, so these are the
+ * real failures. Path geometry is synthetic: the trace records token intervals
  * but no coordinates, so the swipe letters are inferred from the target word
- * minus the tapped letters, in order - the only reconstruction the data admits.
+ * minus the tapped letters, in order, the only reconstruction the data admits.
  *
  * Two mechanisms are covered:
- *  - "cuando": one swipe needing cuts at TWO interior cross-stream taps. The
+ *  - "cuando": one swipe needing cuts at two interior cross-stream taps. The
  *    tap-split generator inserted one tap per sequence, so the representable
- *    orders were cuno|a|d, cu|a|no|d and cun|a|d|o - and that last one spells
- *    c,u,n,a,d,o, which is exactly the word that won on device ("cuñado",
- *    d=0.59). c,u,a,n,d,o was never a candidate.
- *  - partial overlap: two swipes where the second STARTS inside the first but
- *    ENDS after it - what two thumbs moving at once actually produce. The
+ *    orders were cuno|a|d, cu|a|no|d and cun|a|d|o, and the last spells
+ *    c,u,n,a,d,o, the word that won on device ("cuñado", d=0.59). c,u,a,n,d,o
+ *    was never a candidate.
+ *  - partial overlap: two swipes where the second starts inside the first but
+ *    ends after it, what two thumbs moving at once produce. The
  *    swipe-around-swipe generator required strict containment on both sides.
  */
 class DualSimultaneousSwipeTest {
@@ -40,8 +38,8 @@ class DualSimultaneousSwipeTest {
     /**
      * Folded spellings only (Trie.build drops anything Alphabet.encode rejects,
      * so "cuñado" must appear as its folded key "cunado"). Frequencies follow
-     * real Spanish: "cuando" is a top-100 word, "cunado" is far rarer - so the
-     * contest is decided by frequency over geometry, exactly as on device.
+     * real Spanish: "cuando" is a top-100 word, "cunado" is far rarer, so the
+     * contest is decided by frequency over geometry, as on device.
      */
     private fun spanishish(): Trie = Trie.build(
         listOf(
@@ -56,8 +54,8 @@ class DualSimultaneousSwipeTest {
     /**
      * Analogue words for the generalization test, plus their losing rivals.
      * Frequencies follow real English: "planted" is roughly ten times commoner
-     * than "plated", which is the word the tail-trimmed interior variant
-     * produces from the same gesture - so that pairing is a real contest.
+     * than "plated", the word the tail-trimmed interior variant produces from
+     * the same gesture, so that pairing is a real contest.
      */
     private fun analogues(): Trie = Trie.build(
         listOf(
@@ -87,9 +85,9 @@ class DualSimultaneousSwipeTest {
     // ---- timelines -----------------------------------------------------------
 
     /**
-     * Device capture 12:40:38, es active. One LEFT swipe 9006679..9007614
-     * (935 ms) with cross-stream taps at +320 ms and +582 ms. The swipe supplies
-     * c,u then n then o; the taps supply a and d. Needs [cu][a][n][d][o].
+     * A device capture, es active: one left swipe of 935 ms with cross-stream
+     * taps at +320 ms and +582 ms. The swipe supplies c,u then n then o; the
+     * taps supply a and d. Needs [cu][a][n][d][o].
      */
     private fun cuando(overshoot: Float = 0f) = listOf(
         if (overshoot == 0f) {
@@ -104,13 +102,12 @@ class DualSimultaneousSwipeTest {
     /**
      * Piece shape 2-1-1 like cuando: swipe w,a then t then d; taps n and e.
      * The interior piece is a single letter, so only the tail-trimmed interior
-     * variant can close it. Cuts land on the leg joints - 31 samples over
+     * variant can close it. Cuts land on the leg joints: 31 samples over
      * 900 ms puts sample 10 at 300 ms and sample 20 at 600 ms.
      *
-     * ("wander" was tried first and rejected as a fixture: it is already
-     * reachable pre-fix because 'r' sits exactly FUZZY_TAP_RADIUS_KW from the
-     * tapped 'e', so the fuzzy-anchor pass substitutes it and the case proves
-     * nothing about multi-cut. 'd' is 1.58 kw from 'e', outside that radius.)
+     * Not "wander": its 'r' sits at FUZZY_TAP_RADIUS_KW from the tapped 'e', so
+     * the fuzzy-anchor pass reaches it without any multi-cut. 'd' is 1.58 kw
+     * from 'e', outside that radius.
      */
     private fun wanted(overshoot: Float = 0f) = listOf(
         if (overshoot == 0f) {
@@ -124,11 +121,10 @@ class DualSimultaneousSwipeTest {
 
     /**
      * Piece shape 2-2-1: swipe p,l then n,t then d; taps a and e. The interior
-     * piece carries TWO letters, whose ideal path (keyDist(n,t) = 3.9 kw) is
-     * far longer than the 1.2 kw tail trim admits, so the untrimmed interior
-     * variant is the only one that can close it. Together with wanted this
-     * proves both interior variants are load-bearing rather than one being
-     * redundant.
+     * piece carries two letters, whose ideal path (keyDist(n,t) = 3.9 kw) is
+     * far longer than the 1.2 kw tail trim admits, so only the untrimmed
+     * interior variant can close it. Together with wanted this shows both
+     * interior variants are needed.
      */
     private fun planted() = listOf(
         TestData.swipe("plntd", g, t0 = 0, durMs = 1200, stream = StreamId.LEFT),
@@ -137,19 +133,19 @@ class DualSimultaneousSwipeTest {
     )
 
     /**
-     * From a device capture, Italian active. "praticamente" written the way it
-     * naturally falls out for two thumbs: the RIGHT thumb taps
-     * the right-hand letters p(0) i(4) m(7) n(9) while the LEFT thumb swipes the
-     * left-hand ones in four legs, r-a-t | c-a | e | t-e. One continuous LEFT
-     * swipe 23795021..23796663 (1642 ms) with all three taps inside it, so the
-     * intended reading is [p][rat][i][ca][m][e][n][te] - three interior cuts.
+     * From a device capture, Italian active. "praticamente" the way it falls
+     * out for two thumbs: the right thumb taps the right-hand letters p(0) i(4)
+     * m(7) n(9) while the left thumb swipes the left-hand ones in four legs,
+     * r-a-t | c-a | e | t-e. One continuous left swipe of 1642 ms with all three
+     * taps inside it, so the intended reading is [p][rat][i][ca][m][e][n][te]:
+     * three interior cuts.
      *
-     * Measurement showed why it decoded EMPTY on device: the 4-piece interleave IS
-     * generated, and all three of its trim modes reject that reading. The
-     * untrimmed ones fail on `minLetters=2 (arc=2.46)` for the one-letter "e"
-     * leg; the trimmed one cuts the "ca" piece down past its own 'c', which then
-     * has no pass at all. Timings are the device's; geometry is reconstructed
-     * from the trace's `keys=` contacts, so this is a reachability fixture.
+     * It decoded empty on device: the 4-piece interleave is generated, and all
+     * three of its trim modes reject that reading. The untrimmed ones fail on
+     * `minLetters=2 (arc=2.46)` for the one-letter "e" leg; the trimmed one cuts
+     * the "ca" piece down past its own 'c', which then has no pass. Timings are
+     * the device's; geometry is reconstructed from the trace's `keys=` contacts,
+     * so this is a reachability fixture.
      */
     private fun praticamenteOneSwipe(overshoot: Float = 0.25f) = listOf(
         TestData.tap('p', g, 0, StreamId.RIGHT),
@@ -160,12 +156,12 @@ class DualSimultaneousSwipeTest {
     )
 
     /**
-     * The same word from the same session (L234), one attempt earlier: the LEFT
-     * thumb lifted after "ca" and re-swiped for "ete", so the word needs swipe1
-     * cut at tap i AND swipe2 cut at tap n - cuts in two DIFFERENT swipes in one
-     * sequence. Every generator substitutes at exactly one swipe index, so the
-     * 8-element reading was in the language of none of them and the capture
-     * topped out at three segments.
+     * The same word from the same recording, one attempt earlier: the left thumb
+     * lifted after "ca" and re-swiped for "ete", so the word needs swipe1 cut at
+     * tap i and swipe2 cut at tap n, cuts in two different swipes in one
+     * sequence. Every single-cut generator substitutes at one swipe index, so the
+     * 8-element reading was in the language of none of them and the device
+     * decode topped out at three segments.
      */
     private fun praticamenteTwoSwipes(overshoot: Float = 0.25f) = listOf(
         TestData.tap('p', g, 0, StreamId.RIGHT),
@@ -177,8 +173,8 @@ class DualSimultaneousSwipeTest {
     )
 
     /**
-     * Device capture 12:40:46, the siempre shape: the LEFT swipe starts inside
-     * the RIGHT swipe's interval (9015251 > 9014754) but ends after it
+     * A device capture, the siempre shape: the left swipe starts inside the
+     * right swipe's interval (9015251 > 9014754) but ends after it
      * (9015518 > 9015343), so `inner.tEnd >= outer.tEnd - SPLIT_MARGIN_MS`
      * rejected the interleave. Rebuilt here as w-i-e-r crossed by n-t: the same
      * partial-overlap timing relationship, on geometry that spells "winter".
@@ -193,20 +189,19 @@ class DualSimultaneousSwipeTest {
     @Test
     fun cuandoNeedsTwoInteriorCuts() {
         // Ranking is asserted on the realistic path only. On the perfect
-        // centre-to-centre path this fixture's own geometry favours the WRONG
-        // word - "cunado" fits it at d=0.302 against "cuando"'s 0.447 - and
-        // the saturating geometric term (KineticaConstants.GEO_EXPONENT)
-        // now lets that show. Both distances sit under GEO_SATURATION_KW, so
-        // the cap cannot separate them and only the 1.21x frequency edge did.
-        // A clean path is the unrepresentative case here, exactly as pass
-        // merging found: a real finger
+        // centre-to-centre path this fixture's own geometry favours the wrong
+        // word ("cunado" d=0.302 against "cuando" 0.447), and the saturating
+        // geometric term (KineticaConstants.GEO_EXPONENT) lets that show. Both
+        // distances sit under GEO_SATURATION_KW, so the cap cannot separate them
+        // and only the 1.21x frequency edge did. A clean path is the
+        // unrepresentative case here, as with pass merging: a real finger
         // overshoots, and at 0.25 kw of overshoot "cuando" wins outright.
         val words = decode(spanishish(), cuando(0.25f))
         assertTrue("cuando (overshoot 0.25) top-1 was ${words.take(3)}", words.firstOrNull() == "cuando")
-        // What this fixture was written to prove is REACHABILITY - before the
-        // multi-anchor interleave existed "cuando" was absent from
-        // the clean list entirely, with "cunado" alone on top. That property is
-        // asserted here so narrowing the ranking leg above cannot hide its loss.
+        // What this fixture proves is reachability: without the multi-anchor
+        // interleave "cuando" was absent from the clean list, with "cunado" alone
+        // on top. Asserted here so narrowing the ranking leg above cannot hide
+        // its loss.
         val clean = decode(spanishish(), cuando(0f))
         assertTrue("cuando unreachable on the clean path: $clean", clean.contains("cuando"))
     }
@@ -214,9 +209,9 @@ class DualSimultaneousSwipeTest {
     @Test
     fun cuandoBeatsTheSingleCutRival() {
         // The precise device failure: "cunado" is what [cun][a][d][o] spells and
-        // it must now lose. Locking the rival by name keeps this a contest - if a
-        // future change makes cuando unreachable again, cunado reappears on top
-        // rather than the test merely going quiet.
+        // it must lose. Locking the rival by name keeps this a contest: if a
+        // change makes cuando unreachable again, cunado reappears on top instead
+        // of the test going quiet.
         val words = decode(spanishish(), cuando(0.25f))
         val ci = words.indexOf("cuando")
         val ri = words.indexOf("cunado")
@@ -226,9 +221,9 @@ class DualSimultaneousSwipeTest {
 
     @Test
     fun multiAnchorSplitGeneralizes() {
-        // Two different piece shapes and a second language, so the fix is the
-        // mechanism rather than a patch for one word: 2-1-1 needs the
-        // tail-trimmed interior variant, 2-2-1 needs the untrimmed one.
+        // Two different piece shapes and a second language, so the fix covers
+        // the mechanism and not one word: 2-1-1 needs the tail-trimmed interior
+        // variant, 2-2-1 needs the untrimmed one.
         val trie = analogues()
         for (overshoot in listOf(0f, 0.25f)) {
             val words = decode(trie, wanted(overshoot))
@@ -243,14 +238,15 @@ class DualSimultaneousSwipeTest {
 
     @Test
     fun partialOverlapSwipesInterleave() {
-        // Pre-fix: only the two concatenations exist, so "winter" is absent.
+        // With strict containment only the two concatenations exist and "winter"
+        // is absent.
         val words = decode(analogues(), partialOverlapWinter())
         assertTrue("winter missing from ${words.take(5)}", words.contains("winter"))
     }
 
     @Test
     fun partialOverlapGeneratesAThreePieceSequence() {
-        // Mechanism-level: sequences() must now emit the [A1][B][A2] interleave
+        // Mechanism-level: sequences must emit the [A1][B][A2] interleave
         // for a partially overlapping pair, which strict containment rejected.
         val seqs = MergeAlternatives.sequences(partialOverlapWinter(), dtw)
         assertTrue(
@@ -280,12 +276,12 @@ class DualSimultaneousSwipeTest {
 
     @Test
     fun dwellBoundariesNeedCrossStreamActivity() {
-        // The measurement's discriminator: all three false-positive
-        // dwells sat on single-thumb swipes with no cross-stream activity, while
-        // the one true boundary sat on a swipe with a cross-stream tap inside it.
-        // So a dwell contributes a cut only when the other stream is active in
-        // this gesture - duration alone cannot tell hesitation from boundary
-        // (159 ms true vs 158/164/213 ms false).
+        // On the captured corpus all three false-positive dwells sat on
+        // single-thumb swipes with no cross-stream activity, while the one true
+        // boundary sat on a swipe with a cross-stream tap inside it. So a dwell
+        // contributes a cut only when the other stream is active in this
+        // gesture; duration alone cannot tell hesitation from boundary (159 ms
+        // true vs 158/164/213 ms false).
         val lone = listOf(
             TestData.dwellSwipe("teresa", "te", g, 0, 300, 400, 200, 0f, StreamId.LEFT, markDwell = true),
         )
@@ -317,11 +313,11 @@ class DualSimultaneousSwipeTest {
 
     @Test
     fun aResumedPieceMayHoldOneLetter() {
-        // The phase-1 mechanism at its own level: arc is evidence of letter
-        // count only for the part of a piece that is not lead-in travel. A whole
-        // gesture over MIN_SWIPE_ARC_KW must still spell two letters; the same
-        // arc as a resumed piece may spell one, because where its first letter
-        // sits inside it is exactly what the cut does not know.
+        // The mechanism at its own level: arc is evidence of letter count only
+        // for the part of a piece that is not lead-in travel. A whole gesture
+        // over MIN_SWIPE_ARC_KW must still spell two letters; the same arc as a
+        // resumed piece may spell one, because the cut does not know where its
+        // first letter sits inside it.
         val whole = TestData.swipe("ea", g, 0, 200, StreamId.LEFT)
         assertEquals(2, Matcher.buildSegment(whole, g).minLetters)
         val resumed = MergeAlternatives.sequences(
@@ -348,7 +344,7 @@ class DualSimultaneousSwipeTest {
 
     @Test
     fun praticamenteNeedsThreeInteriorCuts() {
-        // Pre-fix this decoded EMPTY - not one candidate, on device and here.
+        // Without the multi-cut interleave this decoded empty, on device and here.
         val words = decode(italianish(), praticamenteOneSwipe())
         assertTrue("praticamente missing from ${words.take(5)}", words.contains("praticamente"))
         assertEquals("praticamente not top-1 in ${words.take(5)}", "praticamente", words.firstOrNull())
@@ -357,7 +353,7 @@ class DualSimultaneousSwipeTest {
     @Test
     fun praticamenteAcrossTwoLeftSwipes() {
         // The same word when the swiping thumb lifted mid-word: two swipes, one
-        // interior tap each. Needs a sequence that cuts BOTH.
+        // interior tap each. Needs a sequence that cuts both.
         val words = decode(italianish(), praticamenteTwoSwipes())
         assertTrue("praticamente missing from ${words.take(5)}", words.contains("praticamente"))
     }
@@ -374,8 +370,8 @@ class DualSimultaneousSwipeTest {
             seqs.any { it.size == 8 },
         )
         // And the tail boundary is recognized as one: tap m lands 4 ms before
-        // swipe 1's lift, so it follows the whole piece rather than cutting it -
-        // treating it as an interior cut is what nulled the interleave on device.
+        // swipe 1's lift, so it follows the whole piece instead of cutting it;
+        // treating it as an interior cut nulled the interleave on device.
         assertTrue(
             "a tail boundary must not split its swipe into three, sizes ${seqs.map { it.size }}",
             seqs.none { it.size > 8 },
@@ -431,8 +427,7 @@ class DualSimultaneousSwipeTest {
     @Test
     fun cuandoTopOneAgainstRealSpanish() {
         // The hand-weighted dict above proves representability; this proves the
-        // word actually wins against the full 49.5k-word dictionary's rivals,
-        // which is what the device does.
+        // word wins against the full 49.5k-word dictionary's rivals, as on device.
         val p = assetPath("es_wordlist.txt")
         assumeTrue("es wordlist asset not found", Files.exists(p))
         val dict = Files.newBufferedReader(p).use { DictionaryLoader.load(it) }

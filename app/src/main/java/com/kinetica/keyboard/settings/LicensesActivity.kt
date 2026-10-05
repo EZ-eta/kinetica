@@ -10,10 +10,9 @@ import com.kinetica.keyboard.R
 import java.io.IOException
 
 /**
- * Renders THIRD_PARTY_NOTICES, which the build copies from the repo root
- * into the APK assets so the shipped screen can never drift from the file.
- * Plain local text on purpose: the licenses screen must not be the one
- * place the zero-network guarantee breaks.
+ * Renders THIRD_PARTY_NOTICES, which the build copies from the repo root into the APK assets so
+ * the shipped screen cannot drift from the file. Plain local text, so the licenses screen keeps
+ * the zero-network guarantee too.
  */
 class LicensesActivity : AppCompatActivity() {
 

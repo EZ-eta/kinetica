@@ -1,16 +1,16 @@
 ik	10006772
 je	9001167
-het	7081845
+het	7082243
 de	6792979
 dat	6007618
-is	5657678
-een	5039260
-niet	4772886
-en	3722568
+is	5657876
+een	5041347
+niet	4772967
+en	3722678
 van	2941504
 wat	2769802
 we	2691355
-in	2588813
+in	2588915
 ze	2456905
 hij	2329687
 te	2321454
@@ -18,17 +18,17 @@ zijn	2205527
 op	2144681
 maar	2126469
 er	2044255
-met	1856605
+met	1856792
 voor	1855375
 die	1846895
 heb	1769182
 me	1761825
 als	1684935
-was	1493229
-ben	1382175
+was	1493384
+ben	1382352
 om	1321308
 dit	1258367
-mijn	1224703
+mijn	1224839
 aan	1182865
 u	1177214
 dan	1134894
@@ -39,23 +39,23 @@ hier	1086524
 zo	1052236
 jij	1044294
 kan	1042319
-geen	1020815
+geen	1021174
 nog	994553
 ja	982006
-hem	972927
+hem	973156
 heeft	969831
-wel	958539
-moet	957595
+wel	958692
+moet	957764
 wil	941239
 hebben	926997
 goed	887819
-haar	867675
-nee	856003
+haar	867784
+nee	856397
 hoe	803291
-nu	792974
+nu	793206
 waar	773738
 over	746315
-ook	734375
+ook	734506
 doen	713370
 uit	700277
 zou	692836
@@ -66,10 +66,10 @@ bent	669561
 mij	666821
 bij	655438
 al	632609
-ons	602876
+ons	602959
 had	584503
 iets	583350
-daar	581597
+daar	581799
 jullie	580766
 gaat	569583
 zal	568758
@@ -77,7 +77,7 @@ m	567079
 hebt	565918
 kom	559616
 waarom	557548
-meer	555563
+meer	555919
 deze	516044
 moeten	472658
 t	472001
@@ -93,10 +93,10 @@ doe	418336
 door	417203
 alleen	407083
 s	401559
-toch	392983
+toch	393126
 zien	383961
 weg	376436
-eens	371727
+eens	371993
 man	359475
 misschien	359214
 laten	353505
@@ -104,13 +104,13 @@ nooit	350946
 nou	347555
 zei	342913
 terug	342296
-oké	341155
+oké	342824
 mee	336637
 niets	329731
 iemand	328805
 komt	313150
 toen	312964
-veel	307717
+veel	307875
 even	305017
 onze	300608
 gewoon	295651
@@ -122,9 +122,9 @@ tot	288727
 worden	281032
 zeggen	278585
 tijd	278263
-weer	276186
+weer	276295
 leven	274544
-twee	269781
+twee	269870
 net	266915
 tegen	265256
 maken	258350
@@ -136,7 +136,7 @@ wordt	250695
 z	249724
 hou	247154
 kijk	243303
-heel	243287
+heel	243806
 wij	242654
 altijd	234911
 mag	233769
@@ -221,7 +221,7 @@ deed	139507
 dingen	139324
 maakt	138947
 alsjeblieft	138555
-eerste	138080
+eerste	138274
 krijgen	137832
 zonder	135995
 steeds	135812
@@ -291,7 +291,7 @@ jongens	97813
 heen	97706
 ken	96085
 hen	95818
-eerst	95781
+eerst	95889
 eigen	94649
 zoon	94005
 gelijk	93785
@@ -320,7 +320,7 @@ zat	86182
 vrienden	86123
 precies	85303
 kind	84394
-hè	83925
+hè	112989
 kleine	83652
 begrijp	83359
 wou	83099
@@ -401,7 +401,7 @@ dokter	63817
 agent	63555
 help	63532
 later	63082
-voordat	63075
+voordat	63173
 ogen	62918
 vrij	62903
 klopt	62698
@@ -426,7 +426,7 @@ baby	59278
 bellen	59053
 boven	59016
 groot	58985
-echte	58959
+echte	59164
 hoeft	58632
 ie	58600
 doden	58363
@@ -715,7 +715,6 @@ naartoe	29240
 begrijpen	29159
 veranderd	29159
 acht	29149
-he	29064
 gingen	28953
 kwamen	28894
 leeft	28744
@@ -800,7 +799,7 @@ erover	25512
 feest	25473
 leek	25459
 vreselijk	25443
-eentje	25438
+eentje	25594
 gevaar	25434
 wonen	25430
 grootste	25416
@@ -831,7 +830,7 @@ hemel	24434
 tenzij	24428
 gisteravond	24391
 begrijpt	24387
-ene	24382
+ene	24495
 lag	24379
 naast	24354
 vooral	24316
@@ -1293,7 +1292,7 @@ ophouden	13661
 hangen	13656
 kennis	13650
 bill	13647
-patiënt	13606
+patiënt	15029
 zware	13585
 basis	13578
 kat	13563
@@ -1641,7 +1640,7 @@ betaalt	10444
 betekenen	10435
 verborgen	10430
 publiek	10413
-carrière	10408
+carrière	10489
 tanden	10394
 amy	10386
 rapport	10384
@@ -1680,7 +1679,7 @@ waardeer	10042
 nauwelijks	10026
 bad	10025
 bieden	10014
-geïnteresseerd	10007
+geïnteresseerd	10779
 verlaat	10001
 duivel	9993
 overkomen	9961
@@ -1824,7 +1823,7 @@ vingers	9044
 las	9042
 arresteren	8994
 tuin	8993
-ideeën	8991
+ideeën	9322
 korte	8979
 gelaten	8970
 sean	8969
@@ -1871,7 +1870,7 @@ lenen	8727
 moed	8710
 alice	8691
 vergissing	8686
-patiënten	8673
+patiënten	9462
 toon	8668
 normale	8667
 broeder	8663
@@ -2605,7 +2604,7 @@ pop	5760
 verschuldigd	5759
 gesteld	5755
 hee	5750
-tweeën	5750
+tweeën	5984
 zielig	5749
 my	5746
 terry	5746
@@ -2882,7 +2881,7 @@ on	5092
 achterna	5091
 verenigde	5090
 golf	5090
-café	5087
+café	5672
 suiker	5085
 lippen	5083
 zuurstof	5078
@@ -3502,7 +3501,7 @@ madame	4013
 juni	4012
 snoep	4010
 apart	4010
-italië	4009
+italië	4271
 oudste	4008
 liam	4008
 uitschakelen	4007
@@ -3542,7 +3541,7 @@ temperatuur	3962
 bemoei	3962
 ongelukkig	3959
 bezocht	3957
-financiële	3957
+financiële	4199
 tijdstip	3956
 overste	3956
 verbergt	3955
@@ -3609,7 +3608,7 @@ diana	3874
 stephen	3874
 favoriet	3874
 heten	3873
-officiële	3872
+officiële	4155
 legde	3867
 zusters	3867
 kooi	3867
@@ -4765,7 +4764,7 @@ achtervolgen	2710
 database	2710
 weddenschap	2709
 dc	2707
-australië	2707
+australië	2854
 achterlijk	2707
 vereerd	2707
 receptie	2705
@@ -6544,7 +6543,7 @@ percy	1793
 verspil	1793
 europese	1793
 liefdadigheid	1792
-poëzie	1792
+poëzie	1872
 vloeistof	1792
 donuts	1791
 rudy	1791
@@ -6901,7 +6900,6 @@ huisdier	1671
 overleef	1670
 kostbare	1670
 gail	1669
-okè	1669
 aangegeven	1669
 schaap	1668
 vonnis	1668
@@ -7055,7 +7053,7 @@ vegen	1628
 blokkeren	1627
 abe	1627
 daadwerkelijk	1627
-überhaupt	1627
+überhaupt	1792
 gregory	1626
 mack	1626
 uitschot	1626
@@ -7124,7 +7122,6 @@ plas	1609
 aye	1608
 bedreigingen	1608
 instrumenten	1608
-èèn	1608
 condooms	1607
 marilyn	1607
 toernooi	1607
@@ -7452,7 +7449,7 @@ plaatsvinden	1520
 gecheckt	1520
 zuigt	1520
 fletcher	1520
-hawaï	1519
+hawaï	1653
 stunt	1519
 talloze	1519
 voeg	1519
@@ -7819,7 +7816,6 @@ verplichtingen	1424
 objecten	1424
 parade	1424
 misdrijven	1423
-patient	1423
 liften	1423
 schrijvers	1423
 geheugenverlies	1423
@@ -8824,7 +8820,7 @@ leah	1204
 donut	1204
 tentoonstelling	1204
 rookte	1203
-azië	1203
+azië	1292
 michaels	1203
 mri	1203
 ira	1203
@@ -9474,7 +9470,7 @@ philippe	1085
 wright	1085
 geboeid	1085
 bittere	1085
-discussiëren	1085
+discussiëren	1177
 zeke	1085
 decker	1085
 vertegenwoordig	1084
@@ -11765,7 +11761,7 @@ lizzy	791
 felicia	791
 paolo	791
 cafeïne	791
-geïrriteerd	791
+geïrriteerd	886
 sofa	791
 coyote	791
 nova	791
@@ -11777,7 +11773,6 @@ tomas	790
 constance	790
 bandiet	789
 gossip	789
-patienten	789
 tardis	789
 primaire	789
 smeekt	789
@@ -11984,7 +11979,6 @@ moskee	772
 tweedehands	772
 spider	772
 stafchef	772
-geinteresseerd	772
 aanraakte	771
 zakte	771
 gallagher	771
@@ -14420,7 +14414,6 @@ diesel	585
 essay	585
 rain	585
 vreedzame	585
-cafe	585
 voordien	585
 hippe	585
 con	585
@@ -15598,7 +15591,6 @@ plutonium	519
 robertson	519
 weiss	519
 dahlia	519
-héél	519
 thatcher	519
 injecteren	519
 jat	518
@@ -18488,7 +18480,6 @@ zintuig	398
 bemanningslid	398
 wexler	398
 faber	398
-hét	398
 runde	398
 grandioos	398
 verleen	398
@@ -18591,7 +18582,6 @@ vakken	394
 vliegdekschip	394
 meningsverschillen	394
 heidense	394
-néé	394
 verbijsterend	394
 beleef	394
 mind	394
@@ -19755,7 +19745,6 @@ fame	359
 sub	359
 langdurig	359
 uitvaart	359
-géén	359
 korsak	359
 zeggenschap	359
 snede	358
@@ -19828,7 +19817,6 @@ ruïneert	357
 zaklantaarn	357
 voorgevallen	356
 gloeien	356
-méér	356
 mckenzie	356
 afgetuigd	356
 falcone	356
@@ -20526,7 +20514,6 @@ logboeken	338
 dagdromen	338
 showbusiness	338
 serieuzer	338
-eèn	338
 stokjes	338
 farnsworth	338
 rotwijf	338
@@ -20771,7 +20758,6 @@ katz	331
 kuur	331
 agos	331
 schneider	331
-ideeen	331
 martelt	331
 affaires	331
 levenstekens	331
@@ -23004,7 +22990,6 @@ getimed	283
 gesmeten	283
 grommen	283
 conducteur	283
-officiele	283
 fotoshoot	283
 blackadder	283
 spuitje	283
@@ -23916,7 +23901,6 @@ funk	266
 ehh	266
 wegreed	266
 geboord	266
-ééns	266
 reston	266
 decolleté	266
 raza	266
@@ -24113,7 +24097,6 @@ bemiddeling	262
 onveranderd	262
 telefoniste	262
 schatrijk	262
-italie	262
 stemden	262
 criminal	262
 prediker	262
@@ -25353,7 +25336,6 @@ outfits	242
 cocaine	242
 cinnamon	242
 geknuffeld	242
-financiele	242
 durst	242
 petit	242
 lichtere	242
@@ -25833,7 +25815,6 @@ hervorming	234
 geprikkeld	234
 bandit	234
 binnengaat	234
-tweeen	234
 zip	234
 meegaand	234
 huey	234
@@ -25976,7 +25957,6 @@ forten	232
 woonwagen	232
 weenie	232
 millicent	232
-nú	232
 paté	232
 merlot	232
 croissant	232
@@ -26149,7 +26129,6 @@ bloedtransfusie	229
 bijbehorende	229
 bevochten	229
 barbados	229
-hém	229
 klemt	229
 middenrif	229
 hanteert	229
@@ -27964,7 +27943,6 @@ francie	206
 klaagden	206
 peterselie	206
 gromt	206
-échte	205
 beieren	205
 cranedriver	205
 goren	205
@@ -28281,7 +28259,6 @@ kattenvoer	202
 teruggezet	202
 rafi	202
 misstappen	202
-dáár	202
 volkswagen	202
 antony	202
 benzinetank	202
@@ -28600,7 +28577,6 @@ riddler	198
 welwillendheid	198
 burgundy	198
 majestic	198
-ís	198
 vicieuze	198
 beugels	198
 bijbaantje	198
@@ -28960,7 +28936,6 @@ overstaan	194
 yosemite	194
 glover	194
 slaatje	194
-éérste	194
 dobbelsteen	194
 vreugd	194
 klontje	194
@@ -29591,7 +29566,6 @@ barbecueën	187
 smartphone	187
 gymleraar	187
 jims	187
-mét	187
 jolanda	187
 canton	187
 voortbrengen	187
@@ -30653,7 +30627,6 @@ zakdoeken	177
 dipsaus	177
 ee	177
 landis	177
-bén	177
 inspraak	177
 gluiperige	177
 afgedwongen	177
@@ -31525,7 +31498,6 @@ moedwillig	169
 toussaint	169
 willows	169
 exploiteren	169
-móet	169
 fotoalbum	169
 gespijbeld	169
 trechter	169
@@ -31955,7 +31927,6 @@ diabeet	165
 acts	165
 gijsio	165
 afwerpen	165
-uberhaupt	165
 epifanio	165
 doran	165
 forceer	165
@@ -32684,7 +32655,6 @@ hapert	158
 frigide	158
 gegeseld	158
 troels	158
-véél	158
 bikers	158
 quaker	158
 moker	158
@@ -32972,7 +32942,6 @@ pootie	156
 adoptiebureau	156
 paramount	156
 allegra	156
-eéntje	156
 afkoelt	156
 trapper	156
 pitstop	156
@@ -33047,7 +33016,6 @@ fryer	155
 lanceerplatform	155
 melkwegen	155
 loeb	155
-wás	155
 aanschuiven	155
 miezerig	155
 brouwen	155
@@ -33294,7 +33262,6 @@ oostenrijkers	153
 tekorten	153
 wellustige	153
 chatham	153
-wèl	153
 loc	153
 gepleit	153
 scotts	153
@@ -34142,7 +34109,6 @@ gedineerd	147
 barbeque	147
 godinnen	147
 falling	147
-australie	147
 saaiste	147
 geshockeerd	147
 gepantserd	147
@@ -34648,7 +34614,6 @@ farms	143
 vingeren	143
 haakje	143
 lasser	143
-tóch	143
 cargo	143
 realist	143
 mcveigh	143
@@ -34958,7 +34923,6 @@ welkomstcomité	141
 verkeersongeluk	141
 dienstwapen	141
 katana	141
-éen	141
 overhebben	141
 veracruz	141
 nachtkijker	141
@@ -35677,7 +35641,6 @@ youth	136
 kleinzielig	136
 hq	136
 aasgier	136
-míjn	136
 dara	136
 zwelgen	136
 yeller	136
@@ -36030,7 +35993,6 @@ verloochend	134
 tilden	134
 neve	134
 odelle	134
-hawai	134
 doceert	134
 soldij	134
 mykes	134
@@ -36404,7 +36366,6 @@ winner	132
 gammel	132
 hief	131
 selfies	131
-óók	131
 zuil	131
 kraakpand	131
 genezingsproces	131
@@ -39618,7 +39579,6 @@ xanadu	113
 matcht	113
 promicin	113
 winstons	113
-éne	113
 boomstammen	113
 passioneel	113
 marmot	113
@@ -40310,7 +40270,6 @@ meisner	110
 nerveuzer	110
 pochen	110
 prehistorie	110
-èn	110
 dikkerds	110
 mctavish	110
 glaasjes	110
@@ -40534,7 +40493,6 @@ thrace	109
 rusk	109
 manchetknoop	109
 riders	109
-wéér	109
 rona	109
 kweekte	109
 opruimde	109
@@ -40612,7 +40570,6 @@ landingszone	109
 herdacht	109
 aanklopt	109
 zwaargewichten	109
-háár	109
 modderpoel	109
 hondsdolle	109
 pennenlikker	109
@@ -40748,7 +40705,6 @@ railing	108
 céline	108
 vastgepind	108
 thallium	108
-éérst	108
 ivanova	108
 prosper	108
 dinsdagochtend	108
@@ -42070,7 +42026,6 @@ ondervond	102
 beschuit	102
 afdingen	102
 electronica	102
-ín	102
 rechteroor	102
 truukjes	102
 opgespaard	102
@@ -43015,7 +42970,6 @@ bonne	98
 geborgenheid	98
 kalahari	98
 sloeries	98
-vóórdat	98
 aspiraties	98
 childers	98
 jirachi	98
@@ -43948,7 +43902,6 @@ implantatie	95
 opbouwende	95
 devore	95
 volksheld	95
-geirriteerd	95
 sanctie	95
 lucretia	95
 evander	95
@@ -44734,7 +44687,6 @@ kleindochters	92
 nuck	92
 quince	92
 schermutselingen	92
-discussieren	92
 saki	92
 wereldheerschappij	92
 jankte	92
@@ -45507,7 +45459,6 @@ rouwperiode	89
 dissectie	89
 doodsimpel	89
 postkaart	89
-azie	89
 luxor	89
 comstock	89
 tietjens	89
@@ -45640,7 +45591,6 @@ zandkorrel	89
 degeneratie	89
 geteleporteerd	89
 voortbewegen	89
-twéé	89
 knick	89
 geddes	89
 familiefortuin	89
@@ -47526,7 +47476,6 @@ inbeelding	83
 nos	83
 mekong	83
 sportpagina	83
-óns	83
 kriebelen	83
 wereldtournee	83
 hiss	83
@@ -47991,7 +47940,6 @@ smoeltje	81
 dít	81
 verontrustends	81
 verlengsnoer	81
-níet	81
 paartje	81
 waterige	81
 yummy	81
@@ -48061,7 +48009,6 @@ hypnotische	81
 cree	81
 archivaris	81
 voedselbank	81
-carriëre	81
 gedigitaliseerd	81
 drogeert	81
 ijzers	81
@@ -48393,7 +48340,6 @@ horende	80
 reten	80
 bloedmaan	80
 gretige	80
-poezie	80
 fanning	80
 helge	80
 witje	80

@@ -1,5 +1,6 @@
 package com.kinetica.keyboard.layout
 
+import com.kinetica.keyboard.engine.Alphabet
 import com.kinetica.keyboard.keys.EditorAction
 
 /** Optional, settings-driven edits applied to a loaded layout. */
@@ -9,29 +10,31 @@ object LayoutMutations {
     const val EMOJI_ALTERNATE = "☺"
 
     /**
-     * Reserved key outputs for editor actions, defined once in [EditorAction] so
-     * the comma key and the chord shortcuts cannot disagree about what one means.
-     * The IME intercepts them before the commit path (same pattern as
-     * [EMOJI_ALTERNATE]).
+     * Enter's hold cell for a newline, added where enter runs the app's action. Not `⏎`,
+     * which is the ENTER action's glyph in the letter lists.
+     */
+    const val NEWLINE_ALTERNATE = "↵"
+
+    /**
+     * Reserved key outputs for editor actions, defined once in [EditorAction] so the comma key
+     * and the chord shortcuts agree on what each means. The IME intercepts them before the
+     * commit path, as it does [EMOJI_ALTERNATE].
      */
     val ACTION_PASTE = EditorAction.PASTE.output
     val ACTION_SELECT_ALL = EditorAction.SELECT_ALL.output
 
     /**
-     * Enter's alternate-popup cells. Enter carries no alternates
-     * in any layout JSON, so these are injected uniformly for every alpha
-     * layout; the popup shows them alone (no base glyph) with the first
-     * pre-selected, matching the default enter up-swipe output "?".
+     * Enter's alternate-popup cells. No layout JSON gives enter alternates, so these are
+     * injected for every alpha layout; the popup shows them alone with the first pre-selected,
+     * matching enter's default up-swipe output "?".
      */
     val ENTER_ALTERNATES = listOf("?", "!", ",")
 
     /**
-     * Shift's alternate-popup cells: the case to put the word in hand into (R34).
+     * Shift's alternate-popup cells: the case to put the word in hand into.
      *
-     * Labels rather than outputs, unlike every other alternate list here, because the IME
-     * discriminates on `KeyType.SHIFT` and never lets these strings reach the editor. That
-     * is why they need no reserved prefix: the key is the command, the cell is the
-     * argument, and the order is [WordCase]'s.
+     * Labels, not outputs: the IME discriminates on `KeyType.SHIFT` and never lets these
+     * strings reach the editor, so they need no reserved prefix. The order is [WordCase]'s.
      */
     val SHIFT_CASE_CELLS = listOf("abc", "Abc", "ABC")
 
@@ -39,28 +42,23 @@ object LayoutMutations {
     const val APOSTROPHE_KEY_ID = "apostrophe"
 
     /**
-     * Home-row nudge applied together with the apostrophe key: the letter home
-     * row (a..l, y=0.25) shifts left by this fraction of the keyboard width,
-     * spending the slack left of "A" so the apostrophe - which stays at the
-     * right edge - sits apart from "L" with a visible gap. Kept small so the
-     * letter geometry barely moves (0.015 ≈ 0.15 kw, far inside the DTW radii,
-     * and only while the key is enabled); raise it for a wider gap.
+     * Home-row nudge applied with the apostrophe key: the home row (a..l, y=0.25) shifts left by
+     * this fraction of the keyboard width, so the apostrophe at the right edge sits apart from
+     * "L". 0.015 is about 0.15 kw, far inside the DTW radii, and applies only while the key is on.
      */
     const val APOSTROPHE_HOME_ROW_SHIFT = 0.015f
 
     /**
-     * Optional apostrophe key: a narrow, chromeless (no key background,
-     * Nintype-style) CHAR key at the right of the home row, so "'" is reachable
-     * by a single tap without the symbols layer or a long-press - the writing
-     * path for elided/contracted words in any language (e.g. "nell'immagine",
-     * "don't"). It is a non-letter key, so it stays invisible to the swipe
-     * engine geometry (only a-z keys participate). The home row nudges left by
-     * [APOSTROPHE_HOME_ROW_SHIFT] so the key sits apart from "L". Applied in the
-     * alpha-layout chain only; idempotent (the appended key guards re-entry, so
-     * the nudge is never doubled).
+     * Optional apostrophe key: a narrow, chromeless (Nintype-style) CHAR key at the right of the
+     * home row, so "'" is one tap away for elided and contracted words ("nell'immagine",
+     * "don't"). Not a letter key, so the swipe engine never sees it. The home row nudges left by
+     * [APOSTROPHE_HOME_ROW_SHIFT]. Alpha-layout chain only; idempotent, because the appended key
+     * guards re-entry and the nudge is never doubled.
      */
     fun withApostropheKey(layout: KeyboardLayout): KeyboardLayout {
         if (layout.keys.any { it.id == APOSTROPHE_KEY_ID }) return layout
+        // The slot it takes is QWERTY's; a board in another script fills its rows.
+        if (layout.alphabet != Alphabet.LATIN) return layout
         val shifted = layout.keys.map { k ->
             if (kotlin.math.abs(k.y - 0.25f) < 0.01f) {
                 k.copy(x = k.x - APOSTROPHE_HOME_ROW_SHIFT)
@@ -76,10 +74,46 @@ object LayoutMutations {
     }
 
     /**
-     * Gives the enter key its [ENTER_ALTERNATES] popup cells.
-     * Applied unconditionally in the alpha-layout chain - the feature is always
-     * on - and only to the alpha layer, so the numpad-layer enter (slide-left
-     * back to letters) is untouched. A no-op when the layout has no enter key.
+     * Spreads the middle letter row (y=0.25) toward the edges by [amount], 0 to 1. At 1
+     * the row fills the width, up to the apostrophe key when that is on; neighbours keep
+     * touching. Key centres map about the row's midpoint, so every key keeps its split half
+     * (QWERTY's `g` stays centred on 0.5). The key-width unit is the narrowest letter key, a
+     * top-row key, so only the home row's own distances grow. On the captured corpus a hand used
+     * to its board decodes the same at 0 and 1, and a hand aiming at a flush row reads 252 of
+     * 269 indented against 272 of 280.
+     */
+    fun withHomeRowSpread(layout: KeyboardLayout, amount: Float): KeyboardLayout {
+        val a = amount.coerceIn(0f, 1f)
+        if (a <= 0f) return layout
+        val row = layout.keys.filter { it.isLetter && kotlin.math.abs(it.y - 0.25f) < 0.01f }
+        if (row.size < 2) return layout
+        val left = row.minOf { it.x }
+        val right = row.maxOf { it.x + it.w }
+        val limit = layout.keys.firstOrNull { it.id == APOSTROPHE_KEY_ID }?.x ?: 1f
+        if (left <= SPREAD_SLACK && right >= limit - SPREAD_SLACK) return layout
+        val newLeft = left * (1f - a)
+        val newRight = right + (limit - right) * a
+        val s = (newRight - newLeft) / (right - left)
+        val mid = (left + right) / 2f
+        val newMid = (newLeft + newRight) / 2f
+        val ids = row.mapTo(HashSet()) { it.id }
+        return layout.copy(
+            keys = layout.keys.map { k ->
+                if (k.id !in ids) return@map k
+                val w = k.w * s
+                val centre = newMid + (k.x + k.w / 2f - mid) * s
+                k.copy(x = centre - w / 2f, w = w)
+            },
+        )
+    }
+
+    /** Below this a row already reaches the edge: nothing to spread into. */
+    private const val SPREAD_SLACK = 0.001f
+
+    /**
+     * Gives the enter key its [ENTER_ALTERNATES] popup cells. Always applied in the alpha-layout
+     * chain and only there, so the numpad layer's enter (slide-left back to letters) is
+     * untouched. A no-op when the layout has no enter key.
      */
     fun withEnterAlternates(
         layout: KeyboardLayout,
@@ -93,15 +127,10 @@ object LayoutMutations {
     }
 
     /**
-     * Gives the shift key its [SHIFT_CASE_CELLS] popup (R34).
-     *
-     * Applied unconditionally in the alpha-layout chain: no layout JSON gives shift
-     * alternates, so before this the hold timer never even started on it, and nothing can
-     * regress by starting it now.
-     *
-     * `hint = ""` is load-bearing. `Key.hintChar` falls back to the first alternate, so
-     * without it every keyboard would grow a permanent `abc` in the corner of its shift
-     * key to advertise a feature most people will not use.
+     * Gives the shift key its [SHIFT_CASE_CELLS] popup. Always applied in the alpha-layout
+     * chain: no layout JSON gives shift alternates, so nothing else starts its hold timer.
+     * `hint = ""` keeps the corner clear, because [Key.hintChar] falls back to the first
+     * alternate and every shift key would otherwise show a permanent `abc`.
      */
     fun withShiftCaseCells(
         layout: KeyboardLayout,
@@ -115,16 +144,14 @@ object LayoutMutations {
     }
 
     /**
-     * Replaces the period and comma keys' long-press alternates with the user's
-     * own lists. An EMPTY list leaves that key untouched, so the layout JSON stays
-     * the source of truth: all five bundled layouts happen to author the same
-     * punctuation (period `... << >>`, comma `_ [ ] en-dash em-dash`), but a
-     * future language layout may not, and a global default would have overridden
-     * it silently.
+     * Replaces the period and comma keys' long-press alternates with the user's own lists. An
+     * empty list leaves that key untouched, so the layout JSON stays the source of truth: a
+     * language layout may author its own punctuation, and a global default would override it
+     * silently.
      *
-     * Applied EARLY in the alpha-layout chain, before [withEmojiOnComma] and
-     * [withCommaKey], so a user list still gets the emoji entry prepended and
-     * still survives the comma being repurposed (see [ownCharFirst]).
+     * Applied early in the alpha-layout chain, before [withEmojiOnComma] and [withCommaKey], so a
+     * user list still gets the emoji entry prepended and survives the comma being repurposed
+     * (see [ownCharFirst]).
      */
     fun withPunctuationAlternates(
         layout: KeyboardLayout,
@@ -153,23 +180,19 @@ object LayoutMutations {
     /**
      * Repurposes the comma key per the comma-key setting.
      *
-     * [mode]: "keep" | "remove" | "char" | "text" | "paste" | "select_all";
-     * [custom] backs the char/text modes and is ignored otherwise. Callers
-     * pass pre-coerced values (KeyboardConfig blanks invalid combinations
-     * back to "keep").
+     * [mode]: "keep" | "remove" | "char" | "text" | "paste" | "select_all"; [custom] backs the
+     * char and text modes and is ignored otherwise. Callers pass pre-coerced values
+     * (KeyboardConfig turns invalid combinations back into "keep").
      */
     fun withCommaKey(layout: KeyboardLayout, mode: String, custom: String): KeyboardLayout =
         withPunctuationKey(layout, ",", mode, custom, rehomeTo = ".")
 
     /**
-     * The same for the period key (R70), which had only its long-press list to
-     * configure while the comma had six modes.
+     * The same for the period key.
      *
-     * Applied AFTER [withCommaKey], which is what decides the one case neither
-     * function can handle alone: removing the comma rehomes its emoji alternate
-     * onto the period, so removing both drops that alternate. That is the
-     * accepted cost of asking for both keys to be gone, and the emoji key
-     * setting is the way back.
+     * Applied after [withCommaKey]: removing the comma rehomes its emoji alternate onto the
+     * period, so removing both keys drops that alternate. That is the accepted cost, and the
+     * emoji key setting is the way back.
      */
     fun withPeriodKey(layout: KeyboardLayout, mode: String, custom: String): KeyboardLayout =
         withPunctuationKey(layout, ".", mode, custom, rehomeTo = ",")
@@ -177,12 +200,10 @@ object LayoutMutations {
     /**
      * Repurposes the punctuation key whose output is [target].
      *
-     * The emoji long-press option and the key's punctuation popup are preserved
-     * where a key remains; [target] itself becomes the first plain alternate so
-     * the character stays reachable from the same position. On removal the
-     * spacebar absorbs the freed width (the reverse of the old withEmojiKey
-     * spacebar carve) and an emoji alternate hosted here moves to [rehomeTo]
-     * rather than silently vanishing.
+     * Where the key remains, its emoji option and punctuation popup are kept and [target] becomes
+     * the first plain alternate, so the character stays reachable from the same position. On
+     * removal the spacebar absorbs the freed width and an emoji alternate hosted here moves to
+     * [rehomeTo].
      */
     private fun withPunctuationKey(
         layout: KeyboardLayout,
@@ -247,10 +268,9 @@ object LayoutMutations {
     private fun sameRow(a: Key, b: Key): Boolean = kotlin.math.abs(a.y - b.y) < 0.01f
 
     /**
-     * Puts the emoji picker first in the comma key's long-press popup (the
-     * existing comma alternates shift right). The spacebar keeps its full
-     * width: an emoji key carved out of it cost swipe-space and reflowed the
-     * whole bottom row whenever the setting flipped.
+     * Puts the emoji picker first in the comma key's long-press popup. The spacebar keeps its
+     * full width: an emoji key carved out of it cost swipe space and reflowed the bottom row
+     * whenever the setting flipped.
      */
     fun withEmojiOnComma(layout: KeyboardLayout): KeyboardLayout {
         val keys = layout.keys.map { k ->
@@ -264,46 +284,32 @@ object LayoutMutations {
     }
 
     /**
-     * Non-QWERTY letter arrangements, as a swap of ONE pair of letters:
-     * QWERTZ (German, Swiss) exchanges Y and Z, QZERTY (the Italian typewriter
-     * arrangement) exchanges Z and W.
+     * Non-QWERTY letter arrangements as a swap of one pair of letters: QWERTZ (German, Swiss)
+     * exchanges Y and Z, QZERTY (the Italian typewriter arrangement) Z and W.
      */
     const val ARRANGEMENT_QWERTY = "qwerty"
     const val ARRANGEMENT_QWERTZ = "qwertz"
     const val ARRANGEMENT_QZERTY = "qzerty"
 
     /**
-     * AZERTY is not a swap. It is selected by serving a different layout file
-     * (azerty_fr.json, via KineticaIME.alphaLayoutName) rather than by mutating
-     * one, so this mutation has nothing to do for it and the value exists only
-     * so the setting can carry it.
+     * AZERTY is not a swap: it is served as its own layout file (azerty_fr.json, via
+     * AlphaLayouts.name), so [withLetterArrangement] has nothing to do for it and the value
+     * exists for the setting to carry.
      */
     const val ARRANGEMENT_AZERTY = "azerty"
 
     /**
-     * Rearranges two letters without touching the geometry, so the swipe
-     * decoder sees the keyboard the user is looking at.
+     * Swaps two letters without touching the geometry, so the swipe decoder sees the keyboard
+     * the user is looking at. One mutation covers every language; a qwertz_it.json would
+     * duplicate every Italian accent for the sake of one moved pair.
      *
-     * Done here rather than as a second set of layout JSON files because a
-     * qwertz_it.json would have to duplicate every accent Italian carries, and
-     * the pair that moves is the only difference. One mutation covers every
-     * bundled language and every language added later.
+     * - The letter carries its id, label, output and accented alternates: "y" keeps "ý" and "ÿ".
+     * - The position keeps x/y/w/h and its non-letter alternates, so
+     *   [EdgeSwipeBindings.withImplicitAlternates] still finds 1-0 along the top row and
+     *   [Key.hintChar] keeps every corner hint as authored.
      *
-     * What travels with the LETTER: its id, label, output and its accented
-     * alternates - "y" keeps "ý" and "ÿ" wherever it lands.
-     * What stays with the POSITION: x/y/w/h and the non-letter alternates.
-     * That second half is deliberate and it keeps two shipped features correct:
-     * [EdgeSwipeBindings.withImplicitAlternates] reads the first non-letter
-     * alternate per key, so the top row stays 1-0 in every arrangement instead
-     * of offering an apostrophe where the 6 belongs; and [Key.hintChar] is the
-     * first alternate, so rebuilding accents-first keeps every corner hint as
-     * authored.
-     *
-     * AZERTY is not expressible here. It moves M to the home row and changes
-     * both row lengths, so it is a different layout rather than a swap and it
-     * ships as its own JSON. A layout that declares
-     * [KeyboardLayout.fixedArrangement] is returned untouched, which is what
-     * stops a QWERTZ or QZERTY setting from permuting an AZERTY board.
+     * A layout that declares [KeyboardLayout.fixedArrangement] is returned untouched, so a QWERTZ
+     * or QZERTY setting never permutes an AZERTY board.
      */
     fun withLetterArrangement(layout: KeyboardLayout, arrangement: String): KeyboardLayout {
         if (layout.fixedArrangement) return layout
@@ -324,10 +330,9 @@ object LayoutMutations {
                 label = incoming.label,
                 output = incoming.output,
                 alternates = letters + symbols,
-                // An explicit hint belongs to the position's own authored
-                // character, so it is dropped rather than carried onto a letter
-                // it was never written for; hintChar then falls back to the
-                // first alternate exactly as on an unmutated layout.
+                // An explicit hint belongs to the position's authored character, so it is
+                // dropped; hintChar then falls back to the first alternate as on an unmutated
+                // layout.
                 hint = null,
             )
         }
@@ -343,19 +348,14 @@ object LayoutMutations {
     }
 
     /**
-     * Drops accented letters from every key's long-press alternates, keeping the digits and
-     * symbols. English "a" offers `à á â ä ã å æ ā @`, so a user who writes only English
-     * walks past eight accents to reach the one character the key is there for, and "o"
-     * carries seven.
+     * Drops accented letters from every key's long-press alternates, keeping digits and symbols:
+     * English "a" offers `à á â ä ã å æ ā @`, eight accents before the one character an English
+     * writer wants.
      *
-     * A no-op for a layout that declares [KeyboardLayout.nativeAccents]. That is what keeps
-     * "ñ" from a Spanish writer, "ą" from a Polish one and "ř" from a Czech one: the layout
-     * knows whether its accents belong to its language, and this function does not.
-     *
-     * Safe to run before [withNumberPriority], which then finds nothing to reorder. Across
-     * all five bundled layouts every accent-carrying key keeps at least one non-letter
-     * alternate, so no key is left with an empty popup or without the [Key.hintChar] its
-     * corner hint derives from.
+     * A no-op for a layout that declares [KeyboardLayout.nativeAccents], which keeps "ñ" for
+     * Spanish, "ą" for Polish and "ř" for Czech; the layout knows whether its accents belong to
+     * its language. Safe before [withNumberPriority], which then finds nothing to reorder. A key
+     * with no non-letter alternate keeps its list, so no popup goes empty.
      */
     fun withoutForeignAlternates(layout: KeyboardLayout): KeyboardLayout {
         if (layout.nativeAccents) return layout
@@ -374,11 +374,31 @@ object LayoutMutations {
     }
 
     /**
-     * Reorders every key's long-press alternates so digits and symbols come
-     * before accented letters ("Prioritize numbers over accents"): E offers 3
-     * as the plain-long-press default instead of è, and the key's 40% corner
-     * hint follows because [Key.hintChar] derives from the first alternate.
-     * Layout JSON is authored accents-first, so the OFF state needs no work.
+     * The user's own long-press list per letter (#8), matched by the letter typed so it
+     * follows the key through any arrangement. Replaces the list and drops a layout hint, so the
+     * list's first entry is the plain long-press, the up-swipe and the corner character. Last in
+     * the alternates chain, so the key holds what the user wrote.
+     */
+    fun withLetterAlternates(layout: KeyboardLayout, lists: Map<Char, List<String>>): KeyboardLayout {
+        if (lists.isEmpty()) return layout
+        var changed = false
+        val keys = layout.keys.map { k ->
+            val list = if (k.isLetter) lists[k.output[0]] else null
+            if (list.isNullOrEmpty() || (list == k.alternates && k.hint == null)) {
+                k
+            } else {
+                changed = true
+                k.copy(alternates = list, hint = null)
+            }
+        }
+        return if (changed) layout.copy(keys = keys) else layout
+    }
+
+    /**
+     * Reorders every key's long-press alternates so digits and symbols come before accented
+     * letters ("Prioritize numbers over accents"): E offers 3 on a plain long-press instead of
+     * è, and the corner hint follows because [Key.hintChar] derives from the first alternate.
+     * Layout JSON is authored accents-first, so the off state needs no work.
      */
     fun withNumberPriority(layout: KeyboardLayout): KeyboardLayout {
         var changed = false
@@ -395,5 +415,55 @@ object LayoutMutations {
             }
         }
         return if (changed) layout.copy(keys = keys) else layout
+    }
+
+    /**
+     * One row in the layouts' own units: every alpha layout gives each row `h: 0.25`, so the
+     * numbers row adds a quarter to the board.
+     */
+    const val NUMBER_ROW_H = 0.25f
+
+    /** How much taller the board is with the numbers row, so no letter key changes size. */
+    const val NUMBER_ROW_GROWTH = 1f + NUMBER_ROW_H
+
+    /**
+     * A row of digits above the letters. The rows below keep their share of a board one
+     * row taller, which the service grows by [NUMBER_ROW_GROWTH], so a letter key keeps its size
+     * and every distance in key widths is unchanged. A digit is not a letter key, so
+     * no gesture starts on it: taps only.
+     */
+    fun withNumberRow(layout: KeyboardLayout): KeyboardLayout {
+        val scale = 1f / NUMBER_ROW_GROWTH
+        val moved = layout.keys.map { it.copy(y = (it.y + NUMBER_ROW_H) * scale, h = it.h * scale) }
+        val digits = "1234567890".mapIndexed { i, c ->
+            Key(
+                id = "num_$c", type = KeyType.CHAR, label = c.toString(), output = c.toString(),
+                x = i * 0.1f, y = 0f, w = 0.1f, h = NUMBER_ROW_H * scale,
+            )
+        }
+        return layout.copy(keys = digits + moved)
+    }
+
+    /** What the top row's long-press offers with the numbers row on, left to right: Gboard's set. */
+    val NUMBER_ROW_SYMBOLS = listOf("%", "\\", "|", "=", "[", "]", "<", ">", "{", "}")
+
+    /**
+     * With the numbers row on, the top letter row's digits duplicate the row above: they leave
+     * its long-press lists and each key offers a symbol first, which is also its corner character
+     * and its up-swipe. Accents stay; a layout's own digit hint gives way.
+     */
+    fun withNumberRowSymbols(layout: KeyboardLayout): KeyboardLayout {
+        val letters = layout.keys.filter { it.isLetter }
+        val topY = letters.minOfOrNull { it.y } ?: return layout
+        val top = letters.filter { kotlin.math.abs(it.y - topY) < 0.01f }.sortedBy { it.x }.map { it.id }
+        val keys = layout.keys.map { k ->
+            val i = top.indexOf(k.id)
+            if (i < 0) return@map k
+            val kept = k.alternates.filter { !(it.length == 1 && it[0].isDigit()) }
+            val symbol = NUMBER_ROW_SYMBOLS.getOrNull(i)
+            val alts = if (symbol == null || symbol in kept) kept else listOf(symbol) + kept
+            k.copy(alternates = alts, hint = k.hint?.takeUnless { it.length == 1 && it[0].isDigit() })
+        }
+        return layout.copy(keys = keys)
     }
 }

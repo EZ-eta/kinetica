@@ -8,16 +8,13 @@ import android.util.AttributeSet
 import android.view.View
 
 /**
- * A few keys' worth of keyboard, painted from a resolved [KeyboardTheme], so the
- * settings screen can show what a hue actually produces instead of making the
- * user leave settings and open a text field to find out.
+ * A few keys' worth of keyboard, painted from a resolved [KeyboardTheme], so settings can
+ * show what a hue produces without leaving for a text field.
  *
- * It draws the SAME [KeyboardTheme] the service will build - the preference hands
- * it the output of `KeyboardTheme.resolve` - so the preview cannot drift from the
- * keyboard. Everything here is a rounded rectangle; there is no attempt to
- * reproduce the real layout, only the six colour roles a user actually judges: the
- * board behind the keys, a key and its label, a special key, the suggestion strip
- * with its emphasised word, and the accent.
+ * The preference hands it the output of `KeyboardTheme.resolve`, the theme the service
+ * builds, so the preview cannot drift from the keyboard. It draws rounded rectangles for the
+ * six colour roles a user judges: the board, a key and its label, a special key, the
+ * suggestion strip with its emphasised word, and the accent.
  */
 class ThemePreviewView @JvmOverloads constructor(
     context: Context,
@@ -47,8 +44,8 @@ class ThemePreviewView @JvmOverloads constructor(
         rect.set(0f, 0f, w, h)
         canvas.drawRoundRect(rect, r, r, fill)
 
-        // Suggestion strip across the top third, with two words: the emphasised
-        // best candidate and an ordinary one, which are different roles.
+        // Suggestion strip across the top third, with the emphasised best candidate and an
+        // ordinary one, two different roles.
         val barH = h * 0.34f
         fill.color = t.suggestionBg
         rect.set(0f, 0f, w, barH)
@@ -62,8 +59,8 @@ class ThemePreviewView @JvmOverloads constructor(
         fill.color = t.accent
         canvas.drawCircle(w * 0.95f, barH * 0.5f, 2f * density, fill)
 
-        // One row of keys below it: three ordinary, one special, one pressed, so
-        // every surface role appears next to the one it has to be told apart from.
+        // One row of keys: three ordinary, one pressed, one special, so each surface role sits
+        // next to the one it must be told apart from.
         val pad = 3f * density
         val top = barH + pad
         val bottom = h - pad
@@ -77,8 +74,7 @@ class ThemePreviewView @JvmOverloads constructor(
             fill.color = roles[i]
             rect.set(left, top, left + cellW, bottom)
             canvas.drawRoundRect(rect, r, r, fill)
-            // Hint colour on the last cell: it is the role that most often ends up
-            // unreadable when a palette is derived, so it gets shown.
+            // Hint colour on the last cell: the role a derived palette most often leaves unreadable.
             label.color = if (i == cells - 1) t.keyHint else t.keyText
             canvas.drawText(
                 letters[i],

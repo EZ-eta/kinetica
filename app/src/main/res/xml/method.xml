@@ -47,4 +47,24 @@
         android:imeSubtypeLocale="nb_NO"
         android:imeSubtypeMode="keyboard"
         android:isAsciiCapable="true" />
+    <subtype
+        android:label="@string/subtype_ru_ru"
+        android:imeSubtypeLocale="ru_RU"
+        android:imeSubtypeMode="keyboard"
+        android:isAsciiCapable="false" />
+    <subtype
+        android:label="@string/subtype_uk_ua"
+        android:imeSubtypeLocale="uk_UA"
+        android:imeSubtypeMode="keyboard"
+        android:isAsciiCapable="false" />
+    <subtype
+        android:label="@string/subtype_he_il"
+        android:imeSubtypeLocale="iw_IL"
+        android:imeSubtypeMode="keyboard"
+        android:isAsciiCapable="false" />
+    <subtype
+        android:label="@string/subtype_ar"
+        android:imeSubtypeLocale="ar"
+        android:imeSubtypeMode="keyboard"
+        android:isAsciiCapable="false" />
 </input-method>

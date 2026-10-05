@@ -6,14 +6,12 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * The keyboard height bounds, under test for the first time. The invariant in
- * [minNeverExceedsMax] is the one that matters historically: an inverted range
- * fed to `coerceIn` threw and killed the whole app process the moment the
- * keyboard opened.
+ * The keyboard height bounds. [minNeverExceedsMax] matters most: an inverted range fed to
+ * `coerceIn` throws and kills the app process the moment the keyboard opens.
  */
 class KeyboardHeightsTest {
 
-    // Pixel 7: 1080x2400 at density 2.625. The developer's device.
+    // Pixel 7: 1080x2400 at density 2.625.
     private val phoneH = 2400
     private val phoneD = 2.625f
 
@@ -31,7 +29,7 @@ class KeyboardHeightsTest {
                 val min = KeyboardHeights.minPx(h, d)
                 val max = KeyboardHeights.maxPx(h)
                 assertTrue("min $min > max $max at h=$h d=$d", min <= max)
-                // And the range coerceIn actually receives must contain its result.
+                // The range coerceIn receives must contain its result.
                 for (pct in Prefs.MIN_HEIGHT_PCT..Prefs.MAX_HEIGHT_PCT) {
                     val px = KeyboardHeights.targetPx(h, d, pct)
                     assertTrue("target $px outside [$min,$max] at h=$h d=$d pct=$pct",
@@ -54,9 +52,8 @@ class KeyboardHeightsTest {
 
     @Test
     fun theFloorFellWhereTheReportSaidItWasStuck() {
-        // The report is that 25% was still too tall, on a device where 180dp was
-        // what actually bound. Both floors moved, so the reachable minimum has to
-        // have dropped on that geometry - and by a lot, which is what was asked.
+        // The report: 25% was still too tall on a device where a 180dp floor bound. On that
+        // geometry the reachable minimum must now be far lower.
         val nowPct = 100f * KeyboardHeights.minPx(foldH, foldD) / foldH
         assertTrue("floor is $nowPct% of screen", nowPct < 15f)
         val oldFloorPx = minOf(
@@ -120,5 +117,20 @@ class KeyboardHeightsTest {
     fun theHeightIsHeldInsideItsBounds() {
         assertEquals(0, KeyboardHeights.handleDp(-5, legacyHandleOn = true))
         assertEquals(KeyboardHeights.MAX_HANDLE_DP, KeyboardHeights.handleDp(999, legacyHandleOn = false))
+    }
+
+    @Test
+    fun theNumbersRowGrowsTheBoardAndTheSettingKeepsMeaningTheLetters() {
+        // The service and the size preview share this arithmetic.
+        assertEquals(1000, KeyboardHeights.boardPx(800, numberRow = true))
+        assertEquals(800, KeyboardHeights.boardPx(800, numberRow = false))
+        assertEquals(800, KeyboardHeights.letterPx(1000, numberRow = true))
+        assertEquals(1000, KeyboardHeights.letterPx(1000, numberRow = false))
+    }
+
+    @Test
+    fun theBarIsTallerOnlyWithRecentWords() {
+        assertEquals(44f, KeyboardHeights.barDp(44, recentWords = false), 0f)
+        assertEquals(66f, KeyboardHeights.barDp(44, recentWords = true), 0f)
     }
 }

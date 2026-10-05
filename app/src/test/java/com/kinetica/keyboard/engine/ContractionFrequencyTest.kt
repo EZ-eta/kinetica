@@ -9,26 +9,25 @@ import org.junit.Assume.assumeTrue
 import org.junit.Test
 
 /**
- * The 40 bundled English contractions carried the
- * frequency of their apostrophe-LESS MISSPELLING, because the generator assumed
- * the OpenSubtitles source ships "dont"/"arent". It does not - it splits at the
- * apostrophe and keeps the clitic as its own entry ('t 9628970, 's 14291013),
- * which WORD_RE rejects, so the mass stays on the stem ("don" 4158644) while
- * "dont" 9523 is only the typo count.
+ * The 40 bundled English contractions carried the frequency of their
+ * apostrophe-less misspelling, on the assumption that the OpenSubtitles source
+ * ships "dont"/"arent". It splits at the apostrophe and keeps the clitic as its
+ * own entry ('t 9628970, 's 14291013), which WORD_RE rejects, so the mass stays
+ * on the stem ("don" 4158644) while "dont" 9523 is only the typo count.
  *
- * Two mechanisms are locked here, and they are not the same defect:
+ * Two separate mechanisms are locked here:
  *
- *  - RANK. A contraction at freq 163 has fw at the FREQ_WEIGHT_FLOOR, so any
+ *  - Rank. A contraction at freq 163 has fw at the FREQ_WEIGHT_FLOOR, so any
  *    ordinary word sharing its path outranks it whatever the geometry says.
- *  - TIE. The apostrophe is transparent on the swipe path (zero path length in
+ *  - Tie. The apostrophe is transparent on the swipe path (zero path length in
  *    WordPredictor, skipped in the DtwMatcher ideal path), so a contraction and
- *    its misspelling decode at IDENTICAL dTotal. Copying the frequency made
- *    them identical in score too - 32 exact ties broken by heap order alone.
+ *    its misspelling decode at the same dTotal. Copying the frequency made their
+ *    scores equal too: 32 exact ties broken by heap order alone.
  *
- * The completion path is deliberately NOT asserted as a win: there the
- * apostrophe costs a full COMPLETION_PENALTY_PER_LETTER that the bare spelling
- * does not pay, worth geo(0.50)/geo(0.25) = 1.98x, and the frequency repair
- * buys only 1.61x of it. See [contractionCompletionStaysPickable].
+ * The completion path is not asserted as a win: there the apostrophe costs a
+ * full COMPLETION_PENALTY_PER_LETTER the bare spelling does not pay, worth
+ * geo(0.50)/geo(0.25) = 1.98x, and the frequency repair buys only 1.61x of it.
+ * See [contractionCompletionStaysPickable].
  */
 class ContractionFrequencyTest {
 
@@ -54,7 +53,7 @@ class ContractionFrequencyTest {
         return Paths.get("app/src/main/assets/dictionaries/$name")
     }
 
-    /** Raw asset counts, before log-quantization - the defect lives here. */
+    /** Raw asset counts, before log-quantization, where the defect lives. */
     private fun counts(): Map<String, Int> {
         val p = assetPath("en_wordlist.txt")
         assumeTrue("wordlist asset not found", Files.exists(p))
@@ -96,7 +95,7 @@ class ContractionFrequencyTest {
     @Test
     fun noContractionSitsAtTheFallbackFloor() {
         // CONTRACTION_FALLBACK_FREQ was 200 for the eight forms whose
-        // misspelling is absent from the source - a floor, not a measurement.
+        // misspelling is absent from the source: a floor, not a measurement.
         val f = counts()
         val floored = contractions.values.filter { (f[it] ?: 0) <= 200 }
         assertTrue("still at the fallback floor: $floored", floored.isEmpty())
@@ -118,8 +117,8 @@ class ContractionFrequencyTest {
     @Test
     fun freqWeightScaleIsUnchanged() {
         // freqByteFor quantizes against the list maximum, so a contraction
-        // above "you" would move EVERY other word's fw. This is what makes the
-        // asset diff exactly the contraction rows.
+        // above "you" would move every other word's fw. Staying under it keeps
+        // the asset diff to the contraction rows.
         val f = counts()
         assertEquals("maxCount moved", 28_787_591, f.values.max())
         assertEquals("the max is no longer 'you'", 28_787_591, f["you"])
@@ -147,16 +146,13 @@ class ContractionFrequencyTest {
 
     @Test
     fun hereIsBeatsItsHomographRivalsOnTheSwipePath() {
-        // The defect's own device row (swipe contacts "hgfrerds"): a real
-        // "here's" gesture returned gets/hers/herd/has/
-        // herds, with here's nowhere - it is admissible, just outranked at the
-        // frequency floor. Rivals share the h-e-r-*-s path at comparable fits.
-        //
-        // The fixture must be SLOPPY. On a perfect centre-to-centre path
-        // here's own ideal polyline is the input, so it wins at d=0 whatever
-        // its frequency, and the golden would pass for the wrong reason - the
-        // reconstruction caveat recorded elsewhere (a clean rebuild compresses the
-        // distance gap the device row turns on).
+        // The device row (swipe contacts "hgfrerds"): a real "here's" gesture
+        // returned gets/hers/herd/has/herds, with here's nowhere. It is
+        // admissible, only outranked at the frequency floor; rivals share the
+        // h-e-r-*-s path at comparable fits.
+        // The fixture must be sloppy. On a perfect centre-to-centre path here's
+        // own ideal polyline is the input, so it wins at d=0 whatever its
+        // frequency and the golden would pass for the wrong reason.
         val (predictor, g) = predictor()
         val words = predictor.decode(
             listOf(TestData.sloppySwipe("heres", g, 0, 500, overshootKw = 0.45f)), emptyList(),
@@ -196,8 +192,8 @@ class ContractionFrequencyTest {
     fun contractionCompletionStaysPickable() {
         // On the completion path the apostrophe costs a whole
         // COMPLETION_PENALTY_PER_LETTER that "heres" does not pay, so here's
-        // sits at d=0.50 against 0.25 - a 1.98x handicap the frequency repair
-        // only closes to 1.23x. Assert PICKABILITY, not the win: pinning the
+        // sits at d=0.50 against 0.25, a 1.98x handicap the frequency repair
+        // closes only to 1.23x. Assert pickability, not the win: pinning the
         // loss would cement it, and pinning a win would be false.
         val (predictor, g) = predictor()
         val words = predictor.decode(

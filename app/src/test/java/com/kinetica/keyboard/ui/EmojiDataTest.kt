@@ -9,16 +9,15 @@ import org.junit.Assume.assumeTrue
 import org.junit.Test
 
 /**
- * The shipped emoji asset, checked for the first time.
+ * The shipped emoji asset.
  *
- * `emoji_data.json` is hand-maintained and nothing has ever read it outside the picker,
- * which parses it with no validation at all: a missing field throws `JSONException` out of
- * the `EmojiPickerView` constructor, i.e. the picker fails to open rather than degrading.
+ * `emoji_data.json` is hand-maintained and the picker parses it with no validation: a missing
+ * field throws `JSONException` out of the `EmojiPickerView` constructor and the picker fails to
+ * open.
  *
- * Matched as text rather than parsed, because **the JVM test runtime stubs `org.json`** -
- * the same reason [com.kinetica.keyboard.settings.Backup] is hand-rolled. The file is read
- * off disk, so Gradle does not see it as an input and **`--rerun-tasks` is what makes a
- * fail-first check here actually run.**
+ * Matched as text, not parsed, because the JVM test runtime stubs `org.json`, the same reason
+ * [com.kinetica.keyboard.settings.Backup] is hand-rolled. The file is read off disk, so Gradle
+ * does not see it as an input and a fail-first check here needs `--rerun-tasks`.
  */
 class EmojiDataTest {
 
@@ -53,9 +52,9 @@ class EmojiDataTest {
 
     @Test
     fun noZeroWidthJoinerSequences() {
-        // Standing policy: a device that cannot render a ZWJ sequence draws it as its parts,
-        // which is worse than the single tofu box an unknown codepoint gives. It is also why
-        // Unicode 15.1 is absent entirely, every one of its additions being a ZWJ sequence.
+        // A device that cannot render a ZWJ sequence draws it as its parts, worse than the single
+        // tofu box of an unknown codepoint. Unicode 15.1 is absent for the same reason: all its
+        // additions are ZWJ sequences.
         val bad = values("ch", asset()).filter { it.contains('‍') }
         assertTrue("ZWJ sequences are excluded on purpose: $bad", bad.isEmpty())
     }
@@ -83,7 +82,7 @@ class EmojiDataTest {
     @Test
     fun theRecentUnicodeAdditionsAreThere() {
         // The picker filters by Paint.hasGlyph at load, so carrying an emoji an old device
-        // cannot draw costs nothing. That is what made topping the set up safe.
+        // cannot draw costs nothing.
         val chars = values("ch", asset()).toSet()
         for (ch in listOf("🫨", "🩷", "🪿", "🫢")) {
             assertTrue("expected a Unicode 14/15 emoji to be present", chars.contains(ch))

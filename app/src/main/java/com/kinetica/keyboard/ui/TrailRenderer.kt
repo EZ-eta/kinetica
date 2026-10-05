@@ -7,12 +7,12 @@ import android.graphics.Path
 import com.kinetica.keyboard.engine.models.StreamId
 
 /**
- * Per-stream swipe trails. Hue starts at the configured base (offset for the
- * right thumb so simultaneous trails are distinguishable) and advances 30 deg
- * on every key transition; points fade and shrink over TRAIL_LIFE_MS.
+ * Per-stream swipe trails. Hue starts at the configured base (offset for the right thumb so
+ * simultaneous trails can be told apart) and advances 30 deg on every key transition; points
+ * fade and shrink over TRAIL_LIFE_MS.
  *
- * One smoothed piece per sample rather than one straight line, so a fast swipe does not
- * read as facets; the joins are [TrailPath]'s and are tested there.
+ * One smoothed piece per sample, so a fast swipe does not read as facets; the joins are
+ * [TrailPath]'s and are tested there.
  */
 class TrailRenderer(private val density: Float) {
 
@@ -35,8 +35,7 @@ class TrailRenderer(private val density: Float) {
     }
     private val hsv = FloatArray(3)
 
-    // Both reused every frame: one piece is drawn at a time, so the smoothing costs no
-    // allocation over the straight lines it replaced.
+    // Both reused every frame: one piece is drawn at a time, so smoothing allocates nothing.
     private val path = Path()
     private val quad = FloatArray(TrailPath.SIZE)
 
@@ -54,11 +53,9 @@ class TrailRenderer(private val density: Float) {
         val trail = trails[i]
         val hue = hues[i]
         val last = trail.lastOrNull()
-        // MotionEvent history can deliver several samples per display frame.
-        // The decoder keeps every sample; the visual trail only needs one point
-        // per ~8 ms. Updating the endpoint preserves its current position while
-        // bounding both drawLine work and allocation pressure on high-refresh
-        // devices. Hue transitions remain exact because they force a new point.
+        // MotionEvent history can deliver several samples per frame. The decoder keeps them
+        // all; the trail needs one point per ~8 ms, so the endpoint moves instead, bounding
+        // draw work and allocation on high-refresh screens. A hue change forces a new point.
         if (!forceNextPoint[i] && last != null && last.hue == hue &&
             t >= last.t && t - last.t < MIN_SAMPLE_INTERVAL_MS
         ) {
@@ -125,8 +122,8 @@ class TrailRenderer(private val density: Float) {
                 hsv[2] = 1f
                 paint.color = Color.HSVToColor((200 * f).toInt(), hsv)
                 paint.strokeWidth = (3f + 7f * f) * density
-                // A run ends at a break as well as at the finger, so a lift is still a gap
-                // rather than a curve across the keyboard.
+                // A run ends at a break as well as at the finger, so a lift stays a gap, not a
+                // curve across the keyboard.
                 val next = trail.getOrNull(i + 1)?.takeIf { !it.breakBefore }
                 TrailPath.quadInto(
                     quad,

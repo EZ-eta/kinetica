@@ -5,19 +5,17 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * The per-language single-letter word sets.
- *
- * The first test is the whole reason this object exists rather than a dictionary call, so
- * it is the one to read first if the design is ever questioned.
+ * The per-language single-letter word sets. The first test shows why this is a curated list,
+ * not a dictionary call.
  */
 class StandaloneLettersTest {
 
     @Test
     fun aDictionaryTestCouldNotDoThis() {
-        // Every letter a-z is an entry in every bundled wordlist, with frequencies that
-        // look deliberate: en holds l at 126 518, s at 110 199, t at 72 881, d at 64 304.
-        // They are OpenSubtitles artefacts. So isWord() answers yes for all of them and
-        // the only thing that separates a lone `a` from a lone `t` is a curated list.
+        // Every letter a-z is an entry in every bundled wordlist, with OpenSubtitles frequencies
+        // that look real: en holds l at 126 518, s at 110 199, t at 72 881, d at 64 304.
+        // isWord answers yes for all of them, so only a curated list separates a lone `a`
+        // from a lone `t`.
         for (c in "lstdmcehnbfgjrpxuwkvzq") {
             assertFalse("$c is not an English word on its own", StandaloneLetters.isWord(c, "en"))
         }
@@ -35,8 +33,8 @@ class StandaloneLettersTest {
         assertFalse("y alone is not Italian", StandaloneLetters.isWord('y', "it"))
         assertTrue("w is Polish for in", StandaloneLetters.isWord('w', "pl"))
         assertFalse("w alone is not Spanish", StandaloneLetters.isWord('w', "es"))
-        // Added on a Polish speaker's report. Colloquial rather than a function word, and
-        // the whole Polish set is still unmeasured.
+        // Added on a Polish speaker's report: colloquial, not a function word. The Polish set
+        // has no capture behind it.
         assertTrue("e is a Polish interjection", StandaloneLetters.isWord('e', "pl"))
     }
 
@@ -48,12 +46,22 @@ class StandaloneLettersTest {
         assertEqualsSet("aeiouwz", "pl")
         assertEqualsSet("aikosuvz", "cs")
         assertEqualsSet("u", "nl")
-        // German has no one-letter word. Asserted as empty rather than left
-        // unregistered, because an unregistered language falls back to the
-        // English set and would space and capitalize a lone "a" or "i".
+        // German has no one-letter word. Registered as empty, because an unregistered language
+        // falls back to the English set and would space and capitalize a lone "a" or "i".
         assertEqualsSet("", "de")
         assertEqualsSet("ay", "fr")
         assertEqualsSet("aio", "no")
+        // The other scripts: Russian's prepositions and conjunctions; Hebrew and Arabic write
+        // their one-letter words joined to the next, so a lone one is still being typed.
+        for (c in "авикосуя") assertTrue("ru $c", StandaloneLetters.isWord(c, "ru"))
+        for (c in "бгдежзлмнпртфхцчшщыьэю") assertFalse("ru $c", StandaloneLetters.isWord(c, "ru"))
+        for (c in "והבלמשכ") assertFalse("he $c", StandaloneLetters.isWord(c, "he"))
+        for (c in "وبلف") assertFalse("ar $c", StandaloneLetters.isWord(c, "ar"))
+        // And none of them falls back to English.
+        // Ukrainian is not Russian's set: і and з, never и or к.
+        for (c in "авзійоуя") assertTrue("uk $c", StandaloneLetters.isWord(c, "uk"))
+        for (c in "икс") assertFalse("uk $c", StandaloneLetters.isWord(c, "uk"))
+        for (lang in listOf("ru", "uk", "he", "ar")) assertFalse(StandaloneLetters.isWord('a', lang))
     }
 
     @Test
@@ -66,11 +74,8 @@ class StandaloneLettersTest {
 
     @Test
     fun anUnknownLanguageFallsBackToEnglish() {
-        // Registration order is ADDING_A_LANGUAGE's business; an unregistered code must
-        // still behave, and the smallest set is the safe default. Uses a code that is
-        // not a language rather than a real one: this test read "de" as unregistered
-        // until German shipped, and a registered language is exactly what it must not
-        // assert about.
+        // An unregistered code must still behave, and the smallest set is the safe default.
+        // `zz` is no language, so registering a new one cannot break this test.
         assertTrue(StandaloneLetters.isWord('a', "zz"))
         assertFalse(StandaloneLetters.isWord('e', "zz"))
         assertTrue(StandaloneLetters.isWord('i', ""))

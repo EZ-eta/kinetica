@@ -8,22 +8,18 @@ import org.junit.Assume.assumeTrue
 import org.junit.Test
 
 /**
- * What the symbols pages can actually type, read off the shipped assets.
+ * What the symbols pages can type, read off the shipped assets.
  *
- * Reported: there is no forward slash anywhere on the symbols keyboard. It was true - `/`
- * existed only as a long-press alternate of `b` on the alpha layer - and it was not caught
- * because nothing asserted the inventory. A layout edit that drops a key is invisible
- * otherwise: the JSON still parses and the keyboard still comes up.
+ * A layout edit that drops a key is otherwise invisible: the JSON still parses and the
+ * keyboard still comes up. A missing `/`, once only a long-press alternate of `b`, went
+ * unnoticed that way.
  *
  * The files are read as text and matched, not parsed: the JVM test runtime stubs `org.json`,
- * so [LayoutLoader] cannot be called here (see LayoutMutationsTest). That is enough for the
- * question this asks, which is about presence rather than geometry.
+ * so [LayoutLoader] cannot be called here (see LayoutMutationsTest). Presence needs no geometry.
  *
- * One thing to know when checking a change here: the assets are read straight off disk, so
- * Gradle does not see them as inputs to this task and an asset-only edit leaves it
- * UP-TO-DATE with the previous result. `--rerun-tasks` is what makes a fail-first check
- * actually run. RealDictionaryTest reads the wordlists the same way and has the same
- * property.
+ * The assets are read off disk, so Gradle does not see them as inputs and an asset-only edit
+ * leaves this task UP-TO-DATE; a fail-first check needs `--rerun-tasks`, as RealDictionaryTest
+ * does.
  */
 class SymbolsLayoutTest {
 
@@ -50,17 +46,16 @@ class SymbolsLayoutTest {
 
     @Test
     fun theForwardSlashIsTappableOnTheSymbolsPage() {
-        // The report, and the reason it is a tap rather than an alternate: the reporter
-        // knew about the long press and preferred the symbols layer anyway.
+        // A tap, not an alternate: the reporter knew about the long press and preferred the
+        // symbols layer anyway.
         val page1 = read("symbols.json")
         assertTrue("/ must be tappable on symbols page 1", tappable(page1, "/"))
     }
 
     @Test
     fun theSemicolonSurvivedTheSlashTakingItsSlot() {
-        // `/` took `;`'s cell rather than shrinking the backspace, which is a slide target
-        // and was praised in the field (R20). `;` moved onto `:`, which is where the two
-        // belong together anyway.
+        // `/` took `;`'s cell instead of shrinking the backspace, a slide target users like.
+        // `;` moved onto `:`, where the two belong together.
         val page1 = read("symbols.json")
         assertTrue("; must still be reachable", tappable(page1, ";") || onLongPress(page1, ";"))
         assertTrue(": must stay tappable", tappable(page1, ":"))
@@ -87,18 +82,15 @@ class SymbolsLayoutTest {
 
     @Test
     fun theNumpadCanTypeASpace() {
-        // Reported: the numeric panel was the one layer with no way to type a space, so a
-        // number with a space in it had to be finished on another page. It was the only
-        // layout of the three without a space key.
+        // Without a space key, a number with a space in it had to be finished on another page.
         val numpad = read("numpad.json")
         assertTrue("the numpad needs a space key", numpad.contains("\"type\": \"space\""))
     }
 
     @Test
     fun theNumpadStillCarriesItsInventory() {
-        // The space took a new row rather than a neighbour's cell, so nothing here should
-        // have moved. Asserted because a layout edit that drops a key is invisible
-        // otherwise: the JSON still parses and the keyboard still comes up.
+        // The space took a new row, not a neighbour's cell, so nothing here moves. A layout
+        // edit that drops a key is otherwise invisible.
         val numpad = read("numpad.json")
         for (d in '0'..'9') {
             assertTrue("$d must stay tappable on the numpad", tappable(numpad, d.toString()))

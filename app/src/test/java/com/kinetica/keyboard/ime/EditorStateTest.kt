@@ -10,7 +10,7 @@ import org.junit.Test
  * Which fields take an automatic space.
  *
  * `EditorInfo` is a plain data holder with no framework behind it, so the derivation is
- * reachable from the JVM even though the service around it is not - the same reason
+ * testable on the JVM although the service around it is not, the same reason
  * [autospacesTappedWord] is a free function.
  */
 class EditorStateTest {
@@ -18,7 +18,7 @@ class EditorStateTest {
     private fun stateFor(inputType: Int): EditorState =
         EditorState.from(EditorInfo().also { it.inputType = inputType })
 
-    /** A field carrying an imeOptions flag rather than an inputType variation. */
+    /** A field carrying an imeOptions flag instead of an inputType variation. */
     private fun stateForOptions(inputType: Int, imeOptions: Int): EditorState =
         EditorState.from(
             EditorInfo().also {
@@ -81,10 +81,9 @@ class EditorStateTest {
 
     // ------------------------------------------------- private versus no-learning
     //
-    // Reported by a user: the keyboard looked stuck in password mode in DuckDuckGo and
-    // Molly. Both set IME_FLAG_NO_PERSONALIZED_LEARNING on ordinary text fields, and that
-    // flag used to be folded into privateMode, which switches off the whole suggestion
-    // pipeline. The flag asks the keyboard to forget, not to stop working.
+    // DuckDuckGo and Molly set IME_FLAG_NO_PERSONALIZED_LEARNING on ordinary text fields.
+    // Folded into privateMode, which switches off the whole suggestion pipeline, it made the
+    // keyboard look stuck in password mode. The flag asks the keyboard to forget, not to stop.
 
     @Test
     fun aNoLearningFieldStillOffersSuggestions() {
@@ -148,5 +147,33 @@ class EditorStateTest {
         )
         assertTrue(s.privateMode)
         assertTrue(s.noLearning)
+    }
+
+    private fun stateForPrivate(options: String?): EditorState =
+        EditorState.from(
+            EditorInfo().also {
+                it.inputType = InputType.TYPE_CLASS_TEXT
+                it.privateImeOptions = options
+            },
+        )
+
+    @Test
+    fun kineticasOwnTriggerFieldTakesNoAutomaticSpace() {
+        // The expansion trigger field (#19): one token, like an address.
+        assertTrue(stateForPrivate(EditorState.ONE_TOKEN_OPTION).addressField)
+        assertTrue(stateForPrivate("other.app.flag, ${EditorState.ONE_TOKEN_OPTION}").addressField)
+    }
+
+    @Test
+    fun anOrdinaryFieldHasNoOneTokenOption() {
+        assertFalse(stateForPrivate(null).addressField)
+        assertFalse(stateForPrivate("other.app.flag").addressField)
+        assertFalse(stateForPrivate("${EditorState.ONE_TOKEN_OPTION}Extra").addressField)
+    }
+
+    @Test
+    fun aPickWritesNoSpaceInAOneTokenField() {
+        assertFalse(spacesAfterPick(addressField = true))
+        assertTrue(spacesAfterPick(addressField = false))
     }
 }

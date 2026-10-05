@@ -15,8 +15,8 @@ class AutoCapitalizationTest {
 
     @Test
     fun loneIIsLeftAloneInLanguagesWhereItIsAWord() {
-        // Italian "i" is the plural masculine article; capitalizing it would be
-        // wrong mid-sentence, which is why the rule is language-gated at all.
+        // Italian "i" is the plural masculine article and stays lowercase mid-sentence, so the
+        // rule is gated by language.
         assertEquals("i", AutoCapitalization.forWord("i", "it"))
         assertEquals("i", AutoCapitalization.forWord("i", "es"))
         assertEquals("i", AutoCapitalization.forWord("i", "pl"))
@@ -32,7 +32,7 @@ class AutoCapitalizationTest {
 
     @Test
     fun everyOtherWordIsUntouched() {
-        for (lang in listOf("en", "it", "es", "pl", "cs", "nl", "de", "fr", "no")) {
+        for (lang in listOf("en", "it", "es", "pl", "cs", "nl", "de", "fr", "no", "ru", "he", "ar")) {
             for (w in listOf("in", "if", "is", "it", "ii", "a", "o", "island", "iowa", "")) {
                 assertEquals("$w changed under $lang", w, AutoCapitalization.forWord(w, lang))
             }
@@ -46,6 +46,35 @@ class AutoCapitalizationTest {
         for (c in 'a'..'z') {
             if (c == 'i') continue
             assertEquals("$c changed", c.toString(), AutoCapitalization.forWord(c.toString(), "en"))
+        }
+    }
+
+    @Test
+    fun thePronounsContractionsAreCapitalizedInEnglish() {
+        // A swiped `im` decodes to `i'm`, which must not stay lowercase mid-sentence.
+        assertEquals("I'm", AutoCapitalization.forWord("i'm", "en"))
+        assertEquals("I've", AutoCapitalization.forWord("i've", "en"))
+        assertEquals("I'd", AutoCapitalization.forWord("i'd", "en"))
+        assertEquals("I'll", AutoCapitalization.forWord("i'll", "en"))
+        assertEquals("I'd've", AutoCapitalization.forWord("i'd've", "en"))
+        assertEquals("I'm", AutoCapitalization.forWord("I'm", "en"))
+    }
+
+    @Test
+    fun anEnglishContractionIsCapitalizedWhateverLanguageIsActive() {
+        // Only the English list holds `i'm`: with Italian active and English mixed in, the
+        // word is still English, so its language decides, not the active one.
+        assertEquals("I'm", AutoCapitalization.forWord("i'm", "it", wordLang = "en"))
+        assertEquals("I've", AutoCapitalization.forWord("i've", "pl", wordLang = "en"))
+        // The lone article stays the active language's call.
+        assertEquals("i", AutoCapitalization.forWord("i", "it", wordLang = "en"))
+        assertEquals("i'm", AutoCapitalization.forWord("i'm", "it", wordLang = "it"))
+    }
+
+    @Test
+    fun wordsThatOnlyLookLikeItAreUntouched() {
+        for (w in listOf("im", "ive", "ill", "id", "it's", "i'", "i''", "i'2", "in'", "island's")) {
+            assertEquals("$w changed", w, AutoCapitalization.forWord(w, "en"))
         }
     }
 }

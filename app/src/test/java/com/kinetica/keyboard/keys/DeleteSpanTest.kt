@@ -10,7 +10,7 @@ class DeleteSpanTest {
 
     private fun headOf(text: String, len: Int) = text.substring(0, len)
 
-    // ---- word granularity: the shipped behavior, now under test -------------
+    // ---- word granularity ---------------------------------------------------
 
     @Test
     fun oneWordTakesItsTrailingSpaceWithIt() {
@@ -21,7 +21,7 @@ class DeleteSpanTest {
 
     @Test
     fun punctuationBelongsToTheWord() {
-        // One step must remove "world," rather than leaving the comma behind.
+        // One step must remove "world," comma included.
         val t = "hello world, again"
         assertEquals("again", tailOf(t, DeleteSpan.words(t, 1)))
         assertEquals("world, again", tailOf(t, DeleteSpan.words(t, 2)))
@@ -35,7 +35,7 @@ class DeleteSpanTest {
         assertEquals(0, DeleteSpan.words("", 3))
     }
 
-    // ---- char granularity: the new mode -------------------------------------
+    // ---- char granularity ---------------------------------------------------
 
     @Test
     fun charactersAreStagedOneAtATime() {
@@ -47,8 +47,7 @@ class DeleteSpanTest {
 
     @Test
     fun spacesAreOrdinaryCharactersInCharMode() {
-        // The point of the mode: it must be able to stop between words, which
-        // whole-word staging never does.
+        // Char mode can stop between words, which whole-word staging never does.
         val t = "hi there"
         assertEquals("e", tailOf(t, DeleteSpan.chars(t, 1)))
         assertEquals(" there", tailOf(t, DeleteSpan.chars(t, 6)))
@@ -101,8 +100,8 @@ class DeleteSpanTest {
 
     @Test
     fun withNoSelectionTheSpanIsTheShippedWalk() {
-        // The regression that matters: staging without a selection must not have
-        // changed at all, in either mode, including the degenerate counts.
+        // Without a selection the staging is the plain walk in either mode, degenerate
+        // counts included.
         val t = "hello world, again"
         for (units in 0..4) {
             assertEquals(DeleteSpan.words(t, units), DeleteSpan.staged(0, t, units, false))
@@ -113,8 +112,7 @@ class DeleteSpanTest {
 
     @Test
     fun aSelectionAtTheStartOfTheFieldCannotOverrun() {
-        // Nothing before it, so every further step is a no-op rather than a walk
-        // past offset zero.
+        // Nothing before it, so every further step is a no-op, never a walk past offset zero.
         assertEquals(4, DeleteSpan.staged(4, "", 1, charMode = false))
         assertEquals(4, DeleteSpan.staged(4, "", 9, charMode = false))
         assertEquals(4, DeleteSpan.staged(4, "", 9, charMode = true))
@@ -125,10 +123,9 @@ class DeleteSpanTest {
 
     @Test
     fun theSpanNeverShrinksAsTheSlideGrows() {
-        // What the backspace slide's highlight rests on: the staged span is
-        // recomputed from a snapshot on every threshold crossing, so retracting
-        // from four units to three has to give back a SMALLER span. If this were
-        // not monotone the highlight would grow on a retraction.
+        // The backspace slide's highlight recomputes the staged span from a snapshot at every
+        // threshold crossing, so retracting from four units to three must give a smaller span;
+        // otherwise the highlight would grow on a retraction.
         val before = "the quick brown fox jumps over"
         for (sel in listOf(0, 5)) {
             for (charMode in listOf(false, true)) {
@@ -194,13 +191,11 @@ class DeleteSpanTest {
 
     @Test
     fun rightStopsAtWordEndsAndLeftAtWordStarts() {
-        // The asymmetry, asserted rather than left to be discovered - it was written down
-        // as a symmetry first and this test is what refuted it. Forward takes the
-        // whitespace BEFORE a word so it lands after one; backward takes the whitespace
-        // after it so it lands before one. That is the ordinary editor convention, and it
-        // is also what `words` needs for deletion, where the trailing space goes with the
-        // word it followed. The double space is deliberate: a run of whitespace is one
-        // boundary, not two.
+        // The two directions are asymmetric. Forward takes the whitespace before a word so it
+        // lands after one; backward takes the whitespace after it so it lands before one. That
+        // is the ordinary editor convention, and what `words` needs for deletion, where the
+        // trailing space goes with the word it followed. The double space checks that a run of
+        // whitespace is one boundary, not two.
         val t = "one two, three  four"
         val forward = ArrayList<Int>()
         var i = 0

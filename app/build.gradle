@@ -30,8 +30,8 @@ android {
         applicationId "com.kinetica.keyboard"
         minSdk 26
         targetSdk 34
-        versionCode 55
-        versionName "1.1.2"
+        versionCode 74
+        versionName "2.0.0"
     }
 
     sourceSets {
@@ -51,9 +51,9 @@ android {
         }
     }
 
-    // AGP otherwise writes a Google-signed protobuf of the dependency tree into
-    // the APK signing block. It is a Play Store feature, it is opaque to anyone
-    // inspecting the APK, and F-Droid's scanner rejects an APK that carries it.
+    // AGP otherwise writes a Google-signed protobuf of the dependency tree into the
+    // APK signing block: a Play Store feature, opaque to anyone inspecting the APK,
+    // and rejected by F-Droid's scanner.
     dependenciesInfo {
         includeInApk false
         includeInBundle false
@@ -67,14 +67,16 @@ android {
                 signingConfig signingConfigs.release
             }
         }
-        // A second application id so the developer build installs BESIDE the real
-        // app rather than replacing it: two keyboards in the system picker, two
-        // data directories, and no way for a development build to be mistaken for
-        // a published one. It is also the only build that can produce a decode
-        // trace at all - see TraceRecorder.
+        // A second application id, so the developer build installs beside the real
+        // app with its own data and cannot be mistaken for a published build. It is
+        // also the only build that writes a decode trace (TraceRecorder).
         debug {
             applicationIdSuffix '.dev'
             versionNameSuffix '-dev'
+            // Not debuggable, so the decode times a trace records are the phone's real cost:
+            // ART runs a debuggable build about twice as slow. The trace sink comes from the
+            // debug source set and needs no flag.
+            debuggable false
         }
     }
 

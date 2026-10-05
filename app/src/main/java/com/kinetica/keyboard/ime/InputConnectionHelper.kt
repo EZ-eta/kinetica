@@ -1,5 +1,7 @@
 package com.kinetica.keyboard.ime
 
+import android.os.SystemClock
+import android.view.KeyEvent
 import android.view.inputmethod.InputConnection
 
 /**
@@ -11,6 +13,15 @@ class InputConnectionHelper(private val connection: () -> InputConnection?) {
 
     fun commitText(text: CharSequence): Boolean =
         connection()?.commitText(text, 1) ?: false
+
+    /** One key pressed and released with [metaState] held, as a hardware keyboard sends it. */
+    fun sendKey(keyCode: Int, metaState: Int): Boolean {
+        val ic = connection() ?: return false
+        val now = SystemClock.uptimeMillis()
+        ic.sendKeyEvent(KeyEvent(now, now, KeyEvent.ACTION_DOWN, keyCode, 0, metaState))
+        ic.sendKeyEvent(KeyEvent(now, now, KeyEvent.ACTION_UP, keyCode, 0, metaState))
+        return true
+    }
 
     fun deleteBeforeCursor(count: Int): Boolean =
         connection()?.deleteSurroundingText(count, 0) ?: false
@@ -24,9 +35,8 @@ class InputConnectionHelper(private val connection: () -> InputConnection?) {
     fun selectedText(): CharSequence? = connection()?.getSelectedText(0)
 
     /**
-     * Moves the selection to [start]..[end] in absolute offsets. Used to show a
-     * staged backspace span as a real highlight in the editor rather than only as
-     * a chip on the keyboard; [start] == [end] collapses it back to a cursor.
+     * Moves the selection to [start]..[end] in absolute offsets, so a staged backspace span
+     * shows as a highlight in the editor; [start] == [end] collapses it back to a cursor.
      */
     fun setSelection(start: Int, end: Int): Boolean =
         connection()?.setSelection(start, end) ?: false
@@ -35,11 +45,9 @@ class InputConnectionHelper(private val connection: () -> InputConnection?) {
      * Batch-edit deletion of [count] characters ending at absolute offset [end],
      * used to remove a selection.
      *
-     * [InputConnection.deleteSurroundingText] is specified relative to the
-     * selection BOUNDARIES and leaves the selection itself in place, so it can
-     * never delete one; collapsing the cursor to [end] first is what turns it
-     * into an ordinary backward delete. One batch edit, so the editor reports a
-     * single selection change like every other mutation here.
+     * [InputConnection.deleteSurroundingText] works around the selection's boundaries and
+     * leaves the selection in place, so the cursor collapses to [end] first and the call
+     * becomes a backward delete. One batch edit, so the editor reports one selection change.
      */
     fun deleteEndingAt(end: Int, count: Int): Boolean {
         if (count <= 0) return false
@@ -65,9 +73,8 @@ class InputConnectionHelper(private val connection: () -> InputConnection?) {
      * Batch-edit replacement of [beforeCount] chars before the cursor and [afterCount] after
      * it with [head] and [tail], leaving the cursor between the two.
      *
-     * The cursor is put back by committing [tail] with newCursorPosition 0, which the
-     * framework defines as the start of the inserted text. No absolute offset is needed, so
-     * no cached selection can be stale.
+     * [tail] is committed with newCursorPosition 0, the start of the inserted text, so the
+     * cursor needs no absolute offset and no cached selection can be stale.
      */
     fun replaceAroundCursor(
         beforeCount: Int,
@@ -79,7 +86,21 @@ class InputConnectionHelper(private val connection: () -> InputConnection?) {
         ic.beginBatchEdit()
         ic.deleteSurroundingText(beforeCount, afterCount)
         ic.commitText(head, 1)
-        ic.commitText(tail, 0)
+        // A pick mid-word writes no tail: the cursor ends after the word.
+        if (tail.isNotEmpty()) ic.commitText(tail, 0)
+        ic.endBatchEdit()
+        return true
+    }
+
+    /**
+     * Replaces the selection with [text] and selects the result again from [start], in one batch
+     * edit, so the editor reports a single selection change.
+     */
+    fun replaceSelection(start: Int, text: CharSequence): Boolean {
+        val ic = connection() ?: return false
+        ic.beginBatchEdit()
+        ic.commitText(text, 1)
+        ic.setSelection(start, start + text.length)
         ic.endBatchEdit()
         return true
     }

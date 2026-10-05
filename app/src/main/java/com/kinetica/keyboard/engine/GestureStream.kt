@@ -58,15 +58,18 @@ class GestureStream(
     /**
      * Key contacts so far, including the one under the finger right now.
      *
-     * [contacts] is appended only when the pointer LEAVES a key, so the current one is not
-     * in it yet; for an engine-owned stream `currentKey` is never -1, since it is seeded
-     * from the down key and a transition never assigns -1. Hence the plus one.
+     * [contacts] is appended only when the pointer leaves a key, so the current one is not in
+     * it yet; for an engine-owned stream `currentKey` is never -1, since it is seeded from the
+     * down key and a transition never assigns -1. Hence the plus one.
      *
-     * Counts intervals rather than distinct keys: a path that returns to an earlier key
-     * counts it twice. That is the right way round for the one caller, which is asking
-     * whether this pointer has been travelling rather than which keys it saw.
+     * Counts intervals, not distinct keys: a path that returns to an earlier key counts it
+     * twice. The caller asks whether the pointer has been travelling, not which keys it saw.
      */
     val contactCount: Int get() = contacts.size + if (currentKey != -1) 1 else 0
+
+    /** Where the pointer is now, in kw. */
+    val lastX: Float get() = points[points.size - 1].x
+    val lastY: Float get() = points[points.size - 1].y
 
     fun addPoint(xPx: Float, yPx: Float, t: Long) {
         val x = xPx / geometry.keyWidthPx
@@ -76,6 +79,9 @@ class GestureStream(
         val dyl = y - last.y
         val stepSq = dxl * dxl + dyl * dyl
         if (stepSq < MIN_STEP_SQ_KW && t == last.t) return
+        if (stepSq > TELEPORT_STEP_SQ_KW) {
+            DecodeTrace.log { "pointer jump stream=$streamId step=${"%.2f".format(sqrt(stepSq))}kw dt=${t - last.t}ms" }
+        }
         points.add(PathPoint(x, y, t))
         arcLen += sqrt(stepSq)
 
@@ -106,7 +112,7 @@ class GestureStream(
      * Extends the current stationary run, or closes it and re-anchors here.
      * The radius is measured from the run's first sample, so a pointer creeping
      * slower than DWELL_RADIUS_KW / DWELL_MIN_MS never escapes a run and counts
-     * as parked - deliberate: that speed produces no letters.
+     * as parked; that speed produces no letters.
      */
     private fun trackDwell(idx: Int, x: Float, y: Float, t: Long) {
         val dx = x - runAnchorX
@@ -127,9 +133,9 @@ class GestureStream(
 
     /**
      * Records the open run as a dwell if it lasted long enough. On overflow the
-     * SHORTEST recorded dwell is dropped rather than the newest, so a gesture
-     * with many small hesitations still surfaces its real boundaries; removal
-     * keeps the list in time order, which is what path slicing consumes.
+     * shortest recorded dwell is dropped, not the newest, so a gesture with many
+     * small hesitations still surfaces its real boundaries; removal keeps the
+     * list in time order for path slicing.
      */
     private fun closeRun() {
         if (runLastT - runAnchorT < KineticaConstants.DWELL_MIN_MS) return
@@ -145,15 +151,13 @@ class GestureStream(
     }
 
     fun finish(t: Long): InputToken {
-        // The open run is deliberately NOT closed: a pause with no following leg
-        // is not a boundary between anything, so a thumb resting before it lifts
-        // must not segment the gesture.
+        // The open run is not closed: a pause with no following leg is not a boundary, so a
+        // thumb resting before it lifts must not segment the gesture.
         if (currentKey != -1) contacts.add(KeyContact(currentKey, currentEnter, t))
         val dur = t - downTime
         if (maxDispSqKw < tapDispSqKw) {
-            // Spec-literal taps are <150 ms; a stationary dwell decodes exactly
-            // like a zero-length swipe would, and the flag is the UI's
-            // long-press hook.
+            // Spec-literal taps are <150 ms; a stationary dwell decodes like a
+            // zero-length swipe would, and the flag is the UI's long-press hook.
             return TapToken(
                 streamId, downCode, downX, downY,
                 longPress = dur >= KineticaConstants.TAP_MAX_MS,
@@ -169,6 +173,9 @@ class GestureStream(
     }
 
     private companion object {
+        private const val TELEPORT_STEP_SQ_KW =
+            KineticaConstants.TELEPORT_STEP_KW * KineticaConstants.TELEPORT_STEP_KW
+
         const val MIN_STEP_SQ_KW = 1e-8f
         val DWELL_RADIUS_SQ_KW =
             KineticaConstants.DWELL_RADIUS_KW * KineticaConstants.DWELL_RADIUS_KW

@@ -13,26 +13,25 @@ import org.junit.Test
  * Regression suite for resume-after-interruption: a stream pauses mid-word while
  * the other stream acts, then resumes. Two failure modes, one family:
  *
- *  - Interrupted by a TAP ("interessante" -> "Inn"): the tap-split interleave
- *    IS generated but the resumed second half started at the rest position, so
- *    its first letter failed the matcher's start-letter gate and the word was
- *    pruned. Fixed by the distance-peak head trim (resume at the first real
- *    letter the finger turns away from) plus the soft-first-letter fallback
- *    for split halves.
- *  - Interrupted by a SWIPE ("sempre" -> "saremo"): a swipe interrupted by the
- *    other thumb's swipe was structurally ungenerable (the split generator was
- *    tap-only). Fixed by the swipe-around-swipe generator in MergeAlternatives.
+ *  - Interrupted by a tap ("interessante" -> "Inn"): the tap-split interleave was
+ *    generated, but the resumed half started at the rest position, so its first
+ *    letter failed the start-letter gate. Fixed by the distance-peak head trim
+ *    (resume at the first letter the finger turns away from) and the
+ *    soft-first-letter fallback for split halves.
+ *  - Interrupted by a swipe ("sempre" -> "saremo"): the split generator was
+ *    tap-only, so the reading could not be built. Fixed by the
+ *    swipe-around-swipe generator in MergeAlternatives.
  *
  * Timelines are built from [TestData.dwellSwipe] (a single swipe with a mid-path
- * rest) crossed with a tap or swipe on the other stream during the rest, run at
- * a clean and a sloppy overshoot so the fixtures are not perfect-center.
+ * rest) crossed with a tap or swipe on the other stream during the rest, at a
+ * clean and a sloppy overshoot.
  */
 class ResumeAfterInterruptionTest {
 
     private val g = TestData.qwertyGeometry()
 
     /** Hand-weighted dictionary: the reported words, the losing rival, and
-     *  distractors so ranking is a real contest rather than a forced choice. */
+     *  distractors, so ranking is a contest and not a forced choice. */
     private fun dict(): Trie = Trie.build(
         listOf(
             "interessante" to 5000,
@@ -115,8 +114,8 @@ class ResumeAfterInterruptionTest {
 
     @Test
     fun resumeSplitGeneralizesBeyondReportedWords() {
-        // Three analogue words - two tap-interrupted, one swipe-interrupted -
-        // to prove the fix is the mechanism, not a patch for two examples.
+        // Three analogue words, two tap-interrupted and one swipe-interrupted,
+        // so the fix covers the mechanism and not two examples.
         val cases = listOf(
             "wanted" to ::wanted,
             "hunter" to ::hunter,

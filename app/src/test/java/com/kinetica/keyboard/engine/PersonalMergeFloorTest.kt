@@ -8,13 +8,11 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * The personal-word merge floor (KineticaConstants.PERSONAL_MERGE_MIN_COUNT):
- * one stray commit must not become a decodable trie word, because swipe
- * decode then re-commits it and every auto-commit re-learns it - the
- * self-reinforcing poisoning loop captured on a live trace ("sonore" and
- * "imposte" entering the es personal dictionary from language-swap misfires).
- * Rows de-reinforced to zero must not resurrect as freqByte-1 ghosts through
- * the max(1, ..) quantizer either ("quinndi").
+ * The personal-word merge floor (KineticaConstants.PERSONAL_MERGE_MIN_COUNT): one stray commit
+ * must not become a decodable trie word, or the decode re-commits it and every auto-commit
+ * re-learns it ("sonore" and "imposte" entered the es personal dictionary this way). Rows
+ * de-reinforced to zero must not come back as freqByte-1 ghosts through the max(1, ..)
+ * quantizer either ("quinndi").
  */
 class PersonalMergeFloorTest {
 

@@ -15,8 +15,8 @@ import org.junit.Test
  * British spelling is a re-rank, not a language: both spellings of every pair
  * are already in the English wordlist with the American form the more frequent,
  * so the setting exchanges the two counts while the trie is built. These tests
- * pin the three properties that makes it safe - the swap is exact, it is
- * direction-guarded, and it leaves the language's total frequency mass alone.
+ * pin what makes it safe: the swap is exact, direction-guarded, and leaves the
+ * language's total frequency mass alone.
  */
 class BritishSpellingTest {
 
@@ -118,7 +118,7 @@ class BritishSpellingTest {
 
     @Test
     fun theBundledListReRanksRealEnglishSuggestions() {
-        // The point of the feature, on the real asset rather than a fixture.
+        // The feature on the real asset, not a fixture.
         val wl = assetPath("en_wordlist.txt")
         val pl = assetPath("en_gb_variants.txt")
         assumeTrue("en assets not found", Files.exists(wl) && Files.exists(pl))

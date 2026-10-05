@@ -25,6 +25,24 @@ class BigramTable private constructor(
 
     fun sizeBytes(): Int = keys.size * 8 + boosts.size
 
+    /**
+     * What follows [prevWordId] in the table, strongest first, as (next word id, boost byte).
+     * A previous word's pairs are contiguous in the sorted keys, so this is one search and a
+     * slice.
+     */
+    fun successors(prevWordId: Int, limit: Int): List<Pair<Int, Int>> {
+        if (prevWordId < 0 || keys.isEmpty() || limit <= 0) return emptyList()
+        var i = java.util.Arrays.binarySearch(keys, pack(prevWordId, 0))
+        if (i < 0) i = -i - 1
+        val out = ArrayList<Pair<Int, Int>>()
+        while (i < keys.size && (keys[i] ushr 32).toInt() == prevWordId) {
+            out.add((keys[i] and 0xFFFFFFFFL).toInt() to (boosts[i].toInt() and 0xFF))
+            i++
+        }
+        out.sortWith(compareByDescending<Pair<Int, Int>> { it.second }.thenBy { it.first })
+        return if (out.size > limit) out.subList(0, limit) else out
+    }
+
     companion object {
         val EMPTY = BigramTable(LongArray(0), ByteArray(0))
 

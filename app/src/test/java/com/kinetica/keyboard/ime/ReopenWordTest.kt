@@ -7,10 +7,9 @@ import org.junit.Test
 /**
  * The shape half of reopening a word when the cursor is moved into it.
  *
- * Whether a word is actually there is reloadWordUnderCursor's question and it already
- * answers it; what is decided here is only whether this selection change is the kind
- * that could reopen one. It is pure for the same reason hugsPreviousWord and
- * startsNewSentence are: the service around it has no JVM reach at all.
+ * reloadWordUnderCursor decides whether a word is there; this decides only whether the
+ * selection change could reopen one. It is pure, like hugsPreviousWord and startsNewSentence,
+ * because the service around it has no JVM reach.
  */
 class ReopenWordTest {
 
@@ -37,7 +36,7 @@ class ReopenWordTest {
     fun aDisagreeingSelectionIsNotCollapsed() {
         // selectionLength is computed from the cached, normalized offsets while the
         // callback carries the editor's raw ones; if they disagree the cursor is not
-        // where this rule assumes, so it declines rather than guessing.
+        // where this rule assumes, so it declines instead of guessing.
         assertFalse(reopensWordUnderCursor(selectionLength = 0, selStart = 3, selEnd = 7))
     }
 }

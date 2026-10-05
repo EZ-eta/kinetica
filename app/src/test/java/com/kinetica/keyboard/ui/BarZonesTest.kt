@@ -5,11 +5,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * The bar cut itself into five equal zones whatever the words were, so anything long was
- * ellipsized. The report: "three or four suggestions looked the same with ellipses and
- * differed in word endings while only their beginnings were shown."
+ * How the suggestion bar packs words into pages. Five fixed zones ellipsized long words until
+ * candidates differing only in their endings looked the same.
  *
- * Widths here are already the full allowance a word needs, the way the view computes it.
+ * Widths here are already the full allowance a word needs, as the view computes it.
  * A bar 320 units wide is roughly a phone's word area in dp.
  */
 class BarZonesTest {
@@ -20,7 +19,7 @@ class BarZonesTest {
 
     @Test
     fun shortWordsStillFillTheRow() {
-        // The case that must not change: five short candidates, one page, as before.
+        // Five short candidates still share one page.
         assertEquals(listOf(5), sizes(50f, 50f, 50f, 50f, 50f))
     }
 
@@ -45,7 +44,7 @@ class BarZonesTest {
 
     @Test
     fun aWordWiderThanTheBarIsStillGivenAPage() {
-        // Nothing can hold it, so it pages alone and fit() ellipsizes it there. The list
+        // Nothing can hold it, so it pages alone and fit ellipsizes it there. The list
         // must still be complete: every word belongs to exactly one page.
         val s = sizes(400f, 60f, 60f)
         assertEquals(listOf(1, 2), s)
@@ -73,8 +72,8 @@ class BarZonesTest {
 
     @Test
     fun anUnlaidOutBarFallsBackToTheFixedFive() {
-        // width is 0 before layout, so there is nothing to pack against. One page per
-        // word would be the wrong answer to "I do not know yet".
+        // The width is 0 before layout, so there is nothing to pack against; the fixed five is a
+        // better guess than one page per word.
         assertEquals(listOf(5, 5, 1), BarZones.pages(List(11) { 200f }, 0f, 5))
     }
 

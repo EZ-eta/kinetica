@@ -15,7 +15,7 @@ import org.junit.Test
  * memory budget, common-word swipe decodes, accent restoration through both
  * the forms path and tap-autocorrect, and a latency bound against the new
  * dictionary's fan-out. qwerty_pl uses the shared QWERTY letter geometry, so
- * TestData.qwertyGeometry() is the language layout's decode surface.
+ * TestData.qwertyGeometry is the language layout's decode surface.
  */
 class PolishDictionaryTest {
 

@@ -1,23 +1,23 @@
 jeg	2069150
-det	1979613
+det	1979839
 er	1826440
 du	1605909
 ikke	1170584
 en	793071
-og	779801
+og	780174
 i	723469
 har	721357
 vi	677013
-på	653123
-å	637731
+på	660573
+å	648887
 til	566187
 deg	526117
 med	516295
 meg	499883
-han	495561
+han	495657
 for	491081
 hva	490108
-som	449072
+som	449328
 at	441524
 så	424592
 kan	397523
@@ -25,60 +25,60 @@ de	392343
 den	376287
 var	370618
 vil	334135
-om	330004
+om	330320
 av	328202
 men	300649
 skal	286943
-et	259006
-ja	254527
+et	259034
+ja	254565
 her	231520
 hun	225743
-bare	224283
+bare	224422
 dette	220467
 dere	219907
-må	217969
-noe	216038
+må	221745
+noe	216169
 nei	213225
 vet	213037
-nå	198959
+nå	201225
 ham	182021
 min	177201
 ut	176899
-kom	168455
-da	165335
+kom	168562
+da	165418
 din	163387
-oss	157681
-ha	150801
-gjør	148138
-hvor	143314
+oss	157748
+ha	150924
+gjør	149163
+hvor	143408
 fra	143094
 være	140255
-noen	134726
-der	128795
+noen	134811
+der	128836
 dem	127888
 igjen	124570
 se	122749
 ta	119649
 ville	119352
-kommer	113936
+kommer	113998
 alle	112776
-går	111624
+går	112839
 alt	109451
-tror	107702
-hvorfor	107037
-hvordan	106421
-få	106364
-gjøre	105375
+tror	107752
+hvorfor	107077
+hvordan	106447
+få	107783
+gjøre	106066
 hvis	104363
-opp	104011
+opp	104085
 seg	103938
 ingen	103152
 hadde	103032
 sa	100192
-bra	99371
+bra	99490
 henne	98861
 får	98471
-når	98152
+når	99277
 blir	97010
 takk	96518
 gå	93824
@@ -98,25 +98,25 @@ kanskje	74728
 tilbake	74675
 aldri	72723
 vel	72247
-ok	71346
+ok	71575
 skulle	70899
-jo	70806
+jo	70857
 trenger	68748
-to	66711
+to	66771
 sier	65166
 kunne	65083
-vært	63152
+vært	63579
 mer	63058
-også	62812
+også	63526
 før	62800
 over	62260
 man	61812
-tar	60462
+tar	60714
 mye	59798
 selv	59552
-god	58932
+god	58965
 gi	58423
-nok	57794
+nok	57828
 mitt	56379
 hans	56130
 sammen	54941
@@ -124,7 +124,7 @@ gjorde	54749
 dag	53086
 enn	52502
 gang	52114
-andre	51337
+andre	51514
 vær	49837
 fikk	49781
 ned	49646
@@ -135,13 +135,13 @@ siden	47531
 ditt	46929
 helt	45638
 mot	44810
-år	44712
+år	45533
 faen	43446
 hele	43234
 deres	43202
 snakke	42690
 komme	42572
-godt	41704
+godt	41741
 ved	40774
 fordi	40082
 gjort	39696
@@ -166,7 +166,7 @@ finne	34343
 unnskyld	34191
 beklager	34064
 veldig	33903
-hold	33564
+hold	33585
 burde	33054
 tid	32927
 ingenting	32508
@@ -176,7 +176,7 @@ hit	31880
 bedre	31797
 gikk	31778
 hjelpe	31143
-morgen	30504
+morgen	30526
 livet	30333
 akkurat	30049
 vite	29944
@@ -192,16 +192,16 @@ sir	28656
 kjenner	28493
 sin	28151
 samme	27845
-står	27366
+står	27433
 far	27281
 ute	27099
-første	26891
+første	27100
 hjelp	26299
 feil	26267
 snill	26235
-død	26214
+død	26365
 herregud	25910
-forstår	25783
+forstår	26053
 disse	25452
 pappa	25346
 gir	24970
@@ -219,21 +219,21 @@ blitt	22960
 barn	22745
 vei	22704
 bør	22629
-klar	22573
+klar	22613
 holder	22484
 heter	22436
 skjedde	22359
 slutt	22287
 visst	22187
-prøver	22086
+prøver	22196
 penger	21930
 drepe	21787
 fint	21771
 hallo	21525
-tro	21485
+tro	21511
 husker	21203
 drar	21122
-døde	21102
+døde	21206
 borte	21065
 mor	20985
 redd	20978
@@ -259,8 +259,8 @@ hører	19940
 måtte	19837
 veien	19711
 fortelle	19647
-bort	19520
-først	19295
+bort	19541
+først	19442
 inne	19199
 fått	19149
 glad	18894
@@ -280,7 +280,7 @@ lenger	17902
 fortsatt	17857
 annen	17848
 gjerne	17721
-hørte	17602
+hørte	17751
 unna	17111
 nye	17091
 sagt	16735
@@ -289,11 +289,11 @@ vekk	16668
 alene	16539
 hatt	16532
 snakket	16438
-flott	16363
+flott	16418
 derfor	16355
 store	16207
-skjønner	16042
-føler	15963
+skjønner	16153
+føler	16071
 menn	15907
 klart	15900
 ny	15815
@@ -301,14 +301,14 @@ liten	15780
 jobber	15739
 mr	15685
 dø	15637
-håper	15623
+håper	15820
 jævla	15555
 grunn	15518
-ennå	15490
+ennå	15720
 klarer	15482
 dager	15469
 tenkte	15449
-politiet	15277
+politiet	15296
 byen	15212
 ganger	15200
 pengene	15157
@@ -338,7 +338,7 @@ moren	14173
 gutt	14141
 be	14110
 bak	14026
-hørt	13994
+hørt	14077
 natt	13961
 fort	13851
 nettopp	13840
@@ -358,7 +358,7 @@ lille	13496
 engang	13495
 ett	13490
 måte	13490
-dårlig	13478
+dårlig	13605
 hyggelig	13406
 sine	13395
 hodet	13352
@@ -371,9 +371,9 @@ par	13130
 senere	13043
 begynner	13001
 galt	12928
-ba	12857
-prøve	12782
-slå	12712
+ba	12890
+prøve	12894
+slå	12838
 tenker	12692
 vanskelig	12677
 vise	12608
@@ -382,12 +382,12 @@ ringer	12450
 slags	12429
 ti	12318
 allerede	12313
-ønsker	12232
+ønsker	12307
 del	12216
 fortell	12196
-gått	11917
+gått	12030
 hvilken	11872
-prøvde	11846
+prøvde	11903
 pokker	11827
 tenke	11826
 saken	11810
@@ -405,7 +405,7 @@ helst	11547
 jente	11522
 øyeblikk	11468
 tenkt	11454
-spørsmål	11451
+spørsmål	11572
 mellom	11420
 bor	11412
 mi	11332
@@ -418,7 +418,6 @@ stopp	11218
 dro	11200
 stemmer	11197
 rolig	11194
-a	11156
 nytt	11132
 ber	11126
 fortalte	11026
@@ -432,13 +431,13 @@ timer	10817
 vente	10760
 redde	10741
 spise	10719
-høres	10716
+høres	10800
 treffe	10701
 setter	10654
 mennesker	10612
 jenta	10596
 sitter	10580
-sønn	10478
+sønn	10532
 legg	10413
 slapp	10410
 velkommen	10408
@@ -475,11 +474,11 @@ problemer	9572
 ses	9561
 videre	9537
 navnet	9481
-lever	9474
+lever	9506
 holdt	9438
 imot	9435
 utenfor	9426
-spørre	9418
+spørre	9463
 utrolig	9417
 satt	9413
 kone	9409
@@ -518,15 +517,15 @@ ro	8745
 vennen	8733
 glem	8730
 rommet	8685
-kjøre	8684
-øynene	8594
+kjøre	8749
+øynene	8660
 tusen	8580
 vann	8542
 forsiktig	8538
 sjanse	8532
 skolen	8513
 kjører	8507
-løp	8468
+løp	8533
 gal	8456
 lover	8449
 herr	8430
@@ -535,7 +534,7 @@ resten	8403
 side	8391
 pass	8378
 fred	8364
-sønnen	8342
+sønnen	8390
 lage	8322
 plass	8314
 familie	8301
@@ -560,7 +559,7 @@ tur	7913
 tidligere	7887
 kvinner	7876
 the	7831
-ønske	7813
+ønske	7859
 prøv	7789
 bil	7781
 valg	7775
@@ -570,13 +569,12 @@ føles	7619
 vondt	7593
 miss	7562
 straks	7554
-kjøpe	7549
+kjøpe	7617
 gitt	7538
 stund	7524
 laget	7483
 jøss	7474
 rom	7460
-pa	7450
 tidlig	7437
 begynne	7404
 idé	7384
@@ -642,7 +640,7 @@ dum	6482
 fare	6479
 spiser	6462
 sak	6455
-forstå	6454
+forstå	6517
 reise	6446
 slo	6428
 leter	6427
@@ -665,8 +663,8 @@ brukte	6206
 herrer	6184
 york	6162
 trengte	6162
-små	6160
-følge	6152
+små	6236
+følge	6173
 følger	6143
 kaffe	6140
 sende	6112
@@ -717,7 +715,7 @@ hjertet	5628
 charlie	5621
 l	5617
 foreldrene	5605
-døren	5595
+døren	5636
 kun	5589
 sto	5580
 betaler	5572
@@ -761,7 +759,7 @@ tjeneste	5280
 føle	5274
 lå	5254
 høyt	5241
-største	5236
+største	5259
 kort	5216
 kastet	5215
 slåss	5170
@@ -773,7 +771,7 @@ skyt	5128
 rør	5124
 spill	5123
 sjef	5109
-født	5104
+født	5142
 særlig	5100
 kompis	5079
 kontoret	5055
@@ -825,11 +823,11 @@ overalt	4752
 søster	4740
 tuller	4739
 smart	4732
-kjørte	4731
+kjørte	4759
 joe	4726
 skylder	4698
 skriver	4696
-passe	4679
+passe	4712
 alvorlig	4643
 skatt	4641
 president	4641
@@ -846,7 +844,7 @@ bilde	4584
 george	4559
 ordne	4535
 leder	4532
-kjøpte	4528
+kjøpte	4553
 døden	4527
 fest	4524
 tv	4521
@@ -932,7 +930,7 @@ sluttet	4078
 ære	4067
 innen	4063
 kutt	4063
-øyne	4050
+øyne	4074
 ryggen	4045
 fleste	4037
 agent	4036
@@ -949,7 +947,7 @@ dumt	4001
 hjerte	3995
 sprø	3982
 blant	3977
-følte	3975
+følte	4005
 nydelig	3975
 øye	3975
 arbeidet	3972
@@ -987,7 +985,6 @@ levende	3801
 lukter	3800
 maten	3798
 fbi	3791
-ma	3776
 trygg	3768
 film	3757
 betalt	3756
@@ -995,7 +992,7 @@ alex	3751
 kongen	3750
 ordner	3749
 ferdige	3746
-høy	3738
+høy	3760
 møtes	3738
 selger	3730
 virket	3727
@@ -1039,11 +1036,11 @@ enten	3544
 valgte	3532
 ray	3528
 bortsett	3525
-møtte	3525
+møtte	3550
 paul	3520
 munnen	3520
 nærmere	3518
-måned	3501
+måned	3545
 ordentlig	3500
 liksom	3497
 forandret	3484
@@ -1053,7 +1050,7 @@ kalte	3478
 forlot	3476
 oberst	3471
 takke	3464
-spørsmålet	3458
+spørsmålet	3504
 møter	3457
 stakk	3456
 frue	3455
@@ -1124,7 +1121,7 @@ meget	3214
 politi	3212
 flytt	3208
 lunsj	3207
-stol	3207
+stol	3234
 våpenet	3190
 såret	3189
 lest	3187
@@ -1355,7 +1352,7 @@ hvile	2580
 is	2580
 sersjant	2574
 sann	2570
-kjøpt	2568
+kjøpt	2599
 amerikanske	2565
 eddie	2564
 løse	2561
@@ -1521,7 +1518,6 @@ samtidig	2245
 vill	2241
 samlet	2235
 diskutere	2234
-na	2229
 søker	2226
 personer	2223
 sara	2223
@@ -1838,7 +1834,7 @@ fanger	1793
 handlet	1792
 jorda	1791
 kameraet	1790
-trøtt	1789
+trøtt	1808
 jerry	1789
 savne	1788
 kjærligheten	1787
@@ -2255,7 +2251,6 @@ donna	1420
 tja	1419
 knuller	1419
 beskyttet	1419
-fa	1419
 ekkelt	1417
 leiren	1417
 bit	1417
@@ -2512,7 +2507,7 @@ spare	1247
 sliten	1246
 toby	1246
 yeah	1246
-brød	1246
+brød	1269
 bøkene	1244
 sverd	1244
 restauranten	1243
@@ -2553,7 +2548,6 @@ stan	1216
 carlos	1215
 pinlig	1215
 maskinen	1215
-gar	1215
 farge	1214
 mil	1214
 kidnappet	1214
@@ -2702,7 +2696,6 @@ beholder	1128
 cooper	1127
 navnene	1127
 stenger	1126
-nar	1125
 nathan	1125
 dobbelt	1124
 dna	1123
@@ -2899,7 +2892,6 @@ vince	1025
 jaha	1025
 taxi	1025
 oppføre	1025
-gjor	1025
 fingeren	1024
 siktet	1024
 green	1024
@@ -4005,7 +3997,6 @@ matte	691
 avgårde	691
 lngenting	691
 gate	691
-gjore	691
 fiske	691
 spart	691
 reagerer	690
@@ -4122,7 +4113,6 @@ favoritt	668
 liam	668
 gevær	667
 hanna	667
-ogsa	667
 mate	667
 lengst	667
 spy	666
@@ -4181,7 +4171,6 @@ beveg	657
 sans	657
 biff	657
 godteri	656
-ar	656
 keiseren	656
 omstendigheter	656
 pose	655
@@ -5846,7 +5835,6 @@ creek	427
 malte	427
 avgang	427
 ansikter	427
-vart	427
 stjålne	427
 vitser	427
 vinduer	426
@@ -6457,7 +6445,6 @@ tuvok	373
 smule	373
 sinna	373
 filene	373
-øg	373
 nyeste	372
 elias	372
 motorene	372
@@ -7374,7 +7361,6 @@ nigel	316
 inkluderer	316
 sofia	316
 marvin	316
-øm	316
 daphne	316
 vognene	316
 kompisene	316
@@ -8314,7 +8300,6 @@ ynkelige	270
 kanter	270
 kinnet	270
 handa	270
-forstar	270
 tallerken	270
 sanchez	270
 forlatelse	270
@@ -8636,7 +8621,6 @@ jet	256
 epler	256
 clint	256
 godkjente	256
-søm	256
 våg	256
 japanerne	256
 sibley	256
@@ -9376,7 +9360,6 @@ stum	230
 banditter	230
 forelske	230
 løgnen	230
-enna	230
 kirkens	230
 caesar	230
 grillet	230
@@ -9415,7 +9398,6 @@ brothers	229
 motstanderen	229
 systemene	229
 jin	229
-øk	229
 caitlin	229
 divisjon	228
 boone	228
@@ -9492,7 +9474,6 @@ research	226
 georgie	226
 tvinges	226
 merk	226
-dét	226
 poe	226
 statens	226
 gærningen	226
@@ -10051,7 +10032,6 @@ sangene	209
 nødssituasjon	209
 blodbad	209
 trygler	209
-forste	209
 uekte	209
 langsom	209
 varsler	209
@@ -10474,7 +10454,6 @@ kostymet	197
 overlevere	197
 velstående	197
 smykkene	197
-haper	197
 captain	197
 selina	197
 cook	197
@@ -11289,13 +11268,11 @@ minnie	177
 glans	177
 heights	177
 omkom	177
-andré	177
 ransakingsordre	177
 igår	177
 buchanan	177
 objektet	177
 renne	177
-tær	177
 arrestasjon	177
 sultet	177
 ubeleilig	177
@@ -11805,7 +11782,6 @@ innvilget	166
 motivert	166
 flyvåpenet	166
 hadar	165
-ær	165
 zevs	165
 fullfør	165
 lindsey	165
@@ -12680,7 +12656,6 @@ gamlinger	151
 smittsomt	151
 niki	151
 punktert	151
-dod	151
 muldvarp	151
 ruthie	151
 utakknemlige	151
@@ -12771,7 +12746,6 @@ machine	149
 skjevt	149
 lukkes	149
 bmw	149
-horte	149
 graves	149
 tilhøre	149
 svigermor	149
@@ -12874,7 +12848,6 @@ darlene	148
 bøter	147
 evakuert	147
 anga	147
-forst	147
 jekyll	147
 sykepleierne	147
 beklagelig	147
@@ -13436,7 +13409,6 @@ selgeren	139
 nyttige	139
 konas	139
 grande	139
-båre	139
 overbeviser	139
 spøken	139
 passiv	139
@@ -13964,7 +13936,6 @@ sirup	131
 landsbyer	131
 sjåfører	131
 bever	131
-nøe	131
 respekten	131
 guvernørens	131
 konkurrentene	131
@@ -14289,7 +14260,6 @@ sikler	127
 bukta	127
 viagra	127
 anubis	127
-darlig	127
 skjebnens	127
 liza	127
 puter	127
@@ -14352,7 +14322,6 @@ synket	126
 investeringer	126
 glatte	126
 gravene	126
-sla	126
 mellommann	126
 brennes	126
 understreke	126
@@ -14611,7 +14580,6 @@ overveier	123
 diktator	123
 maxwell	123
 republikaner	123
-hå	123
 symbolene	123
 teip	123
 arkivene	123
@@ -14994,7 +14962,6 @@ svinner	119
 programvaren	119
 fay	119
 bosse	119
-brå	119
 væsken	119
 ananas	119
 kjøkkensjef	119
@@ -15529,7 +15496,6 @@ motsetter	113
 aggressivt	113
 trask	113
 regnskapsfører	113
-gatt	113
 autentisk	113
 doreen	113
 flaksen	113
@@ -15656,7 +15622,6 @@ opplysning	112
 dau	112
 fornektelse	112
 primitiv	112
-prove	112
 corey	112
 påføre	112
 drastisk	112
@@ -15753,7 +15718,6 @@ opplæringen	111
 bertram	111
 ames	111
 storkar	111
-skjonner	111
 godsakene	111
 pågripelsen	111
 sully	111
@@ -15821,7 +15785,6 @@ lerretet	110
 navigere	110
 foxtrot	110
 unnsluppet	110
-prover	110
 journalene	110
 buckingham	110
 forbanner	110
@@ -16019,7 +15982,6 @@ sikkerhetssjef	108
 mccabe	108
 fjernkontroll	108
 allergi	108
-foler	108
 inndratt	108
 omvisningen	108
 utbytte	108
@@ -16142,7 +16104,6 @@ feltmarskalk	107
 seamus	107
 knyttes	107
 music	107
-køm	107
 dunham	107
 lårene	107
 tron	107
@@ -16418,7 +16379,6 @@ dyrebar	104
 nichols	104
 ø	104
 ventilen	104
-dode	104
 edna	104
 asteroiden	104
 tilhørt	104
@@ -17357,7 +17317,6 @@ eisenhower	96
 søla	96
 slengte	96
 beslag	96
-hån	96
 skalaen	96
 keiserinne	96
 flag	96
@@ -17554,7 +17513,6 @@ bobilen	94
 innretningen	94
 anstrengelser	94
 minnepinnen	94
-hvør	94
 fryktede	94
 wilkins	94
 teoriene	94
@@ -18695,7 +18653,6 @@ benito	85
 broussard	85
 niller	85
 bragt	85
-nøen	85
 aires	85
 vulgær	85
 swift	85
@@ -18916,7 +18873,6 @@ arkitekten	84
 sørgelige	84
 bankmann	84
 overdrivelse	84
-hores	84
 pilar	84
 privatskole	84
 atferden	84
@@ -18991,7 +18947,6 @@ juno	83
 non	83
 upper	83
 second	83
-då	83
 avskjedsgave	83
 traumatisert	83
 snarveier	83
@@ -19082,7 +19037,6 @@ margaery	83
 pakkene	83
 platt	83
 tjenestene	83
-hort	83
 dildo	83
 dor	83
 tåregass	83
@@ -20204,7 +20158,6 @@ xerxes	76
 forfølgelse	76
 førstedame	76
 higer	76
-sma	76
 autopilot	76
 overbetjenten	76
 tomasz	76
@@ -20318,7 +20271,6 @@ favner	75
 båren	75
 shop	75
 reserver	75
-onsker	75
 skorpionen	75
 overfylt	75
 carr	75
@@ -20350,7 +20302,6 @@ noenlunde	75
 lokaler	75
 marko	75
 oppskrifter	75
-tår	75
 scarlet	75
 kronet	75
 tenkning	75
@@ -20364,7 +20315,6 @@ stemple	75
 engen	75
 archibald	75
 misnøye	75
-spørsmal	75
 prestasjoner	75
 hercules	75
 føiger	75
@@ -20489,7 +20439,6 @@ rødhårede	74
 tamponger	74
 rustom	74
 tute	74
-øpp	74
 lidende	74
 reke	74
 gamlemåten	74
@@ -21736,7 +21685,6 @@ glimtet	68
 dødskult	68
 utgjorde	68
 forrådet	68
-kjope	68
 kjemikaliene	68
 redskaper	68
 halliwell	68
@@ -21919,7 +21867,6 @@ juksemaker	67
 smågutter	67
 sinnstilstand	67
 walther	67
-stær	67
 standarden	67
 hoved	67
 stabssjefen	67
@@ -22082,7 +22029,6 @@ formodentlig	67
 brannskader	67
 blokka	67
 urinprøve	67
-øss	67
 narkohandel	67
 kjekkere	67
 tribune	67
@@ -22280,7 +22226,6 @@ cherie	66
 medgjørlig	66
 derby	66
 lommelykta	66
-oynene	66
 demo	66
 øvet	66
 emiliano	66
@@ -22400,7 +22345,6 @@ velkjente	65
 grevens	65
 usselt	65
 letty	65
-kjore	65
 jurymedlem	65
 tillates	65
 humbert	65
@@ -22467,7 +22411,6 @@ bakom	65
 evy	65
 fargerik	65
 savi	65
-lop	65
 provoserte	65
 bundy	65
 sabla	65
@@ -22931,7 +22874,6 @@ bandene	63
 evolusjonen	63
 marguerite	63
 sløste	63
-forsta	63
 presidentkandidat	63
 fylke	63
 demelza	63
@@ -23090,7 +23032,6 @@ utnevnelsen	62
 holdninger	62
 hej	62
 skrikingen	62
-kømmer	62
 paraplyen	62
 natalia	62
 motarbeider	62
@@ -23677,7 +23618,6 @@ vaskehjelpen	60
 respektable	60
 unntaket	60
 doss	60
-tø	60
 tarvelig	60
 rochelle	60
 hawking	60
@@ -24369,7 +24309,6 @@ spunk	57
 muggen	57
 spiskammeret	57
 tipser	57
-provde	57
 verrat	57
 fredagen	57
 bommen	57
@@ -24795,7 +24734,6 @@ barsk	55
 ostekake	55
 tjenestegjøre	55
 talende	55
-fløtt	55
 napier	55
 evas	55
 sølvfarget	55
@@ -25272,7 +25210,6 @@ helseløs	54
 utflukter	54
 sinns	54
 publiserte	54
-sonn	54
 ørner	54
 digge	54
 kneppe	54
@@ -26050,7 +25987,6 @@ oyster	51
 flamingo	51
 babineaux	51
 pippin	51
-jø	51
 belladonna	51
 lytterne	51
 brannigan	51
@@ -26613,7 +26549,6 @@ sveklinger	50
 guam	50
 priset	50
 grotter	50
-trør	50
 ansjos	50
 morbid	50
 prefekt	50
@@ -27241,7 +27176,6 @@ visesheriffen	48
 blemmer	48
 ocho	48
 eri	48
-sonnen	48
 nettsteder	48
 pikkolo	48
 carlsen	48
@@ -27471,7 +27405,6 @@ belysning	47
 kvelertak	47
 ingeniøren	47
 splitt	47
-øgså	47
 prøveresultatene	47
 wharton	47
 påpeker	47
@@ -27803,7 +27736,6 @@ bråkmakere	46
 treningssenteret	46
 kommersielle	46
 regnvær	46
-onske	46
 underrommet	46
 indias	46
 visjonene	46
@@ -28076,7 +28008,6 @@ brudeparet	46
 konstante	46
 strawberry	46
 jordnær	46
-sporsmal	46
 aksjemarkedet	46
 sandberg	46
 tonene	46
@@ -28322,7 +28253,6 @@ djerv	45
 utgytt	45
 sejanus	45
 statist	45
-sporre	45
 bakhagen	45
 choya	45
 saget	45
@@ -28646,7 +28576,6 @@ flaggermusen	44
 sinnsyke	44
 morningstar	44
 ich	44
-maned	44
 sitert	44
 ramona	44
 overholder	44
@@ -30130,7 +30059,6 @@ lumsk	41
 viner	41
 årstid	41
 kneble	41
-doren	41
 lagrene	41
 rivas	41
 akio	41
@@ -30337,7 +30265,6 @@ telles	41
 smartingen	41
 forbløffe	41
 kardashian	41
-dér	41
 lune	41
 iik	41
 gjeninnsatt	41
@@ -30370,7 +30297,6 @@ armhulen	40
 racine	40
 dawg	40
 tarly	40
-hvørfør	40
 pickering	40
 greina	40
 gjetninger	40
@@ -30540,7 +30466,6 @@ leone	40
 wiiiiam	40
 hagene	40
 meteoren	40
-klår	40
 deucalion	40
 formuer	40
 pennys	40
@@ -31365,7 +31290,6 @@ avdelingens	38
 bille	38
 sjampanjen	38
 visker	38
-fodt	38
 stumper	38
 fole	38
 muir	38
@@ -31737,7 +31661,6 @@ moderlig	38
 giftermålet	38
 kunsthandler	38
 feltene	38
-jæ	38
 overtalende	38
 registreres	38
 athena	38
@@ -32031,7 +31954,6 @@ fortvilelsen	37
 rante	37
 knowles	37
 forderver	37
-næ	37
 corps	37
 vitenskapsfolk	37
 avanserer	37
@@ -32084,7 +32006,6 @@ valeria	37
 stagg	37
 lovprise	37
 khama	37
-gødt	37
 oppdragsgiveren	37
 dryppe	37
 jansson	37
@@ -33818,7 +33739,6 @@ brenning	34
 stanzler	34
 sågar	34
 net	34
-nøk	34
 rei	34
 samlinger	34
 klamret	34
@@ -34406,7 +34326,6 @@ etterforsking	33
 imamen	33
 praktisert	33
 slankekur	33
-gød	33
 whitacre	33
 hanley	33
 noi	33
@@ -34563,7 +34482,6 @@ matforgiftet	33
 utholdenheten	33
 renfield	33
 lufttett	33
-bæ	33
 becket	33
 yara	33
 matkuponger	33
@@ -34780,7 +34698,6 @@ strucker	33
 lyman	33
 bilulykker	33
 yakov	33
-passé	33
 flower	33
 samboere	33
 vanskapning	33
@@ -34950,7 +34867,6 @@ lilian	32
 drucker	32
 minotaur	32
 falmer	32
-levér	32
 avholder	32
 vg	32
 uangripelig	32
@@ -36016,7 +35932,6 @@ sjangse	31
 nordisk	31
 harmonien	31
 erteris	31
-kjopt	31
 temperamentsfull	31
 nordlig	31
 småbyer	31
@@ -36972,7 +36887,6 @@ staker	30
 serber	30
 caulder	30
 diktatorer	30
-folte	30
 kunnskapens	30
 octavius	30
 solariet	30
@@ -38137,7 +38051,6 @@ jeffs	28
 irisen	28
 omalu	28
 millicent	28
-ét	28
 patolog	28
 udyrets	28
 saksere	28
@@ -38341,7 +38254,6 @@ pasjon	28
 angier	28
 guiiet	28
 kitten	28
-kjorte	28
 yubaba	28
 feilte	28
 saldo	28
@@ -39586,7 +39498,6 @@ klagende	27
 teamets	27
 nådestøtet	27
 stabiliteten	27
-støl	27
 snacksen	27
 altseende	27
 heleri	27
@@ -39864,7 +39775,6 @@ terrorismen	26
 gulroten	26
 fingere	26
 lommekniven	26
-trø	26
 flatbush	26
 wilf	26
 dawgs	26
@@ -40458,7 +40368,6 @@ smertens	26
 vestfra	26
 youssef	26
 erme	26
-hvørdan	26
 eminem	26
 utvides	26
 kveite	26
@@ -41548,7 +41457,6 @@ driftig	25
 stoffskiftet	25
 sosialisme	25
 rakket	25
-motte	25
 konsortium	25
 vinnings	25
 oralt	25
@@ -41628,7 +41536,6 @@ shuko	25
 dantana	25
 piuss	25
 hackett	25
-kjopte	25
 fjerdedeler	25
 drabelig	25
 dinesen	25
@@ -41927,7 +41834,6 @@ ruinen	24
 utregninger	24
 minna	24
 towne	24
-sporsmalet	24
 knøtt	24
 bruket	24
 melis	24
@@ -41936,7 +41842,6 @@ sønners	24
 flystyrten	24
 goo	24
 feb	24
-oyne	24
 helv	24
 universe	24
 sable	24
@@ -42930,7 +42835,6 @@ burritos	23
 motvillige	23
 elastisk	23
 farsdag	23
-storste	23
 bladde	23
 studentforeningen	23
 flyttefolkene	23
@@ -43429,7 +43333,6 @@ signering	23
 forbyttet	23
 glemselen	23
 komponent	23
-brod	23
 briefe	23
 lndiana	23
 tilson	23
@@ -44905,7 +44808,6 @@ freaker	22
 øhh	22
 meisel	22
 østavind	22
-spørsmalet	22
 tære	22
 rupier	22
 sikkerhetsfirma	22
@@ -45024,7 +44926,6 @@ landstrykere	22
 ildflue	22
 aki	22
 knallhard	22
-mørgen	22
 een	22
 sion	22
 kjøpesentret	22
@@ -45395,7 +45296,6 @@ injurier	22
 alarmerende	22
 omsorgsfulle	22
 genomet	22
-hoy	22
 hjorter	22
 darya	22
 naturkatastrofer	22
@@ -45981,7 +45881,6 @@ bøyes	21
 chevron	21
 dødscelle	21
 toff	21
-folge	21
 blinklyset	21
 arrietty	21
 korgutt	21
@@ -46241,7 +46140,6 @@ doucette	21
 fondue	21
 kommertilbake	21
 voksnes	21
-høld	21
 kremere	21
 pappesker	21
 mølle	21
@@ -46545,7 +46443,6 @@ avslappede	21
 catharine	21
 småfeil	21
 diskriminerende	21
-børt	21
 nytelser	21
 rangel	21
 giancarlo	21
@@ -48759,7 +48656,6 @@ påmelding	19
 bjeffing	19
 wingman	19
 skrivemaskiner	19
-trott	19
 backer	19
 gangbroen	19
 mechs	19
@@ -48902,7 +48798,6 @@ gripes	19
 ørten	19
 ponyboy	19
 izzys	19
-pølitiet	19
 selvmotsigende	19
 pesto	19
 rokker	19

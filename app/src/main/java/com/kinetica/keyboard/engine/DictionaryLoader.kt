@@ -7,10 +7,9 @@ import kotlin.math.max
 data class WordForm(val display: String, val freqByte: Int)
 
 /**
- * A trie over folded (a-z + apostrophe) keys plus, for the folded keys whose
- * spelling differs from the key or that several spellings share ("po" vs
- * "pò", "senti" vs "sentì"), the display variants ordered by frequency.
- * English produces an empty map; accented-language assets populate it.
+ * A trie over folded keys plus, for keys whose spelling differs from the key or that several
+ * spellings share ("po" vs "pò", "senti" vs "sentì"), the display variants ordered by frequency.
+ * English produces an empty map; accented languages populate it.
  */
 class LoadedDictionary(
     val trie: Trie,
@@ -26,28 +25,23 @@ object DictionaryLoader {
     /**
      * Lines of "word&lt;TAB&gt;count". Invalid lines are skipped, not fatal.
      *
-     * [blocked] holds lower-cased spellings the user never wants offered. They
-     * are dropped here, before folding and before the trie is built, so a
-     * blocked word leaves no node behind and cannot be decoded, completed or
-     * suggested. Filtering the corpus alone would not be enough - a word typed
-     * often enough comes back through [extraWords] - so the block applies to
-     * both sources.
+     * [blocked] holds lower-cased spellings the user never wants offered. They are dropped before
+     * folding and before the trie is built, so a blocked word leaves no node and cannot be decoded,
+     * completed or suggested. The block covers [extraWords] too, since a word typed often enough
+     * comes back through them.
      *
-     * [spellingSwaps] maps a spelling to the one the user prefers, US to UK for
-     * British English. Both spellings are already in the list, so this exchanges
-     * their two counts rather than adding or removing anything: the preferred
-     * form becomes exactly as frequent as the other was. A swap rather than a
-     * multiplier because the measured ratios run 1.0x to 4.2x, so no single
-     * constant serves both "realise" and "catalogue"; and because exchanging two
-     * counts leaves the language's overall frequency distribution untouched,
-     * which matters when cross-language auto-detect compares confidences between
-     * dictionaries.
+     * [spellingSwaps] maps a spelling to the one the user prefers, US to UK for British English.
+     * Both spellings are in the list, so their counts are exchanged. A swap, not a multiplier: the
+     * measured ratios run 1.0x to 4.2x, so no one constant serves both "realise" and "catalogue",
+     * and an exchange leaves the frequency distribution that cross-language auto-detect compares
+     * untouched.
      */
     fun load(
         reader: BufferedReader,
         extraWords: List<Pair<String, Int>> = emptyList(),
         blocked: Set<String> = emptySet(),
         spellingSwaps: Map<String, String> = emptyMap(),
+        alphabet: Alphabet = Alphabet.LATIN,
     ): LoadedDictionary {
         // Duplicate displays (corpus word also in the user dictionary) merge
         // by summing counts, so personal use adds to corpus evidence.
@@ -60,16 +54,27 @@ object DictionaryLoader {
             if (word.lowercase() in blocked) return@forEachLine
             countByDisplay[word] = (countByDisplay[word] ?: 0) + count
         }
+        // A learned spelling that only leaves the accents off a bundled word is not merged: as a
+        // form it would outrank the word it misspells, and the bundled lists drop theirs for the
+        // same reason. Rows learned earlier stay in the database and no longer reach the trie.
+        val bundledSpellings = HashSet<String>()
+        val bundledKeys = HashSet<String>()
+        if (extraWords.isNotEmpty()) {
+            for (w in countByDisplay.keys) {
+                bundledSpellings.add(w.lowercase())
+                bundledKeys.add(AccentFolder.fold(w))
+            }
+        }
         for ((word, count) in extraWords) {
-            if (word.lowercase() in blocked) continue
+            val lower = word.lowercase()
+            if (lower in blocked) continue
+            if (AccentFolder.fold(lower) == lower && lower !in bundledSpellings && lower in bundledKeys) continue
             countByDisplay[word] = (countByDisplay[word] ?: 0) + count
         }
 
-        // After both sources are counted, so a personal commit of either
-        // spelling is part of what gets exchanged. Guarded on the direction:
-        // four of the generator's candidate pairs already have the preferred
-        // spelling ahead ("dialogue" 5 975 against "dialog" 399), and swapping
-        // those would demote it.
+        // After both sources are counted, so a personal commit of either spelling is exchanged
+        // too. Only when the preferred spelling trails: four pairs already have it ahead
+        // ("dialogue" 5 975 against "dialog" 399), and swapping those would demote it.
         for ((from, to) in spellingSwaps) {
             val fromCount = countByDisplay[from] ?: continue
             val toCount = countByDisplay[to] ?: continue
@@ -92,7 +97,7 @@ object DictionaryLoader {
             trieInput.add(folded to top)
             maxCount = max(maxCount, top.toLong())
         }
-        val trie = Trie.build(trieInput)
+        val trie = Trie.build(trieInput, alphabet)
 
         val forms = HashMap<Int, List<WordForm>>()
         for ((folded, variants) in byFolded) {
@@ -107,9 +112,8 @@ object DictionaryLoader {
     }
 
     /**
-     * Lines of "from<TAB>to", the spelling pair list for [load]'s
-     * spellingSwaps. Invalid lines are skipped, not fatal, exactly as in the
-     * wordlist parser.
+     * Lines of "from<TAB>to", the spelling pair list for [load]'s spellingSwaps. Invalid lines are
+     * skipped, not fatal, as in the wordlist parser.
      */
     fun loadSpellingSwaps(reader: BufferedReader): Map<String, String> {
         val out = LinkedHashMap<String, String>(200)
@@ -125,10 +129,9 @@ object DictionaryLoader {
     }
 
     /**
-     * Raw per-user commit counts (word -> count) filtered by the personal
-     * merge floor and scaled for [load]'s extraWords: rows below
-     * PERSONAL_MERGE_MIN_COUNT (including de-reinforced-to-zero rows) never
-     * reach the trie - see the constant's rationale.
+     * Raw per-user commit counts (word -> count) filtered by the personal merge floor and scaled
+     * for [load]'s extraWords. Rows below PERSONAL_MERGE_MIN_COUNT, including rows de-reinforced
+     * to zero, never reach the trie; see the constant's rationale.
      */
     fun userWordsForMerge(rows: List<Pair<String, Int>>): List<Pair<String, Int>> =
         rows.filter { it.second >= KineticaConstants.PERSONAL_MERGE_MIN_COUNT }

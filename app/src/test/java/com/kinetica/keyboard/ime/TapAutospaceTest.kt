@@ -7,8 +7,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * The two decisions behind autospacing a tapped word, kept pure for the reason
- * hugsPreviousWord and startsNewSentence are: the service around them has no JVM reach.
+ * The two decisions behind autospacing a tapped word, pure like hugsPreviousWord and
+ * startsNewSentence because the service around them has no JVM reach.
  */
 class TapAutospaceTest {
 
@@ -52,9 +52,9 @@ class TapAutospaceTest {
 
     @Test
     fun aSingleLetterFiresOnlyWhenItIsAWordInThisLanguage() {
-        // It used to never fire, and `a` and `I` being refused cost a manual space on 12%
-        // of the words in the first prose capture. The gate is not the dictionary - every
-        // letter a-z is an entry - it is StandaloneLetters' curated per-language list.
+        // One-letter words are 12% of the words in captured prose, so `a` and `I` must space.
+        // The gate is StandaloneLetters' curated per-language list, not the dictionary, where
+        // every letter a-z is an entry.
         assertTrue(fires(literal = "a", literalIsWord = true, literalIsStandaloneLetter = true))
         // `t` is in en_wordlist at 72 881 and is not a word anyone types alone.
         assertFalse(fires(literal = "t", literalIsWord = true, literalIsStandaloneLetter = false))
@@ -79,9 +79,8 @@ class TapAutospaceTest {
 
     @Test
     fun aSingleLetterAfterAnApostropheStillRefuses() {
-        // Why the joined branch comes first. The `a` of `dell'anno` is preceded by an
-        // apostrophe, so it never reaches the one-letter rule - which is what keeps the one
-        // genuine premature fire the sweep found out of the shipped behaviour.
+        // The joined branch comes first: the `a` of `dell'anno` follows an apostrophe, so it
+        // never reaches the one-letter rule. It was the only premature fire on captured prose.
         assertFalse(
             fires(
                 literal = "a", literalIsWord = true, literalIsStandaloneLetter = true,
@@ -128,30 +127,25 @@ class TapAutospaceTest {
 
     @Test
     fun oneDeleteIsEnoughToStopIt() {
-        // The developer's report: deleting the space reopens the word as tap anchors,
-        // which is indistinguishable from a freshly tapped one, so the timer armed again
-        // and `name@mail.com` could not be typed at all. What tells the two apart is that
-        // the reload carries no gesture - see aReloadedWordDoesNotArmTheTimer, which is
-        // the same claim from the other side.
+        // Deleting the space reopens the word as tap anchors, which look like a freshly tapped
+        // word, so the timer would arm again and `name@mail.com` could not be typed. The reload
+        // carries no gesture, which tells them apart; aReloadedWordDoesNotArmTheTimer makes the
+        // same claim from the other side.
         assertFalse(fires(literal = "name", literalIsWord = true, carriesNoToken = true))
     }
 
     @Test
     fun aWordCompletedAfterDeletingItsSpaceEarnsANewOne() {
-        // Reported from the 1.0.5 candidate: `car`, delete the space, then `pet`, and the
-        // finished `carpet` got nothing. `carpet` is a different and completed word, and
-        // the space it never got had been refused for `car` a second and a half earlier.
-        // A flag recording the delete is what did that, and retiring it is the fix - so
-        // this asserts the ABSENCE of a gate, which is why it is named for the case.
+        // `car`, delete the space, then `pet`: the finished `carpet` is a different, completed
+        // word and earns its space. A flag recording the delete used to refuse it, so this
+        // asserts the absence of a gate.
         assertTrue(fires(literal = "carpet", literalIsWord = true, carriesNoToken = false))
     }
 
     @Test
     fun aFreshlySwipedWordAfterASlideEarnsItsSpace() {
-        // The other half of the same defect, and the one that was mis-read as a bug in the
-        // first place. Sliding a swiped word's space away abandons the word WITHOUT
-        // reloading, so the next gesture is a new word and its space is earned. The
-        // capture's `refused=true` wakes on this path were correct fires.
+        // The other half of the same defect. Sliding a swiped word's space away abandons the
+        // word without reloading, so the next gesture is a new word and its space is earned.
         assertTrue(
             autospacesSwipedWord(
                 hasSwipeToken = true, addressField = false, carriesNoToken = false,
@@ -174,9 +168,8 @@ class TapAutospaceTest {
 
     @Test
     fun aWordThatContinuesAnEarlierTokenTakesNoSpace() {
-        // Reported by accident: a log saved as `notes 14.log`, where only the `14` was
-        // typed. `_` finalizes the word, `notes` is in the dictionary, and the space landed
-        // before the digits.
+        // A log saved as `notes 14.log`, where only the `14` was typed: `_` finalizes the word,
+        // `notes` is in the dictionary, and the space landed before the digits.
         assertFalse(fires(literal = "notes", literalIsWord = true, joinedToWhatPrecedes = true))
     }
 
@@ -195,7 +188,7 @@ class TapAutospaceTest {
 
     @Test
     fun ordinaryTypingIsUntouched() {
-        // The common case by an enormous margin, and the one that must not move.
+        // By far the common case.
         assertFalse(joinsPrecedingToken("hello "))
         assertFalse(joinsPrecedingToken("Hi.\t"))
         assertFalse(joinsPrecedingToken("first\n"))
@@ -205,10 +198,10 @@ class TapAutospaceTest {
 
     @Test
     fun anOpeningQuoteOrBracketStillSpaces() {
-        // `"hello world"` has to keep its space, which is why this is not
-        // "anything that is not whitespace".
+        // `"hello world"` has to keep its space, so the rule is not "anything that is not
+        // whitespace".
         assertFalse(joinsPrecedingToken("\""))
-        // The straight apostrophe is NOT an opener: Italian elision beats quoting.
+        // The straight apostrophe is not an opener: Italian elision beats quoting.
         assertTrue(joinsPrecedingToken("l'"))
         assertFalse(joinsPrecedingToken("("))
         assertFalse(joinsPrecedingToken("["))
@@ -241,7 +234,7 @@ class TapAutospaceTest {
 
     @Test
     fun aRealContinuationIsStillTakenBack() {
-        // What the retraction is FOR, and both cases the KDoc names: a premature space
+        // What the retraction is for, and both cases its KDoc names: a premature space
         // inside `automatico`, and `is` + `land`. Both fuse into something that can still
         // become a word, so both still retract.
         assertTrue(
@@ -267,10 +260,10 @@ class TapAutospaceTest {
 
     @Test
     fun aShortFirstWordCanStillFuseAndThatIsWhatTheWindowIsFor() {
-        // The residue: `la` + `g` is `lag`, a live prefix of `lago`, so the
-        // gate passes it and `la gente` can still fuse. Measured over the 2026-08-29
-        // capture: nothing of six letters or more still fuses, 2 of 16 at four to five,
-        // and most two- and three-letter words do. The window is what bounds the rest.
+        // The residue: `la` + `g` is `lag`, a live prefix of `lago`, so the gate passes it and
+        // `la gente` can still fuse. On one prose capture nothing of six letters or more fuses,
+        // 2 of 16 at four to five, and most two- and three-letter words do; the window bounds
+        // the rest.
         assertTrue(
             retractsAutospace(
                 fromTappedWord = true, tentativeLength = 0, elapsedMs = 120,
@@ -283,10 +276,10 @@ class TapAutospaceTest {
 
     @Test
     fun aReopenedWordIsStampedBeforeTheLetterThatReopenedIt() {
-        // The letter that triggers the reload carries its REAL touch time. Basing the
-        // anchors on `now` put them after it whenever touch-to-reload latency exceeded the
-        // word's length in ms, so the new letter sorted before the whole reloaded word:
-        // `automatico` + `p` reached the decoder as `pautomatico`.
+        // The letter that triggers the reload carries its real touch time. Anchors based on
+        // `now` land after it whenever touch-to-reload latency exceeds the word's length in ms,
+        // so the new letter sorts before the whole reloaded word: `automatico` + `p` reached the
+        // decoder as `pautomatico`.
         val touch = 10_000L
         val base = reloadAnchorBase(touch, count = 10)
         assertTrue("first anchor must precede the touch", base < touch)
@@ -311,9 +304,9 @@ class TapAutospaceTest {
 
     @Test
     fun aContractionAutospacesAlthoughTheComposerOnlySawItsTail() {
-        // `don't` reaches the composer as `don`, then a one-letter `t` - the apostrophe
-        // routes to onPunctuation and finalizes the word. So the literal alone can never
-        // earn the space, and until now no apostrophe word autospaced in any language.
+        // `don't` reaches the composer as `don`, then a one-letter `t`, because the apostrophe
+        // routes to onPunctuation and finalizes the word. The literal alone can never earn the
+        // space.
         assertTrue(
             fires(
                 literal = "t", literalIsWord = false,
@@ -365,7 +358,7 @@ class TapAutospaceTest {
 
     @Test
     fun anElidedWordAutospacesOnItsSecondHalf() {
-        // The developer's choice, stated as a preference over the quoting case: an
+        // Chosen over the quoting case: an
         // apostrophe joiner whose whole token is not a word falls back to judging the
         // piece after it. `dell'anno`, `d'accordo`, `un'ora`, `nell'immagine` are all
         // absent from it_wordlist.txt, so the joined lookup can never find them; `anno`,
@@ -381,7 +374,7 @@ class TapAutospaceTest {
 
     @Test
     fun theFallbackIsForTheApostropheAlone() {
-        // The behaviour the report asked to KEEP. `log-12.com` joins on `.`, and `12` is
+        // Behaviour to keep. `log-12.com` joins on `.`, and `12` is
         // no word, so the token lookup is the only question asked and it answers no. Same
         // for `notes_14.log` and `name@mail.com`.
         assertFalse(
@@ -397,7 +390,7 @@ class TapAutospaceTest {
     fun aContractionStillGoesThroughTheJoinedLookup() {
         // `don't` and `it's` are in en_wordlist with large counts, so the whole token is a
         // word and the first branch answers before the fallback is reached. That matters
-        // because their tails - `t` and `s` - would fail the length rule outright.
+        // because their tails, `t` and `s`, would fail the length rule outright.
         assertTrue(
             fires(
                 literal = "t", literalIsWord = false,
@@ -410,8 +403,8 @@ class TapAutospaceTest {
     @Test
     fun theLengthRuleStillGovernsTheTail() {
         // A one-letter tail earns nothing on its own: the fallback lends the elision the
-        // ORDINARY tap rule, it does not lend it a shorter one. `c'e` gets no space, and
-        // `c'\u00e8` would need the joined lookup - i.e. the wordlist - to find it.
+        // ordinary tap rule, not a shorter one. `c'e` gets no space, and
+        // `c'\u00e8` would need the joined lookup, the wordlist, to find it.
         assertFalse(
             fires(
                 literal = "e", literalIsWord = true,
@@ -425,7 +418,7 @@ class TapAutospaceTest {
     fun whichJoinerItIsIsReadFromTheEditor() {
         assertTrue(joinedByApostrophe("dell'"))
         assertTrue(joinedByApostrophe("don'"))
-        // The typographic form too - the symbols layer offers it as an alternate.
+        // The typographic form too: the symbols layer offers it as an alternate.
         assertTrue(joinedByApostrophe("don\u2019"))
         assertFalse(joinedByApostrophe("session_"))
         assertFalse(joinedByApostrophe("example."))
@@ -437,9 +430,9 @@ class TapAutospaceTest {
 
     @Test
     fun theRetractionAsksAboutTheTailToo() {
-        // `dell'ann` earns a space because `ann` is an entry, so the `o` has to take it
-        // back - and isLivePrefix("dell'anno") answers no, because no elided form is in
-        // the trie at all. The tail is what makes the fusion answerable.
+        // `dell'ann` earns a space because `ann` is an entry, so the `o` has to take it back,
+        // and isLivePrefix("dell'anno") answers no because no elided form is in the trie.
+        // Asking about the tail makes the fusion answerable.
         assertEquals("ann", tailAfterLastApostrophe("dell'ann"))
         assertEquals("al", tailAfterLastApostrophe("l'al"))
         assertEquals("s", tailAfterLastApostrophe("it's"))
@@ -455,18 +448,16 @@ class TapAutospaceTest {
 
     @Test
     fun aReloadedWordDoesNotArmTheTimer() {
-        // Item 46's first mechanism. reloadWordUnderCursor seeds synthetic anchors and
-        // seed() decodes them, so the result is indistinguishable here from a thumb's - and
-        // a word the user parked a cursor in has not been finished. 15 of the 57 fires in
-        // the 1.0.5k capture were this, `log` five times and `dell` twice.
+        // reloadWordUnderCursor seeds synthetic anchors and seed decodes them, so
+        // the result looks like a thumb's, but a word the user parked a cursor in is not
+        // finished. On one capture 15 of 57 fires were this.
         assertFalse(fires(literal = "dell", literalIsWord = true, carriesNoToken = true))
     }
 
     @Test
     fun aRealTokenAfterTheReloadArmsItAgain() {
-        // The point of the flag being about the DECODE rather than about the word: extending
-        // a reopened word is exactly what the reopen is for, and the letter that extends it
-        // is evidence of its own.
+        // The flag is about the decode, not the word: extending a reopened word is what the
+        // reopen is for, and the letter that extends it is evidence of its own.
         assertTrue(fires(literal = "dell", literalIsWord = true, carriesNoToken = false))
     }
 
@@ -490,10 +481,9 @@ class TapAutospaceTest {
 
     @Test
     fun oneLetterWaitsLongerThanAWord() {
-        // The whole of what makes the one-letter rule affordable. `a` is a word and it is
-        // also the first letter of `and`, `arrivato` and `ad`; no delay tells those apart
-        // by shape, only silence does. The developer's own slider is 204 ms, where the
-        // sweep counts 10 premature fires of 28 risky word-starts.
+        // The longer wait makes the one-letter rule affordable: `a` is a word and also the
+        // first letter of `and`, `arrivato` and `ad`, and only silence tells them apart. At a
+        // 204 ms slider, 10 of 28 risky word-starts on captured prose fire early.
         assertEquals(300L, singleLetterDelayMs(tapDelayMs = 204, floorMs = 300))
         assertEquals(300L, singleLetterDelayMs(tapDelayMs = 300, floorMs = 300))
     }

@@ -5,25 +5,19 @@ import com.kinetica.keyboard.engine.AccentFolder
 /**
  * Finding a setting by typing what you call it.
  *
- * Sixty rows over five subscreens is past what anyone scans, and the reports that drove the
- * submenus (R49) turned into reports that the submenus hid things. The request (R82) asked
- * for full text plus "synonym tagging to match search intent without exact terminology",
- * which is the half that matters: nobody looking for the autospace delay searches "delay".
+ * Submenus hide rows, so search covers titles, summaries and synonyms; the synonyms matter
+ * most, since a user looking for a setting rarely types its exact title.
  *
- * Pure, so the ranking is testable without a device - the same split [BarPaging] and
- * [PersonalWordRows] use. The Android side walks the inflated screen and hands the rows
- * over; nothing here knows what a Preference is.
- *
- * It also answers the "index rebuilt on update or language change" half of the request by
- * not having an index: the rows are read from the live preference tree each time the field
- * is opened, so there is no stored copy that can go stale.
+ * Pure, so the ranking is testable without a device, as with [BarPaging] and [PersonalWordRows].
+ * The Android side walks the inflated screen and hands the rows over. There is no stored index:
+ * the rows are read from the live preference tree each time the field opens, so nothing goes
+ * stale after an update or a language change.
  */
 object SettingsIndex {
 
     /**
-     * One searchable row. [screenKey] is null for a row on the top level, and
-     * [screenTitle] is what the result list shows underneath the title so a hit says where
-     * it lives as well as what it is.
+     * One searchable row. [screenKey] is null for a row on the top level, and [screenTitle] is
+     * shown under the title so a hit says where it lives as well as what it is.
      */
     data class Entry(
         val key: String,
@@ -37,15 +31,13 @@ object SettingsIndex {
     /**
      * Rows of [entries] matching [query], best match first.
      *
-     * Folded and lowercased through [AccentFolder], the same fold the decoder uses, and
-     * substring rather than prefix, both for the reasons [PersonalWordRows.filtered]
-     * states. **One deliberate difference from that function: a blank query is NOTHING
-     * here, not everything.** A search field showing all sixty rows is the settings screen
-     * with an extra step, and the caller uses the empty result to mean "close the overlay".
+     * Folded and lowercased through [AccentFolder], the decoder's fold, and matched as a
+     * substring, for the reasons [PersonalWordRows.filtered] gives. Unlike that function, a blank
+     * query matches nothing: every row would be the settings screen again, and the caller reads
+     * the empty result as "close the overlay".
      *
-     * Ranked title, then summary, then synonym. Within a rank the incoming order is kept,
-     * which is tree order, so two equally good hits appear in the order they appear in
-     * settings. The sort is stable and that is load-bearing rather than incidental.
+     * Ranked title, then summary, then synonym. The sort is stable, so within a rank hits keep
+     * tree order, the order they appear in settings.
      */
     fun match(entries: List<Entry>, query: String): List<Entry> {
         val q = AccentFolder.fold(query.trim().lowercase())
@@ -61,10 +53,9 @@ object SettingsIndex {
      * Where [entry] matches [folded], as a sort key. Lower is better; [RANK_NONE] is no
      * match at all.
      *
-     * A title hit beats a summary hit because the title is what the user is trying to
-     * remember, and a summary mentioning a word in passing should not push the row that is
-     * actually named after it down the list. Synonyms come last for the same reason: they
-     * exist to make a row reachable, not to make it prominent.
+     * A title hit beats a summary hit because the title is what the user is trying to remember,
+     * and a summary mentioning a word in passing should not push down the row named after it.
+     * Synonyms come last: they make a row reachable, not prominent.
      */
     internal fun rankOf(entry: SettingsIndex.Entry, folded: String): Int = when {
         folded in fold(entry.title) -> RANK_TITLE

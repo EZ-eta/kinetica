@@ -10,17 +10,12 @@ import com.kinetica.keyboard.ui.KeyboardTheme
 import com.kinetica.keyboard.ui.ThemePreviewView
 
 /**
- * A live swatch of the resolved keyboard palette, sitting under the hue slider.
+ * A live swatch of the resolved keyboard palette, under the hue slider, so a colour can be judged
+ * without leaving settings. It is handed the output of [KeyboardTheme.resolve], not a colour of its
+ * own, so the preview cannot disagree with the keyboard.
  *
- * The hue slider showed a number and nothing else, so choosing a colour meant
- * leaving settings, opening a text field, judging it, and going back. This shows
- * the palette the service will actually build - it is handed the output of
- * [KeyboardTheme.resolve], not a colour of its own, so the preview cannot
- * disagree with the keyboard.
- *
- * [KeyboardPrefsFragment] pushes a new theme on every hue, source or brightness
- * change, and the slider is marked `updatesContinuously` so that happens while the
- * thumb is still moving rather than on release.
+ * [KeyboardPrefsFragment] pushes a new theme on every hue, source or brightness change; the slider
+ * is `updatesContinuously`, so the swatch follows the thumb while it moves.
  */
 class ThemePreviewPreference @JvmOverloads constructor(
     context: Context,
@@ -37,9 +32,8 @@ class ThemePreviewPreference @JvmOverloads constructor(
     }
 
     /**
-     * [caption] says whether the hue is doing anything at all: in the bundled and
-     * Material You palettes it is ignored, and a preview that sat there unchanged
-     * while the slider moved would look broken rather than informative.
+     * [caption] says whether the hue does anything: the bundled and Material You palettes ignore
+     * it, and a preview that stays unchanged while the slider moves would look broken.
      */
     fun show(theme: KeyboardTheme, caption: String) {
         this.theme = theme

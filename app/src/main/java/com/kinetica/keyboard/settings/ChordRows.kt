@@ -1,14 +1,15 @@
 package com.kinetica.keyboard.settings
 
 import com.kinetica.keyboard.data.ChordShortcut
+import com.kinetica.keyboard.keys.ChordKey
+import com.kinetica.keyboard.keys.ChordTrigger
 import com.kinetica.keyboard.keys.EditorAction
 
 /**
  * Ordering for the chord list.
  *
- * Pure so it can be tested: the screen around it is Android-only, but the question of what
- * order the rows come in is not. Asked for by a user, whose point was that one submenu
- * holding every chord setting stops being legible once the list is long.
+ * Pure so it can be tested; the screen around it is Android-only. A long chord list needs an order
+ * to stay legible.
  */
 object ChordRows {
 
@@ -26,9 +27,8 @@ object ChordRows {
     /**
      * What a row does, as a sort key: the action's own name, or "" for a text chord.
      *
-     * Text sorts first because it is the common case and the one a user scans for; the
-     * command chords then group together by name rather than being scattered through the
-     * alphabet of their keys.
+     * Text sorts first because it is the common case and the one a user scans for; the command
+     * chords then group by name instead of scattering through the alphabet of their keys.
      */
     fun functionKey(expansion: String): String = EditorAction.of(expansion)?.name ?: ""
 
@@ -40,4 +40,17 @@ object ChordRows {
             compareBy({ functionKey(it.expansion) }, { it.chord }),
         )
     }
+
+    /**
+     * [rows] in groups by the key they are held with, `?123` first, each group in [sort] order;
+     * an empty group is left out. A row this build cannot read stays visible under `?123`, so it
+     * can still be deleted.
+     */
+    fun grouped(rows: List<ChordShortcut>, sort: Sort): List<Pair<ChordTrigger, List<ChordShortcut>>> {
+        val by = rows.groupBy { ChordKey.decode(it.chord)?.trigger ?: ChordTrigger.MODE }
+        return ChordTrigger.entries.mapNotNull { t -> by[t]?.let { t to sorted(it, sort) } }
+    }
+
+    /** The key a row shows: the tapped key alone, whatever it is held with. */
+    fun keyLabel(row: ChordShortcut): String = ChordKey.decode(row.chord)?.key?.toString() ?: row.chord
 }

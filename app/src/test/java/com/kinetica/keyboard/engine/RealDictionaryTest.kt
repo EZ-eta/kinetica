@@ -73,13 +73,12 @@ class RealDictionaryTest {
     @Test
     fun letterRevisitWordsSurviveSloppySwipes() {
         // Regression for the "however" -> "hoover" collapse: words that visit
-        // a letter twice (the second e in how-e-v-e-r) used to be pruned by the
+        // a letter twice (the second e in how-e-v-e-r) were pruned by the
         // path-order monotonicity check, because each letter recorded only its
-        // single globally nearest resample index. A perfect center-to-center
-        // path passes that check with zero margin; any real-world overshoot at
-        // a turn vertex shifted the minima and silently killed the word before
-        // DTW ever scored it, leaving a shorter revisit-free rival ("hoover")
-        // as the sole survivor.
+        // single nearest resample index. A perfect center-to-center path passes
+        // that check with zero margin; any real overshoot at a turn shifted the
+        // minima and killed the word before DTW scored it, leaving a shorter
+        // revisit-free rival ("hoover") as the sole survivor.
         val trie = loadTrie()
         val g = TestData.qwertyGeometry()
         val predictor = WordPredictor(trie, BigramTable.EMPTY, g)
@@ -168,10 +167,8 @@ class RealDictionaryTest {
     @Test
     fun completionSurfacesFromTapPrefix() {
         // Real-dictionary completion golden: a 5-tap prefix surfaces its rare long
-        // extension mid-word. (The planning example "zibaldone" lives in the
-        // developer's personal dictionary, not the bundled wordlist; the
-        // mechanism is identical - personal words merge into the trie at
-        // load - so a bundled word keeps this golden runnable everywhere.)
+        // extension mid-word. Personal words merge into the trie at load the same
+        // way, so a bundled word keeps this golden runnable everywhere.
         val trie = loadTrie()
         val g = TestData.qwertyGeometry()
         val predictor = WordPredictor(trie, BigramTable.EMPTY, g)
@@ -187,8 +184,8 @@ class RealDictionaryTest {
     fun completionDecodeLatencyIsBounded() {
         // Worst-case completion fan-out: "co" prefixes ~1500 words of the
         // real dictionary, so the bounded descent (COMPLETION_MAX_EXTRA,
-        // MAX_CANDIDATES) is what keeps this inside the same 100 ms budget
-        // as full swipe decodes.
+        // MAX_CANDIDATES) keeps this inside the same 100 ms budget as full
+        // swipe decodes.
         val trie = loadTrie()
         val g = TestData.qwertyGeometry()
         val predictor = WordPredictor(trie, BigramTable.EMPTY, g)
@@ -202,11 +199,11 @@ class RealDictionaryTest {
 
     @Test
     fun multiAnchorDecodeLatencyIsBounded() {
-        // Worst-case merge fan-out: a swipe carrying TWO
-        // cross-stream anchors emits the multi-anchor interleave in three trim
-        // variants on top of every pre-existing generator, and each interleave
-        // costs three DTW segments per candidate instead of one. MAX_SPLIT_ANCHORS
-        // and MAX_ALT_SEQUENCES are what keep that inside the same 100 ms budget.
+        // Worst-case merge fan-out: a swipe carrying two cross-stream anchors
+        // emits the multi-anchor interleave in three trim variants on top of
+        // every other generator, and each interleave costs three DTW segments
+        // per candidate instead of one. MAX_SPLIT_ANCHORS and MAX_ALT_SEQUENCES
+        // keep that inside the same 100 ms budget.
         val trie = loadTrie()
         val g = TestData.qwertyGeometry()
         val predictor = WordPredictor(trie, BigramTable.EMPTY, g)
@@ -224,14 +221,11 @@ class RealDictionaryTest {
 
     @Test
     fun dualThumbDecodeLatencyIsBounded() {
-        // Two overlapping cross-stream swipes, which is what two thumbs typing at
-        // once actually produce and which NONE of the other latency bounds covers -
-        // the worst case they reach is one swipe with two anchors. Cutting both
-        // swipes multiplies the piece count rather than adding to it, so this is
-        // where MAX_SPLIT_ANCHORS and MAX_ALT_SEQUENCES have to hold, and the bound
-        // has to exist before the merge learns to cut the second swipe rather than
-        // after.
-        //
+        // Two overlapping cross-stream swipes, what two thumbs typing at once
+        // produce, which none of the other latency bounds covers (their worst case
+        // is one swipe with two anchors). Cutting both swipes multiplies the piece
+        // count, so this is where MAX_SPLIT_ANCHORS and MAX_ALT_SEQUENCES have to
+        // hold.
         // Shaped on the device buffer for "keys": right thumb k..y, left thumb e..s,
         // the left starting inside the right and ending with it.
         val trie = loadTrie()
@@ -250,14 +244,12 @@ class RealDictionaryTest {
 
     @Test
     fun contactCutDecodeLatencyIsBounded() {
-        // The bound above is two synthetic swipes, which DO carry contacts (TestData.
-        // contactsAlong derives them from the path) and so do reach this generator - a
-        // KDoc two files over said otherwise and was out of date. What it does not reach
-        // is the worst shape: three swipes, all three cuttable, where the pair
-        // enumeration has three pairs to spend MAX_ALT_SEQUENCES on rather than one.
-        //
+        // The bound above is two synthetic swipes, which carry contacts (TestData.
+        // contactsAlong derives them from the path) and so reach this generator. It
+        // does not reach the worst shape: three swipes, all three cuttable, where the
+        // pair enumeration has three pairs to spend MAX_ALT_SEQUENCES on, not one.
         // Replayed from the device so the contacts are the ones a thumb produced.
-        // Measured at 1.08 ms per decode against the 100 ms ceiling, 2026-08-22.
+        // Measured at 1.08 ms per decode against the 100 ms ceiling.
         val trie = loadTrie()
         val g = TestData.qwertyGeometry()
         val predictor = WordPredictor(trie, BigramTable.EMPTY, g)
@@ -278,8 +270,8 @@ class RealDictionaryTest {
     @Test
     fun mergedDecodeLatencyIsBounded() {
         // The split-variant fan-out (V1/V2/V3 per (tap, swipe) pair, capped by
-        // MAX_ALT_SEQUENCES=12) multiplies pattern count for merged buffers -
-        // the single-swipe case above never fires the generators at all. The
+        // MAX_ALT_SEQUENCES=12) multiplies pattern count for merged buffers;
+        // the single-swipe case above never fires the generators. The
         // quindi early-tap buffer exercises all three variants against the
         // full dictionary under the same 100 ms budget.
         val trie = loadTrie()
@@ -300,9 +292,9 @@ class RealDictionaryTest {
     /**
      * The retraction's dictionary gate, on the buffers that made it necessary.
      *
-     * Every pair here is verbatim from the 2026-08-29 capture: the developer typed the
-     * first word, the automatic space arrived, and the next word's first letter decided
-     * whether the space survived. `isLivePrefix` is what now decides it.
+     * Every pair here is verbatim from a capture: the first word was typed, the automatic
+     * space arrived, and the next word's first letter decided whether the space survived.
+     * `isLivePrefix` decides it.
      */
     @Test
     fun theRetractionGateSeparatesAFinishedWordFromAnUnfinishedOne() {
@@ -311,20 +303,20 @@ class RealDictionaryTest {
         val dict = Files.newBufferedReader(p).use { DictionaryLoader.load(it) }
         val pred = WordPredictor(dict.trie, BigramTable.EMPTY, TestData.qwertyGeometry(), dict.forms)
 
-        // Finished words swallowing the next one - the reported bug. Each of these
+        // Finished words swallowing the next one, the reported bug. Each of these
         // decoded to nothing on device once the space had been taken back.
         for (fused in listOf("automaticop", "automaticope", "cadettod", "cadettodi")) {
             assertTrue("$fused must not look like a word in waiting", !pred.isLivePrefix(fused))
         }
 
-        // What the retraction exists for, and it must survive: a premature space inside a
-        // word the developer was still typing.
+        // What the retraction is for, and it must survive: a premature space inside a
+        // word still being typed.
         for (fused in listOf("autom", "automatic", "mangian", "mangiano", "prov", "praticam")) {
             assertTrue("$fused is a real continuation", pred.isLivePrefix(fused))
         }
 
         // Accents fold, because a prefix has not chosen them yet: `perche` reaches the
-        // `perché` node exactly as the decoder's own accent handling does.
+        // `perché` node as the decoder's own accent handling does.
         assertTrue("perch", pred.isLivePrefix("perch"))
         assertTrue("case is folded", pred.isLivePrefix("AUTOM"))
 
@@ -333,19 +325,17 @@ class RealDictionaryTest {
     }
 
     /**
-     * What the autospace's joined-token lookup actually finds, per language.
+     * What the autospace's joined-token lookup finds, per language.
      *
-     * The rule is the same in both; the outcomes differ because the data does, and that is
-     * worth pinning rather than believing. English contractions are in the wordlist with
-     * large counts, so `don't` spaces. Italian elisions are NOT in it at all - ten
-     * apostrophe entries, every one corpus junk - so the lookup cannot find `d'accordo` and
-     * no logic change can alter THAT.
+     * The rule is the same in both; the outcomes differ because the data does. English
+     * contractions are in the wordlist with large counts, so `don't` spaces. Italian
+     * elisions are not in it (ten apostrophe entries, all corpus junk), so the lookup
+     * cannot find `d'accordo`.
      *
-     * What did change is what the absence costs. `autospacesTappedWord` no longer waits on
-     * this lookup for an apostrophe joiner: when it answers no it judges the piece after
-     * the apostrophe instead, and the last block below is why that works - the second half
-     * of every elision is an ordinary entry. So the Italian assertion here still stands and
-     * is still the one WP38 flips; it just no longer decides whether the space arrives.
+     * `autospacesTappedWord` does not depend on this lookup for an apostrophe joiner: when
+     * it answers no, it judges the piece after the apostrophe, and the second half of every
+     * elision is an ordinary entry (the last block below). So the Italian assertion stands,
+     * but it no longer decides whether the space arrives.
      */
     @Test
     fun theJoinedTokenLookupIsDecidedByWhatEachWordlistHolds() {
@@ -362,27 +352,25 @@ class RealDictionaryTest {
         for (w in listOf("don't", "it's", "can't")) {
             assertTrue("$w should be an English word", en.isWord(w))
         }
-        // Not words, so a token like this stays refused - the reported behaviour to keep.
+        // Not words, so a token like this stays refused, the reported behaviour to keep.
         for (w in listOf("log-12.com", "example.com", "session_notes")) {
             assertTrue("$w must not be a word", !en.isWord(w) && !it.isWord(w))
         }
-        // The Italian gap, stated as a fact. When the elided forms are generated into the
-        // wordlist this assertion is the one that flips, and it should be flipped
-        // deliberately rather than discovered.
+        // The Italian gap. When elided forms are generated into the wordlist this
+        // assertion flips; update it then.
         for (w in listOf("d'accordo", "l'altro", "un'ora", "dell'anno")) {
-            assertTrue("$w is absent from it_wordlist; see item 45", !it.isWord(w))
+            assertTrue("$w is absent from it_wordlist", !it.isWord(w))
         }
-        // ...and what the fallback rests on: the piece AFTER the apostrophe is an ordinary
-        // Italian word in every one of them, which is why judging it on its own is a real
-        // answer rather than a shrug. `ora` is the shortest at three letters, so the
-        // two-letter length rule never bites on the forms that matter.
+        // ...and what the fallback rests on: the piece after the apostrophe is an ordinary
+        // Italian word in every one of them, so judging it on its own is a real answer.
+        // `ora` is the shortest at three letters, so the two-letter length rule never
+        // bites on the forms that matter.
         for (w in listOf("accordo", "altro", "ora", "anno", "immagine")) {
             assertTrue("$w should be an Italian word", it.isWord(w))
             assertTrue("$w is long enough for the length rule", w.length >= 2)
         }
         // The retraction's second question, on real data: `dell'anno` is unreachable as a
-        // whole and `anno` is reachable, which is the entire reason the fusion is asked of
-        // the tail as well.
+        // whole and `anno` is reachable, so the fusion is asked of the tail as well.
         assertTrue("dell'anno is not a live prefix", !it.isLivePrefix("dell'anno"))
         assertTrue("anno is", it.isLivePrefix("anno"))
     }

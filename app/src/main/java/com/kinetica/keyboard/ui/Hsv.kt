@@ -3,26 +3,20 @@ package com.kinetica.keyboard.ui
 /**
  * HSV to packed ARGB, and back far enough to recover a hue.
  *
- * Hand-rolled rather than calling `android.graphics.Color`, for the same reason
- * the DTW and the trie are hand-rolled: this is where the theme's whole palette
- * comes from, and every derived colour role should be checkable without a device.
- * `Color`'s static helpers are stubbed in the JVM unit-test runtime and throw
- * "not mocked", so a palette built on them cannot be tested at all - which is how
- * a near-white text constant on a near-white surface would have shipped.
+ * Hand-rolled because the theme's whole palette comes from here and `android.graphics.Color`'s
+ * static helpers throw "not mocked" in JVM unit tests; a palette built on them could ship
+ * near-white text on a near-white surface untested.
  *
- * Deliberately reproduces `Color.HSVToColor`'s exact conventions, including the
- * odd one: a hue outside [0, 360) is treated as 0 rather than wrapped or clamped,
- * and channels round with +0.5. Matching it means the shipped palettes are
- * unchanged to the byte.
+ * Reproduces `Color.HSVToColor`'s conventions, so palettes match it to the byte: a hue outside
+ * [0, 360) is treated as 0, not wrapped or clamped, and channels round with +0.5.
  */
 object Hsv {
 
     /**
      * Opaque ARGB for [hue] degrees, [sat] and [value] in [0, 1].
      *
-     * A non-finite or out-of-range hue collapses to 0 (red), which is what the
-     * platform does and is a visible-but-harmless answer for a corrupt
-     * preference - better than a transparent or black keyboard.
+     * A non-finite or out-of-range hue collapses to 0 (red), as the platform does: a corrupt
+     * preference gives a visible keyboard, not a transparent or black one.
      */
     fun toColor(hue: Float, sat: Float, value: Float): Int {
         val s = sat.coerceIn(0f, 1f)

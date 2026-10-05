@@ -14,31 +14,22 @@ import org.junit.Test
 
 /**
  * The merged-ranking acceptance sweep: both enabled languages' dictionaries, every word
- * decoded through BOTH predictors and ranked into one list.
+ * decoded through both predictors and ranked into one list.
  *
- * This population began as a throwaway script to derive two thresholds
- * that no longer exist; it is a permanent golden now, because the property it
- * measures is the one thing cross-language ranking can get catastrophically
- * wrong - one asset quietly winning everything. Both directions are swept
- * (it active / es secondary and the reverse) so a bias toward either
- * dictionary shows up as a failure rather than as a lucky asymmetry.
+ * It guards against one asset quietly winning everything. Both directions are swept
+ * (it active / es secondary and the reverse) so a bias toward either dictionary fails
+ * instead of passing as a lucky asymmetry. Two properties:
  *
- * Two properties, and the first is the sharper one:
+ * 1. Merging must not disturb a same-language decode: for every word of the active
+ *    language, the merged lead is the word the active predictor alone would lead with.
+ *    If cross-dictionary frequency were not comparable, or the promotion rule too
+ *    loose, this fails first and at scale.
+ * 2. A word only the other language has must lead. A whole-list swap reached 23 of 38
+ *    rows offline and 2 of 10 on device, because between two Romance languages "the
+ *    active language has no explanation at all" is much rarer than a foreign word.
  *
- * 1. **Merging must not disturb a same-language decode.** For every word of
- *    the active language, the merged list's lead must be the same word the
- *    active predictor alone would have led with. This is the whole risk of the
- *    design stated as an assertion - if cross-dictionary frequency were not
- *    comparable, or the promotion rule were too loose, it fails here first and
- *    at scale, not on one hand-picked row.
- * 2. **A word only the other language has must lead.** This is what the swap
- *    gate could not do: detection measured 23 of 38 rows, and on
- *    device at 2 of 10, because between two Romance languages "the active
- *    language has no explanation at all" is much rarer than a foreign word.
- *
- * Each case runs clean and sloppy, since a sloppy path is the realistic one
- * and the two can disagree (the pass-run finding was the reverse - precision was
- * what broke pass merging).
+ * Each case runs clean and sloppy, since a sloppy path is the realistic one and the two
+ * can disagree (precision is what broke pass merging; see PassRunSplitTest).
  */
 class MergedRankingSweepTest {
 
@@ -112,23 +103,19 @@ class MergedRankingSweepTest {
 
     @Test
     fun aWordOnlyTheOtherLanguageHasLeadsUnlessTheActiveOneFitsAsWell() {
-        // The full contract of rule 2c, asserted uniformly rather than against
-        // a hand-maintained list of exceptions: a word only the other language
-        // has must LEAD, and the sole excuse for not leading is that the active
-        // language explains the same path at least as well - in which case the
-        // word must still be pickable, because a tie is not a reason to hide it.
-        //
-        // The measured split (76 rows) is 59 leading and 17 tied.
-        // Every tie is one of two shapes, and both are rule 2c working:
+        // The full contract of rule 2c, asserted uniformly with no list of
+        // exceptions: a word only the other language has must lead, unless the
+        // active language explains the same path at least as well, and then it
+        // must still be pickable, because a tie is no reason to hide it.
+        // Of 76 rows, 59 lead and 17 tie. Every tie is one of two shapes:
         //   - a doubled letter shares its ideal path after consecutive-duplicate
         //     dedup, so interessante/interesante, necessario/necesario,
-        //     citta/cita, notte/noté and posso/piso decode at IDENTICAL d and
-        //     the active language keeps its own word (the rese/reese
-        //     class, across languages);
+        //     citta/cita, notte/noté and posso/piso decode at equal d and the
+        //     active language keeps its own word (the rese/reese class, across
+        //     languages);
         //   - "puedo" on a sloppy path, where Italian "perdo" fits at 0.193
-        //     against 0.194 - a real competition, decided by a thousandth.
-        // Accent restoration counts as leading: "manana" -> "mañana" is the
-        // AccentFolder working, not a miss.
+        //     against 0.194, a real competition decided by a thousandth.
+        // Accent restoration counts as leading: "manana" -> "mañana".
         val bad = ArrayList<String>()
         var lead = 0
         var n = 0
@@ -162,14 +149,12 @@ class MergedRankingSweepTest {
 
     @Test
     fun twoLanguageDecodeLatencyIsBounded() {
-        // The five existing *LatencyIsBounded goldens all call one predictor
-        // directly, so none of them covers the configuration that actually runs
-        // when a second language is enabled. Both decodes already happened
-        // before the merged ranking - the swap consulted both dictionaries too - so this is
-        // not new work, but it is now on the path to every suggestion and needs
-        // its own bound. Measured 1.5 ms per word against the project's
-        // standard 100 ms budget; the merge itself is two sorts of at most ten
-        // elements plus a trie lookup per foreign candidate.
+        // The other *LatencyIsBounded goldens call one predictor directly, so
+        // none covers the configuration that runs when a second language is
+        // enabled. Both decodes are on the path to every suggestion and need
+        // their own bound: 1.5 ms per word against the standard 100 ms budget.
+        // The merge itself is two sorts of at most ten elements plus a trie
+        // lookup per foreign candidate.
         val a = predictor("it")
         val o = predictor("es")
         val buffers = listOf(
@@ -193,14 +178,12 @@ class MergedRankingSweepTest {
 
     @Test
     fun aForeignWordMayCrowdTheWindowWithoutLookingLikeAnEmptyDecode() {
-        // Regression for a real defect this sweep caught: rule 2's
-        // "did the active language produce anything" test was evaluated against
+        // Rule 2's "did the active language produce anything" test once read
         // the TOP_K-truncated list. On "ciudad" every Italian candidate (best
-        // fit d=0.795) scores below all ten Spanish ones, so the window holds
-        // no Italian word at all and the rule read that as an empty decode -
-        // refusing to commit a Spanish word sitting at d=0.000. Being crowded
-        // out of the bar is not the same as having nothing to say, so both
-        // operands are taken from the full decode.
+        // fit d=0.795) scores below all ten Spanish ones, so the window held no
+        // Italian word and the rule read that as an empty decode, refusing a
+        // Spanish word at d=0.000. Crowded out of the bar is not the same as
+        // having nothing to say, so both operands come from the full decode.
         for (w in listOf("ciudad", "verdad")) {
             val r = row("it", "es", w, sloppy = false)
             assertEquals("$w must lead", w, r.merged.tentative?.word)
@@ -210,7 +193,7 @@ class MergedRankingSweepTest {
 
     private companion object {
         // Words present in it_wordlist; the starred dozen are in es_wordlist
-        // too, which is what exercises the shared-word filter at scale.
+        // too, which exercises the shared-word filter at scale.
         val IT_WORDS = listOf(
             "sempre", "quindi", "interessante", "sudare", "sarei", "siete", "lei", "loro",
             "quando", "perche", "grazie", "domani", "lavoro", "casa", "tempo", "bene",
@@ -219,14 +202,14 @@ class MergedRankingSweepTest {
             "strada", "verita", "mondo",
         )
 
-        // In es_wordlist and NOT in it_wordlist - verified against the assets.
+        // In es_wordlist and not in it_wordlist, checked against the assets.
         val ES_ONLY = listOf(
             "ayudarte", "trabajo", "siempre", "mujer", "nosotros", "cuando", "manana",
             "ahora", "ciudad", "mientras", "entonces", "nunca", "tambien", "pueblo",
             "pequeno", "puedo", "hacer", "decir", "verdad",
         )
 
-        // In it_wordlist and NOT in es_wordlist, for the reverse direction.
+        // In it_wordlist and not in es_wordlist, for the reverse direction.
         val IT_ONLY = listOf(
             "quindi", "interessante", "sudare", "sarei", "perche", "domani", "lavoro",
             "vedere", "mangiare", "lavorare", "necessario", "parlare", "citta", "uomo",

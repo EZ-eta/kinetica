@@ -1,6 +1,8 @@
 package com.kinetica.keyboard.keys
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
 import org.junit.Test
 
 /**
@@ -69,8 +71,8 @@ class SpacebarCursorControllerTest {
 
     @Test
     fun theStepCannotUndercutTheThresholdThatArmsCursorMode() {
-        // A step shorter than the 8dp that enters cursor mode would fire on the very
-        // sample that armed it, so the first movement would jump two.
+        // A step shorter than the 8dp that enters cursor mode would fire on the sample that
+        // armed it, so the first movement would jump two.
         val r = Recorder()
         r.controller.stepDp = 1f
         assertEquals(SpacebarCursorController.ENTER_SLIDE_DP, r.controller.effectiveStepDp())
@@ -91,8 +93,8 @@ class SpacebarCursorControllerTest {
 
     @Test
     fun theGranularityIsCarriedOutToTheListener() {
-        // The controller does not know what a word is; the service does. Passing the flag
-        // out is what keeps the arithmetic here indifferent to it.
+        // The controller does not know what a word is; the service does, so the flag is passed
+        // out and the arithmetic stays indifferent to it.
         val r = Recorder()
         r.controller.wordMode = true
         r.controller.onDown(0f)
@@ -110,7 +112,7 @@ class SpacebarCursorControllerTest {
         assertEquals(listOf(1 to false), r.steps)
     }
 
-    // R35, the spaceless space: the left 30% of the key ends the word and writes no
+    // The spaceless space: the left 30% of the key ends the word and writes no
     // space. The key here is 100 wide from x=0, so the zone is x < 30.
 
     @Test
@@ -138,8 +140,7 @@ class SpacebarCursorControllerTest {
 
     @Test
     fun theSlideWinsOverTheZoneItStartedIn() {
-        // The finger made a slide, so it is a slide. Nothing may end a word behind a
-        // gesture whose whole purpose was to move the cursor.
+        // A slide moves the cursor, so it may not also end a word.
         val r = Recorder()
         r.controller.spacelessZone = true
         r.controller.onDown(10f, 0f, 100f)
@@ -151,14 +152,14 @@ class SpacebarCursorControllerTest {
 
     @Test
     fun aCallerThatDoesNotKnowTheKeyRectNeverArmsTheZone() {
-        // The default arguments, i.e. every caller written before the zone existed.
+        // The default arguments, as passed by a caller that knows no key rect.
         val r = Recorder()
         r.controller.spacelessZone = true
         r.controller.onDown(10f)
         assertEquals(SpacebarCursorController.Lift.SPACE, r.controller.onUp())
     }
 
-    // ---- R69: the double-space window ------------------------------------------------
+    // ---- The double-space window ------------------------------------------------
 
     private fun tapper(): SpacebarCursorController =
         SpacebarCursorController(density = 1f) { _, _ -> }.apply { doubleSpacePeriod = true }
@@ -186,7 +187,7 @@ class SpacebarCursorControllerTest {
 
     @Test
     fun theSettingOffMeansTheWindowNeverOpens() {
-        // Default off, and the whole feature has to be invisible until asked for.
+        // Default off: the feature is invisible until turned on.
         val c = SpacebarCursorController(density = 1f) { _, _ -> }
         c.onDown(0f)
         c.onUp(1_000L)
@@ -214,5 +215,29 @@ class SpacebarCursorControllerTest {
         assertEquals(SpacebarCursorController.Lift.SLIDE, c.onUp(1_000L))
         c.onDown(0f)
         assertEquals(SpacebarCursorController.Lift.SPACE, c.onUp(1_050L))
+    }
+
+    // ---- the spacebar as a chord trigger ---------------------------------------------
+
+    @Test
+    fun aTouchSpentOnAChordWritesNothingAndOpensNoWindow() {
+        // Without the reset, the tap after it would read as a double space and write `. `.
+        val c = tapper()
+        c.onDown(0f)
+        assertEquals(SpacebarCursorController.Lift.SPACE, c.onUp(1_000L))
+        c.onDown(0f)
+        c.consume()
+        c.onDown(0f)
+        assertEquals(SpacebarCursorController.Lift.SPACE, c.onUp(1_150L))
+    }
+
+    @Test
+    fun aSlideIsWhatEndsTheTouchAsATrigger() {
+        val c = tapper()
+        c.onDown(0f)
+        c.onMove(5f)
+        assertFalse(c.sliding)
+        c.onMove(40f)
+        assertTrue(c.sliding)
     }
 }

@@ -189,4 +189,22 @@ class DictionaryMergerTest {
         val rows = DictionaryMerger.readPrimary(reader("the\t1000\nbroken line\nof\t500\n"))
         assertEquals(listOf("the" to 1000, "of" to 500), rows)
     }
+
+    @Test
+    fun anImportDoesNotBringBackALeftOffAccent() {
+        // AOSP's Italian list holds `perche` and `cosi`, which the bundled list drops as
+        // spellings with the accents left off.
+        val italian = listOf("perché" to 900_000, "così" to 700_000, "e" to 5_000_000, "è" to 2_000_000, "pane" to 1_000)
+        val aosp = """
+             word=perche,f=80
+             word=cosi,f=115
+             word=pancetta,f=90
+        """.trimIndent()
+        val words = DictionaryMerger.merge(italian, reader(aosp), "it").rows.map { it.first }
+        assertFalse("perche" in words)
+        assertFalse("cosi" in words)
+        assertTrue("pancetta" in words)
+        // A real pair's plain spelling is in the bundled list already, so it is not this case.
+        assertFalse(DictionaryMerger.leavesAccentsOff("e", setOf("e", "è"), setOf("e")))
+    }
 }

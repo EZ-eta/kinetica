@@ -6,9 +6,9 @@ import org.junit.Test
 /**
  * The expandify trigger walk.
  *
- * A fourth walk rather than a fifth caller of trailingLetterRun, and these fixtures are
- * why: the reporter's own five triggers are `.`, `x`, `vv`, `^^` and `(-.-)'`, and the
- * letter walk returns nothing for three of them. Whitespace is the only boundary here.
+ * Its own walk, not trailingLetterRun: the reporter's triggers are `.`, `x`, `vv`, `^^` and
+ * `(-.-)'`, and the letter walk returns nothing for three of them. Whitespace is the only
+ * boundary here.
  */
 class TriggerAtCursorTest {
 
@@ -32,8 +32,8 @@ class TriggerAtCursorTest {
 
     @Test
     fun oneTrailingSpaceIsSkippedAndReportedInTheSpan() {
-        // The autospace writes one after almost every word, and a trigger that stops
-        // working the moment it arrives is a trigger nobody can fire.
+        // The autospace writes one after almost every word; a trigger that stopped working once
+        // it arrived could never be fired.
         val found = at("done vv ")
         assertEquals("vv", found.trigger)
         assertEquals(3, found.span)

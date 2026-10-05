@@ -28,10 +28,9 @@ abstract class KineticaDb : RoomDatabase() {
         private var instance: KineticaDb? = null
 
         /**
-         * v1 -> v2: user_words gains a language partition. Pre-v2 rows carry
-         * no language information, so they are attributed to English (the
-         * default language) rather than dropped; an Italian-first user loses
-         * nothing they cannot re-earn in a few commits.
+         * v1 -> v2: user_words gains a language partition. Pre-v2 rows carry no language,
+         * so they go to English, the default; an Italian-first user re-earns them in a few
+         * commits.
          */
         private val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
@@ -51,10 +50,8 @@ abstract class KineticaDb : RoomDatabase() {
         }
 
         /**
-         * v2 -> v3: the block list arrives as a new table, so nothing existing
-         * is read, rewritten or dropped. Learned words and chords are untouched
-         * by construction, which is the whole reason to add a table rather than
-         * a column on user_words.
+         * v2 -> v3: the block list is a new table, not a column on user_words, so learned
+         * words and chords are never read, rewritten or dropped.
          */
         private val MIGRATION_2_3 = object : Migration(2, 3) {
             override fun migrate(db: SupportSQLiteDatabase) {
@@ -67,10 +64,7 @@ abstract class KineticaDb : RoomDatabase() {
             }
         }
 
-        /**
-         * v3 -> v4: emoji use counts arrive as a new table, the same shape as
-         * v2 -> v3. Nothing existing is read, rewritten or dropped.
-         */
+        /** v3 -> v4: emoji use counts, a new table like v2 -> v3. */
         private val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(
@@ -82,11 +76,7 @@ abstract class KineticaDb : RoomDatabase() {
             }
         }
 
-        /**
-         * v4 -> v5: learned word pairs arrive as a new table, the same shape as v2 -> v3
-         * and v3 -> v4. Nothing existing is read, rewritten or dropped, so learned words
-         * and chords survive by construction.
-         */
+        /** v4 -> v5: learned word pairs, a new table like v2 -> v3. */
         private val MIGRATION_4_5 = object : Migration(4, 5) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(
@@ -98,11 +88,7 @@ abstract class KineticaDb : RoomDatabase() {
             }
         }
 
-        /**
-         * v5 -> v6: text expansions arrive as a new table, the same shape as v2 -> v3,
-         * v3 -> v4 and v4 -> v5. Nothing existing is read, rewritten or dropped, so
-         * learned words, chords and pairs survive by construction.
-         */
+        /** v5 -> v6: text expansions, a new table like v2 -> v3. */
         private val MIGRATION_5_6 = object : Migration(5, 6) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(

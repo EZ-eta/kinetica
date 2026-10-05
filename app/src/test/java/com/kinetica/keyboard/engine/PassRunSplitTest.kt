@@ -12,28 +12,25 @@ import org.junit.Assume.assumeTrue
 import org.junit.Test
 
 /**
- * Regression suite for pass-run merging: a swipe whose
- * legs are all shorter than `R_INNER_KW` (1.8 kw) never leaves any of its keys'
- * discs, so `Matcher.buildSegment`'s one-index-per-run rule merged every visit
- * to a key into a SINGLE pass. A word needing that letter at increasing indices
- * then became unspellable and the decode returned nothing.
+ * Regression suite for pass-run merging: a swipe whose legs are all shorter than
+ * `R_INNER_KW` (1.8 kw) never leaves any of its keys' discs, so
+ * `Matcher.buildSegment`'s one-index-per-run rule merged every visit to a key into a
+ * single pass. A word needing that letter at increasing indices became unspellable
+ * and the decode returned nothing.
  *
- * Confirmed on a device capture: "vedere" failed
- * 2 of 3 natural gestures, committing "vette"/"brewer". Both failing swipes had
- * contacts `edere`, which reconstructs to pass runs `e[0] d[9] r[25]` - one run
- * for e - and zero candidates.
+ * On a device capture "vedere" failed 2 of 3 natural gestures, committing
+ * "vette"/"brewer". Both failing swipes had contacts `edere`, which reconstructs to
+ * pass runs `e[0] d[9] r[25]` (one run for e) and zero candidates.
  *
- * **The defect punishes PRECISION**, which inverts this project's usual fixture
- * assumption that a clean centre-to-centre path is the optimistic case. So the
- * acceptance cases here are the PRECISE buffers, and the sloppy paths (already
- * locked by `DecodeReachabilityTest.realisticVederePathsDecodeVedere`) are the
- * controls that must not pay for them.
+ * The defect punishes precision, so the acceptance cases here are the precise
+ * buffers, and the sloppy paths (locked by
+ * `DecodeReachabilityTest.realisticVederePathsDecodeVedere`) are the controls that
+ * must not pay for them.
  *
  * The fix splits a run at an interior peak with `PASS_SPLIT_PROMINENCE_KW` of
- * prominence on BOTH sides - the path demonstrably left the key and came back.
- * It is monotone: each sub-run keeps its own argmin, so the pass set is a strict
- * superset of the old one and no previously-decodable word can be lost
- * (`passesAscendAndKeepTheNearestVisit` locks that).
+ * prominence on both sides: the path left the key and came back. It is monotone:
+ * each sub-run keeps its own argmin, so the pass set is a superset of the old one and
+ * no decodable word is lost (`passesAscendAndKeepTheNearestVisit`).
  */
 class PassRunSplitTest {
 
@@ -57,15 +54,15 @@ class PassRunSplitTest {
     @Test
     fun preciseShortReversalKeepsOnePassPerVisit() {
         // The reconstructed device buffer's swipe: e->d->e->r->e, every leg
-        // under R_INNER_KW. Pre-fix the whole path is one run per key, so e has
-        // exactly one pass (index 0) and v-e-d-e-r-e cannot be spelled.
+        // under R_INNER_KW. Without the split the whole path is one run per key,
+        // so e has one pass (index 0) and v-e-d-e-r-e cannot be spelled.
         val seg = segmentOf(TestData.swipe("edere", g, 0, 800, StreamId.RIGHT))
         val e = passes(seg, 'e')
         assertEquals("one pass per visit to e, got $e", 3, e.size)
         assertEquals("the first e pass is the path's start", 0, e.first())
         assertEquals("the last e pass is the path's end", KineticaConstants.RESAMPLE_N - 1, e.last())
         assertTrue("e passes must ascend: $e", e.zipWithNext().all { (a, b) -> a < b })
-        // d and r are visited once each and must NOT gain phantom passes: the
+        // d and r are visited once each and must not gain phantom passes: the
         // path only approaches them, it never leaves and returns.
         assertEquals("d visited once, got ${passes(seg, 'd')}", 1, passes(seg, 'd').size)
         assertEquals("r visited once, got ${passes(seg, 'r')}", 1, passes(seg, 'r').size)
@@ -74,9 +71,9 @@ class PassRunSplitTest {
     @Test
     fun straightSweepKeepsOnePassPerKey() {
         // The anti-over-split control. Along a straight line the distance to any
-        // key is strictly V-shaped: one minimum, no interior peak, so no split
-        // may occur. If this reds, the rule is firing on ordinary travel and
-        // every decode in the product just got looser.
+        // key is V-shaped: one minimum, no interior peak, so no split may occur.
+        // If this reds, the rule fires on ordinary travel and every decode gets
+        // looser.
         for (word in listOf("qwerty", "asdfg", "poiuy", "zxcvb")) {
             val seg = segmentOf(TestData.swipe(word, g, 0, 800, StreamId.RIGHT))
             for (code in 0 until Alphabet.LETTERS) {
@@ -90,12 +87,11 @@ class PassRunSplitTest {
 
     @Test
     fun passSetIsASupersetOfTheRunRule() {
-        // The property that makes this change monotone, and therefore safe for
-        // every existing golden: splitting a run cannot DROP an index the old
-        // one-argmin-per-run rule chose, because that argmin is also the argmin
-        // of whichever sub-run ends up containing it. The old rule is
-        // reimplemented here rather than described, so the claim is checked and
-        // not asserted by comment. Reversal-heavy and ordinary paths alike.
+        // Monotonicity, which keeps every existing golden safe: splitting a run
+        // cannot drop an index the old one-argmin-per-run rule chose, because
+        // that argmin is also the argmin of the sub-run containing it. The old
+        // rule is reimplemented below so the claim is checked. Reversal-heavy and
+        // ordinary paths alike.
         for (word in listOf(
             "edere", "vedere", "however", "parlare", "cuando", "interessante",
             "sempre", "keyboard", "something", "uini",
@@ -149,9 +145,9 @@ class PassRunSplitTest {
 
     @Test
     fun deviceVedereBufferDecodesVedere() {
-        // The captured failure verbatim: tap v plus a RIGHT swipe whose traced
-        // contacts were e,d,e,r,e. Pre-fix this decodes EMPTY (device committed
-        // "vette", then "brewer"), which is also why the empty-decode rescue then handed
+        // The captured failure: tap v plus a right-thumb swipe whose traced
+        // contacts were e,d,e,r,e. Without the split it decodes empty (the phone
+        // committed "vette", then "brewer"), and the empty-decode rescue handed
         // the word to Spanish.
         val p = fullItalian() ?: return
         val tokens = listOf(
@@ -165,7 +161,7 @@ class PassRunSplitTest {
     @Test
     fun preciseVederePathDecodesVedere() {
         // The same defect without the tap: the whole word swiped precisely.
-        // Pre-fix top-1 is "vere" at d=0.255 with "vedere" absent from the list.
+        // Without the split top-1 is "vere" at d=0.255 and "vedere" is absent.
         val p = fullItalian() ?: return
         val out = p.decode(listOf(TestData.swipe("vedere", g, 0, 1200, StreamId.RIGHT)), emptyList())
         assertEquals("precise path: ${top(out)}", "vedere", out.firstOrNull()?.word)
@@ -177,12 +173,11 @@ class PassRunSplitTest {
 
     @Test
     fun shortReversalWordsAreReachableOnPrecisePaths() {
-        // A three-language regression sample, so the fix is the mechanism and
-        // not a patch for one word. Every entry here is unspellable pre-fix on
-        // its own clean path: measured across those assets, 114 it / 87 en /
-        // 108 es words of the top 20k are, and 0.7 kw of prominence recovers
-        // all but four.
-        // Reachability is this suite's contract; where these words RANK is a scoring question.
+        // A three-language sample, so the fix covers the mechanism and not one
+        // word. Every entry is unspellable without the split on its own clean
+        // path; of the top 20k words, 114 it / 87 en / 108 es are, and 0.7 kw of
+        // prominence recovers all but four.
+        // Reachability is this suite's contract; where these words rank is a scoring question.
         for ((lang, words) in listOf(
             "it" to listOf("vede", "sede", "cede", "rese"),
             "en" to listOf("deed", "seas", "pope"),

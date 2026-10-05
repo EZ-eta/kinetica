@@ -6,8 +6,8 @@ import androidx.room.Transaction
 
 @Dao
 interface UserBigramDao {
-    // Two statements rather than an upsert, for the reason UserWordDao gives: ON CONFLICT
-    // DO UPDATE needs SQLite 3.24+ and API 26 devices ship 3.18.
+    // Two statements, not an upsert: ON CONFLICT DO UPDATE needs SQLite 3.24+ and API 26
+    // devices ship 3.18.
     @Query(
         "INSERT OR IGNORE INTO user_bigrams (prev, next, lang, count, updatedAt) " +
             "VALUES (:prev, :next, :lang, 0, :now)",

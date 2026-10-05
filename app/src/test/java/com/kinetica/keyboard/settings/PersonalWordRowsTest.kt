@@ -11,7 +11,7 @@ class PersonalWordRowsTest {
 
     @Test
     fun theMergeFloorDecidesWhatIsInDecode() {
-        // The screen's whole point is telling a harmful row from an inert one.
+        // The screen exists to tell a harmful row from an inert one.
         assertFalse("a de-reinforced row is inert", PersonalWordRows.isInDecode(0))
         assertFalse("one stray commit never reaches the trie", PersonalWordRows.isInDecode(1))
         assertTrue(PersonalWordRows.isInDecode(KineticaConstants.PERSONAL_MERGE_MIN_COUNT))
@@ -27,9 +27,8 @@ class PersonalWordRowsTest {
 
     @Test
     fun theMostInfluentialRowsComeFirst() {
-        // "cuñado" at 6 is the historical case: a
-        // self-reinforced misfire that outranked the intended word. Alphabetical
-        // order would bury it between "casa" and "dormir".
+        // "cuñado" at 6 stands for a self-reinforced misfire that outranked the intended word;
+        // alphabetical order would bury it between "casa" and "dormir".
         val rows = listOf("dormir" to 2, "casa" to 1, "cuñado" to 6, "abeja" to 6, "zorro" to 3)
         assertEquals(
             listOf("abeja" to 6, "cuñado" to 6, "zorro" to 3, "dormir" to 2, "casa" to 1),
@@ -53,9 +52,8 @@ class PersonalWordRowsTest {
     // ---- the search filter --------------------------------------------------
 
     /**
-     * The list the dialog is built from, count-ordered as the screen shows it.
-     * Deliberately one where alphabetical and count order disagree, so a filter
-     * that quietly re-sorted would be caught.
+     * The list the dialog is built from, count-ordered as the screen shows it. Alphabetical and
+     * count order disagree here, so a filter that re-sorted would be caught.
      */
     private val dictionary = PersonalWordRows.sortedForDisplay(
         listOf(
@@ -66,19 +64,14 @@ class PersonalWordRowsTest {
 
     @Test
     fun tappingAFilteredRowResolvesToTheWordUnderTheFinger() {
-        // THE risk this feature carries, and the reason it is the first test.
-        // The dialog used to be built with setItems over the whole list, so the
-        // click index WAS the index into that list. With a filter in front, an
-        // index resolved against the unfiltered list deletes whatever happens to
-        // sit at that visual position - i.e. the screen whose entire purpose is
-        // removing one specific harmful word would remove a different one.
+        // The filter's main risk: an index resolved against the unfiltered list deletes
+        // whatever sits at that visual position, so the screen meant to remove one harmful word
+        // would remove a different one.
         val shown = PersonalWordRows.filtered(dictionary, "me")
         // "me" itself is not first: count ordering puts "come" (77) above it.
         assertEquals(listOf("come", "me", "meno"), shown.map { it.first })
-        // Position 1 in the FILTERED list is "me"; position 1 in the unfiltered
-        // list is "come". A handler that used the raw index would delete the
-        // wrong one, and these two words are exactly the pair the boost rule cares
-        // about.
+        // Position 1 in the filtered list is "me"; in the unfiltered list it is "come". A
+        // handler using the raw index would delete the wrong one.
         assertEquals("me", shown[1].first)
         assertEquals("come", dictionary[1].first)
         // The row must carry its own count too, or the confirm dialog would
@@ -88,9 +81,8 @@ class PersonalWordRowsTest {
 
     @Test
     fun theFilterPreservesCountOrdering() {
-        // Ordering is the screen's one design decision (see sortedForDisplay):
-        // influence first, because that is what a poisoning word has. A filter
-        // that returned matches in dictionary order would silently undo it.
+        // Influence first (see sortedForDisplay), because that is what a poisoning word has; a
+        // filter returning matches in dictionary order would silently undo it.
         val shown = PersonalWordRows.filtered(dictionary, "e")
         assertEquals(
             listOf("che", "come", "me", "sempre", "perché", "meno"),
@@ -110,9 +102,8 @@ class PersonalWordRowsTest {
 
     @Test
     fun theFilterIgnoresCaseAndAccents() {
-        // "perché" is unreachable by typing "perche" otherwise, and the whole
-        // point is finding a word you can name. Folding is AccentFolder's, the
-        // same one the decoder uses, so the two agree about what a letter is.
+        // Otherwise "perché" cannot be found by typing "perche". Folding is AccentFolder's, as in
+        // the decoder, so the two agree about what a letter is.
         assertEquals(listOf("perché"), PersonalWordRows.filtered(dictionary, "perche").map { it.first })
         assertEquals(listOf("perché"), PersonalWordRows.filtered(dictionary, "PERCHÉ").map { it.first })
         assertEquals(listOf("che", "perché"), PersonalWordRows.filtered(dictionary, "CHE").map { it.first })
@@ -120,9 +111,8 @@ class PersonalWordRowsTest {
 
     @Test
     fun aLowCountMatchIsStillReportedAsBelowTheFloor() {
-        // Filtering must not change what a row MEANS. "qd" is the historical
-        // junk word and finding it by name must still
-        // show it as inert rather than as a decode participant.
+        // Filtering must not change what a row means: "qd", a junk word, found by name still
+        // shows as inert, not as a decode participant.
         val shown = PersonalWordRows.filtered(dictionary, "qd")
         assertEquals(listOf("qd" to 3), shown)
         assertTrue("qd at 3 is above the floor", PersonalWordRows.isInDecode(shown[0].second))
@@ -132,16 +122,15 @@ class PersonalWordRowsTest {
 
     @Test
     fun noMatchIsAnEmptyListAndNotTheWholeDictionary() {
-        // The failure mode of a badly-written filter: fall through to
-        // "everything" on no match, which would put 4,266 rows back on screen.
+        // A careless filter falls through to everything on no match, putting thousands of rows
+        // back on screen.
         assertEquals(emptyList<Pair<String, Int>>(), PersonalWordRows.filtered(dictionary, "zzz"))
     }
 
     // ------------------------------------------------- batch selection
     //
-    // Deleting one word at a time closed and moved the dialog on every press, which a user
-    // reported as unusable at speed. The multi-select that replaced it inherits the
-    // screen's one real hazard: a tick is a position in the FILTERED list.
+    // Multi-select, because deleting one word at a time closed and moved the dialog on every
+    // press. It inherits the screen's hazard: a tick is a position in the filtered list.
 
     @Test
     fun aCheckedWordSurvivesAFilterChange() {
@@ -197,5 +186,15 @@ class PersonalWordRowsTest {
     fun nothingCheckedDeletesNothing() {
         assertEquals(emptyList<String>(), PersonalWordRows.wordsToDelete(dictionary, emptySet()))
         assertEquals(emptyList<Int>(), PersonalWordRows.checkedPositions(dictionary, emptySet()))
+    }
+
+    @Test
+    fun aRowSaysWhetherItIsSuggestedAndWhenItWillBe() {
+        // The label says what the merge floor means for the word, not "below the merge floor".
+        val floor = com.kinetica.keyboard.engine.KineticaConstants.PERSONAL_MERGE_MIN_COUNT
+        assertEquals(PersonalWordRows.RowState.SUGGESTED, PersonalWordRows.rowState(floor))
+        assertEquals(PersonalWordRows.RowState.SUGGESTED, PersonalWordRows.rowState(40))
+        assertEquals(PersonalWordRows.RowState.BELOW_FLOOR, PersonalWordRows.rowState(floor - 1))
+        assertEquals(PersonalWordRows.RowState.TAKEN_BACK, PersonalWordRows.rowState(0))
     }
 }

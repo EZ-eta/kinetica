@@ -3,29 +3,26 @@ package com.kinetica.keyboard.keys
 import android.os.Handler
 
 /**
- * Backspace behaviors: tap deletes one char; holding past the arm delay
- * repeats char deletion at 50ms; sliding left STAGES one unit per threshold
- * crossed without deleting anything - the staged span is highlighted in a
- * preview chip and committed only at lift. Sliding back right retracts the
- * staged span unit by unit; lifting with nothing staged is a no-op, so a
- * slide too far is always recoverable.
+ * Backspace behaviors: a tap deletes one char; holding past the arm delay repeats char deletion
+ * at 50 ms; sliding left stages one unit per threshold crossed without deleting anything. The
+ * staged span is highlighted in a preview chip and deleted at lift. Sliding back right retracts it
+ * unit by unit, and lifting with nothing staged is a no-op, so a slide too far is recoverable.
  *
- * A unit is a whole word by default, or a single character when [charMode] is
- * set. Only the threshold and the meaning of the count change - the staging
- * protocol, the retraction and the lift semantics are shared, which is the whole
- * reason the mode is a flag here rather than a second gesture.
+ * A unit is a whole word by default, or a single character when [charMode] is set. Only the
+ * threshold and the meaning of the count change; staging, retraction and lift are shared, so the
+ * mode is a flag and not a second gesture.
  */
 class BackspaceController(
     private val density: Float,
     private val handler: Handler,
     private val onDeleteChar: () -> Unit,
     /**
-     * Staged unit count changed; 0 clears the preview without deleting. The
-     * boolean is [charMode] at the time of the event, so the receiver never has
-     * to consult a second copy of the setting to know what the count means.
+     * Staged unit count changed; 0 clears the preview without deleting. The boolean is
+     * [charMode] at the time of the event, so the receiver needs no second copy of the setting
+     * to know what the count means.
      */
     private val onStageUnits: (Int, Boolean) -> Unit,
-    /** Pointer lifted with a staged span: delete exactly that span. */
+    /** Pointer lifted with a staged span: delete that span. */
     private val onCommitStaged: () -> Unit,
 ) {
     /**
