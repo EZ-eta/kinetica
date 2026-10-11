@@ -104,6 +104,14 @@ class BarAdjustTest {
         assertFalse(BarAdjust.recentSwap(dx = 30f, dy = 20f, swipePx = 16f))
     }
 
+    @Test
+    fun recentWheelKeepsItsDefaultAndCanReverseBothDirections() {
+        assertTrue(BarAdjust.recentSwapAbove(dy = 20f, reverse = false))
+        assertFalse(BarAdjust.recentSwapAbove(dy = -20f, reverse = false))
+        assertFalse(BarAdjust.recentSwapAbove(dy = 20f, reverse = true))
+        assertTrue(BarAdjust.recentSwapAbove(dy = -20f, reverse = true))
+    }
+
     // ---- A deliberate tap on the correction strip must not be eaten ---------------
     //
     // The arm fires at 450ms for any zone in either mode. A user aiming at a word to swap in

@@ -102,6 +102,7 @@ class SuggestionBarView @JvmOverloads constructor(
      * mode.
      */
     var flickEnabled = false
+    var reverseRecentWheel = false
 
     /** Configured manual boost magnitude: what a release in place adds. */
     var reinforceIncrement = 1
@@ -713,13 +714,16 @@ class SuggestionBarView @JvmOverloads constructor(
                 if (downZone == ZONE_RECENT) {
                     val cell = recentCellAt(ev.x, ev.y)
                     val dy = ev.y - downY
-                    // Nintype-style swap: a vertical swipe on a column brings a neighbour into
-                    // place, down for the word above, up for the word below.
+                    // By default the column moves like a wheel: down brings the word above.
                     val swipe = recentDownCell >= 0 &&
                         BarAdjust.recentSwap(ev.x - downX, dy, RECENT_SWIPE_DP * density)
                     if (swipe) {
                         val col = recent.getOrNull(recentDownCell / RECENT_ROWS)
-                        val word = if (dy > 0) col?.above else col?.below
+                        val word = if (BarAdjust.recentSwapAbove(dy, reverseRecentWheel)) {
+                            col?.above
+                        } else {
+                            col?.below
+                        }
                         if (col != null && word != null) {
                             listener?.onRecentPicked(col.back, word)
                             performClick()

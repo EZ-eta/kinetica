@@ -846,6 +846,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         suggestionBar?.reinforceIncrement = config.reinforceIncrement
         suggestionBar?.reinforceStepDp = config.reinforceStepDp
         suggestionBar?.badgesWhileAdjusting = config.badgesWhileAdjusting
+        suggestionBar?.reverseRecentWheel = config.reverseRecentWheel
         suggestionBar?.retypeButton = config.retypeButton
         suggestionBar?.retypeButtonDp = config.retypeButtonDp
         // Resolved here, not in the views, so the language cell drops out below two enabled

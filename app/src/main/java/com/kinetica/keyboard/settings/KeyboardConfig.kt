@@ -135,6 +135,7 @@ data class KeyboardConfig(
     val nextWord: Boolean,
     /** Recent words and their alternatives on a taller bar. */
     val recentWords: Boolean,
+    val reverseRecentWheel: Boolean,
     /** Digits in their own row above the letters. */
     val numberRow: Boolean,
     /** Enabled languages in canonical cycle order; always contains [language]. */
@@ -335,6 +336,9 @@ data class KeyboardConfig(
             menuActionOrder = ActionRow.decodeOrder(prefs.getString(Prefs.MENU_ACTIONS_ORDER, null)),
             nextWord = prefs.getBoolean(Prefs.NEXT_WORD, Prefs.DEFAULT_NEXT_WORD),
             recentWords = prefs.getBoolean(Prefs.RECENT_WORDS, Prefs.DEFAULT_RECENT_WORDS),
+            reverseRecentWheel = prefs.getBoolean(
+                Prefs.REVERSE_RECENT_WHEEL, Prefs.DEFAULT_REVERSE_RECENT_WHEEL,
+            ),
             numberRow = prefs.getBoolean(Prefs.NUMBER_ROW, Prefs.DEFAULT_NUMBER_ROW),
             enabledLanguages = enabledLanguages(prefs),
             britishSpelling = prefs.getBoolean(

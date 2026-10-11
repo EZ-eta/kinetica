@@ -319,6 +319,8 @@
     <string name="pref_bar_actions_title">Shortcuts in the suggestion bar</string>
     <string name="pref_next_word_title">Suggest the next word</string>
     <string name="pref_recent_words_title">Recent words on the bar</string>
+    <string name="pref_reverse_recent_wheel_title">Reverse recent-word wheel</string>
+    <string name="pref_reverse_recent_wheel_summary">Swipe up to choose the word above, or down to choose the word below. Taps and long-press weight adjustment stay the same</string>
     <string name="size_preview_portrait">Portrait</string>
     <string name="size_preview_landscape">Landscape</string>
     <string name="expansion_more_targets_note">A trigger that already exists gets this as another target; the keyboard then offers its targets on the bar.</string>

@@ -57,6 +57,7 @@ object Prefs {
      * bar taller and takes two fifths of its width.
      */
     const val RECENT_WORDS = "pref_recent_words"
+    const val REVERSE_RECENT_WHEEL = "pref_reverse_recent_wheel"
 
     /** A row of digits above the letters, taps only; the board grows a row for it. */
     const val NUMBER_ROW = "pref_number_row"
@@ -516,6 +517,7 @@ object Prefs {
     const val DEFAULT_LEARN_PHRASES = false
     const val DEFAULT_NEXT_WORD = true
     const val DEFAULT_RECENT_WORDS = false
+    const val DEFAULT_REVERSE_RECENT_WHEEL = false
     const val DEFAULT_NUMBER_ROW = false
     const val DEFAULT_ENTER_ALTERNATES = "? ! ,"
     const val DEFAULT_APOSTROPHE_KEY = false

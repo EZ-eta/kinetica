@@ -97,4 +97,7 @@ object BarAdjust {
      */
     fun recentSwap(dx: Float, dy: Float, swipePx: Float): Boolean =
         kotlin.math.abs(dy) > swipePx && kotlin.math.abs(dy) > kotlin.math.abs(dx)
+
+    /** Which neighbour a recognised vertical swap selects; taps and weight slides do not use it. */
+    fun recentSwapAbove(dy: Float, reverse: Boolean): Boolean = (dy > 0) != reverse
 }

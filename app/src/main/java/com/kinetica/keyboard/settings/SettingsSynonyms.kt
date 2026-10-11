@@ -69,6 +69,7 @@ object SettingsSynonyms {
         Prefs.TIDY_SPACES to listOf("space", "spaces", "double space", "compress", "quote", "autospace"),
         Prefs.NUMBER_ROW to listOf("digits", "numbers", "number row", "numeric", "1234"),
         Prefs.RECENT_WORDS to listOf("thicc", "thick", "multi-row", "rows", "history", "previous word", "topbar", "swap"),
+        Prefs.REVERSE_RECENT_WHEEL to listOf("reverse", "wheel", "swipe", "direction", "recent", "swap"),
         Prefs.MENU_ACTIONS to listOf(
             "?123", "123", "hold", "long press", "shortcut", "gear", "undo", "menu",
             "action", "popup",

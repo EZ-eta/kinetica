@@ -185,6 +185,13 @@
                 android:summary="@string/pref_recent_words_summary"
                 android:defaultValue="false" />
             <SwitchPreferenceCompat
+                android:key="pref_reverse_recent_wheel"
+                android:title="@string/pref_reverse_recent_wheel_title"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_reverse_recent_wheel_summary"
+                android:dependency="pref_recent_words"
+                android:defaultValue="false" />
+            <SwitchPreferenceCompat
                 android:key="pref_badges_while_adjusting"
                 android:title="@string/pref_badges_while_adjusting_title"
                 app:singleLineTitle="false"
