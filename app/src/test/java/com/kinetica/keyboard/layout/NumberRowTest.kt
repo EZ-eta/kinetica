@@ -1,9 +1,17 @@
 package com.kinetica.keyboard.layout
 
 import com.kinetica.keyboard.engine.KeyboardGeometry
+import com.kinetica.keyboard.engine.GestureEngine
+import com.kinetica.keyboard.engine.models.InputToken
+import com.kinetica.keyboard.engine.models.StreamId
+import com.kinetica.keyboard.engine.models.SwipeToken
+import com.kinetica.keyboard.keys.EdgeSwipeBindings
+import com.kinetica.keyboard.keys.EdgeSwipeDetector
 import kotlin.math.abs
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 /**
@@ -67,6 +75,45 @@ class NumberRowTest {
         assertTrue(l.keys.filter { !it.id.startsWith("num_") }.all { it.y >= rowBottom - 1e-6f })
         assertTrue(l.keys.all { it.y + it.h <= 1f + 1e-6f })
         assertEquals("every letter is still there", 26, l.keys.count { it.isLetter })
+    }
+
+    @Test
+    fun aSloppyGlideThroughDigitsReturnsOnlyLetterContactsToTheEngine() {
+        val l = LayoutMutations.withNumberRow(LayoutMutations.withNumberRowSymbols(qwerty()))
+        val h = viewH * LayoutMutations.NUMBER_ROW_GROWTH
+        val g = geometry(l, h)
+        val tokens = ArrayList<InputToken>()
+        val engine = GestureEngine(object : GestureEngine.Listener {
+            override fun onTokenFinalized(token: InputToken) { tokens.add(token) }
+            override fun onKeyTransition(streamId: StreamId, code: Int) {}
+            override fun onAllPointersUp() {}
+        }).also { it.setGeometry(g, 12f) }
+        val q = l.keys.first { it.id == "q" }
+        val one = l.keys.first { it.id == "num_1" }
+        // Start near q's right edge and return just beyond its sticky bounds into w.
+        val x = g.centerX('q' - 'a') * g.keyWidthPx + 52f
+        val y = g.centerY('q' - 'a') * g.keyWidthPx + 4f
+        val peakX = x - 3f
+        val peakY = (one.y + one.h * .6f) * h
+        assertFalse(engine.onPointerDown(0, peakX, peakY, 0))
+        assertTrue(engine.onPointerDown(0, x, y, 10))
+        engine.onPointerMove(0, peakX, peakY, 70)
+        assertEquals(1, engine.contactCount(0))
+        val endX = g.centerX('w' - 'a') * g.keyWidthPx - 31f
+        val endY = y - 3f
+        engine.onPointerMove(0, endX, endY, 130)
+        assertEquals(2, engine.contactCount(0))
+        val bindings = EdgeSwipeBindings.withImplicitAlternates(l, EdgeSwipeBindings(emptyList()))
+        assertEquals("%", EdgeSwipeDetector.detect(
+            q, endX - x, endY - y, peakX - x, peakY - y, 1f, bindings,
+            engine.contactCount(0), returnedFromNumberRow = false,
+        ))
+        assertNull(EdgeSwipeDetector.detect(
+            q, endX - x, endY - y, peakX - x, peakY - y, 1f, bindings,
+            engine.contactCount(0), returnedFromNumberRow = true,
+        ))
+        engine.onPointerUp(0, endX, endY, 140)
+        assertEquals(listOf('q' - 'a', 'w' - 'a'), (tokens.single() as SwipeToken).keyContacts.map { it.code })
     }
 
     @Test

@@ -2,6 +2,7 @@ package com.kinetica.keyboard.keys
 
 import com.kinetica.keyboard.layout.Key
 import com.kinetica.keyboard.layout.KeyboardLayout
+import com.kinetica.keyboard.layout.LayoutMutations
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -21,7 +22,10 @@ data class EdgeSwipeBinding(
  * consulted by [EdgeSwipeDetector] at pointer lift. Bindings are keyed on the
  * layout key id, which is stable across languages and layout modes.
  */
-class EdgeSwipeBindings(val bindings: List<EdgeSwipeBinding>) {
+class EdgeSwipeBindings(
+    val bindings: List<EdgeSwipeBinding>,
+    private val implicitUpKeys: Set<String> = emptySet(),
+) {
 
     private val byKeyAndDir = HashMap<String, String>(bindings.size * 2)
 
@@ -42,6 +46,9 @@ class EdgeSwipeBindings(val bindings: List<EdgeSwipeBinding>) {
     fun outputFor(key: Key, direction: EdgeSwipeBinding.Direction): String? =
         outputFor(key.id, direction) ?: key.chordChar?.let { outputFor(it.toString(), direction) }
 
+    /** Explicit bindings remain explicit even when their output matches the corner hint. */
+    fun isImplicitUp(key: Key): Boolean = key.id in implicitUpKeys
+
     fun serialize(): String {
         val arr = JSONArray()
         for (b in bindings) {
@@ -59,7 +66,8 @@ class EdgeSwipeBindings(val bindings: List<EdgeSwipeBinding>) {
         /** Reserved output value: opens the emoji picker. */
         const val ACTION_EMOJI = "emoji"
 
-        // Letter rows by normalized Key.y (top 0.00, home 0.25, bottom 0.50 in the bundled
+        // Letter rows by Key.y before the optional number-row transform (top 0.00, home 0.25,
+        // bottom 0.50 in the bundled
         // layouts). Half-row bands tolerate layout rounding without catching the home row or the
         // space/enter row (0.75).
         private const val TOP_ROW_Y_MAX = 0.1f
@@ -147,17 +155,26 @@ class EdgeSwipeBindings(val bindings: List<EdgeSwipeBinding>) {
             explicit: EdgeSwipeBindings,
         ): EdgeSwipeBindings {
             val implicit = ArrayList<EdgeSwipeBinding>()
+            val numberRow = layout.keys.any { it.id.startsWith("num_") }
             for (k in layout.keys) {
                 if (!k.isLetter) continue
+                // Undo only the optional row's coordinate shift; other layouts keep their bands.
+                val rowY = if (numberRow) {
+                    k.y * LayoutMutations.NUMBER_ROW_GROWTH - LayoutMutations.NUMBER_ROW_H
+                } else k.y
                 val direction = when {
-                    k.y < TOP_ROW_Y_MAX -> EdgeSwipeBinding.Direction.UP
-                    k.y in BOTTOM_ROW_Y_MIN..BOTTOM_ROW_Y_MAX -> EdgeSwipeBinding.Direction.DOWN
+                    rowY < TOP_ROW_Y_MAX -> EdgeSwipeBinding.Direction.UP
+                    rowY in BOTTOM_ROW_Y_MIN..BOTTOM_ROW_Y_MAX -> EdgeSwipeBinding.Direction.DOWN
                     else -> continue
                 }
                 val symbol = k.hintChar ?: continue
                 implicit.add(EdgeSwipeBinding(k.id, direction, symbol))
             }
-            return EdgeSwipeBindings(implicit + explicit.bindings)
+            val explicitUp = explicit.bindings.filter { it.direction == EdgeSwipeBinding.Direction.UP }
+                .mapTo(HashSet()) { it.keyId }
+            val implicitUp = implicit.filter { it.direction == EdgeSwipeBinding.Direction.UP && it.keyId !in explicitUp }
+                .mapTo(HashSet()) { it.keyId }
+            return EdgeSwipeBindings(implicit + explicit.bindings, implicitUp)
         }
 
         /**
