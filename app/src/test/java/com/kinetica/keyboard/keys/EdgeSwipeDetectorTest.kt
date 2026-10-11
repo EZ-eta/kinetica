@@ -3,6 +3,8 @@ package com.kinetica.keyboard.keys
 import com.kinetica.keyboard.keys.EdgeSwipeBinding.Direction
 import com.kinetica.keyboard.layout.Key
 import com.kinetica.keyboard.layout.KeyType
+import com.kinetica.keyboard.layout.KeyboardLayout
+import com.kinetica.keyboard.layout.LayoutMutations
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -43,6 +45,47 @@ class EdgeSwipeDetectorTest {
         py: Float = dy,
         contacts: Int = 1,
     ) = EdgeSwipeDetector.detect(key, dx, dy, px, py, 1f, bindings, contacts)
+
+    private val numberedLayout = LayoutMutations.withNumberRow(
+        KeyboardLayout("probe", "en_US", listOf(y, b)),
+    )
+    private val numberedY = numberedLayout.keys.first { it.id == "y" }
+    private val implicit = EdgeSwipeBindings.withImplicitAlternates(
+        numberedLayout, EdgeSwipeBindings(emptyList()),
+    )
+
+    private fun numberedDetect(
+        dx: Float, dy: Float, px: Float = dx, py: Float = dy,
+        contacts: Int = 2, returned: Boolean = true,
+        active: EdgeSwipeBindings = implicit,
+    ) = EdgeSwipeDetector.detect(numberedY, dx, dy, px, py, 1f, active, contacts, returned)
+
+    @Test
+    fun aNumberRowGlideReturningSidewaysCannotUseItsUpwardPeak() {
+        assertEquals("6", numberedDetect(22f, -14f, 6f, -38f, returned = false))
+        assertNull(numberedDetect(22f, -14f, 6f, -38f))
+    }
+
+    @Test
+    fun aNumberRowGlideReturningToLettersCannotUseAnUpwardLiftEither() {
+        assertEquals("6", numberedDetect(2f, -32f, 4f, -80f, returned = false))
+        assertNull(numberedDetect(2f, -32f, 4f, -80f))
+    }
+
+    @Test
+    fun deliberateSingleLetterFlicksRemainAvailableWithTheNumberRow() {
+        assertEquals("6", numberedDetect(2f, -40f, contacts = 1, returned = false))
+        assertEquals("6", numberedDetect(22f, -14f, 6f, -38f, contacts = 1))
+        assertEquals("6", numberedDetect(1f, -18f, 2f, -34f, contacts = 1))
+        assertEquals("6", numberedDetect(2f, -40f, contacts = 2, returned = false))
+    }
+
+    @Test
+    fun explicitUpBindingsKeepTheirPeakAndLiftBehaviorOnNumberRowGlides() {
+        val explicit = EdgeSwipeBindings.withImplicitAlternates(numberedLayout, bindings)
+        assertEquals("6", numberedDetect(22f, -14f, 6f, -38f, active = explicit))
+        assertEquals("6", numberedDetect(2f, -32f, 4f, -80f, active = explicit))
+    }
 
     @Test
     fun aCleanUpFlickStillFires() {

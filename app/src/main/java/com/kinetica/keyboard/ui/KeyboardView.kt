@@ -390,6 +390,7 @@ class KeyboardView @JvmOverloads constructor(
     // EdgeSwipeDetector: a flick off the top row is short and curves back before the lift.
     private val peakDxByPointer = FloatArray(MAX_POINTERS)
     private val peakDyByPointer = FloatArray(MAX_POINTERS)
+    private val enteredNumberRowByPointer = BooleanArray(MAX_POINTERS)
     private val downTimeByPointer = LongArray(MAX_POINTERS)
     private val pressedKeys = LinkedHashSet<Int>()
 
@@ -950,6 +951,7 @@ class KeyboardView @JvmOverloads constructor(
         downYByPointer[pid] = y
         peakDxByPointer[pid] = 0f
         peakDyByPointer[pid] = 0f
+        enteredNumberRowByPointer[pid] = false
         downTimeByPointer[pid] = t
         val key = if (keyIdx != -1) l.keys[keyIdx] else null
 
@@ -1340,6 +1342,7 @@ class KeyboardView @JvmOverloads constructor(
                     val hx = ev.getHistoricalX(p, h)
                     val hy = ev.getHistoricalY(p, h)
                     val ht = ev.getHistoricalEventTime(h)
+                    trackNumberRow(pid, hx, hy)
                     e.onPointerMove(pid, hx, hy, ht)
                     addTrailPoint(e, pid, hx, hy, ht)
                 }
@@ -1387,11 +1390,26 @@ class KeyboardView @JvmOverloads constructor(
         }
     }
 
+    private fun trackNumberRow(pid: Int, x: Float, y: Float) {
+        if (enteredNumberRowByPointer[pid]) return
+        val l = layout
+        val downIdx = downKeyByPointer[pid]
+        if (l != null && downIdx in l.keys.indices && l.keys[downIdx].isLetter) {
+            val downRect = keyRects.getOrNull(downIdx)
+            if (downRect != null && y < downRect.top) {
+                enteredNumberRowByPointer[pid] = l.keys.indices.any { i ->
+                    l.keys[i].id.startsWith("num_") && keyRects.getOrNull(i)?.contains(x, y) == true
+                }
+            }
+        }
+    }
+
     /**
      * Keeps the displacement at this pointer's furthest sample from its down point. Radial, so
      * one pair of values serves all four directions; compared squared, so the move path takes no roots.
      */
     private fun trackPeak(pid: Int, x: Float, y: Float) {
+        trackNumberRow(pid, x, y)
         val dx = x - downXByPointer[pid]
         val dy = y - downYByPointer[pid]
         val px = peakDxByPointer[pid]
@@ -1417,11 +1435,19 @@ class KeyboardView @JvmOverloads constructor(
         val dy = y - downYByPointer[pid]
         trackPeak(pid, x, y)
         val shortcut = key?.let {
+            // A glide may first return to another letter in the lift sample.
+            if (routeByPointer[pid] == ROUTE_ENGINE && enteredNumberRowByPointer[pid] &&
+                edgeSwipeBindings.isImplicitUp(it)
+            ) {
+                engine?.onPointerMove(pid, x, y, t)
+            }
             // Read before the stream is cancelled or finished below; after that the engine no
             // longer knows where this pointer has been.
             EdgeSwipeDetector.detect(
                 it, dx, dy, peakDxByPointer[pid], peakDyByPointer[pid], density,
                 edgeSwipeBindings, engine?.contactCount(pid) ?: 1,
+                returnedFromNumberRow = enteredNumberRowByPointer[pid] &&
+                    keyRects.getOrNull(downKeyByPointer[pid])?.let { r -> y >= r.top } == true,
             )
         }
 

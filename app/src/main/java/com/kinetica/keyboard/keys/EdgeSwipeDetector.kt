@@ -14,7 +14,7 @@ import kotlin.math.abs
  * grows until the dominance test fails at lift and the path decodes as a word (up on `y` for `6`
  * gave `to` about half the time). The furthest point is consulted only when the lift refused the
  * gesture outright and only where a binding exists, so nothing the lift resolves changes meaning.
- * On the top row it cannot steal a typed word: there are no letters above it.
+ * A number-row excursion returning across letters is a word, not an implicit up-flick.
  */
 object EdgeSwipeDetector {
 
@@ -43,6 +43,8 @@ object EdgeSwipeDetector {
      *
      * [contacts] is how many keys the pointer has touched; see [MAX_SHORTCUT_CONTACTS]. It
      * defaults to one for a caller with no gesture stream, every key that is not a letter.
+     * [returnedFromNumberRow] means the path entered a digit key and lifted back among letters.
+     * Only implicit UP bindings yield to such a multi-letter path; explicit shortcuts still win.
      */
     fun detect(
         key: Key,
@@ -53,6 +55,7 @@ object EdgeSwipeDetector {
         density: Float,
         bindings: EdgeSwipeBindings,
         contacts: Int = 1,
+        returnedFromNumberRow: Boolean = false,
     ): String? {
         val minTravel = MIN_TRAVEL_DP * density
         // The lift decides first and alone wherever it decides anything, so a gesture that reads
@@ -62,6 +65,15 @@ object EdgeSwipeDetector {
             ?: directionOf(peakDxPx, peakDyPx, minTravel)
         val bound = direction?.let { bindings.outputFor(key, it) }
         if (bound != null) {
+            if (direction == EdgeSwipeBinding.Direction.UP && bindings.isImplicitUp(key) &&
+                returnedFromNumberRow && contacts > 1
+            ) {
+                DecodeTrace.log {
+                    "  edgeswipe refused key=${key.id} dir=$direction bound=$bound " +
+                        "reason=number-row-glide contacts=$contacts"
+                }
+                return null
+            }
             // The contact refusal is traced beside the firing: it is the only measurement of what
             // MAX_SHORTCUT_CONTACTS costs.
             if (contacts <= MAX_SHORTCUT_CONTACTS) {

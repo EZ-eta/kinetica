@@ -4,6 +4,7 @@ import com.kinetica.keyboard.keys.EdgeSwipeBinding.Direction
 import com.kinetica.keyboard.layout.Key
 import com.kinetica.keyboard.layout.KeyType
 import com.kinetica.keyboard.layout.KeyboardLayout
+import com.kinetica.keyboard.layout.LayoutMutations
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -52,6 +53,29 @@ class EdgeSwipeBindingsTest {
     )
 
     private val empty = EdgeSwipeBindings(emptyList())
+
+    @Test
+    fun numberRowKeepsImplicitFlicksOnTheLetterRowsNotTheHomeRow() {
+        val numbered = LayoutMutations.withNumberRow(LayoutMutations.withNumberRowSymbols(layout()))
+        val b = EdgeSwipeBindings.withImplicitAlternates(numbered, empty)
+        val q = numbered.keys.first { it.id == "q" }
+        assertEquals(q.hintChar, b.outputFor(q, Direction.UP))
+        assertTrue(b.isImplicitUp(q))
+        assertNull(b.outputFor("a", Direction.DOWN))
+        assertNull(b.outputFor("a", Direction.UP))
+        assertEquals("ž", b.outputFor("z", Direction.DOWN))
+        assertNull(b.outputFor("num_1", Direction.UP))
+    }
+
+    @Test
+    fun anExplicitUpBindingIsNotAnImplicitFlickEvenWithTheSameOutput() {
+        val numbered = LayoutMutations.withNumberRow(layout())
+        val q = numbered.keys.first { it.id == "q" }
+        val explicit = EdgeSwipeBindings(listOf(EdgeSwipeBinding("q", Direction.UP, "1")))
+        val b = EdgeSwipeBindings.withImplicitAlternates(numbered, explicit)
+        assertEquals("1", b.outputFor(q, Direction.UP))
+        org.junit.Assert.assertFalse(b.isImplicitUp(q))
+    }
 
     @Test
     fun topRowUpYieldsTheHintItShows() {
