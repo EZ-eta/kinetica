@@ -121,6 +121,9 @@ class GestureEngine(private val listener: Listener) {
     fun isSwipeCommitted(pointerId: Int): Boolean =
         streamFor(pointerId)?.isSwipeCommitted == true
 
+    /** A hold popup must not interrupt either pointer while a word is being swiped. */
+    fun hasCommittedSwipe(): Boolean = streams.any { it?.isSwipeCommitted == true }
+
     fun streamIdOf(pointerId: Int): StreamId? = streamFor(pointerId)?.streamId
 
     /**
