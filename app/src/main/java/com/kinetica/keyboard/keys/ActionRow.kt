@@ -132,14 +132,22 @@ object ActionRow {
     )
 
     /**
-     * The glyph for an action written by name in a letter's list, `:paste` or `:select_all`, or
-     * null for anything else: typing a name is easier than finding the symbol.
+     * An action written explicitly by name, `:paste` or `:select_all`, or null for anything
+     * else. Unlike bare glyph matching, every action is safe to name explicitly.
      */
-    fun glyphForToken(text: String): String? {
+    fun actionForToken(text: String): EditorAction? {
         if (text.length < 2 || text[0] != ':') return null
         val name = text.substring(1).uppercase()
-        return EditorAction.entries.firstOrNull { it.name == name && it !in NOT_IN_LISTS }?.let { glyph(it) }
+        return EditorAction.entries.firstOrNull { it.name == name }
     }
+
+    fun glyphForToken(text: String): String? = actionForToken(text)?.let { glyph(it) }
+
+    /** Explicit names are unambiguous; bare labels such as `ALL` remain literal text. */
+    fun actionForAlternate(text: String): EditorAction? = actionForToken(text) ?: actionForGlyph(text)
+
+    /** Accepted names for the settings help, derived from the same actions as the parser. */
+    val tokens: List<String> = EditorAction.entries.map { ":" + it.output.removePrefix(EditorAction.PREFIX) }
 
     /**
      * Whether [action] is worth offering at all right now.

@@ -1,6 +1,5 @@
 package com.kinetica.keyboard.ime
 
-import com.kinetica.keyboard.keys.ActionRow
 import com.kinetica.keyboard.layout.KeyboardLayout
 import com.kinetica.keyboard.layout.LayoutMutations
 import com.kinetica.keyboard.settings.KeyboardConfig
@@ -58,10 +57,9 @@ object AlphaLayouts {
         if (config.numberPriority) l = LayoutMutations.withNumberPriority(l)
         // Digits have their own row then; a user's list below still wins.
         if (config.numberRow) l = LayoutMutations.withNumberRowSymbols(l)
-        // Last in the alternates chain, so a list the user wrote wins (#8). An action written
-        // by name (`:paste`) becomes the symbol that runs it.
-        val lists = config.letterAlternates.mapValues { (_, list) -> list.map { ActionRow.glyphForToken(it) ?: it } }
-        l = LayoutMutations.withLetterAlternates(l, lists)
+        // Keep explicit names until dispatch: :select_all and literal ALL draw alike but
+        // only the named action should run.
+        l = LayoutMutations.withLetterAlternates(l, config.letterAlternates)
         // After the emoji mutation, so a removal can relocate the emoji
         // alternate and a repurposed key keeps it in its popup.
         l = LayoutMutations.withCommaKey(l, config.commaMode, config.commaCustom)

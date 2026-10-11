@@ -1448,7 +1448,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             // it. It runs here as it does on the chord path, instead of being inserted.
             if (performIfAction(output)) return
             // A shortcut placed first in a letter's list is also its up-swipe.
-            ActionRow.actionForGlyph(output)?.let {
+            ActionRow.actionForAlternate(output)?.let {
                 performShortcut(it)
                 return
             }
@@ -1479,7 +1479,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             }
             // A shortcut's symbol in a letter's list runs the shortcut.
             if (key.isLetter) {
-                ActionRow.actionForGlyph(text)?.let {
+                ActionRow.actionForAlternate(text)?.let {
                     performShortcut(it)
                     return
                 }

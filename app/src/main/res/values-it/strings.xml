@@ -344,7 +344,7 @@
     <string name="pref_group_longpress_title">Menu a pressione lunga</string>
     <string name="pref_group_longpress_summary">Griglia o riga, e cosa offre ogni lettera tenuta premuta</string>
     <string name="pref_letter_alternates_note_title">L\'elenco di ogni lettera</string>
-    <string name="pref_letter_alternates_note_summary">Caratteri separati da spazi. Il primo è il carattere nell\'angolo del tasto, scritto da una pressione lunga semplice o da uno swipe in su. Vuoto, o uguale a quello di serie, tiene l\'elenco di serie; Predefinito inserisce i caratteri di tutte le lingue attive, da sfoltire. Una scorciatoia si esegue con il suo simbolo della barra o con il suo nome: :paste :copy :cut :undo :redo :settings :retype :date :time :copy_line :tab :escape :home :end. Un solo elenco per tutte le lingue</string>
+    <string name="pref_letter_alternates_note_summary">Caratteri separati da spazi. Il primo è il carattere nell\'angolo del tasto, scritto da una pressione lunga semplice o da uno swipe in su. Vuoto, o uguale a quello di serie, tiene l\'elenco di serie; Predefinito inserisce i caratteri di tutte le lingue attive, da sfoltire. Una scorciatoia si esegue con il suo simbolo della barra o con il suo nome esplicito: %1$s. Etichette semplici come ALL, 123 e le frecce restano testo. Un solo elenco per tutte le lingue</string>
     <string name="pref_edit_from_menu_title">Modifica un menu dalla tastiera</string>
     <string name="pref_edit_from_menu_summary">Tieni fermo per un attimo il menu di una lettera per aprirne l\'elenco qui</string>
     <string name="pref_letter_alternates_builtin">Di serie: %1$s</string>
@@ -479,9 +479,9 @@
     <string name="pref_period_mode_title">Tasto punto</string>
     <string name="pref_period_mode_summary">Le stesse sei opzioni del tasto virgola, per il punto. Togliendo entrambi i tasti sparisce anche la pressione lunga per le emoji che condividono</string>
     <string name="pref_period_custom_title">Testo a scelta del tasto punto</string>
-    <string name="pref_period_custom_summary">Usato dalle opzioni carattere e testo a scelta qui sopra</string>
+    <string name="pref_period_custom_summary">Usato dalle opzioni carattere e testo a scelta qui sopra. Il testo accetta anche il nome di un\'azione, come :next_language o :select_all</string>
     <string name="pref_comma_custom_title">Testo a scelta del tasto virgola</string>
-    <string name="pref_comma_custom_summary">Usato dalle opzioni carattere e testo a scelta qui sopra</string>
+    <string name="pref_comma_custom_summary">Usato dalle opzioni carattere e testo a scelta qui sopra. Il testo accetta anche il nome di un\'azione, come :next_language o :select_all</string>
     <string name="emoji_recent">Usate spesso</string>
     <string name="pref_theme_mode_title">Tema della tastiera</string>
     <string name="pref_theme_brightness_title">Chiaro o scuro</string>

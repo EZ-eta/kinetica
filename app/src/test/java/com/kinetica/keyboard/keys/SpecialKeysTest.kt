@@ -39,7 +39,7 @@ class SpecialKeysTest {
     @Test
     fun theyReachEveryShortcutSurface() {
         // The chord, edge-swipe and bar choosers all list ActionRow.ALL or the enum; a name in
-        // a letter list resolves too, except the arrows, which a list types as text.
+        // a letter list resolves too. Bare arrows still type themselves.
         for (a in special) {
             assertTrue(a.name, a in ActionRow.ALL)
             assertEquals(a, EditorAction.of(a.output))
@@ -47,7 +47,7 @@ class SpecialKeysTest {
         }
         assertEquals("⇥", ActionRow.glyphForToken(":tab"))
         assertEquals("⎋", ActionRow.glyphForToken(":escape"))
-        assertNull(ActionRow.glyphForToken(":arrow_left"))
+        assertEquals("←", ActionRow.glyphForToken(":arrow_left"))
         assertEquals(ActionRow.Notice.Sent(EditorAction.TAB), ActionRow.notice(EditorAction.TAB, ActionRow.KeyboardState(true, listOf("en"), "en", "full", null)))
     }
 }

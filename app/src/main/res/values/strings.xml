@@ -377,7 +377,7 @@
     <string name="pref_group_longpress_summary">Grid or strip, and what each letter offers when held</string>
     <string name="pref_letter_alternates_note_title">Each letter\'s list</string>
     <!-- The :paste, :copy ... names are typed into the lists and read by the keyboard: keep them in English. -->
-    <string name="pref_letter_alternates_note_summary">Characters separated by spaces. The first is the key\'s corner character, typed by a plain long-press or an up-swipe. Blank, or the built-in list, keeps the built-in one; Default fills in every enabled language\'s characters to trim. A shortcut runs from its bar symbol or its name: :paste :copy :cut :undo :redo :settings :retype :date :time :copy_line :tab :escape :home :end. One list for every language</string>
+    <string name="pref_letter_alternates_note_summary">Characters separated by spaces. The first is the key\'s corner character, typed by a plain long-press or an up-swipe. Blank, or the built-in list, keeps the built-in one; Default fills in every enabled language\'s characters to trim. A shortcut runs from its bar symbol or its explicit name: %1$s. Plain labels such as ALL, 123 and arrows stay text. One list for every language</string>
     <string name="pref_edit_from_menu_title">Edit a menu from the keyboard</string>
     <string name="pref_edit_from_menu_summary">Hold a letter\'s long-press menu still for a moment to open its list here</string>
     <string name="pref_letter_alternates_builtin">Built-in: %1$s</string>
@@ -544,9 +544,9 @@
     <string name="pref_period_mode_title">Period key</string>
     <string name="pref_period_mode_summary">The same six options as the comma key, for the period. Removing both keys drops the emoji long-press they share</string>
     <string name="pref_period_custom_title">Period key custom text</string>
-    <string name="pref_period_custom_summary">Used by the custom character and custom text options above</string>
+    <string name="pref_period_custom_summary">Used by the custom character and custom text options above. Custom text also accepts an action name, such as :next_language or :select_all</string>
     <string name="pref_comma_custom_title">Comma key custom text</string>
-    <string name="pref_comma_custom_summary">Used by the custom character and custom text options above</string>
+    <string name="pref_comma_custom_summary">Used by the custom character and custom text options above. Custom text also accepts an action name, such as :next_language or :select_all</string>
     <string name="emoji_back_to_letters" translatable="false">ABC</string>
     <string name="emoji_recent">Frequently used</string>
 

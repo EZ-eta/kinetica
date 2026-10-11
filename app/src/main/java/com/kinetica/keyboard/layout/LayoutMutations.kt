@@ -1,6 +1,7 @@
 package com.kinetica.keyboard.layout
 
 import com.kinetica.keyboard.engine.Alphabet
+import com.kinetica.keyboard.keys.ActionRow
 import com.kinetica.keyboard.keys.EditorAction
 
 /** Optional, settings-driven edits applied to a loaded layout. */
@@ -239,7 +240,8 @@ object LayoutMutations {
 
         val (label, output) = when (mode) {
             "char" -> custom.take(1) to custom.take(1)
-            "text" -> custom to custom
+            "text" -> ActionRow.actionForToken(custom)?.let { ActionRow.glyph(it) to it.output }
+                ?: (custom to custom)
             // ISO/IEC 9995-7 paste symbol; select-all has no ISO glyph, a
             // short text label shrinks like any multi-char key label.
             "paste" -> "\u2398" to ACTION_PASTE

@@ -252,8 +252,29 @@ class ActionRowTest {
     @Test
     fun anActionWrittenByNameBecomesItsSymbol() {
         assertEquals("⎘", ActionRow.glyphForToken(":paste"))
-        assertEquals(null, ActionRow.glyphForToken(":select_all"))
+        assertEquals("ALL", ActionRow.glyphForToken(":select_all"))
         assertEquals("↶", ActionRow.glyphForToken(":UNDO"))
+        for (a in EditorAction.entries) {
+            assertEquals(a.name, ActionRow.glyph(a), ActionRow.glyphForToken(":" + a.name.lowercase()))
+        }
         for (t in listOf("paste", ":", ":nothing", "a", "")) assertEquals(null, ActionRow.glyphForToken(t))
+    }
+
+    @Test
+    fun explicitSelectAllRunsButItsBareLabelStaysText() {
+        assertEquals(EditorAction.SELECT_ALL, ActionRow.actionForAlternate(":select_all"))
+        assertEquals(null, ActionRow.actionForAlternate("ALL"))
+        for (a in EditorAction.entries) {
+            assertEquals(a, ActionRow.actionForAlternate(":" + a.name.lowercase()))
+        }
+        for (t in listOf("ALL", "123", "»", "wpm", "TAP", "→", "hello", ":nothing")) {
+            assertEquals(null, ActionRow.actionForAlternate(t))
+        }
+    }
+
+    @Test
+    fun helpNamesExactlyTheAcceptedExplicitActions() {
+        assertEquals(EditorAction.entries.toSet(), ActionRow.tokens.map { ActionRow.actionForToken(it) }.toSet())
+        assertEquals(EditorAction.entries.size, ActionRow.tokens.distinct().size)
     }
 }

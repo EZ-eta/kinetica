@@ -29,6 +29,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.kinetica.keyboard.R
 import com.kinetica.keyboard.engine.Alphabet
 import com.kinetica.keyboard.ime.AlphaLayouts
+import com.kinetica.keyboard.keys.ActionRow
 import com.kinetica.keyboard.layout.LayoutLoader
 import com.kinetica.keyboard.layout.LayoutTransforms
 import com.kinetica.keyboard.ui.KeyboardTheme
@@ -258,6 +259,7 @@ class KeyboardPrefsFragment : PreferenceFragmentCompat() {
     private fun addLetterRows() {
         val screen = preferenceScreen ?: return
         val ctx = context ?: return
+        findPreference<Preference>("pref_letter_alternates_note")?.summary = letterAlternatesHelp()
         val perLanguage = try {
             builtInListsPerLanguage()
         } catch (e: IOException) {
@@ -326,7 +328,7 @@ class KeyboardPrefsFragment : PreferenceFragmentCompat() {
         row.title = letter
         row.isSingleLineTitle = false
         row.dialogTitle = getString(R.string.pref_letter_alternates_dialog_title, letter)
-        row.dialogMessage = getString(R.string.pref_letter_alternates_note_summary)
+        row.dialogMessage = letterAlternatesHelp()
         row.summaryProvider = Preference.SummaryProvider<EditTextPreference> { p ->
             val t = p.text
             when {
@@ -368,6 +370,9 @@ class KeyboardPrefsFragment : PreferenceFragmentCompat() {
         group.addPreference(row)
         return row
     }
+
+    private fun letterAlternatesHelp(): String =
+        getString(R.string.pref_letter_alternates_note_summary, ActionRow.tokens.joinToString(" "))
 
     /**
      * Each enabled language's long-press lists as the keyboard would build them with no list of

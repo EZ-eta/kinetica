@@ -29,6 +29,7 @@ import com.kinetica.keyboard.layout.LandscapeArrangement
 import com.kinetica.keyboard.layout.LayoutTransforms
 import com.kinetica.keyboard.engine.models.StreamId
 import com.kinetica.keyboard.keys.BackspaceController
+import com.kinetica.keyboard.keys.ActionRow
 import com.kinetica.keyboard.keys.ChordTrigger
 import com.kinetica.keyboard.keys.EdgeSwipeBinding
 import com.kinetica.keyboard.keys.EdgeSwipeBindings
@@ -697,11 +698,12 @@ class KeyboardView @JvmOverloads constructor(
             c.drawText(label, inset.centerX(), baseline, labelPaint)
         }
         key.hintChar?.let {
+            val shown = if (key.isLetter) ActionRow.glyphForToken(it) ?: it else it
             // 40% alpha: visible enough to advertise the long-press default
             // without competing with the main label.
             hintPaint.alpha = 102
             hintPaint.textSize = inset.height() * 0.24f
-            c.drawText(it, inset.right - 3f * density, inset.top + hintPaint.textSize + 2f * density, hintPaint)
+            c.drawText(shown, inset.right - 3f * density, inset.top + hintPaint.textSize + 2f * density, hintPaint)
         }
         // A line at the spaceless zone's edge, since the zone has no other visible boundary.
         // Ambient alpha, not the dot's: it is a standing affordance, not a state.
@@ -885,7 +887,7 @@ class KeyboardView @JvmOverloads constructor(
                     cornerPx, cornerPx, popupSelectedPaint,
                 )
             }
-            canvas.drawText(p.cells[i], cx, baseline, labelPaint)
+            canvas.drawText(popupLabel(p.cells[i]), cx, baseline, labelPaint)
         }
     }
 
@@ -908,9 +910,12 @@ class KeyboardView @JvmOverloads constructor(
                 )
             }
             val baseline = t + p.cellH / 2f - (labelPaint.descent() + labelPaint.ascent()) / 2f
-            canvas.drawText(p.cells[i], l + p.cellW / 2f, baseline, labelPaint)
+            canvas.drawText(popupLabel(p.cells[i]), l + p.cellW / 2f, baseline, labelPaint)
         }
     }
+
+    private fun popupLabel(text: String): String =
+        if (keyAtDown(popupPointer)?.isLetter == true) ActionRow.glyphForToken(text) ?: text else text
 
     private fun ensureAnimating() {
         if (zenMode || animating) return

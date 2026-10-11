@@ -577,6 +577,39 @@ class LayoutMutationsTest {
         assertSame(before, LayoutMutations.withCommaKey(before, "keep", ""))
     }
 
+    @Test
+    fun punctuationCustomTextCanNameTheLanguageAction() {
+        val comma = LayoutMutations.withCommaKey(bottomRowLayout(), "text", ":next_language")
+            .keys.first { it.id == "comma" }
+        val period = LayoutMutations.withPeriodKey(bottomRowLayout(), "text", ":NEXT_LANGUAGE")
+            .keys.first { it.id == "period" }
+        for (key in listOf(comma, period)) {
+            assertEquals(com.kinetica.keyboard.keys.EditorAction.NEXT_LANGUAGE.output, key.output)
+            assertEquals("⇄", key.label)
+        }
+        assertEquals(",", comma.alternates.first())
+        assertEquals(".", period.alternates.first())
+    }
+
+    @Test
+    fun punctuationCustomTextKeepsOrdinaryAndUnknownNamesLiteral() {
+        for (text in listOf("ALL", "hello world", ":nothing", "prefix :next_language")) {
+            val comma = LayoutMutations.withCommaKey(bottomRowLayout(), "text", text)
+                .keys.first { it.id == "comma" }
+            val period = LayoutMutations.withPeriodKey(bottomRowLayout(), "text", text)
+                .keys.first { it.id == "period" }
+            for (key in listOf(comma, period)) {
+                assertEquals(text, key.output)
+                assertEquals(text, key.label)
+            }
+        }
+        assertEquals(
+            ":",
+            LayoutMutations.withCommaKey(bottomRowLayout(), "char", ":next_language")
+                .keys.first { it.id == "comma" }.output,
+        )
+    }
+
     /** Home row mirroring the bundled layouts: "l" ends at 0.95, right pad free. */
     private fun homeRowLayout(): KeyboardLayout = KeyboardLayout(
         name = "qwerty", locale = "en_US",
