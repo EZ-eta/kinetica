@@ -87,12 +87,15 @@ object TestData {
         Alphabet.UKRAINIAN,
     )
 
-    /** Hebrew, mirroring assets/layouts/native_he.json: 8 / 10 / 9, ten-key widths. */
+    /**
+     * Hebrew, mirroring assets/layouts/native_he.json: 8 (centred) / 10 / 9. The shipped
+     * bottom row is squeezed to 0.85 to fit backspace; here it keeps ten-key widths.
+     */
     fun hebrewGeometry(): KeyboardGeometry = letterGeometry(
         listOf(
-            "קראטוןםפ" to 0.0f,
+            "קראטוןםפ" to 1.0f,
             "שדגכעיחלךף" to 0.0f,
-            "זסבהנמצתץ" to 0.5f,
+            "זסבהנמצתץ" to 0.0f,
         ),
         DEFAULT_ROW_PITCH_KW,
         Alphabet.HEBREW,
