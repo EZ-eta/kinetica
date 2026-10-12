@@ -18,7 +18,30 @@ object EnterBehavior {
         data class Action(val id: Int) : Result
     }
 
-    /** [followApp] is the setting; off gives the old rule, a newline in any multi-line field. */
+    /**
+     * What a tap does. [followApp] is the setting; off, a newline in any
+     * multi-line field. With [holdSends] on, a field with an action takes a newline on the tap and
+     * the action on the hold ([holdAction]).
+     */
+    fun tap(state: EditorState, followApp: Boolean, holdSends: Boolean): Result =
+        if (holdAction(state, holdSends) != null) Result.Newline else resolve(state, followApp)
+
+    /**
+     * The action a hold runs with [holdSends] on, or null when the field names none. Multi-line
+     * fields only: a single-line field has no use for a newline, so its tap keeps the action. The
+     * no-enter-action flag is not read: it asks for a newline on enter, which the tap gives, and
+     * a chat box that sets it beside Send is where a hold to send is wanted.
+     */
+    fun holdAction(state: EditorState, holdSends: Boolean): Result.Action? {
+        if (!holdSends || !state.multiline) return null
+        if (state.actionLabel != null) return Result.Action(state.customActionId)
+        if (state.actionId == EditorInfo.IME_ACTION_NONE || state.actionId == EditorInfo.IME_ACTION_UNSPECIFIED) {
+            return null
+        }
+        return Result.Action(state.actionId)
+    }
+
+    /** [followApp] is the setting; off, a newline in any multi-line field. */
     fun resolve(state: EditorState, followApp: Boolean): Result {
         if (!followApp) {
             return if (state.multiline ||
@@ -36,8 +59,8 @@ object EnterBehavior {
      * The action as the key shows it, or null for the plain enter glyph. An app's own label
      * wins. UNSPECIFIED shows nothing: the app named no action, so there is no word for it.
      */
-    fun labelKind(state: EditorState, followApp: Boolean): Label? {
-        val r = resolve(state, followApp) as? Result.Action ?: return null
+    fun labelKind(state: EditorState, followApp: Boolean, holdSends: Boolean = false): Label? {
+        val r = tap(state, followApp, holdSends) as? Result.Action ?: return null
         if (state.actionLabel != null && followApp) return Label.Custom(state.actionLabel)
         return when (r.id) {
             EditorInfo.IME_ACTION_SEARCH -> Label.SEARCH

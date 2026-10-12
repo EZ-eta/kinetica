@@ -23,6 +23,13 @@ interface UserWordDao {
         addWeight(word, lang, amount, now)
     }
 
+    /**
+     * The capital and its votes, written whole: decided from the live mirror after a vote, or as
+     * a backup or an import carries them.
+     */
+    @Query("UPDATE user_words SET display = :display, caseVotes = :votes WHERE word = :word AND lang = :lang")
+    fun setCase(word: String, lang: String, display: String?, votes: Int)
+
     @Query("SELECT * FROM user_words WHERE lang = :lang ORDER BY frequency DESC LIMIT :limit")
     fun topN(lang: String, limit: Int): List<UserWord>
 

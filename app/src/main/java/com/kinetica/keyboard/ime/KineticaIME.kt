@@ -46,6 +46,7 @@ import com.kinetica.keyboard.engine.models.WordCandidate
 import com.kinetica.keyboard.keys.ActionRow
 import com.kinetica.keyboard.keys.AutoCapitalization
 import com.kinetica.keyboard.keys.ChordKey
+import com.kinetica.keyboard.keys.ChordLabels
 import com.kinetica.keyboard.keys.ChordTrigger
 import com.kinetica.keyboard.keys.DeleteSpan
 import com.kinetica.keyboard.keys.EditorAction
@@ -58,10 +59,12 @@ import com.kinetica.keyboard.keys.WordCase
 import com.kinetica.keyboard.layout.Key
 import com.kinetica.keyboard.layout.KeyType
 import com.kinetica.keyboard.layout.KeyboardLayout
+import com.kinetica.keyboard.layout.LandscapeArrangement
 import com.kinetica.keyboard.layout.LayoutLoader
 import com.kinetica.keyboard.layout.LayoutMutations
 import com.kinetica.keyboard.settings.ActionLabels
 import com.kinetica.keyboard.settings.ChordDefaults
+import com.kinetica.keyboard.settings.EdgeSwipeDefaults
 import com.kinetica.keyboard.settings.ExpansionRows
 import com.kinetica.keyboard.settings.KeyboardConfig
 import com.kinetica.keyboard.settings.KeyboardHeights
@@ -70,6 +73,7 @@ import com.kinetica.keyboard.settings.SettingsActivity
 import com.kinetica.keyboard.settings.SettingsSynonyms
 import com.kinetica.keyboard.ui.EmojiPickerView
 import com.kinetica.keyboard.ui.EmojiRecents
+import com.kinetica.keyboard.ui.BarAdjust
 import com.kinetica.keyboard.ui.InputContainerView
 import com.kinetica.keyboard.ui.Hsv
 import com.kinetica.keyboard.ui.KeyboardTheme
@@ -182,10 +186,18 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     // expandify action fires. Unlike chordMap it is not re-read at every input start: the
     // table may hold hundreds of rows, so it reloads on Prefs.EXPANSION_GENERATION.
     @Volatile
-    private var expansionMap: Map<String, List<String>> = emptyMap()
+    private var expansionTable: ExpansionTable = ExpansionTable.EMPTY
 
-    /** Several targets for one trigger, offered on the bar until one is picked (#19 phase 2). */
-    private class ExpansionChoice(val trigger: String, val targets: List<String>, val shown: List<String>)
+    /**
+     * Several targets for one trigger, offered on the bar until one is picked (#19).
+     * [trigger] is what was typed, [stored] the trigger it matched, which differ in case only.
+     */
+    private class ExpansionChoice(
+        val trigger: String,
+        val stored: String,
+        val targets: List<String>,
+        val shown: List<String>,
+    )
 
     private var expansionChoice: ExpansionChoice? = null
 
@@ -334,6 +346,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     private var autospacePending = false
     private val autospaceRunnable = Runnable {
         autospacePending = false
+        suggestionBar?.clearAutospaceTimer()
         val comp = composer
         val hasSwipe = comp?.hasSwipeToken() == true
         // The text preceding the word being written, i.e. the word's own letters dropped
@@ -367,7 +380,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         if (comp?.hasPendingWord == true && (swipes || taps)) {
             // Read before the word is finalized, which can rewrite it but never what follows.
             val after = if (config.tidySpaces) ich.textAfterCursor(2) else null
-            if (!autospaceWanted(config.tidySpaces, after)) {
+            if (!autospaceWanted(config.tidySpaces, after, config.noSpaceBefore)) {
                 // The word still ends; the editor already has what should follow it.
                 if (finalizePendingWord()) {
                     DecodeTrace.log { "  autospace held before=${after?.firstOrNull()?.code}" }
@@ -391,14 +404,20 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
 
     override fun onCreate() {
         super.onCreate()
-        // Decode tracing, developer build only. Two-thumb gestures cannot be reproduced on
+        // Decode tracing, debug build only. Two-thumb gestures cannot be reproduced on
         // the JVM, so a capture of the real token buffer is the evidence for them. The
         // release source set's TraceRecorder is a stub that installs nothing.
         TraceRecorder.install(this)
+        // Lengths and flags only, never text: what a crash line records about the word in hand.
+        TraceRecorder.crashState = {
+            "tentative=$tentativeLength tokens=${composer?.tokenCount} offer=${midWordOffer != null} " +
+                "kept=${keptBar != null} sel=$selStart,$selEnd field=${editorState.fieldKind}"
+        }
         engine.maxPointers = 2
         @Suppress("DEPRECATION")
         vibrator = getSystemService(VIBRATOR_SERVICE) as? Vibrator
         val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+        EdgeSwipeDefaults.applyTo(prefs)
         config = KeyboardConfig.from(prefs)
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { p, _ ->
             val previous = config
@@ -458,6 +477,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
                 config.plainLetterAlternates != previous.plainLetterAlternates ||
                 config.commaMode != previous.commaMode ||
                 config.commaCustom != previous.commaCustom ||
+                config.fieldKeys != previous.fieldKeys ||
                 config.periodMode != previous.periodMode ||
                 config.periodCustom != previous.periodCustom ||
                 config.periodAlternates != previous.periodAlternates ||
@@ -479,7 +499,9 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
                 .unregisterOnSharedPreferenceChangeListener(it)
         }
         cancelUserDictReload()
-        mainHandler.removeCallbacks(spacebarNoticeRunnable)
+        // Every posted callback goes before the executors shut: one running after would hand
+        // work to a closed executor and throw on the main thread.
+        mainHandler.removeCallbacksAndMessages(null)
         decodeExecutor.shutdown()
         alternateDecodeExecutor.shutdown()
         extraDecodeExecutor.shutdown()
@@ -517,7 +539,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
                 val allBlocked = allBlockedWords()
                 val swaps = spellingSwaps(lang)
                 val dict = openWordlist(lang).bufferedReader().use {
-                    DictionaryLoader.load(it, userWords, blocked, swaps, Alphabet.forLanguage(lang))
+                    DictionaryLoader.load(it, userWords, blocked, swaps, Alphabet.forLanguage(lang), casesOf(userRows))
                 }
                 val bigrams = assets.open(bigramsAsset(lang)).bufferedReader().use {
                     DictionaryLoader.loadBigrams(it, dict.trie)
@@ -545,6 +567,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
                                 blockedWords(other),
                                 spellingSwaps(other),
                                 Alphabet.forLanguage(other),
+                                casesOf(altRows),
                             )
                         }
                         val b = assets.open(bigramsAsset(other)).bufferedReader().use {
@@ -574,6 +597,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
                                 blockedWords(other),
                                 spellingSwaps(other),
                                 Alphabet.forLanguage(other),
+                                casesOf(extraRows),
                             )
                         }
                         val b = assets.open(bigramsAsset(other)).bufferedReader().use {
@@ -592,6 +616,9 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
                     val counts = ConcurrentHashMap<String, Int>(userRows.size * 2)
                     for (row in userRows) counts[row.word] = row.frequency
                     personalCounts = counts
+                    learnedCases[lang] = ConcurrentHashMap(casesOf(userRows))
+                    detectLang?.let { learnedCases[it] = ConcurrentHashMap(casesOf(altRows)) }
+                    extraLang?.let { learnedCases[it] = ConcurrentHashMap(casesOf(extraRows)) }
                     val pairs = pairMap(pairRows)
                     personalPairs = pairs
                     val p = WordPredictor(
@@ -639,6 +666,10 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
                     )
                 }
             } catch (e: IOException) {
+                Log.e(TAG, "dictionary load failed for $lang", e)
+            } catch (e: RuntimeException) {
+                // On its own thread an exception kills the keyboard; the dictionary already
+                // loaded keeps serving instead.
                 Log.e(TAG, "dictionary load failed for $lang", e)
             }
         }, "kinetica-dict-load").start()
@@ -696,8 +727,16 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     }
 
     /** Alpha layout with settings-driven mutations applied; the chain is [AlphaLayouts]. */
+    // The field kind the letters on screen were built for: a new field of another kind
+    // rebuilds them, so an email field's `@` does not follow the user into a message.
+    private var layoutFieldKind = FieldKind.TEXT
+
+    // The number pad was put up by a number field, not chosen: the next field takes it down.
+    private var numpadAuto = false
+
     private fun alphaLayout(): KeyboardLayout =
-        AlphaLayouts.build(layoutFor(AlphaLayouts.name(config, bundledLayouts)), config)
+        AlphaLayouts.build(layoutFor(AlphaLayouts.name(config, bundledLayouts)), config, editorState.fieldKind)
+            .also { layoutFieldKind = editorState.fieldKind }
 
     private fun wordlistAsset(lang: String) = "dictionaries/${lang}_wordlist.txt"
     private fun bigramsAsset(lang: String) = "dictionaries/${lang}_bigrams.txt"
@@ -806,8 +845,10 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         // Per field: the key names the action enter will run, and its hold offers a newline
         // whenever enter itself will not write one.
         kv.enterNewlineCell =
-            EnterBehavior.resolve(editorState, config.enterAction) is EnterBehavior.Result.Action
-        kv.enterLabel = EnterBehavior.labelKind(editorState, config.enterAction)?.let { enterLabelText(it) }
+            EnterBehavior.tap(editorState, config.enterAction, config.enterHoldSends) is EnterBehavior.Result.Action
+        kv.enterActionCell = EnterBehavior.holdAction(editorState, config.enterHoldSends) != null
+        kv.enterLabel = EnterBehavior.labelKind(editorState, config.enterAction, config.enterHoldSends)
+            ?.let { enterLabelText(it) }
         if (!config.typingSpeed || editorState.privateMode) kv.speedLabel = null
         val theme = KeyboardTheme.resolve(
             this, config.themeMode, config.themeColor, config.themeBrightness,
@@ -821,10 +862,14 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             if (config.trailColorMode == "theme") theme.accentHue else config.trailBaseHue
         kv.longPressMs = config.longPressMs
         kv.chordArmMs = config.chordArmMs
+        kv.chordLabelsEnabled = config.chordLabels
         kv.spaceChordArmMs = config.spaceChordArmMs
         kv.layoutMode = config.layoutMode
         kv.landscapeSplitGapPct = config.landscapeSplitGapPct
-        kv.landscapeArrangement = if (isLandscape()) config.landscapeArrangement else null
+        val arranged = LandscapeArrangement.appliesTo(
+            isLandscape(), resources.configuration.screenWidthDp, config.wideArrangement,
+        )
+        kv.landscapeArrangement = if (arranged) config.landscapeArrangement else null
         kv.popupColumns = config.popupColumns
         kv.autospaceDot = config.autospace
         kv.backspaceCharSlide = config.backspaceCharSlide
@@ -846,6 +891,10 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         suggestionBar?.reinforceIncrement = config.reinforceIncrement
         suggestionBar?.reinforceStepDp = config.reinforceStepDp
         suggestionBar?.badgesWhileAdjusting = config.badgesWhileAdjusting
+        suggestionBar?.textScale = config.barTextScale
+        suggestionBar?.recentTextScale = config.recentTextScale
+        suggestionBar?.compactWords = config.barCompact
+        suggestionBar?.recentSwipeReversed = config.recentSwipeReversed
         suggestionBar?.retypeButton = config.retypeButton
         suggestionBar?.retypeButtonDp = config.retypeButtonDp
         // Resolved here, not in the views, so the language cell drops out below two enabled
@@ -949,6 +998,12 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         val s = attribute?.initialSelStart ?: -1
         val e = attribute?.initialSelEnd ?: -1
         setSelectionCache(s, e)
+        // A field that asks for no sentence caps, an address above all, must not inherit the
+        // capital the last field armed. Caps lock is the user's and stays.
+        if (!editorState.capSentences && shift.state == ShiftState.State.SHIFT) {
+            shift.autoShift(false)
+            keyboardView?.setShiftUppercase(shift.isShifted)
+        }
         updateAutoShift()
         reloadChords()
         reloadEmojiUses()
@@ -964,9 +1019,11 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
                 emptyList()
             }
             // Every target, in position order: a trigger with several offers them on the bar.
-            expansionMap = rows.filter { it.trigger.isNotEmpty() }
-                .groupBy { it.trigger }
-                .mapValues { (_, r) -> r.sortedBy { it.position }.map { it.target } }
+            expansionTable = ExpansionTable(
+                rows.filter { it.trigger.isNotEmpty() }
+                    .groupBy { it.trigger }
+                    .mapValues { (_, r) -> r.sortedBy { it.position }.map { it.target } },
+            )
         }
     }
 
@@ -995,6 +1052,22 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         updateBarWordPending()
         keyboardView?.setShiftUppercase(shift.isShifted)
         closeEmojiPicker()
+        val onLetters = keyboardView?.showsLetters ?: true
+        // Left by hand in the meantime, the pad is no longer the field's to take down.
+        if (onLetters) numpadAuto = false
+        when {
+            opensOnNumpad(restarting, config.numpadForNumbers, editorState.fieldKind == FieldKind.NUMERIC) -> {
+                keyboardView?.setKeyboardLayout(layoutFor("numpad"))
+                numpadAuto = true
+            }
+            // A pad a number field put up goes with it, whatever the letters setting.
+            opensOnLetters(restarting, config.lettersOnNewField || numpadAuto, onLetters) -> {
+                keyboardView?.setKeyboardLayout(alphaLayout())
+                numpadAuto = false
+            }
+            onLetters && !restarting && editorState.fieldKind != layoutFieldKind ->
+                keyboardView?.setKeyboardLayout(alphaLayout())
+        }
         applyViewConfig()
     }
 
@@ -1059,6 +1132,9 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         // selection case: a plain cursor move already clears the strip through abandonWord,
         // and widening this would lose the strip in any editor the ledger misjudges.
         if (selectionLength() > 0) clearCorrection()
+        // The shift was decided for the old cursor position: after a period, a cursor moved back
+        // into the sentence would capitalize the next letter.
+        if (selectionLength() == 0) updateAutoShift()
         refreshPredictions()
     }
 
@@ -1200,10 +1276,17 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     }
 
     private fun onCandidatesRanked(
-        candidates: List<WordCandidate>,
-        tentative: WordCandidate?,
+        decoded: List<WordCandidate>,
+        decodedLead: WordCandidate?,
         literal: String,
     ) {
+        // A word blocked a moment ago is still in the trie until the reload: it must not be
+        // written or offered meanwhile.
+        val blocked = blockedSpellings
+        val candidates = if (blocked.isEmpty()) decoded else decoded.filter { it.word.lowercase() !in blocked }
+        // A blocked lead leaves the word pick-only: the next head may be a word the merge refused
+        // to lead with, another language's.
+        val tentative = if (decodedLead != null && decodedLead.word.lowercase() in blocked) null else decodedLead
         lastCandidates = candidates
         lastTentative = tentative
         lastLiteral = literal
@@ -1370,8 +1453,11 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             else -> config.autospaceTapDelayMs
         }
         val kind = if (swipe) "swipe" else if (letter) "letter" else "tap"
-        DecodeTrace.log { "  autospace arm kind=$kind delay=$delay lit=$lastLiteral" }
-        mainHandler.postDelayed(autospaceRunnable, delay)
+        val now = SystemClock.uptimeMillis()
+        val wait = autospaceWait(delay, composer?.lastTokenEnd ?: -1L, now)
+        DecodeTrace.log { "  autospace arm kind=$kind delay=$delay wait=$wait lit=$lastLiteral" }
+        mainHandler.postDelayed(autospaceRunnable, wait)
+        if (config.autospaceTimer) suggestionBar?.showAutospaceTimer(now - (delay - wait), delay)
     }
 
     private fun cancelAutospace() {
@@ -1380,6 +1466,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             mainHandler.removeCallbacks(autospaceRunnable)
             autospacePending = false
         }
+        suggestionBar?.clearAutospaceTimer()
     }
 
     // -------------------------------------------------------- key handling
@@ -1470,6 +1557,16 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
                 openEmojiPicker()
                 return
             }
+            // Enter's hold where a tap writes the newline: the field's action.
+            if (key.type == KeyType.ENTER && text == LayoutMutations.ACTION_ALTERNATE) {
+                EnterBehavior.holdAction(editorState, config.enterHoldSends)?.let {
+                    finalizePendingWord()
+                    DecodeTrace.log { "  enter action=${it.id} src=hold" }
+                    ich.performEditorAction(it.id)
+                    updateAutoShift()
+                    return
+                }
+            }
             // Enter's hold, where enter runs the app's action: the one way left to a newline.
             if (key.type == KeyType.ENTER && text == LayoutMutations.NEWLINE_ALTERNATE) {
                 finalizePendingWord()
@@ -1477,12 +1574,16 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
                 updateAutoShift()
                 return
             }
-            // A shortcut's symbol in a letter's list runs the shortcut.
-            if (key.isLetter) {
-                ActionRow.actionForGlyph(text)?.let {
-                    performShortcut(it)
-                    return
-                }
+            // A shortcut's symbol in any key's list runs the shortcut; a key combination or a
+            // target written out (`combo:ctrl+a`) runs as it would from a chord.
+            ActionRow.actionForGlyph(text)?.let {
+                performShortcut(it)
+                return
+            }
+            if (performIfAction(text)) return
+            // A repurposed key's own cell is its label, `⎘` or `ALL`: it does what a tap does.
+            if (!key.isLetter && text == key.label && key.output != text && performIfAction(key.output)) {
+                return
             }
             // A held letter's accent reaches the composer folded, so without this line a capture
             // cannot tell a long-press from a tap.
@@ -1512,8 +1613,15 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
 
         override fun onMenuAction(index: Int) = this@KineticaIME.performMenuAction(index)
 
+        override fun onRestingFingerDropped() {
+            if (!engine.hasActivePointers()) composer?.redecode()
+        }
+
         override fun hasChord(trigger: ChordTrigger, key: Char): Boolean =
             chordMap.containsKey(ChordKey(trigger, key))
+
+        override fun chordLabel(trigger: ChordTrigger, key: Char): String? =
+            chordMap[ChordKey(trigger, key)]?.let { ChordLabels.of(it) }
 
         override fun onChordTriggered(trigger: ChordTrigger, key: Char, heldMs: Long) {
             val expansion = chordMap[ChordKey(trigger, key)] ?: return
@@ -1568,8 +1676,8 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             if (!expansionsOnBar()) vibrateForKeyPress()
         }
 
-        override fun onSuggestionBlocked(word: String) =
-            this@KineticaIME.onSuggestionBlocked(word)
+        override fun onSuggestionBlocked(word: String, source: BarAdjust.BlockSource) =
+            this@KineticaIME.onSuggestionBlocked(word, source)
 
         override fun onRetype() {
             vibrateForKeyPress()
@@ -1729,7 +1837,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             return
         }
         val prev = previousWordForPrediction(ich.textBeforeCursor(PREDICT_TAIL_CHARS))
-        val found = if (prev == null) emptyList() else predictNext(prev)
+        val found = if (prev == null) emptyList() else predictNext(prev).filter { it.word.lowercase() !in blockedSpellings }
         // The pronoun's own capital, which a prediction never went through displayWord for.
         val shown = found.map { AutoCapitalization.forWord(it.word, config.language, it.language.ifEmpty { config.language }) }
         // Against what the bar shows now: it can be cleared behind these predictions' back.
@@ -1825,6 +1933,10 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         expectAfter(span, undo.typed.length)
         autospaceInserted = false
         unlearnWord(undo.corrected)
+        // Backspace taking a learned capital off the letters typed says the lowercase was meant.
+        if (undo.corrected != undo.typed && undo.corrected.equals(undo.typed, ignoreCase = true)) {
+            voteCase(undo.typed, languageOf(undo.typed), CaseVote(-1, null))
+        }
         DecodeTrace.log { "  autocorrect undo word=${undo.corrected} typed=${undo.typed}" }
         updateAutoShift()
         return true
@@ -1840,7 +1952,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
      * - Gated on [EditorState.teachesNothing] like every learning path: a word written to the
      *   database from a password field is a disclosure.
      */
-    private fun onSuggestionBlocked(word: String) {
+    private fun onSuggestionBlocked(word: String, source: BarAdjust.BlockSource) {
         if (editorState.teachesNothing || word.isEmpty()) return
         if (expansionsOnBar()) {
             DecodeTrace.log { "  weight refused word=$word src=expansion" }
@@ -1871,7 +1983,66 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             // its write rebuilds the trie from stale rows and the word comes back.
             mainHandler.post { loadDictionaryAsync() }
         }
+        if (config.deleteOnBlock && deleteBlockedWord(word, source)) return
         pushSuggestions()
+    }
+
+    /**
+     * Takes a just-blocked [word] out of the text when it is the word at the cursor: the word
+     * just committed, held on its chip or the newest recent column, or the word in progress,
+     * held on a live zone. The bar then offers the gesture's other readings. Anything else is
+     * blocked and left where it is. True when the text was changed.
+     */
+    private fun deleteBlockedWord(word: String, source: BarAdjust.BlockSource): Boolean {
+        val after = ich.textAfterCursor(1)
+        val committed = lastCommit.retypeWord
+        val read = if (committed == null) "" else ich.textBeforeCursor(committed.length + COMMIT_TAIL_CHARS) ?: ""
+        val committedSpan = if (committed == null) -1 else commitSpan(read, committed, COMMIT_TAIL_CHARS)
+        val tailIsSpace = committed != null && committedSpan >= committed.length &&
+            read.takeLast(committedSpan - committed.length).all { it == ' ' }
+        val what = blockDelete(
+            source = source,
+            word = word,
+            tentativeWord = tentativeWord.takeIf { tentativeLength > 0 },
+            otherPending = (tentativeLength == 0 && composer?.hasPendingWord == true) ||
+                midWordOffer != null || keptBar != null,
+            selected = selectionLength() > 0,
+            letterAfter = after != null && after.isNotEmpty() && after[0].isLetter(),
+            committed = committed,
+            committedSpan = committedSpan,
+            tailIsSpace = tailIsSpace,
+        )
+        DecodeTrace.log { "  block delete word=$word src=${source.name.lowercase()} -> ${what.name.lowercase()}" }
+        when (what) {
+            BlockDelete.NONE -> return false
+            BlockDelete.COMMIT -> {
+                cancelAutospace()
+                val offer = notBlocked(lastCommit.offerAfterRetype(committed!!, KineticaConstants.TOP_K), blockedSpellings)
+                val languages = lastCommit.languages
+                unlearnLastPair()
+                ich.deleteBeforeCursor(committedSpan)
+                expectAfter(committedSpan, 0)
+                recentWords.dropNewest()
+                abandonWord()
+                forgetAutospace()
+                updateAutoShift()
+                if (offer.isNotEmpty() && !editorState.privateMode) showRetypeOffer(offer, languages) else refreshPredictions()
+            }
+            BlockDelete.TENTATIVE -> {
+                // Cancelled first: a stale timeout left armed would clear the offer below.
+                cancelAutospace()
+                val offer = notBlocked(lastCandidates.map { displayWord(it.word) }, blockedSpellings).distinct()
+                val languages = candidateLanguages
+                val span = tentativeLength
+                ich.deleteBeforeCursor(span)
+                expectAfter(span, 0)
+                abandonWord()
+                forgetAutospace()
+                updateAutoShift()
+                if (offer.isNotEmpty() && !editorState.privateMode) showRetypeOffer(offer, languages) else refreshPredictions()
+            }
+        }
+        return true
     }
 
     /** Long-press weight adjustment from the bar: signed, scaled by config. */
@@ -1929,6 +2100,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             EditorAction.END, EditorAction.ARROW_UP, EditorAction.ARROW_DOWN, EditorAction.ARROW_LEFT,
             EditorAction.ARROW_RIGHT, EditorAction.PAGE_UP, EditorAction.PAGE_DOWN,
             EditorAction.BACKSPACE, EditorAction.CTRL_NEXT,
+            EditorAction.CASE_LOWER, EditorAction.CASE_TITLE, EditorAction.CASE_UPPER,
             -> null
         }
         if (menuId == null) {
@@ -1975,6 +2147,10 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
                 ctrlPending = !ctrlPending
                 DecodeTrace.log { "  ctrl pending=$ctrlPending" }
             }
+            // The word in hand, not after it: like RETYPE, it runs before anything is settled.
+            EditorAction.CASE_LOWER -> recaseWordInHand(WordCase.LOWER)
+            EditorAction.CASE_TITLE -> recaseWordInHand(WordCase.TITLE)
+            EditorAction.CASE_UPPER -> recaseWordInHand(WordCase.UPPER)
             // Every context-menu action is handled by the caller.
             else -> Unit
         }
@@ -2190,8 +2366,10 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         finalizePendingWord()
         val before = ich.textBeforeCursor(MAX_TRIGGER_CHARS + 2) ?: ""
         val found = triggerAtCursor(before, MAX_TRIGGER_CHARS)
-        val targets = expansionMap[found.trigger]
-        if (found.trigger.isEmpty() || targets.isNullOrEmpty()) {
+        val table = expansionTable
+        val stored = table.storedFor(found.trigger, config.triggerCase)
+        val targets = stored?.let { table.byTrigger[it] }
+        if (found.trigger.isEmpty() || stored == null || targets.isNullOrEmpty()) {
             // Nothing is typed for a miss: an unset trigger is the commonest case while the
             // user learns the feature, and inserting something is the worse answer.
             DecodeTrace.log { "  expandify miss trigger=${found.trigger}" }
@@ -2199,21 +2377,27 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             return
         }
         if (targets.size > 1) {
-            offerExpansions(found.trigger, targets)
+            offerExpansions(found.trigger, stored, targets)
             return
         }
-        applyExpansion(found, before, targets[0])
+        applyExpansion(found, before, targets[0], stored)
     }
+
+    /** [target] as it would be written for [typed]: carried case on text, actions untouched. */
+    private fun casedTarget(typed: String, stored: String, target: String): String =
+        if (expansionEffect(target) is ExpansionEffect.Text) carryCase(typed, stored, target, config.triggerCase) else target
 
     /**
      * The targets of one trigger, on the bar, for a tap to choose (#19). The
      * trigger stays written until then, so a choice left unpicked costs nothing.
      */
-    private fun offerExpansions(trigger: String, targets: List<String>) {
+    private fun offerExpansions(trigger: String, stored: String, targets: List<String>) {
         val shown = ExpansionRows.distinctLabels(
-            targets.map { t -> ExpansionRows.shown(t, EXPANSION_PICK_CHARS) { getString(ActionLabels.labelRes(it)) } },
+            targets.map { t ->
+                ExpansionRows.shown(casedTarget(trigger, stored, t), EXPANSION_PICK_CHARS) { getString(ActionLabels.labelRes(it)) }
+            },
         )
-        expansionChoice = ExpansionChoice(trigger, targets, shown)
+        expansionChoice = ExpansionChoice(trigger, stored, targets, shown)
         suggestionBar?.setSuggestions(shown.map { SuggestionBarView.Suggestion(it, 0) })
         DecodeTrace.log { "  expandify offer trigger=$trigger n=${targets.size}" }
     }
@@ -2227,11 +2411,14 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             DecodeTrace.log { "  expandify pick refused trigger=${choice.trigger}" }
             return
         }
-        applyExpansion(found, before, choice.targets[index])
+        applyExpansion(found, before, choice.targets[index], choice.stored)
     }
 
-    /** Replaces the trigger [found] in [before] with [target], or runs it when it is an action. */
-    private fun applyExpansion(found: TriggerSpan, before: CharSequence, target: String) {
+    /**
+     * Replaces the trigger [found] in [before] with [target], or runs it when it is an action.
+     * [stored] is the trigger [target] belongs to, which [found] may match in another case.
+     */
+    private fun applyExpansion(found: TriggerSpan, before: CharSequence, target: String, stored: String) {
         val text = when (val effect = expansionEffect(target)) {
             is ExpansionEffect.Refused -> {
                 // Refused before anything is deleted, so the trigger is still there to fix.
@@ -2264,7 +2451,8 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
                 updateAutoShift()
                 return
             }
-            is ExpansionEffect.Text -> expansionForField(effect.text, editorState.multiline)
+            is ExpansionEffect.Text ->
+                expansionForField(carryCase(found.trigger, stored, effect.text, config.triggerCase), editorState.multiline)
         }
         val tail = before.subSequence(
             before.length - found.span + found.trigger.length, before.length,
@@ -2383,7 +2571,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
      * every other path through commitTracked clears the flag.
      */
     private fun eatAutospaceBefore(text: String) {
-        if (!autospaceInserted || !hugsPreviousWord(text)) return
+        if (!autospaceInserted || !hugsPreviousWord(text, config.noSpaceBefore)) return
         if (ich.textBeforeCursor(1)?.toString() != " ") return
         ich.deleteBeforeCursor(1)
         expectAfter(1, 0)
@@ -2707,8 +2895,14 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         DecodeTrace.log { "  autospace eat spaceless" }
     }
 
+    /** Shift's popup cell, by its place in [LayoutMutations.SHIFT_CASE_CELLS]. */
+    private fun recaseWordInHand(cell: String) {
+        val idx = LayoutMutations.SHIFT_CASE_CELLS.indexOf(cell)
+        recaseWordInHand(WordCase.entries.getOrNull(idx) ?: return)
+    }
+
     /**
-     * Re-cases the word in hand, or the one just finished, from shift's popup.
+     * Re-cases the word in hand, or the one just finished, from shift's popup or a shortcut.
      *
      * The span is [retypeSpan]'s: the word being written, else the last commit with what the
      * editor holds after it ([commitSpan]), else the letters under the cursor. The last case
@@ -2719,9 +2913,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
      * - No re-commit, which would clear the candidates and the correction strip.
      * - No abandon, so a re-cased word in progress stays writable.
      */
-    private fun recaseWordInHand(cell: String) {
-        val idx = LayoutMutations.SHIFT_CASE_CELLS.indexOf(cell)
-        val want = WordCase.entries.getOrNull(idx) ?: return
+    private fun recaseWordInHand(want: WordCase) {
         if (selectionLength() != 0 && recaseSelection(want)) return
         if (tentativeLength == 0 && recaseAroundCursor(want)) return
         // The guard the retype and the reload share. Inside a word was answered above; a
@@ -2909,6 +3101,9 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         // cannot reach onCandidates until this method returns, so the flag is up before
         // either arm site reads it.
         seededWithoutTokens = true
+        // In the same message as the abandon that emptied the bar, so no frame draws the
+        // shortcut row between the delete and the decode.
+        updateBarWordPending()
     }
 
     /**
@@ -2944,6 +3139,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         wordBefore(before, word.head)?.let { comp.anchorContext(it) }
         comp.seed(taps)
         seededWithoutTokens = true
+        updateBarWordPending()
         return true
     }
 
@@ -2983,7 +3179,9 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         if (consumeCtrl("enter")) return
         cancelAutospace()
         finalizePendingWord()
-        when (val r = EnterBehavior.resolve(editorState, config.enterAction)) {
+        // The symbol pages and the numpad have no enter hold, so their tap keeps the action.
+        val holdSends = config.enterHoldSends && keyboardView?.showsLetters != false
+        when (val r = EnterBehavior.tap(editorState, config.enterAction, holdSends)) {
             EnterBehavior.Result.Newline -> commitTracked("\n")
             is EnterBehavior.Result.Action -> {
                 DecodeTrace.log { "  enter action=${r.id}" }
@@ -3010,7 +3208,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         val scores = HashMap<String, Float>(3)
         for ((lang, p) in listOf(config.language to predictor, secondaryLanguage to secondaryPredictor, extraLanguage to extraPredictor)) {
             if (lang == null || p == null) continue
-            scores[lang] = if (p.isWord(word)) p.frequencyByte(word).coerceAtLeast(0) / 255f else 0f
+            scores[lang] = if (p.isWordIgnoringCase(word)) p.frequencyByte(word).coerceAtLeast(0) / 255f else 0f
         }
         if (scores.size < 2) return
         momentum.observe(scores)
@@ -3086,7 +3284,10 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         }
         replaceTentative(word)
         commitWordInternal(word)
-        if (spacesAfterPick(editorState.addressField)) {
+        // Tidy spaces holds a pick's space as it holds the autospace: a word picked in front of
+        // `!` gains no space before it.
+        val after = if (config.tidySpaces) ich.textAfterCursor(2) else null
+        if (spacesAfterPick(editorState.addressField) && autospaceWanted(config.tidySpaces, after, config.noSpaceBefore)) {
             commitTracked(" ")
             // A picked word's space is the keyboard's own, like the autospace, so punctuation
             // takes it back. commitTracked clears the flag, so this comes after it.
@@ -3132,6 +3333,16 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         learnWord(replacement, lang = replacementLang)
         if (!current.equals(replacement, ignoreCase = true)) {
             unlearnWord(current)
+        } else if (current != replacement) {
+            // A case-only pick is a choice of case: down for the lowercase, up for a capital the
+            // dictionary does not hold as written.
+            val held = predictorFor(replacementLang)?.holdsExactSpelling(replacement) == true
+            val vote = when {
+                replacement == replacement.lowercase() -> CaseVote(-1, null)
+                held || replacement.none { it.isLowerCase() } -> CaseVote.NONE
+                else -> CaseVote(1, replacement)
+            }
+            voteCase(replacement, replacementLang, vote)
         }
         lastLearnedWord = replacement.lowercase()
         lastLearnedWordLang = replacementLang
@@ -3177,6 +3388,16 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
                 replaceTentative(display)
                 finalWord = display
                 autocorrectUndo = AutocorrectUndo(typed, display, cursorExpected())
+            } else if (threshold != null && !editorState.addressField) {
+                // A learned capital, as autocorrect gives a German noun its own: the letters
+                // spell a word, so autocorrect leaves them, and the capital is the user's.
+                learnedCapital(finalWord, casesFor(languageOf(finalWord))[finalWord.lowercase()])?.let { capital ->
+                    val typed = tentativeWord
+                    replaceTentative(capital)
+                    finalWord = capital
+                    autocorrectUndo = AutocorrectUndo(typed, capital, cursorExpected())
+                    DecodeTrace.log { "  learned capital typed=$typed -> $capital" }
+                }
             }
         }
         // English's lone "i". Nothing upstream can reach it: letters are
@@ -3240,19 +3461,47 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     }
 
     /**
+     * One vote on how [word] is capitalized in [lang] (`caseVote`). Decided against the live
+     * mirror and written whole, behind the count the same commit queued, so the row exists; a
+     * capital that now leads, or no longer does, needs a load to show.
+     */
+    private fun voteCase(word: String, lang: String, case: CaseVote) {
+        if (case.vote == 0 || editorState.teachesNothing) return
+        val w = word.lowercase()
+        val map = casesFor(lang)
+        val old = map[w]
+        val next = nextCase(old, case) ?: return
+        map[w] = next
+        val reload = leadChanged(old, next)
+        DecodeTrace.log { "  learn capital word=$w display=${next.display} votes=${next.votes} lang=$lang" }
+        dbExecutor.execute {
+            try {
+                KineticaDb.get(this).userWords().setCase(w, lang, next.display, next.votes)
+            } catch (e: RuntimeException) {
+                Log.w(TAG, "case vote failed for $w", e)
+                return@execute
+            }
+            if (reload) mainHandler.post { scheduleUserDictReload() }
+        }
+    }
+
+    /** The predictor serving [lang]: the active one, the second or the third. */
+    private fun predictorFor(lang: String): WordPredictor? = when {
+        lang == secondaryLanguage && lang != config.language -> secondaryPredictor
+        lang == extraLanguage && lang != config.language -> extraPredictor
+        else -> predictor
+    }
+
+    /**
      * Arms the reload that makes a word just learned searchable.
      *
      * [unlearnWord] has no counterpart: a word pushed back below the merge floor keeps its
      * trie entry until the next load, but its ranking multiplier drops with the count.
      */
     private fun askUserDictReload(word: String, lang: String, before: Int, after: Int) {
-        val p = when {
-            lang == secondaryLanguage && lang != config.language -> secondaryPredictor
-            lang == extraLanguage && lang != config.language -> extraPredictor
-            else -> predictor
-        }
+        val p = predictorFor(lang)
         // No predictor yet means the first load has not finished; it will merge this word.
-        if (!userDictNeedsReload(before, after, p?.isWord(word) ?: true)) return
+        if (!userDictNeedsReload(before, after, p?.isWordIgnoringCase(word) ?: true)) return
         DecodeTrace.log { "  userdict stale word=$word count=$after lang=$lang" }
         scheduleUserDictReload()
     }
@@ -3486,6 +3735,16 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         return candidateLanguages[w] ?: correctionLanguages[w] ?: config.language
     }
 
+    // Each language's learned capitals, lowercase word -> capital and votes, mirrored from
+    // user_words at load and kept by learnWord, so a commit knows a capital it has learned.
+    private val learnedCases = ConcurrentHashMap<String, ConcurrentHashMap<String, DictionaryLoader.LearnedCase>>()
+
+    private fun casesFor(lang: String): ConcurrentHashMap<String, DictionaryLoader.LearnedCase> =
+        learnedCases.getOrPut(lang) { ConcurrentHashMap() }
+
+    private fun casesOf(rows: List<UserWord>): Map<String, DictionaryLoader.LearnedCase> =
+        DictionaryLoader.learnedCases(rows.map { Triple(it.word, it.display, it.caseVotes) })
+
     /** Live count map backing [lang]'s predictor; the active one by default. */
     private fun countsFor(lang: String): ConcurrentHashMap<String, Int> = when {
         lang == secondaryLanguage && lang != config.language -> secondaryCounts
@@ -3624,6 +3883,15 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             val langs = candidateLanguages + (typed?.let { mapOf(it.lowercase() to lang) } ?: emptyMap())
             commitHistory.record(cursorExpected() - word.length, word, alts, langs)
         }
+        // Read before the candidates go: what the keyboard proposed for these letters, and the
+        // text before the word (the editor holds the word, so it is cut off the read).
+        val proposal = lastCandidates.firstOrNull { it.word.equals(word, ignoreCase = true) }?.word
+        val textBefore = if (editorState.addressField || editorState.teachesNothing) {
+            null
+        } else {
+            ich.textBeforeCursor(word.length + CAPS_LOOKBACK_CHARS)?.toString()
+                ?.takeIf { it.endsWith(word) }?.dropLast(word.length)
+        }
         composer?.commitWord(word.lowercase())
         tentativeLength = 0
         tentativeWord = ""
@@ -3644,6 +3912,8 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             if (!swipeDecodeEmpty && learnsOnCommit(word, reloadedWord)) {
                 val filed = sharedFiling.languageFor(heldBy(word), lang)
                 learnWord(word, lang = filed)
+                val held = predictorFor(filed)?.holdsExactSpelling(word) == true
+                voteCase(word, filed, caseVote(word, proposal, held, textBefore, casesFor(filed)[word.lowercase()]?.display, filed))
                 lastLearnedWord = word.lowercase()
                 lastLearnedWordLang = filed
                 // The pair is learned from the same evidence as the word, under the same
@@ -4523,6 +4793,31 @@ internal fun staleTimeoutMs(swipeDelayMs: Long): Long = maxOf(2 * swipeDelayMs, 
 internal const val STALE_TIMEOUT_FLOOR_MS = 200L
 
 /**
+ * How long the autospace timer still waits: [delay] counted from [liftAt], the last thumb's lift,
+ * not from [now], when the decode landed. Counted from the decode, a 10 ms setting would wait
+ * tens of milliseconds longer than it says. Never negative; a lift time unknown (-1) or in the future
+ * waits the whole delay.
+ */
+internal fun autospaceWait(delay: Long, liftAt: Long, now: Long): Long {
+    if (liftAt < 0 || liftAt > now) return delay
+    return (delay - (now - liftAt)).coerceIn(0L, delay)
+}
+
+/**
+ * Whether a field opening should bring the number pad up: a number field, the setting on, and
+ * not a restart. Off by default, since some type words into number fields and expand them.
+ */
+internal fun opensOnNumpad(restarting: Boolean, enabled: Boolean, numeric: Boolean): Boolean =
+    enabled && !restarting && numeric
+
+/**
+ * Whether a field opening should bring the letters back. Not on a restart: an app restarting its
+ * own field mid-edit keeps the page the user chose there.
+ */
+internal fun opensOnLetters(restarting: Boolean, enabled: Boolean, onLetters: Boolean): Boolean =
+    enabled && !restarting && !onLetters
+
+/**
  * Whether [text] is punctuation that sits against the word before it, so an automatic space
  * in front of it should go.
  *
@@ -4531,8 +4826,8 @@ internal const val STALE_TIMEOUT_FLOOR_MS = 200L
  * derived from a character class: an em dash is punctuation and takes a space, and an
  * apostrophe hugs but never arrives here.
  */
-internal fun hugsPreviousWord(text: String): Boolean =
-    text.length == 1 && text[0] in HUGGING_PUNCTUATION
+internal fun hugsPreviousWord(text: String, hugging: String = Prefs.DEFAULT_NO_SPACE_BEFORE): Boolean =
+    text.length == 1 && text[0] in hugging
 
 /**
  * Whether the text before the cursor ends a sentence, so the next letter is capitalized.
@@ -4606,12 +4901,17 @@ internal fun tidySpaceTap(before: CharSequence, doubleSpacePeriod: Boolean): Spa
 
 /**
  * Whether the automatic space after a word should be written: with tidy spaces on, not when the
- * editor already has whitespace or a closing quote or bracket right after the cursor.
+ * editor already has whitespace, a closing quote or bracket, or a mark of [hugging] right after
+ * the cursor, so a word written in front of `:` or `!` gains no space before it.
  */
-internal fun autospaceWanted(tidy: Boolean, after: CharSequence?): Boolean {
+internal fun autospaceWanted(
+    tidy: Boolean,
+    after: CharSequence?,
+    hugging: String = Prefs.DEFAULT_NO_SPACE_BEFORE,
+): Boolean {
     if (!tidy || after.isNullOrEmpty()) return true
     val c = after[0]
-    if (c in SENTENCE_CLOSERS) return false
+    if (c in SENTENCE_CLOSERS || c in hugging) return false
     // A space or tab holds only with a word right after it (`word| next`). A newline, or a
     // space a field keeps at its end, is not the separator the next word needs: counting them
     // silenced every autospace in such a field (17 of 17 holds in one capture).
@@ -4651,8 +4951,6 @@ private const val WORD_OPENERS = "([{\"\u00ab\u201c\u2018"
 // appears mid-token in something a keyboard has to type without spacing it:
 // snake_case, e-mail, don't, example.com, a/b, user@host, a\\b, C:name.
 private const val WORD_JOINERS = "_-'\u2019./\\@:"
-
-private const val HUGGING_PUNCTUATION = ".,!?;:)]}\u00bb\u2026"
 
 /**
  * True when a slide or an unlearn takes a word that was merged into the trie (at or above the
@@ -4746,6 +5044,37 @@ internal fun autocorrectUndoSpan(before: CharSequence, corrected: String, typedA
     if (!tail.startsWith(corrected)) return -1
     if (typedAfter == 1 && tail.last().isLetterOrDigit()) return -1
     return span
+}
+
+/** What blocking a word does to the text, with deleting on block on. */
+internal enum class BlockDelete { COMMIT, TENTATIVE, NONE }
+
+/**
+ * Whether a blocked [word] is the text at the cursor, and which: the last commit, held on its
+ * chip or the newest recent column, nothing in progress, nothing selected, no letter after the
+ * cursor, and the editor still ending in it ([committedSpan] proved, as a retype proves it) with
+ * nothing after it but spaces ([tailIsSpace]: a period or a newline typed after it is the
+ * user's); or the word in progress, held on a live zone. Every other block leaves the text
+ * alone: a wrong delete costs more than a wrong block.
+ */
+internal fun blockDelete(
+    source: BarAdjust.BlockSource,
+    word: String,
+    tentativeWord: String?,
+    otherPending: Boolean,
+    selected: Boolean,
+    letterAfter: Boolean,
+    committed: String?,
+    committedSpan: Int,
+    tailIsSpace: Boolean = true,
+): BlockDelete = when {
+    selected -> BlockDelete.NONE
+    source == BarAdjust.BlockSource.LIVE && tentativeWord != null && tentativeWord.equals(word, ignoreCase = true) ->
+        BlockDelete.TENTATIVE
+    (source == BarAdjust.BlockSource.CHIP || source == BarAdjust.BlockSource.NEWEST_RECENT) &&
+        tentativeWord == null && !otherPending && !letterAfter &&
+        committed != null && committed.equals(word, ignoreCase = true) && committedSpan > 0 && tailIsSpace -> BlockDelete.COMMIT
+    else -> BlockDelete.NONE
 }
 
 /** [words] without the blocked spellings: a block means never offered, wherever the word was kept. */

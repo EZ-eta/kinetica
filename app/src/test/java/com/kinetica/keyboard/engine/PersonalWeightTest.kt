@@ -45,6 +45,20 @@ class PersonalWeightTest {
     }
 
     @Test
+    fun aCapitalizedFormEarnsItsWordsWeight() {
+        // German nouns are display forms ("Haus" on the "haus" node) and the counts are keyed
+        // lowercase, so the lookup by display never found one: committed nouns gained nothing.
+        val d = java.io.BufferedReader(java.io.StringReader("Haus\t5000\nhat\t9000\n"))
+            .use { DictionaryLoader.load(it) }
+        val plain = WordPredictor(d.trie, BigramTable.EMPTY, g, d.forms)
+        val learned = WordPredictor(d.trie, BigramTable.EMPTY, g, d.forms, mapOf("haus" to 5))
+        val sloppy = listOf(TestData.sloppySwipe("haus", g, 0L, 420L))
+        val before = plain.decode(sloppy, emptyList()).first { it.word == "Haus" }.score
+        val after = learned.decode(sloppy, emptyList()).first { it.word == "Haus" }.score
+        org.junit.Assert.assertTrue("Haus before=$before after=$after", after > before)
+    }
+
+    @Test
     fun personalCountReadsThroughPredictor() {
         val p = WordPredictor(dict(), BigramTable.EMPTY, g, emptyMap(), mapOf("thou" to 7))
         assertEquals(7, p.personalCount("Thou"))

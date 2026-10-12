@@ -186,14 +186,25 @@ object LayoutTransforms {
                 splitX(x0, key) * viewW, y0 * viewH,
                 splitX(x1, key) * viewW, y1 * viewH,
             )
-            LayoutMode.ONE_HANDED -> RectF(
-                (1f - ONE_HANDED_SCALE + x0 * ONE_HANDED_SCALE) * viewW,
-                (1f - ONE_HANDED_SCALE + y0 * ONE_HANDED_SCALE) * viewH,
-                (1f - ONE_HANDED_SCALE + x1 * ONE_HANDED_SCALE) * viewW,
-                (1f - ONE_HANDED_SCALE + y1 * ONE_HANDED_SCALE) * viewH,
-            )
+            LayoutMode.ONE_HANDED, LayoutMode.ONE_HANDED_LEFT -> {
+                val left = mode == LayoutMode.ONE_HANDED_LEFT
+                RectF(
+                    oneHandedX(x0, left) * viewW, oneHandedY(y0) * viewH,
+                    oneHandedX(x1, left) * viewW, oneHandedY(y1) * viewH,
+                )
+            }
         }
     }
+
+    /**
+     * One-handed, x: the board scaled on both axes and anchored to the bottom corner of the hand
+     * that holds the phone. Both axes alike, so every distance in key widths is unchanged.
+     */
+    fun oneHandedX(x: Float, left: Boolean): Float =
+        if (left) x * ONE_HANDED_SCALE else 1f - ONE_HANDED_SCALE + x * ONE_HANDED_SCALE
+
+    /** One-handed, y: anchored to the bottom, whichever the hand. */
+    fun oneHandedY(y: Float): Float = 1f - ONE_HANDED_SCALE + y * ONE_HANDED_SCALE
 
     /**
      * Split: left-half keys compress into [0, 0.42], right-half keys into

@@ -26,8 +26,8 @@ object BarAdjust {
     const val MAX_COUNT = 10_000
 
     /**
-     * The count a word would end up with after [steps] of slide, one badge tier per step (the
-     * developer's choice). A release in place adds [increment], the plain long-press reinforce.
+     * The count a word would end up with after [steps] of slide, one badge tier per step. A
+     * release in place adds [increment], the plain long-press reinforce.
      * Each step up doubles that, each step down halves the count, floored at zero like the store.
      * The ranking boost grows with `ln(1 + count)`, so a halving is one steady unit of rank: a
      * word at 300 blocks in 10 steps, against 61 at a fixed 5 per step.
@@ -97,4 +97,47 @@ object BarAdjust {
      */
     fun recentSwap(dx: Float, dy: Float, swipePx: Float): Boolean =
         kotlin.math.abs(dy) > swipePx && kotlin.math.abs(dy) > kotlin.math.abs(dx)
+
+    /**
+     * Whether a swap of [dy] brings the word above into place: a downward drag does, as a list
+     * scrolls under the thumb. [reversed] is the setting for those who read it the other way, the
+     * swipe pointing at the word it fetches.
+     */
+    fun swapTakesAbove(dy: Float, reversed: Boolean): Boolean = (dy > 0) != reversed
+
+    /** Where a blocked word was held, which decides whether the text holding it can go too. */
+    enum class BlockSource {
+        /** The chip: the word just committed, on the correction strip. */
+        CHIP,
+
+        /** The newest recent column's word: the word just committed, with recent words on. */
+        NEWEST_RECENT,
+
+        /** A live candidate of the word in progress. */
+        LIVE,
+
+        /** Anything else: an alternative on the strip, an older column, a prediction, an offer. */
+        OTHER,
+    }
+
+    /**
+     * [zone] and its state at the arm: a word zone's index into the full list is [fullIndex], and
+     * a recent column's [recentBack] counts commits before the newest. A live zone counts only
+     * when no strip is up, since the strip's other words are alternatives, not the word written.
+     */
+    fun blockSource(
+        zone: Int,
+        recentZone: Int,
+        correctionMode: Boolean,
+        fullIndex: Int,
+        selectedIndex: Int,
+        recentBack: Int?,
+        wordPending: Boolean,
+    ): BlockSource = when {
+        zone == recentZone -> if (recentBack == 0) BlockSource.NEWEST_RECENT else BlockSource.OTHER
+        zone < 0 -> BlockSource.OTHER
+        correctionMode -> if (fullIndex == selectedIndex) BlockSource.CHIP else BlockSource.OTHER
+        wordPending -> BlockSource.LIVE
+        else -> BlockSource.OTHER
+    }
 }

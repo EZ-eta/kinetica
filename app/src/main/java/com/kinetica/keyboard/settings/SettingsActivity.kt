@@ -121,19 +121,21 @@ class SettingsActivity :
         supportFragmentManager.findFragmentById(android.R.id.content) as? KeyboardPrefsFragment
 
     /**
-     * The whole searchable tree: every inflated row, plus the chord-screen settings that have no
-     * row of their own.
+     * The whole searchable tree: every inflated row, plus the settings on the chord and expansion
+     * screens, which have no row of their own.
      */
     private fun entries(): List<SettingsIndex.Entry> {
         val walked = topFragment()?.searchEntries() ?: emptyList()
-        return walked + EXTRA_ROWS.map { (key, titles) ->
+        return walked + EXTRA_ROWS.map { row ->
             SettingsIndex.Entry(
-                key = key,
-                title = getString(titles.first),
-                summary = getString(titles.second),
-                screenKey = CHORD_SCREEN,
-                screenTitle = getString(R.string.chord_settings_title),
-                terms = SettingsSynonyms.termsFor(key),
+                key = row.key,
+                title = getString(row.title),
+                summary = getString(row.summary),
+                screenKey = row.screen,
+                screenTitle = getString(
+                    if (row.screen == CHORD_SCREEN) R.string.chord_settings_title else R.string.expansion_settings_title,
+                ),
+                terms = SettingsSynonyms.termsFor(row.key),
             )
         }
     }
@@ -203,6 +205,10 @@ class SettingsActivity :
         }
         if (screenKey == CHORD_SCREEN) {
             startActivity(Intent(this, ChordSettingsActivity::class.java))
+            return
+        }
+        if (screenKey == SettingsSynonyms.EXPANSIONS_ROW) {
+            startActivity(Intent(this, ExpansionSettingsActivity::class.java))
             return
         }
         openScreen(screenKey, revealKey = key)
@@ -281,15 +287,27 @@ class SettingsActivity :
         /** Screens the keyboard may ask for by extra. */
         val OPENABLE_SCREENS = setOf(SettingsSynonyms.LONGPRESS_GROUP)
 
+        /** A setting on a screen of its own, by key, title, summary and that screen's row key. */
+        data class ExtraRow(val key: String, val title: Int, val summary: Int, val screen: String)
+
         /**
-         * Title and summary for the settings inside [ChordSettingsActivity], which appear in no
-         * preference XML; without them search cannot find the chord lead-ins.
+         * The settings inside [ChordSettingsActivity] and [ExpansionSettingsActivity], which appear
+         * in no preference XML; without them search cannot find the chord lead-ins or the trigger
+         * case.
          */
-        val EXTRA_ROWS: List<Pair<String, Pair<Int, Int>>> = listOf(
-            Prefs.CHORD_ARM_MS to
-                (R.string.pref_chord_arm_title to R.string.pref_chord_arm_summary),
-            Prefs.SPACE_CHORD_ARM_MS to
-                (R.string.pref_space_chord_arm_title to R.string.pref_space_chord_arm_summary),
+        val EXTRA_ROWS: List<ExtraRow> = listOf(
+            ExtraRow(
+                Prefs.CHORD_ARM_MS, R.string.pref_chord_arm_title, R.string.pref_chord_arm_summary,
+                CHORD_SCREEN,
+            ),
+            ExtraRow(
+                Prefs.SPACE_CHORD_ARM_MS, R.string.pref_space_chord_arm_title,
+                R.string.pref_space_chord_arm_summary, CHORD_SCREEN,
+            ),
+            ExtraRow(
+                Prefs.TRIGGER_CASE, R.string.pref_trigger_case_title, R.string.pref_trigger_case_summary,
+                SettingsSynonyms.EXPANSIONS_ROW,
+            ),
         )
     }
 }

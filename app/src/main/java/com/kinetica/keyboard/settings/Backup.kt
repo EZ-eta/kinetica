@@ -40,6 +40,12 @@ object Backup {
 
     data class Word(val lang: String, val word: String, val count: Int)
 
+    /**
+     * A learned word's capital and its votes, beside its [Word] row. A record type of its own, so
+     * an older build skips it and keeps the word, lowercase, and [VERSION] stays 1.
+     */
+    data class Capital(val lang: String, val word: String, val display: String, val votes: Int)
+
     data class Blocked(val lang: String, val word: String)
 
     data class Chord(val chord: String, val expansion: String)
@@ -62,6 +68,7 @@ object Backup {
          * from, so the restore names what is missing instead of moving it.
          */
         val importedBase: List<String> = emptyList(),
+        val capitals: List<Capital> = emptyList(),
     )
 
     /** True when [s] can survive a round trip: no separator, no newline. */
@@ -141,6 +148,11 @@ object Backup {
         for (lang in data.importedBase) {
             if (encodable(lang)) yield("basedict\t$lang")
         }
+        for (c in data.capitals) {
+            if (encodable(c.lang) && encodable(c.word) && encodable(c.display)) {
+                yield("wcase\t${c.lang}\t${c.word}\t${c.display}\t${c.votes}")
+            }
+        }
     }
 
     /** How many records [encode] would drop, so the export can say so. */
@@ -191,6 +203,7 @@ object Backup {
         val expansions = ArrayList<Expand>()
         val phrases = ArrayList<Phrase>()
         val base = ArrayList<String>()
+        val capitals = ArrayList<Capital>()
         var skipped = 0
         while (it.hasNext()) {
             val line = it.next()
@@ -212,11 +225,12 @@ object Backup {
                 "expand" -> parseExpand(f)?.also { e -> expansions.add(e) } != null
                 "phrase" -> parsePhrase(f)?.also { p -> phrases.add(p) } != null
                 "basedict" -> if (f.size == 2 && f[1].isNotEmpty()) { base.add(f[1]); true } else false
+                "wcase" -> parseCapital(f)?.also { c -> capitals.add(c) } != null
                 else -> false
             }
             if (!ok) skipped++
         }
-        return Result.Ok(Data(prefs, words, blocked, chords, expansions, phrases, base), skipped)
+        return Result.Ok(Data(prefs, words, blocked, chords, expansions, phrases, base, capitals), skipped)
     }
 
     private fun parseExpand(f: List<String>): Expand? {
@@ -244,6 +258,13 @@ object Backup {
         val n = f[3].toIntOrNull() ?: return null
         if (n < 1) return null
         return Word(f[1], f[2], n)
+    }
+
+    private fun parseCapital(f: List<String>): Capital? {
+        if (f.size != 5 || f[1].isEmpty() || f[2].isEmpty() || f[3].isEmpty()) return null
+        if (f[3].lowercase() != f[2]) return null
+        val votes = f[4].toIntOrNull() ?: return null
+        return Capital(f[1], f[2], f[3], votes)
     }
 
     private fun parsePhrase(f: List<String>): Phrase? {

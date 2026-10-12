@@ -367,9 +367,14 @@ class DictionarySettingsActivity : AppCompatActivity() {
     private fun showPersonalWords(lang: String, label: String) {
         io.execute {
             val rows = try {
+                // A settled capital is how the word is written, so the list shows it; delete and
+                // raise go back to the lowercase key.
                 PersonalWordRows.sortedForDisplay(
                     KineticaDb.get(this).userWords().allForLanguage(lang)
-                        .map { it.word to it.frequency },
+                        .map { row ->
+                            val settled = row.display != null && row.caseVotes >= KineticaConstants.LEARNED_CAPITAL_MIN_VOTES
+                            (if (settled) row.display!! else row.word) to row.frequency
+                        },
                 )
             } catch (e: RuntimeException) {
                 toastLater(R.string.dict_db_error)
@@ -616,7 +621,7 @@ class DictionarySettingsActivity : AppCompatActivity() {
             try {
                 val dao = KineticaDb.get(this).userWords()
                 val now = System.currentTimeMillis()
-                for (w in words) dao.upsertAdd(w, lang, 1, now)
+                for (w in words) dao.upsertAdd(w.lowercase(), lang, 1, now)
             } catch (e: RuntimeException) {
                 toastLater(R.string.dict_db_error)
                 return@execute
@@ -653,7 +658,7 @@ class DictionarySettingsActivity : AppCompatActivity() {
                 io.execute {
                     try {
                         val dao = KineticaDb.get(this).userWords()
-                        for (w in words) dao.delete(w, lang)
+                        for (w in words) dao.delete(w.lowercase(), lang)
                     } catch (e: RuntimeException) {
                         toastLater(R.string.dict_db_error)
                         return@execute
@@ -731,7 +736,9 @@ class DictionarySettingsActivity : AppCompatActivity() {
                 val rows = KineticaDb.get(this).userWords().allForLanguage(lang)
                 val arr = JSONArray()
                 for (r in rows) {
-                    arr.put(JSONObject().put("word", r.word).put("count", r.frequency))
+                    val o = JSONObject().put("word", r.word).put("count", r.frequency)
+                    r.display?.let { o.put("display", it).put("caseVotes", r.caseVotes) }
+                    arr.put(o)
                 }
                 val doc = JSONObject()
                     .put("format", "kinetica-personal-1")
@@ -781,8 +788,12 @@ class DictionarySettingsActivity : AppCompatActivity() {
                 var imported = 0
                 for (i in 0 until words.length()) {
                     val o = words.getJSONObject(i)
-                    val word = o.getString("word").lowercase()
+                    val written = o.getString("word")
+                    val word = written.lowercase()
                     val count = o.getInt("count")
+                    // A capital from an export, or a word written with one.
+                    val display = o.optString("display", "").ifEmpty { written.takeIf { it != word } }
+                        ?.takeIf { it.lowercase() == word }
                     if (word.isEmpty() || word.length > 24 || count < 1) continue
                     if (!WORD_RE.matches(word)) continue
                     // An import is deliberate: clamp up to the merge floor so every imported word
@@ -796,6 +807,15 @@ class DictionarySettingsActivity : AppCompatActivity() {
                         ),
                         now,
                     )
+                    if (display != null) {
+                        // The file's own votes when it carries them, an unsettled or voted-down
+                        // capital included; a capital written in the word is settled.
+                        val votes = if (o.has("caseVotes")) o.getInt("caseVotes") else KineticaConstants.LEARNED_CAPITAL_MIN_VOTES
+                        dao.setCase(
+                            word, lang, display,
+                            votes.coerceIn(KineticaConstants.CASE_VOTES_LOW, KineticaConstants.CASE_VOTES_HIGH),
+                        )
+                    }
                     imported++
                 }
                 main.post {

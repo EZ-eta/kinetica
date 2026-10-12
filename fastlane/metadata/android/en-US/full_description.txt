@@ -26,15 +26,18 @@ Features
   follow the language you are typing
 * Next-word suggestions, recent words on the bar, and a correction strip right
   after each word
-* Tap inside a word you wrote to swap it for another
+* Tap inside a word you wrote to swap it for another; swipe shift to change
+  its case
 * Tap autocorrect with three levels; backspace right after it undoes it
 * Your words rank higher as you use them; slide a suggestion to raise, lower or
-  block it
+  block it. Names you write with a capital keep it
 * Chords on ?123 or the spacebar, edge swipes on any key, and text expansions:
   type text, run an action, or press Ctrl and a key
 * Long-press menus as grids, with your own list for every letter
-* Optional numbers row, a wider middle row, landscape split, one-handed and
-  split modes, adjustable height and margins
+* Keys that fit the field: @ in email fields, / in web addresses, and an
+  optional number pad for numbers
+* Optional numbers row, a wider middle row, landscape split, one-handed for
+  either hand, split mode, adjustable height and margins
 * Peck-type mode for slang and code: every tap types exactly its letter
 * Dark, light, Material You or your own colour
 * Backup of every setting, learned word and shortcut in one file

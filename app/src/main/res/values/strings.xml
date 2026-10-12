@@ -4,7 +4,7 @@
          so a partial file works. CONTRIBUTING.md says what to leave alone. -->
     <string name="app_name" translatable="false">Kinetica</string>
     <!-- The application id, as a resource so the settings sub-screen intents below
-         follow the build they are running in. The developer build overrides it. -->
+         follow the build they are running in. The debug build overrides it. -->
     <string name="app_pkg" translatable="false">com.kinetica.keyboard</string>
     <string name="ime_name">Kinetica Keyboard</string>
     <string name="subtype_en_us" translatable="false">English (US)</string>
@@ -52,9 +52,9 @@
     <string name="tip_accents_summary">Slide to the one you want and lift. Long-press menus shapes the popup</string>
     <string name="tip_delete_words_title">Slide left from backspace</string>
     <string name="tip_delete_words_summary">Words are marked for deletion as you go; slide back to keep them, lift to delete</string>
-    <string name="tip_case_title">Hold shift to change a word\'s case</string>
+    <string name="tip_case_title">Swipe shift to change a word\'s case</string>
     <!-- abc, Abc and ABC are the popup's own labels. -->
-    <string name="tip_case_summary">abc, Abc or ABC for the word at the cursor, or for selected text</string>
+    <string name="tip_case_summary">Up for ABC, right for Abc, down for abc; hold for the menu. On the word at the cursor, or on selected text</string>
     <string name="tip_digits_title">Swipe up on the top row for digits</string>
     <string name="tip_digits_summary">The small glyph on a key is one swipe away: up on the top row, down on the bottom row</string>
     <string name="tip_settings_key_title">Hold ?123 for settings</string>
@@ -132,7 +132,12 @@
     <string name="pref_autospace_delay_title">Autospace delay after a swipe (ms)</string>
     <string name="pref_autospace_delay_summary">How long a swiped word waits for its space. Raise it if spaces land inside words you are still swiping</string>
     <string name="pref_autospace_tap_delay_title">Autospace delay after tapping (ms)</string>
-    <string name="pref_autospace_tap_delay_summary">The same for a tapped word. Taps come at a steadier pace than swipes, so this can be shorter</string>
+    <string name="pref_autospace_tap_delay_summary">The same for a tapped word, counted from the last lift; it needs Autospace tapped words too. A one-letter word waits at least 300 ms</string>
+    <string name="pref_autospace_timer_title">Show the autospace wait</string>
+    <string name="pref_autospace_timer_summary">A band on the suggestion bar shrinks until the space lands</string>
+    <string name="pref_no_space_before_title">No space before</string>
+    <string name="pref_no_space_before_summary">Marks that take back an automatic space, typed together. With tidy spaces on, no automatic space goes in front of them either</string>
+    <string name="pref_no_space_before_default" translatable="false">.,!?;:)]}»…</string>
     <string name="pref_autospace_retract_title">Take the space back within (ms)</string>
     <string name="pref_autospace_retract_summary">After an automatic space, how long a letter still cancels it and rejoins the word</string>
     <string name="pref_zen_title">Zen mode (no animations)</string>
@@ -290,6 +295,9 @@
     <string name="action_arrow_right">Right arrow</string>
     <string name="action_page_up">Page up</string>
     <string name="action_page_down">Page down</string>
+    <string name="action_case_lower">Word in lowercase (abc)</string>
+    <string name="action_case_title">Capitalized word (Abc)</string>
+    <string name="action_case_upper">Word in capitals (ABC)</string>
     <string name="notice_name_peck_mode">Peck-type</string>
     <string name="notice_name_typing_speed">Typing speed</string>
     <string name="pref_no_primary_title">Follow the language I type (experimental)</string>
@@ -335,6 +343,30 @@
     <string name="tutor_hint_alternate">The thumbs hand over letter by letter. Keep a steady rhythm.</string>
     <string name="pref_tidy_spaces_title">Tidy spaces</string>
     <string name="pref_enter_action_title">Enter runs the app\'s action</string>
+    <string name="pref_delete_on_block_title">Blocking a word deletes it</string>
+    <string name="pref_delete_on_block_summary">Sliding the word you just wrote off the bar also takes it out of the text, and the bar offers the gesture\'s other words. Only the word at the cursor</string>
+    <string name="pref_trigger_case_title">Capitals in expansion triggers</string>
+    <string name="pref_trigger_case_summary">Whether a trigger typed with a capital still fires, and passes the capital on</string>
+    <string name="pref_wide_arrangement_title">Wide screens arrange like landscape</string>
+    <string name="pref_wide_arrangement_summary">An unfolded phone or a tablet held upright, 600 dp wide or more, uses the landscape arrangement instead of keys stretched across the screen</string>
+    <string name="pref_chord_labels_title">Show chords while a trigger is held</string>
+    <string name="pref_chord_labels_summary">Each key with a chord shows what it does once ?123 or the spacebar has been held still for a moment</string>
+    <string name="pref_recent_text_pct_title">Recent words text size (%)</string>
+    <string name="pref_recent_text_pct_summary">The recent-word columns, sized separately from the suggestions</string>
+    <string name="pref_recent_swipe_reversed_title">Reverse the recent-word swipe</string>
+    <string name="pref_recent_swipe_reversed_summary">Swipe up on a recent word for the one above it, down for the one below. Off: down brings the word above, as a list scrolls</string>
+    <string name="pref_bar_text_pct_title">Suggestion text size (%)</string>
+    <string name="pref_bar_text_pct_summary">Size of the words on the bar, relative to the bar height</string>
+    <string name="pref_bar_compact_title">Compact suggestions</string>
+    <string name="pref_bar_compact_summary">Words sit side by side with a small gap, instead of each in an equal share of the bar. More fit on a page</string>
+    <string name="pref_enter_hold_sends_title">Hold enter to send</string>
+    <string name="pref_enter_hold_sends_summary">In a multi-line field with an action, such as a chat box, a tap on enter writes a new line and a hold runs the action. Single-line fields and the symbol pages keep the action on the tap</string>
+    <string name="pref_field_keys_title">Keys that fit the field</string>
+    <string name="pref_field_keys_summary">The comma key types @ in an email field, and / in a web address with : in its menu. The comma stays in the menu. No capital at the start of either</string>
+    <string name="pref_numpad_for_numbers_title">Number pad in number fields</string>
+    <string name="pref_numpad_for_numbers_summary">A field that takes only numbers, a phone number or a date opens on the number pad. Off: the letters, so a word can still be typed and expanded there</string>
+    <string name="pref_letters_on_new_field_title">Letters in every new field</string>
+    <string name="pref_letters_on_new_field_summary">A new field opens on the letters, not on the symbols or number page the last one was left on</string>
     <string name="pref_enter_action_summary">Enter searches, sends or goes when the field asks for it, and the key says which. Hold enter for a new line. Off: a new line in any multi-line field</string>
     <string name="enter_label_search">Search</string>
     <string name="enter_label_send">Send</string>
@@ -342,7 +374,7 @@
     <string name="enter_label_next">Next</string>
     <string name="enter_label_done">Done</string>
     <string name="enter_label_previous">Back</string>
-    <string name="pref_tidy_spaces_summary">Never two spaces in a row: a second space is dropped, or ends the sentence when the double-space full stop is on. No automatic space before a closing quote or bracket</string>
+    <string name="pref_tidy_spaces_summary">Never two spaces in a row: a second space is dropped, or ends the sentence when the double-space full stop is on. No automatic space before a closing quote or bracket, or before the marks in No space before</string>
     <string name="pref_number_row_title">Numbers row</string>
     <string name="pref_number_row_summary">Digits in their own row above the letters, tap only. The keyboard grows a row so the letters keep their size</string>
     <string name="pref_recent_words_summary">The last two words stay on the left of the bar, each with the two words it beat above and below it. Tap one to swap it in. The bar grows to fit</string>
@@ -353,7 +385,7 @@
     <string name="shortcut_row" translatable="false">%1$s  %2$s</string>
     <string name="shortcut_move_up">Move up</string>
     <string name="shortcut_move_down">Move down</string>
-    <string name="pref_menu_actions_summary">Hold ?123 and slide up onto one. Chosen separately from the bar, so the bar can drop the gear and the menu keep it</string>
+    <string name="pref_menu_actions_summary">Hold ?123 and slide onto one: above the key, or on the spacebar while chords are shown. Chosen separately from the bar, so the bar can drop the gear and the menu keep it</string>
 
     <string name="expansion_settings_title">Text expansions</string>
     <string name="pref_expansions_summary">Turn a short trigger into longer text, such as a link or a few lines. Fired by the Expand action on an edge swipe, a chord or the bar</string>
@@ -376,10 +408,12 @@
     <string name="pref_group_longpress_title">Long-press menus</string>
     <string name="pref_group_longpress_summary">Grid or strip, and what each letter offers when held</string>
     <string name="pref_letter_alternates_note_title">Each letter\'s list</string>
-    <!-- The :paste, :copy ... names are typed into the lists and read by the keyboard: keep them in English. -->
-    <string name="pref_letter_alternates_note_summary">Characters separated by spaces. The first is the key\'s corner character, typed by a plain long-press or an up-swipe. Blank, or the built-in list, keeps the built-in one; Default fills in every enabled language\'s characters to trim. A shortcut runs from its bar symbol or its name: :paste :copy :cut :undo :redo :settings :retype :date :time :copy_line :tab :escape :home :end. One list for every language</string>
+    <string name="pref_letter_alternates_note_summary">Characters separated by spaces. The first is the key\'s corner character, typed by a plain long-press or an up-swipe. Built-in is what the active language\'s key offers: leave a list blank, or type the built-in back, to keep it. Default fills in the accents of every enabled language; delete the ones you do not use. A list is shared by every language and replaces the built-in one in all of them</string>
+    <!-- %1$s is the list of :names, generated from the code: they stay in English. -->
+    <string name="pref_letter_alternates_names">A shortcut runs from its bar symbol or its name, here and in the comma, period and enter lists: %1$s</string>
     <string name="pref_edit_from_menu_title">Edit a menu from the keyboard</string>
     <string name="pref_edit_from_menu_summary">Hold a letter\'s long-press menu still for a moment to open its list here</string>
+    <string name="pref_number_row_lists_title">Numbers row, while it is on</string>
     <string name="pref_letter_alternates_builtin">Built-in: %1$s</string>
     <string name="pref_letter_alternates_none">Built-in: none</string>
     <string name="pref_letter_alternates_default">Default: every enabled language</string>
@@ -389,7 +423,7 @@
     <string name="pref_letter_alternates_dialog_title">Long-press on %1$s</string>
     <string name="pref_popup_shape_title">Long-press menu shape</string>
     <string name="pref_plain_letter_alternates_title">Hide accented letters on long-press</string>
-    <string name="pref_plain_letter_alternates_summary">Letter keys offer only digits and symbols. Ignored for a language whose own alphabet uses accents, such as Italian, Spanish, Polish, Czech, German, French or Norwegian</string>
+    <string name="pref_plain_letter_alternates_summary">Letter keys offer only digits, symbols and the letters of your enabled languages, so Polish keeps ą on the English keys. Ignored for a language whose own alphabet uses accents</string>
     <string name="pref_number_priority_title">Numbers before accents on the letter keys</string>
     <string name="pref_number_priority_summary">The digit or symbol comes first in the long-press popup and becomes the corner hint, so swiping up on the top row types 1 to 0. Turn off to put the accents first</string>
 
@@ -540,9 +574,9 @@
     <string name="pref_comma_mode_summary">Keep the comma, remove it (the spacebar widens), or make it a character, text or action of your own. A repurposed key keeps the comma in its long-press menu</string>
     <string name="pref_period_alternates_title">Period long-press symbols</string>
     <string name="pref_comma_alternates_title">Comma long-press symbols</string>
-    <string name="pref_punctuation_alternates_summary">Space-separated, up to eight. Leave blank to keep the built-in list</string>
+    <string name="pref_punctuation_alternates_summary">Space-separated, up to eight. Leave blank to keep the built-in list. A shortcut\'s bar symbol or its name, such as :paste, runs it</string>
     <string name="pref_period_mode_title">Period key</string>
-    <string name="pref_period_mode_summary">The same six options as the comma key, for the period. Removing both keys drops the emoji long-press they share</string>
+    <string name="pref_period_mode_summary">Keep the period, remove it (the spacebar widens), or make it a character, text or action of your own. Removing both keys drops the emoji long-press they share</string>
     <string name="pref_period_custom_title">Period key custom text</string>
     <string name="pref_period_custom_summary">Used by the custom character and custom text options above</string>
     <string name="pref_comma_custom_title">Comma key custom text</string>

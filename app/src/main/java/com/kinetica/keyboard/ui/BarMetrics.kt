@@ -31,7 +31,40 @@ object BarMetrics {
     /** Word text height as a fraction of the bar. */
     const val TEXT_FRACTION = 0.40f
 
-    fun textSize(heightPx: Float): Float = heightPx * TEXT_FRACTION
+    fun textSize(heightPx: Float, scale: Float = 1f): Float = heightPx * TEXT_FRACTION * scale
+
+    /**
+     * The text size setting, as a percentage of [TEXT_FRACTION]. 150 by default, 60% of the bar,
+     * which reads at arm's length. 180 is the ceiling: a middle word's descenders reach the page
+     * dots near 177, and the dots' own clearance runs out at 193. 60 is the floor, for those who
+     * want small text.
+     */
+    const val TEXT_PCT_MIN = 60
+    const val TEXT_PCT_MAX = 180
+    const val TEXT_PCT_DEFAULT = 150
+
+    /** The setting's percentage as a multiplier, clamped to the settable range. */
+    fun textScale(pct: Int): Float = pct.coerceIn(TEXT_PCT_MIN, TEXT_PCT_MAX) / 100f
+
+    /**
+     * The recent-word columns' own text size setting, as a percentage like [TEXT_PCT_DEFAULT].
+     * 150 by default, the size they had under the default bar text. 170 is the ceiling: three
+     * rows to a column, and there the rows' font boxes meet.
+     */
+    const val RECENT_PCT_MIN = 60
+    const val RECENT_PCT_MAX = 170
+    const val RECENT_PCT_DEFAULT = 150
+
+    fun recentTextScale(pct: Int): Float = pct.coerceIn(RECENT_PCT_MIN, RECENT_PCT_MAX) / 100f
+
+    /** A third of the bar is small for text; a recent row draws this much larger. */
+    const val RECENT_TEXT_SCALE = 1.25f
+
+    /**
+     * The gap between two words in compact spacing, as a fraction of the text size: close enough
+     * to read as one line of words, wide enough that a word's edge is still its own target.
+     */
+    const val COMPACT_GAP_FRACTION = 0.75f
 
     /**
      * Multiplier turning a dp ornament size into its size on a bar of [heightPx]; 1.0 when the

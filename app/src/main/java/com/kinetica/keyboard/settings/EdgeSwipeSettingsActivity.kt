@@ -49,6 +49,8 @@ class EdgeSwipeSettingsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        // The list shows shift's swipes even before the keyboard has started since the update.
+        EdgeSwipeDefaults.applyTo(prefs())
         val pad = (16 * resources.displayMetrics.density).toInt()
 
         val root = LinearLayout(this).apply {

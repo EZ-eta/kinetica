@@ -40,7 +40,7 @@ class PopupGridTest {
     }
 
     @Test
-    fun italianOIsThePyramidTheDeveloperChose() {
+    fun italianOIsAPyramid() {
         // `o 9 ò ó ô ö õ` in 3 x 3.
         val g = PopupGrid.rising(7, 3, 1)
         assertEquals(listOf(listOf(-1, 6, -1), listOf(4, 1, 5), listOf(2, 0, 3)), rows(g))

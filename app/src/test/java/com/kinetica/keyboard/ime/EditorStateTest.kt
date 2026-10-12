@@ -2,6 +2,7 @@ package com.kinetica.keyboard.ime
 
 import android.text.InputType
 import android.view.inputmethod.EditorInfo
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -175,5 +176,30 @@ class EditorStateTest {
     fun aPickWritesNoSpaceInAOneTokenField() {
         assertFalse(spacesAfterPick(addressField = true))
         assertTrue(spacesAfterPick(addressField = false))
+    }
+
+    @Test
+    fun eachFieldSaysWhatKindOfKeysItWants() {
+        val text = InputType.TYPE_CLASS_TEXT
+        assertEquals(FieldKind.EMAIL, stateFor(text or InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS).fieldKind)
+        assertEquals(FieldKind.EMAIL, stateFor(text or InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS).fieldKind)
+        assertEquals(FieldKind.URL, stateFor(text or InputType.TYPE_TEXT_VARIATION_URI).fieldKind)
+        assertEquals(FieldKind.NUMERIC, stateFor(InputType.TYPE_CLASS_NUMBER).fieldKind)
+        assertEquals(FieldKind.NUMERIC, stateFor(InputType.TYPE_CLASS_PHONE).fieldKind)
+        assertEquals(FieldKind.NUMERIC, stateFor(InputType.TYPE_CLASS_DATETIME).fieldKind)
+        assertEquals(FieldKind.TEXT, stateFor(text).fieldKind)
+        // A PIN is a password first: nothing about it is offered or switched.
+        assertEquals(
+            FieldKind.TEXT,
+            stateFor(InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD).fieldKind,
+        )
+    }
+
+    @Test
+    fun anAddressNeverStartsWithACapital() {
+        val caps = InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+        assertFalse(stateFor(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS or caps).capSentences)
+        assertFalse(stateFor(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI or caps).capSentences)
+        assertTrue(stateFor(InputType.TYPE_CLASS_TEXT or caps).capSentences)
     }
 }

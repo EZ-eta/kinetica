@@ -9,6 +9,13 @@ class KeyboardConfigTest {
     private val default = listOf("?", "!", ",")
 
     @Test
+    fun theNoSpaceListDropsSpacesAndABlankFieldIsTheDefault() {
+        assertEquals(Prefs.DEFAULT_NO_SPACE_BEFORE, KeyboardConfig.parseNoSpaceBefore(null))
+        assertEquals(Prefs.DEFAULT_NO_SPACE_BEFORE, KeyboardConfig.parseNoSpaceBefore("  "))
+        assertEquals(".,!?", KeyboardConfig.parseNoSpaceBefore(" . , ! ?"))
+    }
+
+    @Test
     fun blankOrNullFallsBackToDefault() {
         assertEquals(default, KeyboardConfig.parseEnterAlternates(null))
         assertEquals(default, KeyboardConfig.parseEnterAlternates(""))

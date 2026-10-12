@@ -17,6 +17,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.widget.PopupWindow
 import com.kinetica.keyboard.engine.Alphabet
+import com.kinetica.keyboard.engine.DecodeTrace
 import com.kinetica.keyboard.engine.GestureEngine
 import com.kinetica.keyboard.engine.KeyboardGeometry
 import com.kinetica.keyboard.engine.KineticaConstants
@@ -28,6 +29,7 @@ import com.kinetica.keyboard.layout.LayoutMutations
 import com.kinetica.keyboard.layout.LandscapeArrangement
 import com.kinetica.keyboard.layout.LayoutTransforms
 import com.kinetica.keyboard.engine.models.StreamId
+import com.kinetica.keyboard.keys.ActionRow
 import com.kinetica.keyboard.keys.BackspaceController
 import com.kinetica.keyboard.keys.ChordTrigger
 import com.kinetica.keyboard.keys.EdgeSwipeBinding
@@ -102,6 +104,12 @@ class KeyboardView @JvmOverloads constructor(
 
         /** Synchronous query: does [key] have a chord under [trigger]? */
         fun hasChord(trigger: ChordTrigger, key: Char): Boolean
+
+        /** A resting finger was dropped at its lift; the word may want its autospace now. */
+        fun onRestingFingerDropped() = Unit
+
+        /** What [key] shows of its chord under [trigger] while the trigger is held, or null. */
+        fun chordLabel(trigger: ChordTrigger, key: Char): String? = null
 
         /** [trigger] held [heldMs] and a chord-assigned key tapped: fire it. */
         fun onChordTriggered(trigger: ChordTrigger, key: Char, heldMs: Long)
@@ -306,6 +314,9 @@ class KeyboardView @JvmOverloads constructor(
     /** True when enter runs an action, so its hold adds [LayoutMutations.NEWLINE_ALTERNATE] as the last cell. */
     var enterNewlineCell = false
 
+    /** Enter's hold runs the field's action, where a tap writes the newline: its cell comes first. */
+    var enterActionCell = false
+
     private var layout: KeyboardLayout? = null
     private val keyRects = ArrayList<RectF>()
     private val keyInsets = ArrayList<RectF>()
@@ -380,6 +391,8 @@ class KeyboardView @JvmOverloads constructor(
         popupBgPaint.color = theme.popupBg
         popupSelectedPaint.color = theme.accent
         deletePreviewPaint.color = theme.keyText
+        chordFillPaint.color = theme.popupBg
+        chordLabelPaint.color = theme.accent
     }
 
     private val routeByPointer = IntArray(MAX_POINTERS) { ROUTE_NONE }
@@ -392,6 +405,13 @@ class KeyboardView @JvmOverloads constructor(
     private val peakDyByPointer = FloatArray(MAX_POINTERS)
     private val downTimeByPointer = LongArray(MAX_POINTERS)
     private val pressedKeys = LinkedHashSet<Int>()
+    // Whether another stream was down at any time during this pointer's: a resting finger is
+    // one held still while the other thumb typed (TouchRules.isRestingFinger).
+    private val overlappedByPointer = BooleanArray(MAX_POINTERS)
+    // A numbers-row digit pressed while the other thumb was drawing a swipe.
+    private val digitDuringSwipe = BooleanArray(MAX_POINTERS)
+    // The digit a touch began on before it was handed to the engine, or -1.
+    private val handoverFrom = IntArray(MAX_POINTERS) { -1 }
 
     // ------------------------------------------------------------ key popups
     //
@@ -475,6 +495,84 @@ class KeyboardView @JvmOverloads constructor(
     private val holdHandler = Handler(Looper.getMainLooper())
     private val holdRunnable = Runnable { onHoldTimerFired() }
 
+    /** Keys show their chords while `?123` or the spacebar is held still past its label delay. */
+    var chordLabelsEnabled = true
+
+    // Each key's chord label by key index while a trigger is held, built once per change so a
+    // frame allocates nothing; null when none are shown.
+    private var chordLabels: Array<String?>? = null
+    // Whether each trigger has been held still long enough for its labels.
+    private var modeLabelsDue = false
+    private var spaceLabelsDue = false
+    private val modeLabelRunnable = Runnable {
+        modeLabelsDue = modeHoldPointer != -1 && !modeHoldMoved
+        refreshChordLabels()
+    }
+    private val spaceLabelRunnable = Runnable {
+        spaceLabelsDue = spacePointer != -1 && !spaceHoldMoved
+        refreshChordLabels()
+    }
+    private val chordFillPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val chordLabelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textAlign = Paint.Align.CENTER
+    }
+
+    /**
+     * Labels each key from the first due trigger with a chord there, `?123` before the spacebar,
+     * the order a chord key fires in. Called whenever a trigger's state changes, so letting go of
+     * one leaves the other's labels up.
+     */
+    private fun refreshChordLabels() {
+        val triggers = chordLabelTriggers(chordLabelsEnabled && modeLabelsDue, chordLabelsEnabled && spaceLabelsDue)
+        val l = layout
+        var labels: Array<String?>? = null
+        if (triggers.isNotEmpty() && l != null) {
+            val built = arrayOfNulls<String>(l.keys.size)
+            var any = false
+            for (i in l.keys.indices) {
+                val c = l.keys[i].chordChar ?: continue
+                for (trigger in triggers) {
+                    built[i] = listener?.chordLabel(trigger, c) ?: continue
+                    any = true
+                    break
+                }
+            }
+            if (any) labels = built
+        }
+        if (labels == null && chordLabels == null) return
+        chordLabels = labels
+        invalidate()
+    }
+
+    /** [trigger]'s hold ended or moved: its labels go, the other trigger's stay. */
+    private fun dropChordLabels(trigger: ChordTrigger) {
+        when (trigger) {
+            ChordTrigger.MODE -> {
+                holdHandler.removeCallbacks(modeLabelRunnable)
+                modeLabelsDue = false
+            }
+            ChordTrigger.SPACE -> {
+                holdHandler.removeCallbacks(spaceLabelRunnable)
+                spaceLabelsDue = false
+            }
+        }
+        refreshChordLabels()
+    }
+
+    /** Each chord's label over its key; the pressed keys draw on top, so a press still shows. */
+    private fun drawChordLabels(canvas: Canvas) {
+        val labels = chordLabels ?: return
+        for (i in labels.indices) {
+            val s = labels[i] ?: continue
+            if (i !in keyInsets.indices) continue
+            val inset = keyInsets[i]
+            canvas.drawRoundRect(inset, cornerPx, cornerPx, chordFillPaint)
+            chordLabelPaint.textSize = if (s.length > 1) inset.height() * 0.32f else inset.height() * 0.45f
+            val baseline = inset.centerY() - (chordLabelPaint.descent() + chordLabelPaint.ascent()) / 2f
+            canvas.drawText(s, inset.centerX(), baseline, chordLabelPaint)
+        }
+    }
+
     /** Whether holding a letter's menu still opens its list in settings (#8); off unless chosen. */
     var editFromMenu = false
     private var editPid = -1
@@ -535,6 +633,9 @@ class KeyboardView @JvmOverloads constructor(
     init {
         applyThemePaints()
     }
+
+    /** Whether the board on screen is a letters page: the symbol pages and the numpad have none. */
+    val showsLetters: Boolean get() = layout?.keys?.any { it.isLetter } == true
 
     fun setKeyboardLayout(l: KeyboardLayout) {
         cancelActivePointers()
@@ -748,6 +849,7 @@ class KeyboardView @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         staticLayer?.let { canvas.drawBitmap(it, 0f, 0f, null) }
+        drawChordLabels(canvas)
         val l = layout
         if (pressedKeys.isNotEmpty() && l != null) {
             for (idx in pressedKeys) {
@@ -952,6 +1054,17 @@ class KeyboardView @JvmOverloads constructor(
         peakDyByPointer[pid] = 0f
         downTimeByPointer[pid] = t
         val key = if (keyIdx != -1) l.keys[keyIdx] else null
+        overlappedByPointer[pid] = false
+        handoverFrom[pid] = -1
+        val fromNumberRow = key != null && LayoutMutations.isNumberRowKey(key)
+        digitDuringSwipe[pid] = fromNumberRow && engine?.otherSwipeCommitted(pid) == true
+
+        if (TouchRules.ignoresExtraFinger(key?.isLetter == true, engineActive && engine?.atCapacity() == true)) {
+            routeByPointer[pid] = ROUTE_NONE
+            downKeyByPointer[pid] = -1
+            DecodeTrace.log { "  touch ignored reason=extra-finger key=${key?.output}" }
+            return
+        }
 
         if (keyIdx != -1) listener?.onKeyPressFeedback()
 
@@ -961,6 +1074,9 @@ class KeyboardView @JvmOverloads constructor(
             modeHoldDownTime = t
             modeHoldMoved = false
             modeChordFired = false
+            if (chordLabelsEnabled) {
+                holdHandler.postDelayed(modeLabelRunnable, maxOf(chordArmMs, CHORD_LABEL_MIN_DELAY_MS))
+            }
         }
 
         // Decided here, fired or typed at the lift: see the interaction table.
@@ -972,6 +1088,7 @@ class KeyboardView @JvmOverloads constructor(
             // The engine never takes a symbol or a digit, so those wait for their lift here.
             chord != null && key?.isLetter != true -> ROUTE_CHORD
             engineActive && engine?.onPointerDown(pid, x, y, t) == true -> {
+                markOverlap(pid)
                 val stream = engine?.streamIdOf(pid)
                 if (stream != null && !zenMode && trailsEnabled && chord == null) {
                     trailRenderer.startStream(stream)
@@ -992,6 +1109,9 @@ class KeyboardView @JvmOverloads constructor(
                 spaceChordFired = false
                 val r = keyRects.getOrNull(keyIdx)
                 spaceController.onDown(x, r?.left ?: 0f, r?.width() ?: 0f)
+                if (chordLabelsEnabled) {
+                    holdHandler.postDelayed(spaceLabelRunnable, maxOf(spaceChordArmMs, SPACE_LABEL_MIN_DELAY_MS))
+                }
                 ROUTE_SPACE
             }
             key?.type == KeyType.BACKSPACE && backspacePointer == -1 -> {
@@ -1011,6 +1131,48 @@ class KeyboardView @JvmOverloads constructor(
             pressedKeys.add(keyIdx)
             invalidate()
         }
+    }
+
+    /** Marks [pid] and every other stream as having shared the keys, when another is down. */
+    private fun markOverlap(pid: Int) {
+        if (engine?.otherTracking(pid) != true) return
+        overlappedByPointer[pid] = true
+        for (q in 0 until MAX_POINTERS) if (routeByPointer[q] == ROUTE_ENGINE) overlappedByPointer[q] = true
+    }
+
+    /**
+     * A touch that began on a numbers-row digit and has slid onto a letter starts its swipe
+     * there, as if it had landed on that letter.
+     */
+    private fun maybeHandOverDigit(pid: Int, x: Float, y: Float, t: Long) {
+        if (routeByPointer[pid] != ROUTE_SPECIAL || !engineActive) return
+        val from = keyAtDown(pid) ?: return
+        if (!LayoutMutations.isNumberRowKey(from)) return
+        // A swipe down bound on the digit is the user's, and the handover would take it.
+        if (edgeSwipeBindings.outputFor(from, EdgeSwipeBinding.Direction.DOWN) != null) return
+        val l = layout ?: return
+        val idx = keyIndexAt(x, y)
+        val onLetter = idx in l.keys.indices && l.keys[idx].isLetter
+        val dx = x - downXByPointer[pid]
+        val dy = y - downYByPointer[pid]
+        if (!TouchRules.handsOverToSwipe(LayoutMutations.isNumberRowKey(from), dx * dx + dy * dy, holdSlopPx * holdSlopPx, onLetter)) return
+        if (engine?.onPointerDown(pid, x, y, t) != true) return
+        if (pid == pendingHoldPid) cancelHold()
+        pressedKeys.remove(downKeyByPointer[pid])
+        pressedKeys.add(idx)
+        invalidate()
+        DecodeTrace.log { "  touch handover from=${from.output} to=${l.keys[idx].output}" }
+        routeByPointer[pid] = ROUTE_ENGINE
+        handoverFrom[pid] = downKeyByPointer[pid]
+        downKeyByPointer[pid] = idx
+        downXByPointer[pid] = x
+        downYByPointer[pid] = y
+        peakDxByPointer[pid] = 0f
+        peakDyByPointer[pid] = 0f
+        downTimeByPointer[pid] = t
+        digitDuringSwipe[pid] = false
+        markOverlap(pid)
+        engine?.streamIdOf(pid)?.let { if (!zenMode && trailsEnabled) trailRenderer.startStream(it) }
     }
 
     /** The triggers armed at [t], `?123` first: each rests in place past its own lead-in. */
@@ -1060,7 +1222,10 @@ class KeyboardView @JvmOverloads constructor(
     private fun scheduleHold(pid: Int, keyIdx: Int) {
         pendingHoldPid = pid
         pendingHoldKeyIdx = keyIdx
-        holdHandler.postDelayed(holdRunnable, longPressMs)
+        // A hold that sends is worse than a stray accent: the long-press setting goes down to
+        // 25 ms, where an ordinary enter tap would open the popup on its pre-selected action.
+        val sends = enterActionCell && layout?.keys?.getOrNull(keyIdx)?.type == KeyType.ENTER
+        holdHandler.postDelayed(holdRunnable, if (sends) maxOf(longPressMs, ENTER_SEND_HOLD_MIN_MS) else longPressMs)
     }
 
     private fun cancelHold() {
@@ -1080,15 +1245,21 @@ class KeyboardView @JvmOverloads constructor(
         if (keyIdx !in l.keys.indices) return
         val key = l.keys[keyIdx]
         val route = routeByPointer[pid]
+        if (route == ROUTE_ENGINE && !TouchRules.holdOpensMenu(engine?.otherTracking(pid) == true)) {
+            DecodeTrace.log { "  touch hold refused reason=other-thumb key=${key.output}" }
+            return
+        }
         when {
             key.type == KeyType.MODE_SYMBOLS && route == ROUTE_SPECIAL -> {
                 routeByPointer[pid] = ROUTE_MODE_HOLD
                 popupPointer = pid
-                // requireInside stays: the finger has to travel up into the strip, so a hold that
-                // lifts without moving does nothing and a menu of several cells is safe.
+                // requireInside stays: the finger has to travel into the strip, so a hold that
+                // lifts without moving does nothing and a menu of several cells is safe. With chord
+                // labels on it sits on the spacebar: above ?123 it would hide the bottom letter row's.
+                val space = if (chordLabelsEnabled) l.keys.indexOfFirst { it.type == KeyType.SPACE } else -1
                 showPopup(
                     keyIdx, modeMenuCells.ifEmpty { listOf(GEAR_GLYPH) },
-                    selected = -1, requireInside = true,
+                    selected = -1, requireInside = true, overIdx = space,
                 )
             }
             key.type == KeyType.ENTER && key.alternates.isNotEmpty() && route == ROUTE_SPECIAL -> {
@@ -1098,7 +1269,7 @@ class KeyboardView @JvmOverloads constructor(
                 // sliding left reaches the others.
                 routeByPointer[pid] = ROUTE_ALT_POPUP
                 popupPointer = pid
-                val cells = enterCells(key)
+                val cells = enterCells(key, hold = true)
                 showPopup(
                     keyIdx, cells, selected = cells.lastIndex,
                     requireInside = false, originX = downXByPointer[pid],
@@ -1130,15 +1301,15 @@ class KeyboardView @JvmOverloads constructor(
                 popupPointer = pid
                 val base = if (uppercase && key.isLetter) key.label.uppercase() else key.label
                 val alts = if (uppercase && key.isLetter) {
-                    key.alternates.map { it.uppercase() }
+                    key.alternates.map(ActionRow::shifted)
                 } else {
                     key.alternates
                 }
                 // Base char first, then the alternates; the first alternate is
                 // pre-selected so a plain lift commits it immediately.
                 val cells = listOf(base) + alts
-                // Any letter has a list to edit, in any script; a digit or symbol has none.
-                if (key.isLetter && editFromMenu) {
+                // Any letter has a list to edit, in any script, and so does a numbers-row digit.
+                if ((key.isLetter || LayoutMutations.isNumberRowKey(key)) && editFromMenu) {
                     cancelEditHold()
                     editPid = pid
                     editLetter = key.output[0]
@@ -1173,14 +1344,26 @@ class KeyboardView @JvmOverloads constructor(
         requireInside: Boolean,
         originX: Float = 0f,
         anchorRightCell: Boolean = false,
+        overIdx: Int = -1,
     ) {
         if (anchorIdx !in keyRects.indices || cells.isEmpty()) return
         val anchor = keyRects[anchorIdx]
+        val margin = 4f * density
+        // Drawn on another key instead of above the anchor, in that key's row and at its height.
+        keyRects.getOrNull(overIdx)?.let { over ->
+            val cell = stripCellOver(over.width(), cells.size, 48f * density, width.toFloat(), margin)
+            val left = popupLeft(over.left, cell * cells.size, width.toFloat(), margin)
+            popup = PopupState(
+                cells, RectF(left, over.top, left + cell * cells.size, over.bottom), cell, selected,
+                requireInside, originX,
+            )
+            invalidate()
+            return
+        }
         val cellW = maxOf(anchor.width(), 48f * density)
             .coerceAtMost((width - 8f * density) / cells.size)
         val w = cellW * cells.size
         val h = maxOf(anchor.height(), 48f * density)
-        val margin = 4f * density
         // anchorRightCell puts the last cell over the anchor and extends the strip left, so
         // enter's primary sits on the key and the alternates are a slide left. Otherwise it centres.
         val rawLeft = if (anchorRightCell) {
@@ -1188,7 +1371,7 @@ class KeyboardView @JvmOverloads constructor(
         } else {
             anchor.centerX() - w / 2f
         }
-        val left = rawLeft.coerceIn(margin, width - w - margin)
+        val left = popupLeft(rawLeft, w, width.toFloat(), margin)
         // Above the key when there is room. Otherwise (top row, or a very short keyboard) the
         // strip would clamp onto its own row under the thumb, so an alternates popup renders in
         // the elevated window at the unclamped position. The state rect stays clamped and
@@ -1358,10 +1541,17 @@ class KeyboardView @JvmOverloads constructor(
                 val dy = y - downYByPointer[pid]
                 if (dx * dx + dy * dy > holdSlopPx * holdSlopPx) {
                     if (pid == pendingHoldPid) cancelHold()
-                    if (pid == modeHoldPointer) modeHoldMoved = true
-                    if (pid == spacePointer) spaceHoldMoved = true
+                    if (pid == modeHoldPointer) {
+                        modeHoldMoved = true
+                        dropChordLabels(ChordTrigger.MODE)
+                    }
+                    if (pid == spacePointer) {
+                        spaceHoldMoved = true
+                        dropChordLabels(ChordTrigger.SPACE)
+                    }
                 }
             }
+            maybeHandOverDigit(pid, x, y, ev.eventTime)
             when (routeByPointer[pid]) {
                 ROUTE_ENGINE -> if (e != null) {
                     e.onPointerMove(pid, x, y, ev.eventTime)
@@ -1370,7 +1560,10 @@ class KeyboardView @JvmOverloads constructor(
                 // After a spacebar chord the touch is spent: it neither slides nor arms again.
                 ROUTE_SPACE -> if (!spaceChordFired) {
                     spaceController.onMove(x)
-                    if (spaceController.sliding) spaceHoldMoved = true
+                    if (spaceController.sliding && !spaceHoldMoved) {
+                        spaceHoldMoved = true
+                        dropChordLabels(ChordTrigger.SPACE)
+                    }
                 }
                 ROUTE_BACKSPACE -> backspaceController.onMove(x)
                 ROUTE_SPECIAL -> maybeArmEnterPopup(pid, x, y)
@@ -1427,7 +1620,15 @@ class KeyboardView @JvmOverloads constructor(
 
         when (routeByPointer[pid]) {
             ROUTE_ENGINE -> {
-                if (chordLift(pid, dx, dy) == ChordLift.FIRE) {
+                if (handoverFrom[pid] != -1 && engine?.isSwipeCommitted(pid) == false) {
+                    // Handed over from a digit and lifted without drawing a swipe: a digit tap
+                    // that drifted onto a letter, so the digit it began on is what it types.
+                    engine?.cancelPointer(pid)
+                    pressedKeys.remove(downKeyByPointer[pid])
+                    downKeyByPointer[pid] = handoverFrom[pid]
+                    DecodeTrace.log { "  touch handover undone, a digit tap" }
+                    dispatchTap(pid, t)
+                } else if (chordLift(pid, dx, dy) == ChordLift.FIRE) {
                     // The letter was a chord after all: it never becomes a token.
                     engine?.cancelPointer(pid)
                     fireChord(pid, t)
@@ -1435,6 +1636,15 @@ class KeyboardView @JvmOverloads constructor(
                     // A designated edge swipe wins over gesture decoding.
                     engine?.cancelPointer(pid)
                     listener?.onEdgeSwipe(shortcut)
+                } else if (TouchRules.isRestingFinger(
+                        stationary = engine?.isSwipeCommitted(pid) == false,
+                        heldMs = t - downTimeByPointer[pid],
+                        overlapped = overlappedByPointer[pid],
+                    )
+                ) {
+                    engine?.cancelPointer(pid)
+                    DecodeTrace.log { "  touch ignored reason=resting held=${t - downTimeByPointer[pid]}ms key=${key?.output}" }
+                    listener?.onRestingFingerDropped()
                 } else {
                     engine?.onPointerUp(pid, x, y, t)
                 }
@@ -1449,6 +1659,7 @@ class KeyboardView @JvmOverloads constructor(
                 spacePointer = -1
                 spaceHoldMoved = false
                 spaceChordFired = false
+                dropChordLabels(ChordTrigger.SPACE)
             }
             ROUTE_BACKSPACE -> {
                 if (shortcut != null) {
@@ -1466,6 +1677,11 @@ class KeyboardView @JvmOverloads constructor(
                     modeChordFired && (key?.type == KeyType.MODE_SYMBOLS || key?.type == KeyType.MODE_SYMBOLS2) -> Unit
                     shortcut != null -> listener?.onEdgeSwipe(shortcut)
                     modeSlide != null -> listener?.onModeSlide(modeSlide)
+                    TouchRules.dropsDigitTap(
+                        fromNumberRow = key != null && LayoutMutations.isNumberRowKey(key),
+                        otherSwiping = digitDuringSwipe[pid],
+                        plainTap = true,
+                    ) -> DecodeTrace.log { "  touch ignored reason=digit-mid-swipe key=${key?.output}" }
                     else -> dispatchTap(pid, t)
                 }
             }
@@ -1503,6 +1719,7 @@ class KeyboardView @JvmOverloads constructor(
             modeHoldPointer = -1
             modeHoldMoved = false
             modeChordFired = false
+            dropChordLabels(ChordTrigger.MODE)
         }
         routeByPointer[pid] = ROUTE_NONE
         chordTriggerByPointer[pid] = null
@@ -1530,7 +1747,7 @@ class KeyboardView @JvmOverloads constructor(
         routeByPointer[pid] = ROUTE_ALT_POPUP
         popupPointer = pid
         // Primary on top of the key, alternates to the left (see onHoldTimerFired).
-        val cells = enterCells(key)
+        val cells = enterCells(key, hold = false)
         showPopup(
             downKeyByPointer[pid], cells, selected = cells.lastIndex,
             requireInside = false, originX = downXByPointer[pid],
@@ -1540,18 +1757,32 @@ class KeyboardView @JvmOverloads constructor(
 
     /**
      * Enter's popup cells, primary last so it sits on the key. The newline goes furthest
-     * from it: the primary stays what the user set, and the newline is one slide away.
+     * from it: the primary stays what the user set, and the newline is one slide away. Where the
+     * hold runs the field's action, a [hold] puts the action on the key, so a hold and lift
+     * sends; the quick up-slide keeps the symbol and offers the action furthest away.
      */
-    private fun enterCells(key: Key): List<String> =
-        (key.alternates + if (enterNewlineCell) listOf(LayoutMutations.NEWLINE_ALTERNATE) else emptyList()).reversed()
+    private fun enterCells(key: Key, hold: Boolean): List<String> {
+        val action = LayoutMutations.ACTION_ALTERNATE
+        val cells = when {
+            enterActionCell && hold -> listOf(action) + key.alternates
+            enterActionCell -> key.alternates + action
+            enterNewlineCell -> key.alternates + LayoutMutations.NEWLINE_ALTERNATE
+            else -> key.alternates
+        }
+        return cells.reversed()
+    }
 
-    /** Slide right on ?123 opens the numpad; slide left on enter returns to alpha. */
+    /**
+     * Slide right on a symbols key (`?123`, `=\<`) opens the numpad; slide left on enter returns
+     * to alpha. Both page keys, because the symbol pages carry no numpad key of their own.
+     */
     private fun detectModeSlide(key: Key?, dx: Float, dy: Float): KeyType? {
         if (key == null) return null
         val minTravel = 30f * density
         if (abs(dx) < minTravel || abs(dx) < 1.5f * abs(dy)) return null
         return when {
-            key.type == KeyType.MODE_SYMBOLS && dx > 0 -> KeyType.MODE_NUMPAD
+            (key.type == KeyType.MODE_SYMBOLS || key.type == KeyType.MODE_SYMBOLS2) && dx > 0 ->
+                KeyType.MODE_NUMPAD
             key.type == KeyType.ENTER && dx < 0 -> KeyType.MODE_ALPHA
             else -> null
         }
@@ -1578,6 +1809,11 @@ class KeyboardView @JvmOverloads constructor(
         modeHoldPointer = -1
         modeHoldMoved = false
         modeChordFired = false
+        holdHandler.removeCallbacks(modeLabelRunnable)
+        holdHandler.removeCallbacks(spaceLabelRunnable)
+        modeLabelsDue = false
+        spaceLabelsDue = false
+        refreshChordLabels()
         spacePointer = -1
         spaceHoldMoved = false
         spaceChordFired = false
@@ -1615,6 +1851,22 @@ class KeyboardView @JvmOverloads constructor(
         /** How long a letter's menu rests still before it opens for editing: well past a slow pick. */
         const val EDIT_HOLD_MS = 1200L
 
+        /**
+         * The chord labels never appear sooner than this, whatever the lead-in: a tap on ?123 to
+         * change page is shorter, and a lead-in set to 0 would flash them on every one.
+         */
+        const val CHORD_LABEL_MIN_DELAY_MS = 150L
+
+        /**
+         * The spacebar's labels wait longer: it is pressed after every word and its tap lasts
+         * about a ?123 tap, so its own 50 ms lead-in would flash them during ordinary typing.
+         * Reasoned, not measured.
+         */
+        const val SPACE_LABEL_MIN_DELAY_MS = 300L
+
+        /** The shortest hold that sends from enter, whatever the long-press setting. */
+        const val ENTER_SEND_HOLD_MIN_MS = 300L
+
     }
 }
 
@@ -1626,6 +1878,26 @@ internal const val CHORD_ARM_MS_DEFAULT = 150L
 
 /** Default spacebar lead-in, in ms; mirrors `Prefs.DEFAULT_SPACE_CHORD_ARM_MS` (`ChordArmTest`). */
 internal const val SPACE_CHORD_ARM_MS_DEFAULT = 50L
+
+/**
+ * A popup's left edge: [rawLeft] kept inside the view's margins. When the strip's cells are capped
+ * to fit the width, `viewW - w - margin` equals `margin` in exact arithmetic and float rounding can
+ * put it a hair below, an empty range that `coerceIn` throws on, so the bound never drops under
+ * the margin.
+ */
+internal fun popupLeft(rawLeft: Float, w: Float, viewW: Float, margin: Float): Float =
+    rawLeft.coerceIn(margin, (viewW - w - margin).coerceAtLeast(margin))
+
+/**
+ * A cell of a strip drawn on a key of width [keyW]: the key shared out, never under [minCell], a
+ * thumb's width, and never so wide that [cells] of them leave the view.
+ */
+internal fun stripCellOver(keyW: Float, cells: Int, minCell: Float, viewW: Float, margin: Float): Float =
+    maxOf(keyW / cells, minCell).coerceAtMost((viewW - 2f * margin) / cells)
+
+/** The triggers whose labels show, in the order a chord key fires them: `?123` first. */
+internal fun chordLabelTriggers(modeDue: Boolean, spaceDue: Boolean): List<ChordTrigger> =
+    listOfNotNull(ChordTrigger.MODE.takeIf { modeDue }, ChordTrigger.SPACE.takeIf { spaceDue })
 
 /** The triggers armed, in the order a chord key asks them: `?123` first. */
 internal fun armedChordTriggers(modeArmed: Boolean, spaceArmed: Boolean): List<ChordTrigger> = when {

@@ -5,7 +5,7 @@
   "keys": [
     { "id": "q", "type": "char", "label": "q", "output": "q", "x": 0.00, "y": 0.00, "w": 0.10, "h": 0.25, "alternates": ["1"] },
     { "id": "w", "type": "char", "label": "w", "output": "w", "x": 0.10, "y": 0.00, "w": 0.10, "h": 0.25, "alternates": ["2"] },
-    { "id": "e", "type": "char", "label": "e", "output": "e", "x": 0.20, "y": 0.00, "w": 0.10, "h": 0.25, "alternates": ["è", "é", "ê", "ë", "ē", "3"] },
+    { "id": "e", "type": "char", "label": "e", "output": "e", "x": 0.20, "y": 0.00, "w": 0.10, "h": 0.25, "alternates": ["è", "é", "ê", "ë", "ē", "ę", "3"] },
     { "id": "r", "type": "char", "label": "r", "output": "r", "x": 0.30, "y": 0.00, "w": 0.10, "h": 0.25, "alternates": ["4"] },
     { "id": "t", "type": "char", "label": "t", "output": "t", "x": 0.40, "y": 0.00, "w": 0.10, "h": 0.25, "alternates": ["5"] },
     { "id": "y", "type": "char", "label": "y", "output": "y", "x": 0.50, "y": 0.00, "w": 0.10, "h": 0.25, "alternates": ["ý", "ÿ", "6"] },
@@ -14,7 +14,7 @@
     { "id": "o", "type": "char", "label": "o", "output": "o", "x": 0.80, "y": 0.00, "w": 0.10, "h": 0.25, "alternates": ["ò", "ó", "ô", "ö", "õ", "ø", "œ", "ō", "9"] },
     { "id": "p", "type": "char", "label": "p", "output": "p", "x": 0.90, "y": 0.00, "w": 0.10, "h": 0.25, "alternates": ["0"] },
 
-    { "id": "a", "type": "char", "label": "a", "output": "a", "x": 0.05, "y": 0.25, "w": 0.10, "h": 0.25, "alternates": ["à", "á", "â", "ä", "ã", "å", "æ", "ā", "@"] },
+    { "id": "a", "type": "char", "label": "a", "output": "a", "x": 0.05, "y": 0.25, "w": 0.10, "h": 0.25, "alternates": ["à", "á", "â", "ä", "ã", "å", "æ", "ā", "ą", "@"] },
     { "id": "s", "type": "char", "label": "s", "output": "s", "x": 0.15, "y": 0.25, "w": 0.10, "h": 0.25, "alternates": ["ß", "ś", "š", "#"] },
     { "id": "d", "type": "char", "label": "d", "output": "d", "x": 0.25, "y": 0.25, "w": 0.10, "h": 0.25, "alternates": ["$"] },
     { "id": "f", "type": "char", "label": "f", "output": "f", "x": 0.35, "y": 0.25, "w": 0.10, "h": 0.25, "alternates": ["&"] },

@@ -88,18 +88,27 @@ object TestData {
     )
 
     /**
-     * Hebrew, mirroring assets/layouts/native_he.json: 8 (centred) / 10 / 9. The shipped
-     * bottom row is squeezed to 0.85 to fit backspace; here it keeps ten-key widths.
+     * Hebrew, mirroring assets/layouts/native_he.json: 8 (centred) / 10 / 9, the bottom row
+     * squeezed to 0.85 of the board beside backspace. kw is the narrowest letter, so the bottom
+     * keys are 1 kw and the rest, and the row pitch, are 0.1 / 0.0944 times larger.
      */
-    fun hebrewGeometry(): KeyboardGeometry = letterGeometry(
-        listOf(
-            "קראטוןםפ" to 1.0f,
-            "שדגכעיחלךף" to 0.0f,
-            "זסבהנמצתץ" to 0.0f,
-        ),
-        DEFAULT_ROW_PITCH_KW,
-        Alphabet.HEBREW,
-    )
+    fun hebrewGeometry(): KeyboardGeometry {
+        val wide = HEBREW_TEN_KEY_W / HEBREW_BOTTOM_KEY_W
+        return letterGeometry(
+            listOf(
+                "קראטוןםפ" to wide,
+                "שדגכעיחלךף" to 0.0f,
+                "זסבהנמצתץ" to 0.0f,
+            ),
+            DEFAULT_ROW_PITCH_KW * wide,
+            Alphabet.HEBREW,
+            keyWidthsKw = listOf(wide, wide, 1f),
+        )
+    }
+
+    /** native_he.json's key widths, as fractions of the board. */
+    private const val HEBREW_TEN_KEY_W = 0.1f
+    private const val HEBREW_BOTTOM_KEY_W = 0.0944f
 
     /** Arabic, mirroring assets/layouts/native_ar.json: 12 / 11 / 10, twelfth widths. */
     fun arabicGeometry(): KeyboardGeometry = letterGeometry(
@@ -112,20 +121,26 @@ object TestData {
         Alphabet.ARABIC,
     )
 
+    /**
+     * Rows of letters with a left offset in kw. [keyWidthsKw] gives each row's key width, 1 kw
+     * unless a board mixes widths; kw is always the narrowest, as on the device.
+     */
     private fun letterGeometry(
         rows: List<Pair<String, Float>>,
         rowPitchKw: Float,
         alphabet: Alphabet = Alphabet.LATIN,
+        keyWidthsKw: List<Float> = rows.map { 1f },
     ): KeyboardGeometry {
         val rowH = rowPitchKw * KEY_W
         val rects = ArrayList<FloatArray>()
         val codes = ArrayList<Int>()
         for ((rowIdx, row) in rows.withIndex()) {
-            val (letters, offsetKeys) = row
+            val (letters, offsetKw) = row
+            val keyW = keyWidthsKw[rowIdx] * KEY_W
             val top = rowIdx * rowH
             for ((i, ch) in letters.withIndex()) {
-                val left = (offsetKeys + i) * KEY_W
-                rects.add(floatArrayOf(left, top, left + KEY_W, top + rowH))
+                val left = offsetKw * KEY_W + i * keyW
+                rects.add(floatArrayOf(left, top, left + keyW, top + rowH))
                 codes.add(alphabet.codeOf(ch))
             }
         }

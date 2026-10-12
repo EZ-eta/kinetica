@@ -123,6 +123,11 @@ object BackupRun {
                 db.blockedWords().block(b.word, b.lang, now)
                 progress.advance()
             }
+            // After the words: a capital lands on the row its word has just written.
+            for (c in data.capitals) {
+                val votes = c.votes.coerceIn(KineticaConstants.CASE_VOTES_LOW, KineticaConstants.CASE_VOTES_HIGH)
+                db.userWords().setCase(c.word, c.lang, c.display, votes)
+            }
             for (c in data.chords) {
                 db.chordShortcuts().assign(c.chord, c.expansion)
                 progress.advance()
@@ -224,12 +229,14 @@ object BackupRun {
         }
         val db = KineticaDb.get(context)
         val words = ArrayList<Backup.Word>()
+        val capitals = ArrayList<Backup.Capital>()
         val blocked = ArrayList<Backup.Blocked>()
         val phrases = ArrayList<Backup.Phrase>()
         val base = ArrayList<String>()
         for (lang in Prefs.ALL_LANGUAGES) {
             for (r in db.userWords().allForLanguage(lang)) {
                 words.add(Backup.Word(lang, r.word, r.frequency))
+                r.display?.let { capitals.add(Backup.Capital(lang, r.word, it, r.caseVotes)) }
             }
             for (r in db.blockedWords().allForLanguage(lang)) {
                 blocked.add(Backup.Blocked(lang, r.word))
@@ -245,7 +252,7 @@ object BackupRun {
         val expansions = db.expansions().all().map {
             Backup.Expand(it.trigger, it.position, it.target)
         }
-        return Backup.Data(prefRows, words, blocked, chords, expansions, phrases, base)
+        return Backup.Data(prefRows, words, blocked, chords, expansions, phrases, base, capitals)
     }
 
     /** The ceiling on an imported count, the same one a personal-dictionary import uses. */

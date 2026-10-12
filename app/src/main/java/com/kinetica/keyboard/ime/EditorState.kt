@@ -4,6 +4,22 @@ import android.text.InputType
 import android.view.inputmethod.EditorInfo
 
 /**
+ * What a field holds, as far as its keys go: an email address or a web address wants a key the
+ * comma can give up, and a number field may want the number pad.
+ */
+enum class FieldKind {
+    TEXT, EMAIL, URL, NUMERIC;
+
+    /** The character the comma key types in this kind of field, or null for the comma. */
+    val commaChar: String?
+        get() = when (this) {
+            EMAIL -> "@"
+            URL -> "/"
+            else -> null
+        }
+}
+
+/**
  * Per-field editor facts derived once in onStartInput.
  *
  * [privateMode] and [noLearning] are separate because the two requests are: a password
@@ -23,6 +39,7 @@ data class EditorState(
     val actionLabel: String? = null,
     /** The action id that goes with [actionLabel]. */
     val customActionId: Int = 0,
+    val fieldKind: FieldKind = FieldKind.TEXT,
 ) {
     /** True when nothing about this field may be persisted, for either reason. */
     val teachesNothing: Boolean get() = privateMode || noLearning
@@ -86,18 +103,34 @@ data class EditorState(
                     variation == InputType.TYPE_TEXT_VARIATION_URI
                 ) || asksForOneToken(info.privateImeOptions)
 
+            val kind = when {
+                cls == InputType.TYPE_CLASS_TEXT && (
+                    variation == InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS ||
+                        variation == InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS
+                    ) -> FieldKind.EMAIL
+                cls == InputType.TYPE_CLASS_TEXT && variation == InputType.TYPE_TEXT_VARIATION_URI -> FieldKind.URL
+                !password && (
+                    cls == InputType.TYPE_CLASS_NUMBER || cls == InputType.TYPE_CLASS_PHONE ||
+                        cls == InputType.TYPE_CLASS_DATETIME
+                    ) -> FieldKind.NUMERIC
+                else -> FieldKind.TEXT
+            }
+
             return EditorState(
                 privateMode = password,
                 noLearning = noLearning,
                 multiline = cls == InputType.TYPE_CLASS_TEXT &&
                     inputType and InputType.TYPE_TEXT_FLAG_MULTI_LINE != 0,
                 actionId = info.imeOptions and EditorInfo.IME_MASK_ACTION,
+                // Never in an address, whatever the app asks: `Name@` is no address.
                 capSentences = cls == InputType.TYPE_CLASS_TEXT &&
-                    inputType and InputType.TYPE_TEXT_FLAG_CAP_SENTENCES != 0,
+                    inputType and InputType.TYPE_TEXT_FLAG_CAP_SENTENCES != 0 &&
+                    kind != FieldKind.EMAIL && kind != FieldKind.URL,
                 addressField = address,
                 noEnterAction = info.imeOptions and EditorInfo.IME_FLAG_NO_ENTER_ACTION != 0,
                 actionLabel = info.actionLabel?.toString()?.takeIf { it.isNotBlank() },
                 customActionId = info.actionId,
+                fieldKind = kind,
             )
         }
     }

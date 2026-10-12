@@ -67,7 +67,11 @@ class WordPredictor(
      * stay optimistic.
      */
     private fun personalBoost(word: String): Float {
-        val count = personalCounts[word] ?: return 1f
+        // The counts are keyed lowercase, as personalCount reads them, so a display form such as
+        // "Haus" is lowercased first; only when it holds a capital, which keeps the allocation
+        // off every other candidate.
+        val key = if (word.any { it.isUpperCase() }) word.lowercase() else word
+        val count = personalCounts[key] ?: return 1f
         return 1f + KineticaConstants.PERSONAL_BOOST * kotlin.math.ln(1f + count)
     }
 
@@ -162,6 +166,14 @@ class WordPredictor(
      * `è` through its `e` and the merge would drop it as shared. Here a key with no forms holds
      * only its own unaccented spelling.
      */
+    /** Whether [word] is a spelling this lexicon holds case and all: `Haus`, not `haus`. */
+    fun holdsExactSpelling(word: String): Boolean {
+        val node = trie.nodeFor(AccentFolder.fold(word.lowercase()))
+        if (node == -1) return false
+        val variants = forms[node] ?: return trie.wordOf(node) == word
+        return variants.any { it.display == word }
+    }
+
     fun holdsSpelling(word: String): Boolean {
         val w = word.lowercase()
         val folded = AccentFolder.fold(w)
@@ -191,7 +203,21 @@ class WordPredictor(
         val node = trie.nodeFor(AccentFolder.fold(w))
         if (node == -1) return -1
         val variants = forms[node] ?: return trie.frequency(node)
-        return variants.firstOrNull { it.display == w }?.freqByte ?: -1
+        // Its own spelling first, then one that differs only in case: `haus` is held as `Haus`.
+        return (variants.firstOrNull { it.display == word } ?: variants.firstOrNull { it.display.lowercase() == w })
+            ?.freqByte ?: -1
+    }
+
+    /**
+     * [isWord], blind to case: `haus` is a word because `Haus` is. For the questions that ask
+     * whether a word exists at all, momentum and the reload; autocorrect keeps [isWord], so a
+     * tapped `haus` is still corrected to its capital.
+     */
+    fun isWordIgnoringCase(word: String): Boolean {
+        if (isWord(word)) return true
+        val w = word.lowercase()
+        val variants = forms[trie.nodeFor(AccentFolder.fold(w)).takeIf { it != -1 } ?: return false] ?: return false
+        return variants.any { it.display.lowercase() == w }
     }
 
     /**
@@ -1830,8 +1856,8 @@ private const val NEARMISS_PER_PIECE = 6
  * close the gesture came to that letter and whether it ever touched it.
  *
  * Per-key near-miss lists saturate (128 of 152 full at a cap of six) and measure how crowded a
- * QWERTY neighbourhood is. The question is about the letters of a named word, and the
- * developer names it by retyping until it commits, so the label arrives free at commit time.
+ * QWERTY neighbourhood is. The question is about the letters of a named word, and retyping until
+ * it commits names it, so the label arrives free at commit time.
  * 254 of 570 labelled buffers never touch some letter of their own word, 158 of them one.
  *
  *  - Per occurrence, not per key: `praticamente` needs `a` twice, and a per-key list

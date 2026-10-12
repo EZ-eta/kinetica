@@ -29,6 +29,8 @@ import androidx.recyclerview.widget.RecyclerView
 import com.kinetica.keyboard.R
 import com.kinetica.keyboard.engine.Alphabet
 import com.kinetica.keyboard.ime.AlphaLayouts
+import com.kinetica.keyboard.keys.ActionRow
+import com.kinetica.keyboard.layout.LandscapeArrangement
 import com.kinetica.keyboard.layout.LayoutLoader
 import com.kinetica.keyboard.layout.LayoutTransforms
 import com.kinetica.keyboard.ui.KeyboardTheme
@@ -126,7 +128,9 @@ class KeyboardPrefsFragment : PreferenceFragmentCompat() {
             keys = keys,
             theme = theme,
             mode = config.layoutMode,
-            landscapeArrangement = if (landscape) config.landscapeArrangement else null,
+            landscapeArrangement = config.landscapeArrangement.takeIf {
+                LandscapeArrangement.appliesTo(landscape, (w / dm.density).toInt(), config.wideArrangement)
+            },
             splitGapPct = config.landscapeSplitGapPct,
         )
         preview.show(
@@ -270,13 +274,17 @@ class KeyboardPrefsFragment : PreferenceFragmentCompat() {
             Log.w(TAG, "built-in long-press lists unavailable", e)
             emptyList()
         }
+        // The names come from the code, so the help can never list fewer than work.
+        val note = getString(R.string.pref_letter_alternates_note_summary) + ". " +
+            getString(R.string.pref_letter_alternates_names, ActionRow.listTokenNames())
+        findPreference<Preference>(LETTER_NOTE_KEY)?.summary = note
         val maps = perLanguage.map { it.second }
         val defaults = LetterDefaults.unionPerLetter(maps, KeyboardConfig.MAX_LETTER_ALTERNATES)
         val rows = ArrayList<EditTextPreference>()
         // A letter's built-in list is the first enabled language's that has the letter, the
         // active one first, so a Latin row still has one with a Cyrillic board active.
         fun builtInFor(c: Char): List<String> = maps.firstOrNull { c in it }?.get(c).orEmpty()
-        for (c in 'a'..'z') rows.add(addLetterRow(screen, c, builtInFor(c), defaults[c].orEmpty()))
+        for (c in 'a'..'z') rows.add(addLetterRow(screen, c, builtInFor(c), defaults[c].orEmpty(), note))
         // Then each enabled board in another script, under its language's name.
         val names = resources.getStringArray(R.array.language_entries)
         val codes = resources.getStringArray(R.array.language_values)
@@ -290,8 +298,15 @@ class KeyboardPrefsFragment : PreferenceFragmentCompat() {
                 isIconSpaceReserved = false
             }
             screen.addPreference(group)
-            for (c in letters) rows.add(addLetterRow(group, c, builtInFor(c), defaults[c].orEmpty()))
+            for (c in letters) rows.add(addLetterRow(group, c, builtInFor(c), defaults[c].orEmpty(), note))
         }
+        // The numbers row's digits, empty until a list is written; used while the row is on.
+        val digits = PreferenceCategory(ctx).apply {
+            title = getString(R.string.pref_number_row_lists_title)
+            isIconSpaceReserved = false
+        }
+        screen.addPreference(digits)
+        for (c in KeyboardConfig.LIST_DIGITS) rows.add(addLetterRow(digits, c, emptyList(), emptyList(), note))
         screen.addPreference(
             Preference(ctx).apply {
                 key = RESET_LETTER_LISTS_KEY
@@ -318,6 +333,7 @@ class KeyboardPrefsFragment : PreferenceFragmentCompat() {
         c: Char,
         own: List<String>,
         default: List<String>,
+        note: String,
     ): EditTextPreference {
         val ownText = own.joinToString(" ")
         val letter = c.uppercaseChar().toString()
@@ -326,7 +342,7 @@ class KeyboardPrefsFragment : PreferenceFragmentCompat() {
         row.title = letter
         row.isSingleLineTitle = false
         row.dialogTitle = getString(R.string.pref_letter_alternates_dialog_title, letter)
-        row.dialogMessage = getString(R.string.pref_letter_alternates_note_summary)
+        row.dialogMessage = note
         row.summaryProvider = Preference.SummaryProvider<EditTextPreference> { p ->
             val t = p.text
             when {
@@ -408,7 +424,7 @@ class KeyboardPrefsFragment : PreferenceFragmentCompat() {
      * The version of the build that is running.
      *
      * Read from the installed package, not a compile-time constant, so the line says which APK is
-     * on this phone. The developer build reports its `-dev` suffix, so the row also tells the two
+     * on this phone. The debug build reports its `-dev` suffix, so the row also tells the two
      * installed apps apart.
      */
     private fun showVersion() {
@@ -488,6 +504,7 @@ class KeyboardPrefsFragment : PreferenceFragmentCompat() {
     private companion object {
         const val TAG = "KineticaPrefs"
         const val RESET_LETTER_LISTS_KEY = "pref_letter_alternates_reset"
+        const val LETTER_NOTE_KEY = "pref_letter_alternates_note"
         const val PREVIEW_KEY = "pref_theme_preview"
         val SIZE_PREVIEW_KEYS = listOf("pref_size_preview", "pref_bar_preview")
         val SIZE_SLIDERS = listOf(

@@ -59,12 +59,10 @@ class EdgeSwipeBindings(val bindings: List<EdgeSwipeBinding>) {
         /** Reserved output value: opens the emoji picker. */
         const val ACTION_EMOJI = "emoji"
 
-        // Letter rows by normalized Key.y (top 0.00, home 0.25, bottom 0.50 in the bundled
-        // layouts). Half-row bands tolerate layout rounding without catching the home row or the
-        // space/enter row (0.75).
-        private const val TOP_ROW_Y_MAX = 0.1f
-        private const val BOTTOM_ROW_Y_MIN = 0.4f
-        private const val BOTTOM_ROW_Y_MAX = 0.6f
+        // Letter rows are the letters' own highest and lowest y, not fixed bands: the numbers row
+        // moves them to 0.2 and 0.6, where fixed bands gave the home row the down-flicks and the
+        // top row none. The tolerance absorbs layout rounding, far below a row's 0.2.
+        private const val SAME_ROW_Y = 0.01f
 
         /**
          * Which built-in gesture a binding on [keyId] in [direction] would shadow, or null when it
@@ -147,11 +145,14 @@ class EdgeSwipeBindings(val bindings: List<EdgeSwipeBinding>) {
             explicit: EdgeSwipeBindings,
         ): EdgeSwipeBindings {
             val implicit = ArrayList<EdgeSwipeBinding>()
-            for (k in layout.keys) {
-                if (!k.isLetter) continue
+            val letters = layout.keys.filter { it.isLetter }
+            val topY = letters.minOfOrNull { it.y } ?: return explicit
+            val bottomY = letters.maxOf { it.y }
+            for (k in letters) {
                 val direction = when {
-                    k.y < TOP_ROW_Y_MAX -> EdgeSwipeBinding.Direction.UP
-                    k.y in BOTTOM_ROW_Y_MIN..BOTTOM_ROW_Y_MAX -> EdgeSwipeBinding.Direction.DOWN
+                    kotlin.math.abs(k.y - topY) < SAME_ROW_Y -> EdgeSwipeBinding.Direction.UP
+                    bottomY - topY > SAME_ROW_Y && kotlin.math.abs(k.y - bottomY) < SAME_ROW_Y ->
+                        EdgeSwipeBinding.Direction.DOWN
                     else -> continue
                 }
                 val symbol = k.hintChar ?: continue
@@ -161,16 +162,36 @@ class EdgeSwipeBindings(val bindings: List<EdgeSwipeBinding>) {
         }
 
         /**
-         * The built-in shortcuts: two, on keys that draw no corner hint to contradict. Every
-         * letter's swipe types its own hint ([withImplicitAlternates]); the emoji picker is on the
-         * comma key's long-press.
+         * Shift's swipes re-case the word in hand: up `ABC`, right `Abc`, down `abc`. Up for more
+         * capitals, down for none; right is the reading direction, a capital at the start.
+         */
+        val SHIFT_CASE = listOf(
+            EdgeSwipeBinding("shift", EdgeSwipeBinding.Direction.UP, EditorAction.CASE_UPPER.output),
+            EdgeSwipeBinding("shift", EdgeSwipeBinding.Direction.RIGHT, EditorAction.CASE_TITLE.output),
+            EdgeSwipeBinding("shift", EdgeSwipeBinding.Direction.DOWN, EditorAction.CASE_LOWER.output),
+        )
+
+        /**
+         * The built-in shortcuts, on keys that draw no corner hint to contradict: `!` and `?` on
+         * backspace and enter, and [SHIFT_CASE]. Every letter's swipe types its own hint
+         * ([withImplicitAlternates]); the emoji picker is on the comma key's long-press.
          */
         val DEFAULTS = EdgeSwipeBindings(
             listOf(
                 EdgeSwipeBinding("backspace", EdgeSwipeBinding.Direction.UP, "!"),
                 EdgeSwipeBinding("enter", EdgeSwipeBinding.Direction.UP, "?"),
-            ),
+            ) + SHIFT_CASE,
         )
+
+        /**
+         * [stored] with each [SHIFT_CASE] swipe added where shift's direction is still free. For a
+         * set saved before those defaults existed, applied once: a swipe the user bound keeps its
+         * output, and a default deleted later stays deleted.
+         */
+        fun withShiftCase(stored: List<EdgeSwipeBinding>): List<EdgeSwipeBinding> =
+            stored + SHIFT_CASE.filter { d ->
+                stored.none { it.keyId == d.keyId && it.direction == d.direction }
+            }
 
         /** Parses the persisted JSON; null or malformed input -> defaults. */
         fun parse(json: String?): EdgeSwipeBindings {

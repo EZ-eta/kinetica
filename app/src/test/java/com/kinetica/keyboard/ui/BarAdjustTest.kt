@@ -147,4 +147,28 @@ class BarAdjustTest {
         assertTrue(BarAdjust.recentCellAdjustable(4, rows))
         for (cell in listOf(0, 2, 3, 5, -1)) assertFalse("cell $cell", BarAdjust.recentCellAdjustable(cell, rows))
     }
+
+    @Test
+    fun aRecentSwapReadsItsDirectionFromTheSetting() {
+        // Down brings the word above, as a list scrolls; reversed, up does.
+        assertTrue(BarAdjust.swapTakesAbove(dy = 40f, reversed = false))
+        assertFalse(BarAdjust.swapTakesAbove(dy = -40f, reversed = false))
+        assertFalse(BarAdjust.swapTakesAbove(dy = 40f, reversed = true))
+        assertTrue(BarAdjust.swapTakesAbove(dy = -40f, reversed = true))
+    }
+
+    @Test
+    fun aBlockKnowsWhetherItHeldTheWordAtTheCursor() {
+        val recent = -7
+        fun src(zone: Int, correction: Boolean = false, full: Int = 0, selected: Int = 0, back: Int? = null, pending: Boolean = false) =
+            BarAdjust.blockSource(zone, recent, correction, full, selected, back, pending)
+        assertEquals(BarAdjust.BlockSource.CHIP, src(0, correction = true, full = 0, selected = 0))
+        // The strip's other words are alternatives, not the word written.
+        assertEquals(BarAdjust.BlockSource.OTHER, src(1, correction = true, full = 1, selected = 0))
+        assertEquals(BarAdjust.BlockSource.NEWEST_RECENT, src(recent, back = 0))
+        assertEquals(BarAdjust.BlockSource.OTHER, src(recent, back = 2))
+        assertEquals(BarAdjust.BlockSource.LIVE, src(2, pending = true))
+        // An idle bar holds predictions: nothing of them is in the text.
+        assertEquals(BarAdjust.BlockSource.OTHER, src(2, pending = false))
+    }
 }

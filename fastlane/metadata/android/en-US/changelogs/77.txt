@@ -1,0 +1,10 @@
+Swipe shift up, right or down for ABC, Abc or abc
+Expansion triggers can ignore or carry their case
+@ and / on the comma in email and web fields
+Number pad in number fields, optional
+Blocking a word can also delete it
+Names you write with a capital keep it
+One-handed mode for the left hand
+Bigger suggestion text, compact bar, chords on the keys
+Hebrew backspace where English has it, thanks lurebat
+Autospace delay counted from the lift; crash fixes

@@ -10,6 +10,9 @@ object Prefs {
     /** Where the letter block sits in landscape: split | centered | stretch. */
     const val LANDSCAPE_ARRANGEMENT = "pref_landscape_arrangement"
 
+    /** A wide screen held upright (an unfolded phone) uses the landscape arrangement too. */
+    const val WIDE_ARRANGEMENT = "pref_wide_arrangement"
+
     /** How far apart the split halves sit, percent of the width. */
     const val LANDSCAPE_SPLIT_GAP_PCT = "pref_landscape_split_gap_pct"
 
@@ -243,6 +246,9 @@ object Prefs {
     /** JSON array of edge-swipe bindings; absent = built-in defaults. */
     const val EDGE_SWIPES = "pref_edge_swipes"
 
+    /** Set once a saved [EDGE_SWIPES] has been given shift's re-case swipes where free. */
+    const val SHIFT_CASE_SEEDED = "pref_shift_case_seeded"
+
     /**
      * Implicit directional alternate swipes: a top-row letter's up-swipe inserts its digit, a
      * bottom-row letter's down-swipe its symbol. Off by default because letter-key swipes share
@@ -305,7 +311,46 @@ object Prefs {
      * where a space already follows. Off by default: it changes what the spacebar does.
      */
     const val TIDY_SPACES = "pref_tidy_spaces"
+
+    /** The characters an automatic space never goes before, user-editable. */
+    const val NO_SPACE_BEFORE = "pref_no_space_before"
+
+    /** The suggestion bar's word size, a percentage of the size its height gives (BarMetrics). */
+    const val BAR_TEXT_PCT = "pref_bar_text_pct"
+
+    /** The recent-word columns' text size, on its own scale (BarMetrics.recentTextScale). */
+    const val RECENT_TEXT_PCT = "pref_recent_text_pct"
+
+    /** Keys show their chords while ?123 or the spacebar is held still. */
+    const val CHORD_LABELS = "pref_chord_labels"
+
+    /** Blocking the word at the cursor from the bar also takes it out of the text. */
+    const val DELETE_ON_BLOCK = "pref_delete_on_block"
+
+    /** How an expansion trigger's case is read: exact | ignore | carry (TriggerCase). */
+    const val TRIGGER_CASE = "pref_trigger_case"
+
+    /** A recent-word column swaps the other way: an up swipe brings the word above. */
+    const val RECENT_SWIPE_REVERSED = "pref_recent_swipe_reversed"
+
+    /** The bar's words sit at their own width with a small gap, instead of in equal zones. */
+    const val BAR_COMPACT = "pref_bar_compact"
+
+    /** The suggestion bar shows the autospace wait as a shrinking band. */
+    const val AUTOSPACE_TIMER = "pref_autospace_timer"
     const val ENTER_ACTION = "pref_enter_action"
+
+    /** A tap on enter writes a newline and a hold runs the field's action. */
+    const val ENTER_HOLD_SENDS = "pref_enter_hold_sends"
+
+    /** The comma key types `@` in an email field and `/` in a web address. */
+    const val FIELD_KEYS = "pref_field_keys"
+
+    /** A field that takes only numbers opens on the number pad. */
+    const val NUMPAD_FOR_NUMBERS = "pref_numpad_for_numbers"
+
+    /** A new field opens on the letters, whatever page the last one was left on. */
+    const val LETTERS_ON_NEW_FIELD = "pref_letters_on_new_field"
     const val TYPING_SPEED = "pref_typing_speed"
     const val NO_PRIMARY = "pref_no_primary"
 
@@ -419,6 +464,9 @@ object Prefs {
      */
     const val DEFAULT_HEIGHT_PCT_LANDSCAPE = 45
 
+    /** On: no phone screen reaches the width, so only the screens it is for change. */
+    const val DEFAULT_WIDE_ARRANGEMENT = true
+
     /** Split, because both thumbs hold a phone turned sideways at its two ends. */
     const val DEFAULT_LANDSCAPE_ARRANGEMENT = "split"
 
@@ -501,8 +549,44 @@ object Prefs {
     const val DEFAULT_DOUBLE_SPACE_PERIOD = false
     const val DEFAULT_TIDY_SPACES = false
 
+    /**
+     * Sentence and clause punctuation and the closing brackets: "Hi" + "!" is "Hi!". Opening
+     * brackets, dashes and quotes keep their space, as in "a (b)" and "one - two".
+     */
+    const val DEFAULT_NO_SPACE_BEFORE = ".,!?;:)]}\u00bb\u2026"
+
+    /** On: a chord is hard to remember unseen, and a quick ?123 tap shows nothing. */
+    const val DEFAULT_CHORD_LABELS = true
+
+    /** Off: a block changes only the bar; some block a word they still mean to type. */
+    const val DEFAULT_DELETE_ON_BLOCK = false
+
+    /** Exact: every stored expansion keeps the meaning it was written with. */
+    const val DEFAULT_TRIGGER_CASE = "exact"
+
+    /** Off: down for the word above is how a list scrolls under a thumb. */
+    const val DEFAULT_RECENT_SWIPE_REVERSED = false
+
+    /** On: words a gap apart read as one line and fit more to a page; a word is still its own target. */
+    const val DEFAULT_BAR_COMPACT = true
+
+    /** On: a pause that ends a word is easier to time when the wait can be seen. */
+    const val DEFAULT_AUTOSPACE_TIMER = true
+
     /** On: enter searches or sends where the app asks it to, the way Android defines it. */
     const val DEFAULT_ENTER_ACTION = true
+
+    /** Off: a hold to send is a habit some chat users want and most never asked for. */
+    const val DEFAULT_ENTER_HOLD_SENDS = false
+
+    /** On: a comma is never part of an address, and the key keeps it in its menu. */
+    const val DEFAULT_FIELD_KEYS = true
+
+    /** Off: some type a word into a number field and expand it to the number. */
+    const val DEFAULT_NUMPAD_FOR_NUMBERS = false
+
+    /** On: what other keyboards do, and a symbols page carried into a search box is a surprise. */
+    const val DEFAULT_LETTERS_ON_NEW_FIELD = true
 
     /** Off: a number on the spacebar is shown only to those who ask for it. */
     const val DEFAULT_TYPING_SPEED = false

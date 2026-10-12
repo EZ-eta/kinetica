@@ -36,6 +36,7 @@ class BackupTest {
         ),
         phrases = listOf(Backup.Phrase("en", "i", "am", 4)),
         importedBase = listOf("en"),
+        capitals = listOf(Backup.Capital("en", "github", "GitHub", 3)),
     )
 
     /**
@@ -66,6 +67,19 @@ class BackupTest {
         assertEquals(d.expansions, back.expansions)
         assertEquals(d.phrases, back.phrases)
         assertEquals(d.importedBase, back.importedBase)
+        assertEquals(d.capitals, back.capitals)
+    }
+
+    @Test
+    fun aCapitalTravelsBesideItsLowercaseWord() {
+        // Its own record type: the word line stays lowercase, so a build that knows no capitals
+        // skips one line and keeps the word.
+        val lines = viaFile(sample()).toList()
+        assertTrue(lines.contains("wcase\ten\tgithub\tGitHub\t3"))
+        // A capital that is not its word's spelling is refused, not stored.
+        val bad = Backup.decode(sequenceOf("${lines.first()}", "wcase\ten\tgithub\tGitLab\t3"))
+        assertEquals(emptyList<Backup.Capital>(), (bad as Backup.Result.Ok).data.capitals)
+        assertEquals(1, bad.skipped)
     }
 
     @Test

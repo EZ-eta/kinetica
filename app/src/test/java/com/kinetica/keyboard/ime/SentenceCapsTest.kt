@@ -181,6 +181,18 @@ class SentenceCapsTest {
     }
 
     @Test
+    fun withTidySpacesNoAutospaceGoesBeforeClausePunctuation() {
+        // A word written in front of `:` or `!` gained a space before it: only the closers held.
+        for (c in listOf(":", ";", "!", "?", ".", ",", "\u2026")) {
+            assertFalse("$c", autospaceWanted(tidy = true, after = c))
+        }
+        assertTrue(autospaceWanted(tidy = false, after = ":"))
+        // The list is the user's: one without `?` lets the space go before it.
+        assertTrue(autospaceWanted(tidy = true, after = "?", hugging = "!"))
+        assertFalse(autospaceWanted(tidy = true, after = "!", hugging = "!"))
+    }
+
+    @Test
     fun withTidySpacesBackspaceCollapsesARunOfSpacesFirst() {
         // From #17: "turn multispace into a single one after the first tap and remove it after a second".
         assertEquals(2, backspaceSpan("word   "))

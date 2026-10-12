@@ -3,6 +3,7 @@ package com.kinetica.keyboard.settings
 import android.content.SharedPreferences
 import com.kinetica.keyboard.engine.Alphabet
 import com.kinetica.keyboard.engine.KineticaConstants
+import com.kinetica.keyboard.ime.TriggerCase
 import com.kinetica.keyboard.ime.singleLetterDelayMs
 import com.kinetica.keyboard.keys.ActionRow
 import com.kinetica.keyboard.keys.EdgeSwipeBindings
@@ -21,6 +22,8 @@ data class KeyboardConfig(
     val heightPct: Int,
     val heightPctLandscape: Int,
     val landscapeArrangement: LandscapeArrangement,
+    /** The arrangement applies in portrait too on a wide screen (LandscapeArrangement.appliesTo). */
+    val wideArrangement: Boolean,
     val landscapeSplitGapPct: Int,
     /** Suggestion-strip height in dp; its text and ornaments scale off it. */
     val suggestionBarDp: Int,
@@ -89,8 +92,34 @@ data class KeyboardConfig(
     val doubleSpacePeriod: Boolean,
     /** No double spaces, no autospace before a closer. */
     val tidySpaces: Boolean,
+    /** Punctuation that takes back an automatic space, and that tidy spaces never put one before. */
+    val noSpaceBefore: String,
+    /** The autospace wait drawn on the suggestion bar. */
+    val autospaceTimer: Boolean,
+    /** The bar's word size as a multiplier, from the percentage setting. */
+    val barTextScale: Float,
+    /** The recent-word columns' text size as a multiplier, set apart from the live words'. */
+    val recentTextScale: Float,
+    /** The bar's words at their own width with a small gap. */
+    val barCompact: Boolean,
+    /** Recent-word columns swap up for the word above. */
+    val recentSwipeReversed: Boolean,
+    /** Keys show their ?123 chords while it is held. */
+    val chordLabels: Boolean,
+    /** How an expansion trigger's case is read. */
+    val triggerCase: TriggerCase,
+    /** A block from the bar also deletes the word at the cursor. */
+    val deleteOnBlock: Boolean,
     /** Enter runs the field's action unless the app asks for none (EnterBehavior). */
     val enterAction: Boolean,
+    /** Enter: a tap writes a newline, a hold runs the field's action (EnterBehavior.holdAction). */
+    val enterHoldSends: Boolean,
+    /** A new field opens on the letters page. */
+    val lettersOnNewField: Boolean,
+    /** The comma key fits email and web-address fields. */
+    val fieldKeys: Boolean,
+    /** A number field opens on the number pad. */
+    val numpadForNumbers: Boolean,
     /** Words per minute on the spacebar (TypingSpeed). */
     val typingSpeed: Boolean,
     /** Up to three languages decode as equals, weighted by what is being typed (LanguageMomentum). */
@@ -164,6 +193,7 @@ data class KeyboardConfig(
             landscapeArrangement = LandscapeArrangement.fromPref(
                 prefs.getString(Prefs.LANDSCAPE_ARRANGEMENT, Prefs.DEFAULT_LANDSCAPE_ARRANGEMENT),
             ),
+            wideArrangement = prefs.getBoolean(Prefs.WIDE_ARRANGEMENT, Prefs.DEFAULT_WIDE_ARRANGEMENT),
             landscapeSplitGapPct = prefs.getInt(
                 Prefs.LANDSCAPE_SPLIT_GAP_PCT, Prefs.DEFAULT_LANDSCAPE_SPLIT_GAP_PCT,
             ).coerceIn(0, Prefs.MAX_LANDSCAPE_SPLIT_GAP_PCT),
@@ -291,7 +321,26 @@ data class KeyboardConfig(
                 Prefs.SPACELESS_SPACE, Prefs.DEFAULT_SPACELESS_SPACE,
             ),
             tidySpaces = prefs.getBoolean(Prefs.TIDY_SPACES, Prefs.DEFAULT_TIDY_SPACES),
+            noSpaceBefore = parseNoSpaceBefore(prefs.getString(Prefs.NO_SPACE_BEFORE, null)),
+            autospaceTimer = prefs.getBoolean(Prefs.AUTOSPACE_TIMER, Prefs.DEFAULT_AUTOSPACE_TIMER),
+            barTextScale = BarMetrics.textScale(prefs.getInt(Prefs.BAR_TEXT_PCT, BarMetrics.TEXT_PCT_DEFAULT)),
+            recentTextScale = BarMetrics.recentTextScale(
+                prefs.getInt(Prefs.RECENT_TEXT_PCT, BarMetrics.RECENT_PCT_DEFAULT),
+            ),
+            barCompact = prefs.getBoolean(Prefs.BAR_COMPACT, Prefs.DEFAULT_BAR_COMPACT),
+            chordLabels = prefs.getBoolean(Prefs.CHORD_LABELS, Prefs.DEFAULT_CHORD_LABELS),
+            triggerCase = TriggerCase.fromPref(prefs.getString(Prefs.TRIGGER_CASE, Prefs.DEFAULT_TRIGGER_CASE)),
+            deleteOnBlock = prefs.getBoolean(Prefs.DELETE_ON_BLOCK, Prefs.DEFAULT_DELETE_ON_BLOCK),
+            recentSwipeReversed = prefs.getBoolean(
+                Prefs.RECENT_SWIPE_REVERSED, Prefs.DEFAULT_RECENT_SWIPE_REVERSED,
+            ),
             enterAction = prefs.getBoolean(Prefs.ENTER_ACTION, Prefs.DEFAULT_ENTER_ACTION),
+            enterHoldSends = prefs.getBoolean(Prefs.ENTER_HOLD_SENDS, Prefs.DEFAULT_ENTER_HOLD_SENDS),
+            lettersOnNewField = prefs.getBoolean(
+                Prefs.LETTERS_ON_NEW_FIELD, Prefs.DEFAULT_LETTERS_ON_NEW_FIELD,
+            ),
+            fieldKeys = prefs.getBoolean(Prefs.FIELD_KEYS, Prefs.DEFAULT_FIELD_KEYS),
+            numpadForNumbers = prefs.getBoolean(Prefs.NUMPAD_FOR_NUMBERS, Prefs.DEFAULT_NUMPAD_FOR_NUMBERS),
             typingSpeed = prefs.getBoolean(Prefs.TYPING_SPEED, Prefs.DEFAULT_TYPING_SPEED),
             noPrimary = prefs.getBoolean(Prefs.NO_PRIMARY, Prefs.DEFAULT_NO_PRIMARY),
             editFromMenu = prefs.getBoolean(Prefs.EDIT_FROM_MENU, Prefs.DEFAULT_EDIT_FROM_MENU),
@@ -417,8 +466,9 @@ data class KeyboardConfig(
         /** Every letter the user gave a list, read through [get] so a test needs no prefs. */
         fun letterAlternatesFrom(get: (String) -> String?): Map<Char, List<String>> {
             val out = HashMap<Char, List<String>>()
-            // Every board's letters, not a-z alone: a Cyrillic `й` has a list too.
-            for (c in LIST_LETTERS) {
+            // Every board's letters, not a-z alone: a Cyrillic `й` has a list too. And the
+            // numbers row's digits.
+            for (c in LIST_LETTERS + LIST_DIGITS) {
                 val list = parseAlternates(get(Prefs.letterAlternatesKey(c)), MAX_LETTER_ALTERNATES)
                 if (list.isNotEmpty()) out[c] = list
             }
@@ -426,6 +476,9 @@ data class KeyboardConfig(
         }
         /** The letters a list can be written for: every letter of every alphabet, once. */
         val LIST_LETTERS: List<Char> = Alphabet.ALL.flatMap { it.letters.toList() }.distinct()
+
+        /** The numbers row's keys, in the row's order, which a list can be written for too. */
+        val LIST_DIGITS: List<Char> = "1234567890".toList()
 
         private val DEFAULT_ENTER_ALTERNATES_LIST = listOf("?", "!", ",")
 
@@ -436,6 +489,15 @@ data class KeyboardConfig(
          */
         fun parseEnterAlternates(raw: String?): List<String> =
             parseAlternates(raw, MAX_ENTER_ALTERNATES).ifEmpty { DEFAULT_ENTER_ALTERNATES_LIST }
+
+        /**
+         * The no-space-before list as one string of characters, spaces dropped. Blank is the
+         * default: a cleared field would otherwise leave every mark after a space.
+         */
+        fun parseNoSpaceBefore(raw: String?): String {
+            val chars = raw.orEmpty().filterNot { it.isWhitespace() }
+            return chars.ifEmpty { Prefs.DEFAULT_NO_SPACE_BEFORE }
+        }
 
         /**
          * Whitespace-split symbol list, capped at [max]. Empty for a blank value, which every caller

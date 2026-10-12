@@ -87,4 +87,13 @@ class ChordArmTest {
         // A swipe from a chord key is a word, not a chord.
         assertEquals(ChordLift.SWIPED, chordAtLift(triggerHeld = true, triggerMoved = false, travelSq = 400f, slopSq = slop))
     }
+
+    @Test
+    fun labelsComeFromTheHeldTriggersInFiringOrder() {
+        // Both held: a key with a chord under each shows ?123's, the one its tap would fire.
+        assertEquals(listOf(ChordTrigger.MODE, ChordTrigger.SPACE), chordLabelTriggers(modeDue = true, spaceDue = true))
+        // The spacebar alone shows its own; once it lifts, nothing.
+        assertEquals(listOf(ChordTrigger.SPACE), chordLabelTriggers(modeDue = false, spaceDue = true))
+        assertEquals(emptyList<ChordTrigger>(), chordLabelTriggers(modeDue = false, spaceDue = false))
+    }
 }

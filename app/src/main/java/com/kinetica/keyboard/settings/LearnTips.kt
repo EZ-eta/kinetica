@@ -11,6 +11,7 @@ object LearnTips {
     val TARGETS: Map<String, Target> = mapOf(
         "tip_cursor" to Target("pref_group_gestures_more", "pref_spacebar_word_slide"),
         "tip_accents" to Target("pref_group_keys", "pref_group_longpress"),
+        "tip_case" to Target("pref_group_gestures", "pref_edge_swipes_screen"),
         "tip_delete_words" to Target("pref_group_gestures_more", "pref_backspace_char_slide"),
         "tip_digits" to Target("pref_group_gestures_more", "pref_alternate_swipes"),
         "tip_resize" to Target("pref_group_size", "pref_keyboard_height_pct"),

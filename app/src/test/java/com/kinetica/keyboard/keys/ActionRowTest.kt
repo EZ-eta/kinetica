@@ -229,6 +229,7 @@ class ActionRowTest {
             EditorAction.SELECT_ALL, EditorAction.TOGGLE_NUMBER_ROW, EditorAction.EXPANDIFY,
             EditorAction.TOGGLE_TYPING_SPEED, EditorAction.TOGGLE_PECK_MODE,
             EditorAction.ARROW_UP, EditorAction.ARROW_DOWN, EditorAction.ARROW_LEFT, EditorAction.ARROW_RIGHT,
+            EditorAction.CASE_LOWER, EditorAction.CASE_TITLE, EditorAction.CASE_UPPER,
         )
         for (a in EditorAction.entries) {
             assertEquals(if (a in plainText) null else a, ActionRow.actionForGlyph(ActionRow.glyph(a)))
@@ -252,8 +253,53 @@ class ActionRowTest {
     @Test
     fun anActionWrittenByNameBecomesItsSymbol() {
         assertEquals("⎘", ActionRow.glyphForToken(":paste"))
-        assertEquals(null, ActionRow.glyphForToken(":select_all"))
         assertEquals("↶", ActionRow.glyphForToken(":UNDO"))
         for (t in listOf("paste", ":", ":nothing", "a", "")) assertEquals(null, ActionRow.glyphForToken(t))
+    }
+
+    @Test
+    fun everyActionCanBeNamedInAList() {
+        // A name the help lists must run. `ALL` is also text, so `:select_all` carries the mark
+        // that tells the two apart.
+        for (a in EditorAction.entries) {
+            val cell = ActionRow.glyphForToken(":" + a.name.lowercase())
+            assertEquals(a.name, a, cell?.let { ActionRow.actionForGlyph(it) })
+            assertEquals(a.name, a, ActionRow.actionForGlyph(ActionRow.glyphForToken(a.output)!!))
+        }
+        assertEquals("ALL${ActionRow.ACTION_MARK}", ActionRow.glyphForToken(":select_all"))
+        // Shifted, a list's cells are upper case.
+        assertEquals(EditorAction.TOGGLE_TYPING_SPEED, ActionRow.actionForGlyph("WPM${ActionRow.ACTION_MARK}"))
+        assertTrue(ActionRow.listTokenNames().split(" ").containsAll(listOf(":next_language", ":select_all", ":paste")))
+    }
+
+    @Test
+    fun aHeldShiftLeavesAWrittenTargetRunnable() {
+        // Upper-cased, `combo:ctrl+a` would not parse and would be typed at every sentence start.
+        assertEquals("combo:ctrl+a", ActionRow.shifted("combo:ctrl+a"))
+        assertEquals("action:paste", ActionRow.shifted("action:paste"))
+        assertEquals("È", ActionRow.shifted("è"))
+        assertEquals("ALL${ActionRow.ACTION_MARK}", ActionRow.shifted("ALL${ActionRow.ACTION_MARK}"))
+    }
+
+    @Test
+    fun theCaseSymbolsDifferByCaseAndKeepIt() {
+        // `abc`, `Abc` and `ABC` are three actions, so neither the lookup nor a held shift may
+        // fold their case.
+        val m = ActionRow.ACTION_MARK
+        assertEquals("abc$m", ActionRow.glyphForToken(":case_lower"))
+        assertEquals(EditorAction.CASE_LOWER, ActionRow.actionForGlyph("abc$m"))
+        assertEquals(EditorAction.CASE_TITLE, ActionRow.actionForGlyph("Abc$m"))
+        assertEquals(EditorAction.CASE_UPPER, ActionRow.actionForGlyph("ABC$m"))
+        assertEquals("Abc$m", ActionRow.shifted("Abc$m"))
+        // Unmarked, they are text a list may hold.
+        for (t in listOf("abc", "Abc", "ABC")) assertEquals(null, ActionRow.actionForGlyph(t))
+        assertEquals(null, ActionRow.notice(EditorAction.CASE_UPPER, state()))
+    }
+
+    @Test
+    fun theLanguageSwitchAnswersToTheNameUsersTry() {
+        assertEquals(EditorAction.NEXT_LANGUAGE, ActionRow.tokenAction(":switch_language"))
+        assertEquals(EditorAction.NEXT_LANGUAGE, ActionRow.tokenAction(":next_language"))
+        assertEquals(ActionRow.glyph(EditorAction.NEXT_LANGUAGE), ActionRow.glyphForToken(":Switch_Language"))
     }
 }

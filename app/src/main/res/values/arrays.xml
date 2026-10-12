@@ -155,7 +155,8 @@
         <item>Right-aligned</item>
         <item>Left-aligned</item>
         <item>Split</item>
-        <item>One-handed</item>
+        <item>One-handed, right</item>
+        <item>One-handed, left</item>
     </string-array>
     <string-array name="layout_mode_values" translatable="false">
         <item>full</item>
@@ -163,6 +164,7 @@
         <item>left</item>
         <item>split</item>
         <item>one_handed</item>
+        <item>one_handed_left</item>
     </string-array>
 
     <string-array name="trail_color_entries">
@@ -241,6 +243,24 @@
 
     <string-array name="comma_mode_entries">
         <item>Comma (default)</item>
+        <item>Removed (spacebar widens)</item>
+        <item>Custom character</item>
+        <item>Custom text</item>
+        <item>Paste</item>
+        <item>Select all</item>
+    </string-array>
+    <string-array name="trigger_case_entries">
+        <item>Exact: the trigger as written</item>
+        <item>Ignore case: Andor also fires andor</item>
+        <item>Carry the case: Andor gives And/or</item>
+    </string-array>
+    <string-array name="trigger_case_values" translatable="false">
+        <item>exact</item>
+        <item>ignore</item>
+        <item>carry</item>
+    </string-array>
+    <string-array name="period_mode_entries">
+        <item>Period (default)</item>
         <item>Removed (spacebar widens)</item>
         <item>Custom character</item>
         <item>Custom text</item>

@@ -7,6 +7,7 @@ import android.graphics.RectF
 import android.graphics.Typeface
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.VelocityTracker
@@ -68,7 +69,7 @@ class SuggestionBarView @JvmOverloads constructor(
          * The weight slide travelled past the bottom of its scale: never offer [word] again.
          * Reversible from Dictionary settings, where the block list lives.
          */
-        fun onSuggestionBlocked(word: String)
+        fun onSuggestionBlocked(word: String, source: BarAdjust.BlockSource)
 
         /** A recent word's alternative was tapped: [back] commits before the newest, 0 the newest. */
         fun onRecentPicked(back: Int, word: String)
@@ -162,6 +163,39 @@ class SuggestionBarView @JvmOverloads constructor(
             }
         }
 
+    /** The text size setting as a multiplier of the bar's own (BarMetrics.textScale). */
+    var textScale = BarMetrics.textScale(BarMetrics.TEXT_PCT_DEFAULT)
+        set(value) {
+            if (field != value) {
+                field = value
+                invalidate()
+            }
+        }
+
+    /** The recent columns' text size setting (BarMetrics.recentTextScale). */
+    var recentTextScale = BarMetrics.recentTextScale(BarMetrics.RECENT_PCT_DEFAULT)
+        set(value) {
+            if (field != value) {
+                field = value
+                invalidate()
+            }
+        }
+
+    /** A recent column's swap reads its swipe the other way: up for the word above. */
+    var recentSwipeReversed = false
+
+    /** Words sit at their own width with a gap between, instead of in equal zones. */
+    var compactWords = false
+        set(value) {
+            if (field != value) {
+                field = value
+                invalidate()
+            }
+        }
+
+    // The measured zone widths behind pageSizes, cached under the same key.
+    private var zoneWidthsCache: List<Float> = emptyList()
+
     private var words: List<Suggestion> = emptyList()
     private var correctionMode = false
     private var selectedIndex = -1
@@ -206,6 +240,12 @@ class SuggestionBarView @JvmOverloads constructor(
     // The word the slide adjusts and its count, taken at the arm: a live candidate or a recent cell.
     private var adjustTarget: Suggestion? = null
     private var adjustCell = -1
+    private var adjustSource = BarAdjust.BlockSource.OTHER
+
+    // The word under the touch at its down, in a zone or a recent cell. The bar can change under a
+    // held thumb (an autospace commits during the hold), and the arm must not land on the word
+    // that replaced it.
+    private var downWord: String? = null
     private var adjustStartY = 0f
     private var adjustSteps = 0
     private var velocityTracker: VelocityTracker? = null
@@ -217,12 +257,16 @@ class SuggestionBarView @JvmOverloads constructor(
         // A recent column's cell arms too: with recent words on, the word just committed
         // lives only there.
         val target = when {
-            zone >= 0 -> wordAt(zone)
+            zone >= 0 -> wordAt(zone)?.takeIf { it.word == downWord }
             zone == ZONE_RECENT && BarAdjust.recentCellAdjustable(recentDownCell, RECENT_ROWS) ->
-                recentCellSuggestion(recentDownCell)
+                recentCellSuggestion(recentDownCell)?.takeIf { it.word == downWord }
             else -> null
         }
         if (target != null) {
+            adjustSource = BarAdjust.blockSource(
+                zone, ZONE_RECENT, correctionMode, pageStart() + zone, selectedIndex,
+                recent.getOrNull(recentDownCell / RECENT_ROWS)?.back, wordPending,
+            )
             // Arm adjustment; the touch is consumed either way, so lifting does not also
             // commit. The delta is applied on lift.
             adjustArmed = true
@@ -264,6 +308,32 @@ class SuggestionBarView @JvmOverloads constructor(
     private val chipPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val dividerPaint = Paint()
     private val badgePaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val timerPaint = Paint()
+
+    // The autospace countdown, in uptime milliseconds; a zero duration draws nothing.
+    private var timerStart = 0L
+    private var timerDuration = 0L
+
+    /**
+     * Draws the autospace wait as a band behind the words that shrinks to nothing as the space
+     * lands. [startUptime] is when the wait began, the thumb's lift, so a decode that took a
+     * moment starts the band part-spent.
+     */
+    fun showAutospaceTimer(startUptime: Long, durationMs: Long) {
+        if (durationMs <= 0L) {
+            clearAutospaceTimer()
+            return
+        }
+        timerStart = startUptime
+        timerDuration = durationMs
+        postInvalidateOnAnimation()
+    }
+
+    fun clearAutospaceTimer() {
+        if (timerDuration == 0L) return
+        timerDuration = 0L
+        invalidate()
+    }
 
     /** Resolved color roles; the setter restains every paint and redraws. */
     var theme: KeyboardTheme = KeyboardTheme.fromResources(context)
@@ -285,6 +355,8 @@ class SuggestionBarView @JvmOverloads constructor(
         dividerPaint.color = theme.keyHint
         dividerPaint.alpha = 60
         badgePaint.color = theme.accent
+        timerPaint.color = theme.accent
+        timerPaint.alpha = TIMER_ALPHA
     }
 
     /** Composition mode: ranked candidates for the word in progress. */
@@ -338,12 +410,30 @@ class SuggestionBarView @JvmOverloads constructor(
         // Everything that changes wordsWidth is in the key, the retype button included, or
         // the partition would stay sized for the old width.
         val key = words.hashCode() * 31 * 31 + width * 31 + height +
-            (if (retypeButton) 7919 else 0) + retypeButtonDp + recent.size * 131 + (tallFactor * 100).toInt()
+            (if (retypeButton) 7919 else 0) + retypeButtonDp + recent.size * 131 + (tallFactor * 100).toInt() +
+            (textScale * 1000).toInt() * 17 + (if (compactWords) 104729 else 0)
         if (key != zoneKey) {
             zoneKey = key
-            pageSizes = BarZones.pages(zoneWidths(), wordsWidth(), MAX_ZONES)
+            zoneWidthsCache = zoneWidths()
+            pageSizes = if (compactWords) {
+                BarZones.compactPages(zoneWidthsCache, wordsWidth(), compactGap(), MAX_ZONES)
+            } else {
+                BarZones.pages(zoneWidthsCache, wordsWidth(), MAX_ZONES)
+            }
         }
         return pageSizes
+    }
+
+    private fun compactGap(): Float =
+        BarMetrics.textSize(rowHeight(), textScale) * BarMetrics.COMPACT_GAP_FRACTION
+
+    /** Where the visible page's words sit: equal zones, or in compact spacing their own widths. */
+    private fun pageLayout(vis: List<Suggestion>): BarZones.Layout {
+        if (!compactWords || vis.size <= 1) return BarZones.equalLayout(vis.size, wordsWidth())
+        val start = pageStart()
+        val widths = zoneWidthsCache.subList(start, (start + vis.size).coerceAtMost(zoneWidthsCache.size))
+        if (widths.size != vis.size) return BarZones.equalLayout(vis.size, wordsWidth())
+        return BarZones.compactLayout(widths, wordsWidth(), compactGap())
     }
 
     /**
@@ -354,7 +444,7 @@ class SuggestionBarView @JvmOverloads constructor(
     private fun zoneWidths(): List<Float> {
         val h = rowHeight()
         val orn = BarMetrics.scale(h, density)
-        primaryPaint.textSize = BarMetrics.textSize(h)
+        primaryPaint.textSize = BarMetrics.textSize(h, textScale)
         val pad = TEXT_INSET_DP * density * orn
         val badge = 2f * (BADGE_GAP_DP + BADGE_REACH_DP) * density * orn
         return words.map {
@@ -385,8 +475,9 @@ class SuggestionBarView @JvmOverloads constructor(
         val sizes = pageSizes()
         if (sizes.isEmpty()) return emptyList()
         val p = page.coerceIn(0, sizes.size - 1)
-        val start = BarZones.startOfPage(sizes, p)
-        return words.subList(start, start + sizes[p])
+        val start = BarZones.startOfPage(sizes, p).coerceAtMost(words.size)
+        // Clamped to the list: the page sizes are cached by a hash of the words.
+        return words.subList(start, (start + sizes[p]).coerceAtMost(words.size))
     }
 
     private fun wordAt(zone: Int): Suggestion? =
@@ -396,14 +487,23 @@ class SuggestionBarView @JvmOverloads constructor(
         val w = width.toFloat()
         val h = height.toFloat()
         canvas.drawRect(0f, 0f, w, h, bgPaint)
+        if (timerDuration > 0L) {
+            val left = 1f - (SystemClock.uptimeMillis() - timerStart).toFloat() / timerDuration
+            if (left > 0f) {
+                canvas.drawRect(0f, 0f, w * left.coerceAtMost(1f), h, timerPaint)
+                postInvalidateOnAnimation()
+            } else {
+                timerDuration = 0L
+            }
+        }
         drawRecent(canvas, h)
         val vis = visible()
         // Ornaments scale with the bar so a thinned bar shrinks them instead of overlapping the
         // word; 1.0 at BarMetrics.REFERENCE_DP, the default 44dp look.
         val rh = rowHeight()
         val orn = BarMetrics.scale(rh, density)
-        textPaint.textSize = BarMetrics.textSize(rh)
-        primaryPaint.textSize = BarMetrics.textSize(rh)
+        textPaint.textSize = BarMetrics.textSize(rh, textScale)
+        primaryPaint.textSize = BarMetrics.textSize(rh, textScale)
         val baseY = h / 2f - (textPaint.descent() + textPaint.ascent()) / 2f
         // Drawn before the early return: an empty bar is when a botched word most needs
         // restarting.
@@ -434,19 +534,26 @@ class SuggestionBarView @JvmOverloads constructor(
             }
         }
         if (vis.isEmpty()) return
-        val zoneW = wordsWidth() / vis.size
+        val layout = pageLayout(vis)
 
         for (i in vis.indices) {
             val s = vis[i]
             val fullIdx = pageStart() + i
-            val left = i * zoneW
-            val cx = left + zoneW / 2f
+            val left = layout.bounds[i]
+            val zoneW = layout.bounds[i + 1] - left
+            val cx = layout.centers[i]
             // Bold goes to the overall top candidate, or the committed word, on whatever page it
             // falls.
             val emphasized = if (correctionMode) fullIdx == selectedIndex else fullIdx == 0
             if (correctionMode && fullIdx == selectedIndex) {
                 val pad = 4f * density * orn
-                zoneRect.set(left + pad, pad, left + zoneW - pad, h - pad)
+                // Compact zones run to the bar's edges; the chip hugs the word instead.
+                val half = if (compactWords && vis.size > 1) {
+                    zoneWidthsCache.getOrElse(fullIdx) { zoneW } / 2f
+                } else {
+                    zoneW / 2f - pad
+                }
+                zoneRect.set(cx - half, pad, cx + half, h - pad)
                 val corner = 6f * density * orn
                 canvas.drawRoundRect(zoneRect, corner, corner, chipPaint)
             }
@@ -507,7 +614,7 @@ class SuggestionBarView @JvmOverloads constructor(
         if (recent.isEmpty()) return
         val colW = recentColumnWidth()
         val rowH = h / RECENT_ROWS
-        val size = BarMetrics.textSize(rowH) * RECENT_TEXT_SCALE
+        val size = BarMetrics.textSize(rowH, recentTextScale) * BarMetrics.RECENT_TEXT_SCALE
         textPaint.textSize = size
         primaryPaint.textSize = size
         val orn = BarMetrics.scale(rowHeight(), density)
@@ -599,6 +706,7 @@ class SuggestionBarView @JvmOverloads constructor(
         when (ev.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 downZone = zoneAt(ev.x)
+                downWord = wordAt(downZone)?.word
                 downX = ev.x
                 downY = ev.y
                 lastTouchY = ev.y
@@ -608,6 +716,7 @@ class SuggestionBarView @JvmOverloads constructor(
                 pageSwipeCandidate = pageCount() > 1 && downZone != ZONE_RETYPE && downZone != ZONE_RECENT
                 pageSwipeConsumed = false
                 recentDownCell = if (downZone == ZONE_RECENT) recentCellAt(ev.x, ev.y) else -1
+                if (downZone == ZONE_RECENT) downWord = recentCellSuggestion(recentDownCell)?.word
                 // In a recent column only the committed word in the middle can be slid.
                 val recentHold = downZone == ZONE_RECENT &&
                     BarAdjust.recentCellAdjustable(recentDownCell, RECENT_ROWS) &&
@@ -685,7 +794,7 @@ class SuggestionBarView @JvmOverloads constructor(
                 if (adjustArmed && BarAdjust.appliesOnLift(correcting, adjustSteps)) {
                     adjustTarget?.let {
                         if (BarAdjust.blockArmed(it.count, adjustSteps)) {
-                            listener?.onSuggestionBlocked(it.word)
+                            listener?.onSuggestionBlocked(it.word, adjustSource)
                         } else {
                             listener?.onSuggestionReinforced(it.word, adjustDelta(it.count, adjustSteps))
                         }
@@ -713,13 +822,13 @@ class SuggestionBarView @JvmOverloads constructor(
                 if (downZone == ZONE_RECENT) {
                     val cell = recentCellAt(ev.x, ev.y)
                     val dy = ev.y - downY
-                    // Nintype-style swap: a vertical swipe on a column brings a neighbour into
-                    // place, down for the word above, up for the word below.
+                    // A vertical swipe on a column brings a neighbour into place, down for the
+                    // word above and up for the word below, or the other way round by setting.
                     val swipe = recentDownCell >= 0 &&
                         BarAdjust.recentSwap(ev.x - downX, dy, RECENT_SWIPE_DP * density)
                     if (swipe) {
                         val col = recent.getOrNull(recentDownCell / RECENT_ROWS)
-                        val word = if (dy > 0) col?.above else col?.below
+                        val word = if (BarAdjust.swapTakesAbove(dy, recentSwipeReversed)) col?.above else col?.below
                         if (col != null && word != null) {
                             listener?.onRecentPicked(col.back, word)
                             performClick()
@@ -790,6 +899,7 @@ class SuggestionBarView @JvmOverloads constructor(
         adjustTarget = null
         adjustCell = -1
         adjustSteps = 0
+        adjustSource = BarAdjust.BlockSource.OTHER
     }
 
     override fun performClick(): Boolean {
@@ -842,12 +952,15 @@ class SuggestionBarView @JvmOverloads constructor(
             return ZONE_ACTION_BASE - i
         }
         if (vis.isEmpty()) return -1
-        return (x / (wordsWidth() / vis.size)).toInt().coerceIn(0, vis.size - 1)
+        return BarZones.zoneOf(pageLayout(vis), x)
     }
 
     private companion object {
         /** Most zones one page may hold, whatever the words measure. */
         const val MAX_ZONES = 5
+
+        /** The autospace band, out of 255: visible behind the words without fighting them. */
+        const val TIMER_ALPHA = 48
 
         /** Padding a word keeps inside its zone, shared by the packing and by [fit]. */
         private const val TEXT_INSET_DP = 8f
@@ -881,9 +994,6 @@ class SuggestionBarView @JvmOverloads constructor(
 
         /** Bar width each recent-word column takes: two leave three fifths to the live words. */
         const val RECENT_COLUMN_FRACTION = 0.2f
-
-        /** A third of the bar is small for text; this much larger still fits the row. */
-        const val RECENT_TEXT_SCALE = 1.25f
 
         /** Vertical travel that makes a touch on a recent column a swap, not a tap. */
         const val RECENT_SWIPE_DP = 16f

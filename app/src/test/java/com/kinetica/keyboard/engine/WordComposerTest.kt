@@ -155,7 +155,8 @@ class WordComposerTest {
         } catch (_: IllegalStateException) {
             failed = true
         }
-        assertTrue("the synthetic failure must reach the executor", failed)
+        // Contained in the worker: on a real executor an escaped exception kills the process.
+        assertFalse("the synthetic failure must not escape the worker", failed)
 
         composer.onToken(TestData.tap('h', g, 100))
         assertEquals(1, queued.size)

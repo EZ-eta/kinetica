@@ -90,6 +90,10 @@ class WordComposer(
     private val decodeWorker = Runnable {
         try {
             drainDecodes()
+        } catch (e: RuntimeException) {
+            // On this executor an exception kills the keyboard's process. A decode that throws
+            // costs its own buffer's candidates, never the keyboard.
+            DecodeTrace.log { "decode failed ${e.javaClass.simpleName}: ${e.message}" }
         } finally {
             // A predictor or main-executor failure must not leave the composer
             // "scheduled" forever. If input arrived while the failed worker ran,
@@ -130,9 +134,20 @@ class WordComposer(
     var languageWeights: Map<String, Float>? = null
 
     val hasPendingWord: Boolean get() = tokens.isNotEmpty()
+
+    /** When the last thumb lifted on the word in hand, or -1 with no token. Main thread. */
+    val lastTokenEnd: Long get() = tokens.maxOfOrNull { it.tEnd } ?: -1L
     val tokenCount: Int get() = tokens.size
 
     fun hasSwipeToken(): Boolean = tokens.any { it !is TapToken }
+
+    /**
+     * Decodes the buffer again, unchanged. A result that landed while a finger was still down
+     * could not arm the autospace; once that finger is dropped as resting, this lets it.
+     */
+    fun redecode() {
+        if (tokens.isNotEmpty()) requestDecode()
+    }
 
     fun onToken(token: InputToken) {
         tokens.add(token)
@@ -181,10 +196,15 @@ class WordComposer(
         val committed = ArrayList(tokens)
         val previous = previousBuffer
         decodeExecutor.execute {
-            val g = predictor.geometry ?: return@execute
-            emitCommitMiss(word, committed, g, "commit", -1L)
-            val gap = gapBetween(previous, committed)
-            if (gap in 0..KineticaConstants.MAX_RETYPE_GAP_MS) emitCommitMiss(word, previous, g, "previous", gap)
+            // A trace line is never worth the keyboard: the same executor's failure kills it.
+            try {
+                val g = predictor.geometry ?: return@execute
+                emitCommitMiss(word, committed, g, "commit", -1L)
+                val gap = gapBetween(previous, committed)
+                if (gap in 0..KineticaConstants.MAX_RETYPE_GAP_MS) emitCommitMiss(word, previous, g, "previous", gap)
+            } catch (e: RuntimeException) {
+                DecodeTrace.log { "commit miss trace failed ${e.javaClass.simpleName}" }
+            }
         }
     }
 
@@ -569,7 +589,14 @@ class WordComposer(
         if (list.isEmpty() || list.any { it !is TapToken }) return ""
         val sorted = list.sortedBy { it.tStart }
         val sb = StringBuilder(sorted.size)
-        for (t in sorted) sb.append(predictor.alphabet.charOf((t as TapToken).code))
+        val alphabet = predictor.alphabet
+        for (t in sorted) {
+            val code = (t as TapToken).code
+            // A tap read on another script's board, between a language switch and its dictionary
+            // loading, has no letter here: it gives no literal, not an index past the alphabet.
+            if (code !in 0 until alphabet.size) return ""
+            sb.append(alphabet.charOf(code))
+        }
         return sb.toString()
     }
 }

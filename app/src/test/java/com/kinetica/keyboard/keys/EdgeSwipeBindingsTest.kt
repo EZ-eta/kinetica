@@ -4,6 +4,7 @@ import com.kinetica.keyboard.keys.EdgeSwipeBinding.Direction
 import com.kinetica.keyboard.layout.Key
 import com.kinetica.keyboard.layout.KeyType
 import com.kinetica.keyboard.layout.KeyboardLayout
+import com.kinetica.keyboard.layout.LayoutMutations
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -52,6 +53,17 @@ class EdgeSwipeBindingsTest {
     )
 
     private val empty = EdgeSwipeBindings(emptyList())
+
+    @Test
+    fun theNumbersRowLeavesTheFlicksOnTheirRows() {
+        // The numbers row moves the letter rows to y 0.2 / 0.4 / 0.6. Fixed bands would lose the
+        // top row's up-flicks and give the home row down-flicks.
+        val b = EdgeSwipeBindings.withImplicitAlternates(LayoutMutations.withNumberRow(layout()), empty)
+        assertEquals("1", b.outputFor("q", Direction.UP))
+        assertEquals("?", b.outputFor("m", Direction.DOWN))
+        assertNull(b.outputFor("a", Direction.DOWN))
+        assertNull(b.outputFor("a", Direction.UP))
+    }
 
     @Test
     fun topRowUpYieldsTheHintItShows() {
@@ -120,6 +132,31 @@ class EdgeSwipeBindingsTest {
     }
 
     @Test
+    fun shiftsSwipesReCaseTheWordByDefault() {
+        val d = EdgeSwipeBindings.DEFAULTS
+        assertEquals(EditorAction.CASE_UPPER.output, d.outputFor("shift", Direction.UP))
+        assertEquals(EditorAction.CASE_TITLE.output, d.outputFor("shift", Direction.RIGHT))
+        assertEquals(EditorAction.CASE_LOWER.output, d.outputFor("shift", Direction.DOWN))
+        assertNull(d.outputFor("shift", Direction.LEFT))
+    }
+
+    @Test
+    fun aSavedSetGetsShiftsSwipesOnlyWhereTheyAreFree() {
+        // Saved before the defaults existed: shift up is the user's own, the rest is free.
+        val mine = EdgeSwipeBinding("shift", Direction.UP, "!")
+        val other = EdgeSwipeBinding("enter", Direction.UP, "?")
+        val filled = EdgeSwipeBindings(EdgeSwipeBindings.withShiftCase(listOf(mine, other)))
+        assertEquals("!", filled.outputFor("shift", Direction.UP))
+        assertEquals("?", filled.outputFor("enter", Direction.UP))
+        assertEquals(EditorAction.CASE_TITLE.output, filled.outputFor("shift", Direction.RIGHT))
+        assertEquals(EditorAction.CASE_LOWER.output, filled.outputFor("shift", Direction.DOWN))
+        assertEquals(4, filled.bindings.size)
+        // A full set gains nothing.
+        val full = EdgeSwipeBindings.DEFAULTS.bindings
+        assertEquals(full, EdgeSwipeBindings.withShiftCase(full))
+    }
+
+    @Test
     fun theEmojiGestureIsNoLongerADefault() {
         assertTrue(
             "no shipped default may open the picker",
@@ -134,7 +171,8 @@ class EdgeSwipeBindingsTest {
         // "Prioritize numbers over accents" moves the hint and the swipe together.
         val es = KeyboardLayout(
             name = "qwerty_es", locale = "es_ES",
-            keys = listOf(charKey("n", 0.50f, listOf("ñ", "!", "¡"))),
+            // A top-row key too: the rows are read off the letters, so a lone key is no board.
+            keys = listOf(charKey("q", 0.00f, listOf("1")), charKey("n", 0.50f, listOf("ñ", "!", "¡"))),
         )
         val b = EdgeSwipeBindings.withImplicitAlternates(es, empty)
         assertEquals("ñ", b.outputFor("n", Direction.DOWN))

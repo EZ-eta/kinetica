@@ -3,6 +3,8 @@ package com.kinetica.keyboard.layout
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Test
@@ -100,6 +102,34 @@ class SymbolsLayoutTest {
         }
         for (t in listOf("backspace", "enter", "mode_alpha")) {
             assertTrue("the numpad needs its $t key", numpad.contains("\"type\": \"$t\""))
+        }
+    }
+
+    /** Each key's rect by id, read as text: `"id": "x", ... "x": .., "y": .., "w": .., "h": ..`. */
+    private fun rect(json: String, id: String): List<Float>? =
+        Regex(""""id": "$id"[^}]*?"x": ([0-9.]+), "y": ([0-9.]+), "w": ([0-9.]+), "h": ([0-9.]+)""")
+            .find(json)?.groupValues?.drop(1)?.map { it.toFloat() }
+
+    @Test
+    fun backspaceAndTheBottomRowSitWhereTheyDoOnTheLetters() {
+        // A backspace 0.05 wider and further left than the letters' turns every `m`-shaped
+        // reach on the symbols page into a delete. The bottom row matches too, a page key
+        // between ABC and the comma.
+        val abc = read("qwerty.json")
+        for (page in listOf("symbols.json", "symbols2.json")) {
+            val json = read(page)
+            for (id in listOf("backspace", "comma", "space", "period", "enter")) {
+                assertEquals("$page $id", rect(abc, id), rect(json, id))
+            }
+            assertEquals("$page ABC where ?123 is", rect(abc, "mode"), rect(json, "abc"))
+        }
+    }
+
+    @Test
+    fun theNumpadIsReachedBySlideAndNoKeyOfItsOwn() {
+        // No 123 key, so the rows line up; a slide right on either page key opens the numpad.
+        for (page in listOf("symbols.json", "symbols2.json")) {
+            assertFalse("$page still carries a numpad key", read(page).contains("mode_numpad"))
         }
     }
 }

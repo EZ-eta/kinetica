@@ -74,6 +74,14 @@ class ChordSettingsActivity : AppCompatActivity() {
                 setPadding(0, pad, 0, pad / 2)
             },
         )
+        // Under the title, not below the list, as on the expansions screen: a long list needs
+        // no scroll to add one.
+        root.addView(
+            Button(this).apply {
+                text = getString(R.string.chord_add)
+                setOnClickListener { showEditor(existing = null) }
+            },
+        )
         emptyHint = TextView(this).apply {
             text = getString(R.string.chord_empty_hint)
             setPadding(0, 0, 0, pad)
@@ -88,12 +96,6 @@ class ChordSettingsActivity : AppCompatActivity() {
         root.addView(sortButton)
         listContainer = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         root.addView(listContainer)
-        root.addView(
-            Button(this).apply {
-                text = getString(R.string.chord_add)
-                setOnClickListener { showEditor(existing = null) }
-            },
-        )
         setContentView(ScrollView(this).apply { addView(root) })
         refresh()
     }

@@ -81,4 +81,44 @@ class EnterBehaviorTest {
         )
         assertNull(EnterBehavior.labelKind(field(multiLine, EditorInfo.IME_ACTION_SEARCH), false))
     }
+
+    @Test
+    fun holdToSendGivesTheTapTheNewline() {
+        val send = EnterBehavior.Result.Action(EditorInfo.IME_ACTION_SEND)
+        val s = field(multiLine, EditorInfo.IME_ACTION_SEND)
+        assertEquals(newline, EnterBehavior.tap(s, followApp = true, holdSends = true))
+        assertEquals(send, EnterBehavior.holdAction(s, holdSends = true))
+        // The key shows the plain glyph: the tap writes a newline.
+        assertNull(EnterBehavior.labelKind(s, true, holdSends = true))
+    }
+
+    @Test
+    fun aChatBoxThatAsksForANewlineStillSendsOnTheHold() {
+        // The flag asks enter for a newline; the tap gives it, and the hold reaches Send.
+        val s = field(multiLine, EditorInfo.IME_ACTION_SEND or EditorInfo.IME_FLAG_NO_ENTER_ACTION)
+        assertEquals(newline, EnterBehavior.tap(s, followApp = true, holdSends = true))
+        assertEquals(EnterBehavior.Result.Action(EditorInfo.IME_ACTION_SEND), EnterBehavior.holdAction(s, true))
+    }
+
+    @Test
+    fun aSingleLineFieldKeepsItsActionOnTheTap() {
+        // A search box or a login field has no use for a newline: its tap still searches.
+        val s = field(imeOptions = EditorInfo.IME_ACTION_SEARCH)
+        assertNull(EnterBehavior.holdAction(s, holdSends = true))
+        assertEquals(EnterBehavior.Result.Action(EditorInfo.IME_ACTION_SEARCH), EnterBehavior.tap(s, true, holdSends = true))
+    }
+
+    @Test
+    fun aFieldWithNoActionKeepsItsEnter() {
+        val s = field(imeOptions = EditorInfo.IME_ACTION_NONE)
+        assertNull(EnterBehavior.holdAction(s, holdSends = true))
+        assertEquals(EnterBehavior.resolve(s, true), EnterBehavior.tap(s, followApp = true, holdSends = true))
+    }
+
+    @Test
+    fun theSettingOffChangesNothing() {
+        val s = field(imeOptions = EditorInfo.IME_ACTION_SEARCH)
+        assertNull(EnterBehavior.holdAction(s, holdSends = false))
+        assertEquals(EnterBehavior.resolve(s, true), EnterBehavior.tap(s, followApp = true, holdSends = false))
+    }
 }

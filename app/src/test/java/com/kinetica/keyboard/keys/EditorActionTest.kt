@@ -51,6 +51,14 @@ class EditorActionTest {
     }
 
     @Test
+    fun anExpansionCannotReCase() {
+        // The word before the trigger would change, never the expansion.
+        for (a in listOf(EditorAction.CASE_LOWER, EditorAction.CASE_TITLE, EditorAction.CASE_UPPER)) {
+            assertTrue(a.name, a in EditorAction.NOT_EXPANSION_TARGETS)
+        }
+    }
+
+    @Test
     fun everyOutputCarriesThePrefixAndIsDistinct() {
         val outputs = EditorAction.entries.map { it.output }
         assertEquals(outputs.size, outputs.toSet().size)

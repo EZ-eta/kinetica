@@ -13,6 +13,13 @@ object KineticaConstants {
     const val TAP_MAX_DISP_DP = 12f
 
     /**
+     * A touch held still this long while the other thumb typed is a resting finger, dropped at
+     * its lift instead of joining the word as a letter. Four times a typing tap's ~100 ms, and
+     * past the 150 ms of [TAP_MAX_MS] that marks a deliberate press. Reasoned, not measured.
+     */
+    const val RESTING_FINGER_MIN_MS = 400L
+
+    /**
      * The arc a swipe piece must carry before it has to spell two letters; a shorter piece, such
      * as a flick, spells one (`Matcher.buildSegment`).
      *
@@ -542,6 +549,20 @@ object KineticaConstants {
     // ghosts through the max(1, ..) quantizer.
     const val PERSONAL_MERGE_MIN_COUNT = 2
     const val USER_FREQ_SCALE = 1000
+
+    /**
+     * Votes before a learned capital leads its word: up one for each mid-sentence commit written
+     * with it, down one for each without. Two, as for the merge floor, is the smallest signal
+     * that is not one accident. A sentence start does not vote: the shift wrote that capital.
+     */
+    const val LEARNED_CAPITAL_MIN_VOTES = 2
+
+    /**
+     * The votes' range. A settled capital stays at most four lowercase commits from losing the
+     * lead, and a word written lowercase four from gaining one, whatever came before.
+     */
+    const val CASE_VOTES_LOW = -2
+    const val CASE_VOTES_HIGH = 5
 
     // Suggestion-bar badge tiers: 1..7 dots (1 center + up to 6 hexagon corners). Thresholds
     // double per tier, counts 1,2,4,8,16,32,64, so a couple of uses already advance the badge

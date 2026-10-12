@@ -121,7 +121,7 @@ class TranslationTest {
     fun theKeyboardsOwnWordsSurvive() {
         // Read back by the code, so a translation that renames them breaks the setting.
         val tokens = mapOf(
-            "pref_letter_alternates_note_summary" to listOf(":paste", ":copy_line", ":escape", ":end"),
+            "pref_punctuation_alternates_summary" to listOf(":paste"),
             "combo_key_hint" to listOf("Del", "Tab", "Left", "Home", "Shift+", "Alt+"),
             "tip_ctrl_summary" to listOf("Del"),
         )

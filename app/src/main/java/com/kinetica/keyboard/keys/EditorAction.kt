@@ -115,6 +115,14 @@ enum class EditorAction(val output: String) {
 
     /** Holds Ctrl for the next key tapped: then `a` sends Ctrl+A. */
     CTRL_NEXT("${ACTION_PREFIX}ctrl_next"),
+
+    /**
+     * Re-case the word in hand, as Shift's hold menu does: `abc`, `Abc`, `ABC`. Shift's swipes
+     * carry them by default, so the case is one flick without the hold.
+     */
+    CASE_LOWER("${ACTION_PREFIX}case_lower"),
+    CASE_TITLE("${ACTION_PREFIX}case_title"),
+    CASE_UPPER("${ACTION_PREFIX}case_upper"),
     ;
 
     companion object {
@@ -124,9 +132,11 @@ enum class EditorAction(val output: String) {
          * Actions an expansion may not fire. EXPANDIFY would find its own trigger again and
          * never stop. RETYPE runs after expandify has cleared the word state, so it would
          * delete the word before the trigger. UNDO and REDO would take back the trigger's
-         * own removal, which is the latest edit the app knows about.
+         * own removal, which is the latest edit the app knows about. A re-case would act on the
+         * word before the trigger, never on the expansion.
          */
-        val NOT_EXPANSION_TARGETS: Set<EditorAction> = setOf(EXPANDIFY, RETYPE, UNDO, REDO)
+        val NOT_EXPANSION_TARGETS: Set<EditorAction> =
+            setOf(EXPANDIFY, RETYPE, UNDO, REDO, CASE_LOWER, CASE_TITLE, CASE_UPPER)
 
         /** The action [output] names, or null when it is ordinary text. */
         fun of(output: String): EditorAction? {
@@ -135,7 +145,7 @@ enum class EditorAction(val output: String) {
         }
 
         /**
-         * True for a string that looks like a command but names none of them: almost certainly a
+         * True for a string that looks like a command but names none of them: most likely a
          * typo in a chord expansion, and inserting `action:pate` into a document is worse than
          * doing nothing.
          */

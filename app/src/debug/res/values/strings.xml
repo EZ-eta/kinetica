@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
     <!--
-      Overrides for the developer build. The system keyboard picker lists ime_name, so the
+      Overrides for the debug build. The system keyboard picker lists ime_name, so the
       two builds need different names there.
     -->
     <string name="app_name">Kinetica DEV</string>

@@ -89,6 +89,30 @@
             android:summary="@string/pref_enter_action_summary"
             android:defaultValue="true" />
         <SwitchPreferenceCompat
+            android:key="pref_enter_hold_sends"
+            android:title="@string/pref_enter_hold_sends_title"
+            app:singleLineTitle="false"
+            android:summary="@string/pref_enter_hold_sends_summary"
+            android:defaultValue="false" />
+        <SwitchPreferenceCompat
+            android:key="pref_field_keys"
+            android:title="@string/pref_field_keys_title"
+            app:singleLineTitle="false"
+            android:summary="@string/pref_field_keys_summary"
+            android:defaultValue="true" />
+        <SwitchPreferenceCompat
+            android:key="pref_numpad_for_numbers"
+            android:title="@string/pref_numpad_for_numbers_title"
+            app:singleLineTitle="false"
+            android:summary="@string/pref_numpad_for_numbers_summary"
+            android:defaultValue="false" />
+        <SwitchPreferenceCompat
+            android:key="pref_letters_on_new_field"
+            android:title="@string/pref_letters_on_new_field_title"
+            app:singleLineTitle="false"
+            android:summary="@string/pref_letters_on_new_field_summary"
+            android:defaultValue="true" />
+        <SwitchPreferenceCompat
             android:key="pref_peck_mode"
             android:title="@string/pref_peck_mode_title"
             app:singleLineTitle="false"
@@ -129,6 +153,13 @@
                 app:sliderSteps="@array/timing_steps_retract"
                 android:dependency="pref_autospace" />
             <SwitchPreferenceCompat
+                android:key="pref_autospace_timer"
+                android:title="@string/pref_autospace_timer_title"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_autospace_timer_summary"
+                android:dependency="pref_autospace"
+                android:defaultValue="true" />
+            <SwitchPreferenceCompat
                 android:key="pref_autospace_tapped_words"
                 android:title="@string/pref_autospace_tapped_words_title"
                 app:singleLineTitle="false"
@@ -153,6 +184,12 @@
                 app:singleLineTitle="false"
                 android:summary="@string/pref_tidy_spaces_summary"
                 android:defaultValue="false" />
+            <EditTextPreference
+                android:key="pref_no_space_before"
+                android:title="@string/pref_no_space_before_title"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_no_space_before_summary"
+                android:defaultValue="@string/pref_no_space_before_default" />
             <SwitchPreferenceCompat
                 android:key="pref_spaceless_space"
                 android:title="@string/pref_spaceless_space_title"
@@ -178,11 +215,47 @@
                 android:max="72"
                 app:min="24"
                 app:showSeekBarValue="true" />
+            <!-- app:min and android:max match BarMetrics.TEXT_PCT_MIN and TEXT_PCT_MAX. -->
+            <SeekBarPreference
+                android:key="pref_bar_text_pct"
+                android:title="@string/pref_bar_text_pct_title"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_bar_text_pct_summary"
+                android:defaultValue="150"
+                android:max="180"
+                app:min="60"
+                app:seekBarIncrement="10"
+                app:showSeekBarValue="true" />
+            <SwitchPreferenceCompat
+                android:key="pref_bar_compact"
+                android:title="@string/pref_bar_compact_title"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_bar_compact_summary"
+                android:defaultValue="true" />
             <SwitchPreferenceCompat
                 android:key="pref_recent_words"
                 android:title="@string/pref_recent_words_title"
                 app:singleLineTitle="false"
                 android:summary="@string/pref_recent_words_summary"
+                android:defaultValue="false" />
+            <!-- app:min and android:max match BarMetrics.RECENT_PCT_MIN and RECENT_PCT_MAX. -->
+            <SeekBarPreference
+                android:key="pref_recent_text_pct"
+                android:title="@string/pref_recent_text_pct_title"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_recent_text_pct_summary"
+                android:defaultValue="150"
+                android:max="170"
+                app:min="60"
+                app:seekBarIncrement="10"
+                app:showSeekBarValue="true"
+                android:dependency="pref_recent_words" />
+            <SwitchPreferenceCompat
+                android:key="pref_recent_swipe_reversed"
+                android:title="@string/pref_recent_swipe_reversed_title"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_recent_swipe_reversed_summary"
+                android:dependency="pref_recent_words"
                 android:defaultValue="false" />
             <SwitchPreferenceCompat
                 android:key="pref_badges_while_adjusting"
@@ -266,6 +339,12 @@
                 android:title="@string/pref_retype_avoids_title"
                 app:singleLineTitle="false"
                 android:summary="@string/pref_retype_avoids_summary"
+                android:defaultValue="false" />
+            <SwitchPreferenceCompat
+                android:key="pref_delete_on_block"
+                android:title="@string/pref_delete_on_block_title"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_delete_on_block_summary"
                 android:defaultValue="false" />
         </PreferenceScreen>
     </PreferenceScreen>
@@ -376,6 +455,12 @@
             android:entryValues="@array/landscape_arrangement_values"
             android:defaultValue="split"
             app:useSimpleSummaryProvider="true" />
+        <SwitchPreferenceCompat
+            android:key="pref_wide_arrangement"
+            android:title="@string/pref_wide_arrangement_title"
+            app:singleLineTitle="false"
+            android:summary="@string/pref_wide_arrangement_summary"
+            android:defaultValue="true" />
         <SeekBarPreference
             android:key="pref_landscape_split_gap_pct"
             android:title="@string/pref_landscape_split_gap_title"
@@ -480,7 +565,7 @@
             android:title="@string/pref_period_mode_title"
             app:singleLineTitle="false"
             android:summary="@string/pref_period_mode_summary"
-            android:entries="@array/comma_mode_entries"
+            android:entries="@array/period_mode_entries"
             android:entryValues="@array/comma_mode_values"
             android:defaultValue="keep" />
         <EditTextPreference
@@ -578,6 +663,12 @@
                 android:targetPackage="@string/app_pkg"
                 android:targetClass="com.kinetica.keyboard.settings.ChordSettingsActivity" />
         </Preference>
+        <SwitchPreferenceCompat
+            android:key="pref_chord_labels"
+            android:title="@string/pref_chord_labels_title"
+            app:singleLineTitle="false"
+            android:summary="@string/pref_chord_labels_summary"
+            android:defaultValue="true" />
         <Preference
             android:key="pref_edge_swipes_screen"
             android:title="@string/edge_swipe_settings_title"
@@ -712,7 +803,6 @@
                 android:title="@string/tip_case_title"
                 app:singleLineTitle="false"
                 android:summary="@string/tip_case_summary"
-                android:selectable="false"
                 android:persistent="false" />
             <Preference
                 android:key="tip_digits"

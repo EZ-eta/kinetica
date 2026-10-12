@@ -28,6 +28,13 @@ class HugsPreviousWordTest {
     }
 
     @Test
+    fun theListIsTheUsers() {
+        // French spacing keeps the space before the high marks; a list without them does that.
+        assertFalse(hugsPreviousWord("!", hugging = ".,"))
+        assertTrue(hugsPreviousWord(".", hugging = ".,"))
+    }
+
+    @Test
     fun anOpeningBracketDoesNot() {
         // "a (b)" wants the space that is already there.
         for (c in listOf("(", "[", "{", "«")) {

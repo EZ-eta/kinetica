@@ -81,4 +81,41 @@ class BarZonesTest {
     fun anEmptyListHasNoPages() {
         assertEquals(emptyList<Int>(), BarZones.pages(emptyList(), bar, 5))
     }
+
+    @Test
+    fun compactSpacingFitsMoreWordsOnAPage() {
+        // Equal zones give three short words and one long one 4 x 88 = 352 > 320: two pages.
+        val widths = listOf(40f, 50f, 45f, 88f)
+        assertEquals(listOf(3, 1), BarZones.pages(widths, bar, 5))
+        // Side by side with a 12-unit gap they take 259 of 320: one page.
+        assertEquals(listOf(4), BarZones.compactPages(widths, bar, 12f, 5))
+        assertEquals(listOf(5, 1), BarZones.compactPages(List(6) { 40f }, bar, 12f, 5))
+    }
+
+    @Test
+    fun compactWordsSitAGapApartAndEveryTouchLandsOnOne() {
+        val widths = listOf(40f, 60f, 50f)
+        val gap = 12f
+        val l = BarZones.compactLayout(widths, bar, gap)
+        assertEquals(0f, l.bounds.first(), 0f)
+        assertEquals(bar, l.bounds.last(), 0f)
+        for (i in 0 until widths.size - 1) {
+            assertEquals(widths[i] / 2f + gap + widths[i + 1] / 2f, l.centers[i + 1] - l.centers[i], 1e-4f)
+            // The boundary sits in the middle of the gap between the two words.
+            assertEquals(l.centers[i] + widths[i] / 2f + gap / 2f, l.bounds[i + 1], 1e-4f)
+        }
+        // The group is centred on the bar.
+        assertEquals(bar - (l.centers.last() + widths.last() / 2f), l.centers.first() - widths.first() / 2f, 1e-4f)
+        assertEquals(0, BarZones.zoneOf(l, 0f))
+        assertEquals(1, BarZones.zoneOf(l, l.centers[1]))
+        assertEquals(2, BarZones.zoneOf(l, bar - 1f))
+    }
+
+    @Test
+    fun equalZonesAreTheOldArithmetic() {
+        val l = BarZones.equalLayout(4, bar)
+        assertEquals(80f, l.bounds[1], 0f)
+        assertEquals(200f, l.centers[2], 0f)
+        assertEquals(3, BarZones.zoneOf(l, 319f))
+    }
 }

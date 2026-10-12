@@ -23,6 +23,17 @@ class SettingsSynonymsTest {
     }
 
     @Test
+    fun aSettingOnItsOwnScreenHasNoRowInTheList() {
+        // The trigger case sits with the triggers; a row left in the list as well would be two
+        // places to look and two search hits.
+        assertTrue(Prefs.TRIGGER_CASE in SettingsSynonyms.EXTRA_KEYS)
+        val xml = PrefsXml.read()
+        for (key in SettingsSynonyms.EXTRA_KEYS) {
+            assertTrue("$key is also in keyboard_prefs.xml", "android:key=\"$key\"" !in xml)
+        }
+    }
+
+    @Test
     fun theWordsPeopleActuallyTypeFindTheirSetting() {
         // Spot checks: none of these words appears in the title of the setting it has to find.
         assertTrue("size" in SettingsSynonyms.termsFor(Prefs.KEYBOARD_HEIGHT_PCT))

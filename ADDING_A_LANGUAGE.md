@@ -57,7 +57,9 @@ Run `python3 tools/generate_assets.py --lang <lang>`. Output (into
   It tells `LayoutMutations.withoutForeignAlternates` to leave the accents alone,
   so a user who enables "Hide accented letters on long-press" (a setting for
   English, where every accent on the keyboard is foreign) does not lose `ñ` or
-  `è`. Omitting it makes the language's own letters trimmable.
+  `è`. Omitting it makes the language's own letters trimmable. On another
+  language's board, the letters listed in `keys/NativeLetters.kt` stay while
+  the language is enabled (section 4).
 - Per-key `alternates` arrays: this is where all accents live (there is no
   Kotlin accent table): e.g. Spanish `a → ["á","@"]`, `n → ["ñ","!"]`,
   `?123`-layer additions like `¿ ¡` go in `symbols.json` alternates only if
@@ -95,6 +97,10 @@ per-language.
 - `engine/DictionaryMerger.kt`: add the language's regex to the
   `WORD_RES` table (mirrors the generator's `WORD_RE`); without it an AOSP
   import silently filters the language's accented words.
+- `keys/NativeLetters.kt`: for a language with accented letters, list the
+  letters it writes. With "Hide accented letters on long-press" on, they stay
+  on an English board while the language is enabled. `NativeLettersTest`
+  checks each letter against the bundled wordlist.
 - `keys/StandaloneLetters.kt`: register the language's one-letter function
   words and test tapped-word autospace. Unregistered languages use the English
   set; dictionary membership cannot distinguish these words from initials.
@@ -169,7 +175,7 @@ overshoot value, and write down the ones that do not.
 `keys/AutoCapitalizationTest.kt`, `keys/StandaloneLettersTest.kt` and
 `layout/LayoutMutationsTest.kt`'s bundled-layout list. Extend all three.
 
-## 7. Device pass (developer, ~5 min)
+## 7. Device pass (~5 min)
 
 Language appears in Settings and the enabled-languages set; language-cycle
 chord (`?123`+L) reaches it; spacebar overlay shows the code; a few taps and

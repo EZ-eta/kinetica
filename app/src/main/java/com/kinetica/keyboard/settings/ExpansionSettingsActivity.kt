@@ -66,6 +66,7 @@ class ExpansionSettingsActivity : AppCompatActivity() {
                 setPadding(0, 0, 0, pad)
             },
         )
+        root.addView(triggerCaseRow(pad))
         root.addView(
             EditText(this).apply {
                 hint = getString(R.string.expansion_filter_hint)
@@ -104,6 +105,41 @@ class ExpansionSettingsActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         io.shutdown()
+    }
+
+    /**
+     * How a trigger's capitals are read, here beside the triggers it changes. Tapped, it offers
+     * the three readings; the row shows the one in use.
+     */
+    private fun triggerCaseRow(pad: Int): LinearLayout {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+        val entries = resources.getStringArray(R.array.trigger_case_entries)
+        val values = resources.getStringArray(R.array.trigger_case_values)
+        fun current() = values.indexOf(prefs.getString(Prefs.TRIGGER_CASE, Prefs.DEFAULT_TRIGGER_CASE))
+            .coerceAtLeast(0)
+        val chosen = TextView(this).apply {
+            text = entries[current()]
+            textSize = 13f
+        }
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, 0, 0, pad)
+            isClickable = true
+            isFocusable = true
+            addView(TextView(context).apply { setText(R.string.pref_trigger_case_title) })
+            addView(chosen)
+            setOnClickListener {
+                AlertDialog.Builder(this@ExpansionSettingsActivity)
+                    .setTitle(R.string.pref_trigger_case_title)
+                    .setSingleChoiceItems(entries, current()) { dialog, which ->
+                        prefs.edit().putString(Prefs.TRIGGER_CASE, values[which]).apply()
+                        chosen.text = entries[which]
+                        dialog.dismiss()
+                    }
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show()
+            }
+        }
     }
 
     private fun dao() = KineticaDb.get(this).expansions()

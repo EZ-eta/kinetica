@@ -16,7 +16,8 @@
         <item>Allineata a destra</item>
         <item>Allineata a sinistra</item>
         <item>Divisa</item>
-        <item>A una mano</item>
+        <item>A una mano, destra</item>
+        <item>A una mano, sinistra</item>
     </string-array>
     <string-array name="trail_color_entries">
         <item>Arcobaleno</item>
@@ -56,6 +57,19 @@
     <string-array name="comma_mode_entries">
         <item>Virgola (predefinito)</item>
         <item>Tolta (la barra spaziatrice si allarga)</item>
+        <item>Carattere a scelta</item>
+        <item>Testo a scelta</item>
+        <item>Incolla</item>
+        <item>Seleziona tutto</item>
+    </string-array>
+    <string-array name="trigger_case_entries">
+        <item>Esatte: l\'abbreviazione come è scritta</item>
+        <item>Ignora maiuscole: Andor attiva anche andor</item>
+        <item>Mantieni le maiuscole: Andor dà And/or</item>
+    </string-array>
+    <string-array name="period_mode_entries">
+        <item>Punto (predefinito)</item>
+        <item>Tolto (la barra spaziatrice si allarga)</item>
         <item>Carattere a scelta</item>
         <item>Testo a scelta</item>
         <item>Incolla</item>

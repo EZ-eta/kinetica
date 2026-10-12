@@ -375,33 +375,47 @@ class LayoutMutationsTest {
 
     @Test
     fun polishLayoutExposesEveryNativeLetter() {
+        val lines = assertExposes("qwerty_pl", POLISH_LETTERS)
+        assertTrue(lines.any { it.contains("\"nativeAccents\": true") })
+    }
+
+    @Test
+    fun englishLayoutExposesEveryPolishLetter() {
+        // A Polish writer often keeps English active and reaches Polish by long-press. English
+        // carried seven of the nine; a and e lacked their ogonek.
+        assertExposes("qwerty", POLISH_LETTERS)
+    }
+
+    private val POLISH_LETTERS = mapOf(
+        "a" to listOf("ą"),
+        "c" to listOf("ć"),
+        "e" to listOf("ę"),
+        "l" to listOf("ł"),
+        "n" to listOf("ń"),
+        "o" to listOf("ó"),
+        "s" to listOf("ś"),
+        "z" to listOf("ź", "ż"),
+    )
+
+    /** Asserts each key of layout [name] lists [expected]'s letters; returns the file's lines. */
+    private fun assertExposes(name: String, expected: Map<String, List<String>>): List<String> {
         val p = listOf(
-            java.nio.file.Paths.get("src/main/assets/layouts/qwerty_pl.json"),
-            java.nio.file.Paths.get("app/src/main/assets/layouts/qwerty_pl.json"),
+            java.nio.file.Paths.get("src/main/assets/layouts/$name.json"),
+            java.nio.file.Paths.get("app/src/main/assets/layouts/$name.json"),
         ).firstOrNull { java.nio.file.Files.exists(it) }
-        org.junit.Assume.assumeTrue("Polish layout asset not found", p != null)
+        org.junit.Assume.assumeTrue("$name layout asset not found", p != null)
         val lines = java.nio.file.Files.readAllLines(p!!)
-        val expected = mapOf(
-            "a" to listOf("ą"),
-            "c" to listOf("ć"),
-            "e" to listOf("ę"),
-            "l" to listOf("ł"),
-            "n" to listOf("ń"),
-            "o" to listOf("ó"),
-            "s" to listOf("ś"),
-            "z" to listOf("ź", "ż"),
-        )
         for ((key, letters) in expected) {
             val line = lines.firstOrNull { it.contains("\"id\": \"$key\"") }
-            assertTrue("qwerty_pl is missing key $key", line != null)
+            assertTrue("$name is missing key $key", line != null)
             for (letter in letters) {
                 assertTrue(
-                    "qwerty_pl key $key is missing $letter: $line",
+                    "$name key $key is missing $letter: $line",
                     line!!.contains("\"$letter\""),
                 )
             }
         }
-        assertTrue(lines.any { it.contains("\"nativeAccents\": true") })
+        return lines
     }
 
     @Test
@@ -568,6 +582,16 @@ class LayoutMutationsTest {
             "the emoji alternate should be gone with both keys",
             out.keys.none { it.alternates.contains(LayoutMutations.EMOJI_ALTERNATE) },
         )
+    }
+
+    @Test
+    fun aCommaThatTypesADotKeepsThePeriodSettingOffIt() {
+        // The comma made a custom "." outputs what the period does and sits before it, so a
+        // lookup by output handed the period's setting to the comma key.
+        val comma = LayoutMutations.withCommaKey(bottomRowLayout(), "char", ".")
+        val out = LayoutMutations.withPeriodKey(comma, "paste", "")
+        assertEquals(".", out.keys.first { it.id == "comma" }.output)
+        assertEquals(LayoutMutations.ACTION_PASTE, out.keys.first { it.id == "period" }.output)
     }
 
     @Test

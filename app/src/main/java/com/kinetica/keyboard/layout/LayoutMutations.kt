@@ -1,6 +1,7 @@
 package com.kinetica.keyboard.layout
 
 import com.kinetica.keyboard.engine.Alphabet
+import com.kinetica.keyboard.keys.ActionRow
 import com.kinetica.keyboard.keys.EditorAction
 
 /** Optional, settings-driven edits applied to a loaded layout. */
@@ -14,6 +15,9 @@ object LayoutMutations {
      * which is the ENTER action's glyph in the letter lists.
      */
     const val NEWLINE_ALTERNATE = "↵"
+
+    /** Enter's hold cell for the field's action, where a tap writes the newline. */
+    const val ACTION_ALTERNATE = "➤"
 
     /**
      * Reserved key outputs for editor actions, defined once in [EditorAction] so the comma key
@@ -185,7 +189,7 @@ object LayoutMutations {
      * (KeyboardConfig turns invalid combinations back into "keep").
      */
     fun withCommaKey(layout: KeyboardLayout, mode: String, custom: String): KeyboardLayout =
-        withPunctuationKey(layout, ",", mode, custom, rehomeTo = ".")
+        withPunctuationKey(layout, "comma", ",", mode, custom, rehomeTo = ".")
 
     /**
      * The same for the period key.
@@ -195,10 +199,12 @@ object LayoutMutations {
      * emoji key setting is the way back.
      */
     fun withPeriodKey(layout: KeyboardLayout, mode: String, custom: String): KeyboardLayout =
-        withPunctuationKey(layout, ".", mode, custom, rehomeTo = ",")
+        withPunctuationKey(layout, "period", ".", mode, custom, rehomeTo = ",")
 
     /**
-     * Repurposes the punctuation key whose output is [target].
+     * Repurposes the punctuation key [keyId], or failing that the key whose output is [target].
+     *
+     * By id first: a comma repurposed to type "." would otherwise take the period's setting.
      *
      * Where the key remains, its emoji option and punctuation popup are kept and [target] becomes
      * the first plain alternate, so the character stays reachable from the same position. On
@@ -207,13 +213,15 @@ object LayoutMutations {
      */
     private fun withPunctuationKey(
         layout: KeyboardLayout,
+        keyId: String,
         target: String,
         mode: String,
         custom: String,
         rehomeTo: String,
     ): KeyboardLayout {
         if (mode == "keep") return layout
-        val key = layout.keys.firstOrNull { it.type == KeyType.CHAR && it.output == target }
+        val key = layout.keys.firstOrNull { it.type == KeyType.CHAR && it.id == keyId }
+            ?: layout.keys.firstOrNull { it.type == KeyType.CHAR && it.output == target }
             ?: return layout
 
         if (mode == "remove") {
@@ -253,6 +261,20 @@ object LayoutMutations {
             } else {
                 k
             }
+        }
+        return layout.copy(keys = keys)
+    }
+
+    /**
+     * [extra] joins the comma key's menu right after its `,`: a URL field's `:` beside the comma
+     * the key gave up. Found by id, like the comma's own setting.
+     */
+    fun withCommaAlternateAfterComma(layout: KeyboardLayout, extra: String): KeyboardLayout {
+        val keys = layout.keys.map { k ->
+            if (k.id != "comma" || extra in k.alternates) return@map k
+            val at = k.alternates.indexOf(",")
+            val alts = if (at < 0) k.alternates + extra else k.alternates.toMutableList().apply { add(at + 1, extra) }
+            k.copy(alternates = alts)
         }
         return layout.copy(keys = keys)
     }
@@ -355,14 +377,15 @@ object LayoutMutations {
      * A no-op for a layout that declares [KeyboardLayout.nativeAccents], which keeps "ñ" for
      * Spanish, "ą" for Polish and "ř" for Czech; the layout knows whether its accents belong to
      * its language. Safe before [withNumberPriority], which then finds nothing to reorder. A key
-     * with no non-letter alternate keeps its list, so no popup goes empty.
+     * with no non-letter alternate keeps its list, so no popup goes empty. A letter in [keep],
+     * one an enabled language writes, stays: Polish enabled keeps ą on an English board.
      */
-    fun withoutForeignAlternates(layout: KeyboardLayout): KeyboardLayout {
+    fun withoutForeignAlternates(layout: KeyboardLayout, keep: Set<String> = emptySet()): KeyboardLayout {
         if (layout.nativeAccents) return layout
         var changed = false
         val keys = layout.keys.map { k ->
             if (k.alternates.isEmpty()) return@map k
-            val kept = k.alternates.filter { it.firstOrNull()?.isLetter() != true }
+            val kept = k.alternates.filter { !isLetterCell(it) || it.lowercase() in keep }
             if (kept.size == k.alternates.size || kept.isEmpty()) {
                 k
             } else {
@@ -404,9 +427,7 @@ object LayoutMutations {
         var changed = false
         val keys = layout.keys.map { k ->
             if (k.alternates.size < 2) return@map k
-            val (symbols, accents) = k.alternates.partition { alt ->
-                alt.firstOrNull()?.isLetter() != true
-            }
+            val (symbols, accents) = k.alternates.partition { alt -> !isLetterCell(alt) }
             if (symbols.isEmpty() || accents.isEmpty()) {
                 k
             } else {
@@ -437,11 +458,37 @@ object LayoutMutations {
         val moved = layout.keys.map { it.copy(y = (it.y + NUMBER_ROW_H) * scale, h = it.h * scale) }
         val digits = "1234567890".mapIndexed { i, c ->
             Key(
-                id = "num_$c", type = KeyType.CHAR, label = c.toString(), output = c.toString(),
+                id = NUMBER_ROW_ID_PREFIX + c, type = KeyType.CHAR, label = c.toString(), output = c.toString(),
                 x = i * 0.1f, y = 0f, w = 0.1f, h = NUMBER_ROW_H * scale,
             )
         }
         return layout.copy(keys = digits + moved)
+    }
+
+    private const val NUMBER_ROW_ID_PREFIX = "num_"
+
+    /**
+     * Whether a cell is a letter, for the two mutations that sort letters from symbols. A
+     * shortcut named in a list (`ALL`, `wpm`, `TAP` with [ActionRow.ACTION_MARK]) is no letter, or
+     * hiding accents would drop it and number priority move it to the end.
+     */
+    private fun isLetterCell(cell: String): Boolean =
+        cell.firstOrNull()?.isLetter() == true && cell.last() != ActionRow.ACTION_MARK
+
+    /** Whether [key] is one of the numbers row's digits. */
+    fun isNumberRowKey(key: Key): Boolean = key.id.startsWith(NUMBER_ROW_ID_PREFIX)
+
+    /**
+     * The user's lists on the numbers row, by digit, as the letters have theirs. After
+     * [withNumberRow], which builds the row bare: a digit holds nothing until a list is written.
+     */
+    fun withNumberRowLists(layout: KeyboardLayout, lists: Map<Char, List<String>>): KeyboardLayout {
+        if (lists.isEmpty()) return layout
+        val keys = layout.keys.map { k ->
+            val list = if (isNumberRowKey(k)) lists[k.output[0]] else null
+            if (list.isNullOrEmpty()) k else k.copy(alternates = list)
+        }
+        return layout.copy(keys = keys)
     }
 
     /** What the top row's long-press offers with the numbers row on, left to right: Gboard's set. */

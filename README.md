@@ -56,6 +56,8 @@ channel can install and update over the other.
   "hello"), and one tap can stand for a doubled letter (`ottima`, `tutti`).
 - Swipe decoding written from scratch: banded dynamic time warping over resampled paths, an anchored
   trie search, frequency and word-pair context.
+- A thumb left resting on the keys, a third finger while both thumbs draw, and a number-row digit
+  brushed mid-swipe type nothing.
 - Practise two thumbs (Settings > Learn Kinetica): five words drawn over the keyboard, thumb by
   thumb, typed in a practice field.
 
@@ -63,11 +65,13 @@ channel can install and update over the other.
 
 - Up to ten candidates; a page holds as many as fit, and the bar swipes sideways to the next one.
   Flick a word up to put it in at once.
+- Words sit side by side with a small gap (Typing > Suggestion bar > *Compact suggestions*, on),
+  in a text size of your choice.
 - After a commit the bar becomes a correction strip: tap another word and it replaces the one just
   written, taking its learned weight with it.
 - Next-word suggestions while nothing is being typed (Typing, on).
 - Recent words: the last two words stay on the bar, each with the words it beat; tap one to swap it
-  in (off by default).
+  in (off by default). They have their own text size and a swipe direction to choose.
 - A tapped word with one stray or one missing letter is offered on the bar, never changed for you.
 - Tap completions mid-word (`t-h` offers "the", "they"); the letters you typed are always the last
   zone, so a word the dictionary lacks goes in with one tap.
@@ -83,23 +87,34 @@ channel can install and update over the other.
 - Backspace to the end of a word to keep working on it with taps or swipes.
 - Slide along the spacebar to move the cursor, by letter or by word.
 - Slide left from backspace to mark words for deletion; slide back to keep them, lift to delete.
-- Hold shift for `abc`, `Abc` or `ABC` on the word at the cursor or on selected text.
+- Swipe shift up for `ABC`, right for `Abc`, down for `abc`, or hold it for the menu: on the word at
+  the cursor or on selected text. The swipes are edge swipes like any other, so they can be changed.
 - Enter searches, sends or goes where the app asks for it, and its label says which; hold it for a
-  new line (Typing, on).
+  new line (Typing, on). In a chat box, *Hold enter to send* swaps the two (Typing, off).
+- Keys that fit the field: `@` on the comma in an email field, `/` in a web address, no capital at
+  their start (Typing, on). Number and phone fields can open on the number pad (Typing, off).
+- A new field opens on the letters, wherever the last one was left (Typing, on).
 - Tidy spaces: never two spaces in a row and none before a closing quote (Typing > Spacing, off).
+- The marks that take back an automatic space are a list you can edit (Typing > Spacing > *No space
+  before*), and a band on the bar shows the wait before the space lands.
 
 ### Shortcuts
 
 - Chords: hold `?123` or the spacebar and tap a key. Each chord picks its trigger, so `?123`+`l` and
   space+`l` are two chords. Defaults: `?123`+`l` switches language, `?123`+`p` toggles peck-type;
-  both can be removed.
-- Edge swipes: swipe off any key in any direction. Defaults: backspace up `!`, enter up `?`.
+  both can be removed. Hold the trigger still and each key shows its chord (Shortcuts and gestures,
+  on).
+- Edge swipes: swipe off any key in any direction. Defaults: backspace up `!`, enter up `?`, and
+  shift up, right and down for the word's case.
 - Text expansions: a short trigger becomes longer text, fired by the Expand action. A trigger can
-  have several targets, picked on the bar, and targets can chain.
+  have several targets, picked on the bar, and targets can chain. A capital in the trigger can be
+  matched exactly, ignored, or carried into the text (`Andor` gives `And/or`), set on the Text
+  expansions screen.
 - A chord, an edge swipe or an expansion can type text, run an action (paste, copy, undo, Tab, the
   arrows, Home, End, Esc, forward delete, the date) or press Ctrl and a key (Ctrl+A, Ctrl+Del).
 - Shortcuts on the bar when there is nothing to suggest, and in the `?123` hold menu; both sets are
-  chosen and ordered in Typing > Suggestion bar.
+  chosen and ordered in Typing > Suggestion bar. While the chords show, the menu sits on the
+  spacebar so it covers none of them.
 - Settings from the keyboard: hold `?123` and slide onto the gear.
 
 ### Keys and layout
@@ -110,8 +125,9 @@ channel can install and update over the other.
 - Numbers row above the letters (Keys, off). The keyboard grows so the letters keep their size.
 - Middle row width (Size and layout): spreads `a s d f g h j k l` toward the edges, for hands used to
   a board without the half-key indent.
-- Layout modes: full width, right, left, split, one-handed. Landscape has its own height and can be
-  split to the edges, centred or full width.
+- Layout modes: full width, right, left, split, one-handed on either side. Landscape has its own
+  height and can be split to the edges, centred or full width. An unfolded phone or a tablet held
+  upright uses the landscape arrangement (Size and layout, on).
 - Height by dragging the handle above the bar, side and bottom margins, a live size preview.
 - An optional apostrophe key right of `L`, for `don't` or `nell'immagine` without the symbols page.
 - Two symbol pages and a numpad; a configurable comma and period key; an emoji picker on the
@@ -142,6 +158,8 @@ channel can install and update over the other.
 - Every committed word earns weight for its language; a word you keep choosing outranks a more
   common one. Hold a suggestion and slide up or down to change its weight, one badge tier per step;
   slide past the lowest tier to block it.
+- A word you keep capitalizing yourself, a name or `GitHub`, comes out with its capital. Writing it
+  in lowercase over the capital talks it back out.
 - Phrase learning (optional): which word you tend to type after which.
 - Dictionary: learned and blocked words per language, with search; import of an AOSP word list,
   merged on the phone.
@@ -155,7 +173,8 @@ channel can install and update over the other.
 
 - **Get rid of a word for good.** Hold it on the bar and slide past the lowest tier, or add it in
   Settings > Dictionary > *Blocked words*. A blocked word is never offered again and never learned
-  back.
+  back. With Typing > Learning > *Blocking a word deletes it*, the word you just wrote also leaves
+  the text.
 - **Peck-type mode** turns off swiping, suggestions and autocorrect, so every tap types exactly its
   letter. For slang, codes and anything the dictionary keeps fighting.
 - **Automatic spaces after tapped words too.** Typing > Spacing > *Autospace tapped words too*. A
@@ -163,8 +182,8 @@ channel can install and update over the other.
   word was not over. Three sliders set the delays.
 - **A shorter keyboard.** *Keyboard height* goes down to 10% of the screen, *Suggestion bar height*
   shrinks the bar and its text, and *Resize handle height* at 0 removes the grip.
-- **Long-press without the accents.** *Hide accented letters on long-press* leaves digits and
-  symbols, for languages whose alphabet does not use accents.
+- **Long-press without the accents.** *Hide accented letters on long-press* leaves digits, symbols
+  and the letters of your enabled languages, so Polish keeps `ą` on the English keys.
 - **A much bigger dictionary.** Settings > Dictionary > *Import improved dictionary* takes an AOSP
   `wordlist.combined` and merges it with the bundled list, three to five times the words. Get the
   `main_<code>.combined` file for your language from

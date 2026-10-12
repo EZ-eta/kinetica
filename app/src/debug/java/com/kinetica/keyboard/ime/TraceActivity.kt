@@ -15,7 +15,7 @@ import com.kinetica.keyboard.R
 import java.io.IOException
 
 /**
- * The developer build's only screen: what the decode trace has recorded, and how to
+ * The debug build's only screen: what the decode trace has recorded, and how to
  * get it off the device.
  *
  * Declared in the debug manifest alone, so nothing about it merges into a release build. Export

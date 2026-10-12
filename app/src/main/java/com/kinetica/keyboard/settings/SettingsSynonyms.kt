@@ -18,12 +18,14 @@ object SettingsSynonyms {
      * tree can find them.
      *
      * Both lead-ins live in [ChordSettingsActivity], which holds every chord setting on one
-     * screen. They are still preferences someone would search for, so the index adds them by
-     * hand. An entry here with no terms is unreachable, which `SettingsSynonymsTest` pins.
+     * screen, and the trigger case in [ExpansionSettingsActivity], beside the triggers. They are
+     * still preferences someone would search for, so the index adds them by hand. An entry here
+     * with no terms is unreachable, which `SettingsSynonymsTest` pins.
      */
     val EXTRA_KEYS: List<String> = listOf(
         Prefs.CHORD_ARM_MS,
         Prefs.SPACE_CHORD_ARM_MS,
+        Prefs.TRIGGER_CASE,
     )
 
     /** Extra words that should find the row [key], or an empty list. */
@@ -66,6 +68,20 @@ object SettingsSynonyms {
         Prefs.NO_PRIMARY to listOf("language", "languages", "mix", "multilingual", "primary", "equal", "detect"),
         Prefs.TYPING_SPEED to listOf("wpm", "speed", "words per minute", "typing speed", "fast"),
         Prefs.ENTER_ACTION to listOf("enter", "return", "search", "send", "go", "newline", "action"),
+        Prefs.ENTER_HOLD_SENDS to listOf("enter", "return", "send", "hold", "newline", "chat", "action"),
+        Prefs.FIELD_KEYS to listOf("email", "url", "address", "at", "@", "comma", "field", "web"),
+        Prefs.NUMPAD_FOR_NUMBERS to listOf("numpad", "number pad", "numbers", "phone", "digits", "field"),
+        Prefs.LETTERS_ON_NEW_FIELD to listOf("symbols", "numbers", "numpad", "page", "field", "reset", "abc"),
+        Prefs.NO_SPACE_BEFORE to listOf("punctuation", "space", "autospace", "colon", "semicolon", "exclamation", "question"),
+        Prefs.BAR_TEXT_PCT to listOf("font", "text size", "size", "bigger", "larger", "suggestions", "words"),
+        Prefs.RECENT_TEXT_PCT to listOf("font", "text size", "size", "bigger", "larger", "recent", "history"),
+        Prefs.WIDE_ARRANGEMENT to listOf("foldable", "fold", "unfolded", "tablet", "wide", "split", "landscape"),
+        Prefs.DELETE_ON_BLOCK to listOf("block", "ban", "delete", "remove", "typo", "misspelled", "erase"),
+        Prefs.TRIGGER_CASE to listOf("expansion", "expandify", "trigger", "case", "capital", "capitals", "uppercase"),
+        Prefs.CHORD_LABELS to listOf("chord", "chords", "labels", "glyphs", "show", "hold", "shortcut"),
+        Prefs.RECENT_SWIPE_REVERSED to listOf("scroll", "direction", "reverse", "invert", "natural", "recent", "wheel"),
+        Prefs.BAR_COMPACT to listOf("spacing", "gap", "dense", "compact", "suggestions", "words", "closer"),
+        Prefs.AUTOSPACE_TIMER to listOf("autospace", "timer", "countdown", "progress", "delay", "wait"),
         Prefs.TIDY_SPACES to listOf("space", "spaces", "double space", "compress", "quote", "autospace"),
         Prefs.NUMBER_ROW to listOf("digits", "numbers", "number row", "numeric", "1234"),
         Prefs.RECENT_WORDS to listOf("thicc", "thick", "multi-row", "rows", "history", "previous word", "topbar", "swap"),

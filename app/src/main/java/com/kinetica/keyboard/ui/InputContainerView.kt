@@ -46,7 +46,8 @@ class InputContainerView(
     }
 
     private val handle = HandleView(context)
-    // Plain, showing the window background: empty space below the keys, not chrome.
+    // Empty space below the keys, not chrome. Painted the keyboard's background in applyTheme:
+    // left plain it would show the window's own colour, a band unlike the keys above it.
     private val bottomGap = View(context)
     private var dragStartRawY = 0f
     private var dragStartHeight = 0
@@ -70,9 +71,10 @@ class InputContainerView(
         wireHandle()
     }
 
-    /** Handle strip colors follow the active theme. */
+    /** The handle strip and the gap below the keys follow the active theme. */
     fun applyTheme(theme: KeyboardTheme) {
         handle.setColors(theme.suggestionBg, theme.keyHint)
+        bottomGap.setBackgroundColor(theme.background)
     }
 
     /**

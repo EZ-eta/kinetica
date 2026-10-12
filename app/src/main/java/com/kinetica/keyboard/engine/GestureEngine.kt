@@ -133,6 +133,17 @@ class GestureEngine(private val listener: Listener) {
 
     fun hasActivePointers(): Boolean = activeCount() > 0
 
+    /** Whether both thumbs are taken, so another touch cannot start a stream. */
+    fun atCapacity(): Boolean = activeCount() >= maxPointers
+
+    /** Whether a pointer other than [pointerId] is drawing a swipe right now. */
+    fun otherSwipeCommitted(pointerId: Int): Boolean =
+        streams.any { it != null && it.pointerId != pointerId && it.isSwipeCommitted }
+
+    /** Whether a pointer other than [pointerId] holds a stream. */
+    fun otherTracking(pointerId: Int): Boolean =
+        streams.any { it != null && it.pointerId != pointerId }
+
     private fun streamFor(pointerId: Int): GestureStream? {
         if (pointerId !in 0 until MAX_POINTER_ID) return null
         val slot = slotByPointer[pointerId]

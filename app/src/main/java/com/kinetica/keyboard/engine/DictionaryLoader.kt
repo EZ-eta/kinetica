@@ -22,6 +22,9 @@ class LoadedDictionary(
  */
 object DictionaryLoader {
 
+    /** The capital a learned word is written with, and its votes (`UserWord.caseVotes`). */
+    data class LearnedCase(val display: String, val votes: Int)
+
     /**
      * Lines of "word&lt;TAB&gt;count". Invalid lines are skipped, not fatal.
      *
@@ -42,6 +45,7 @@ object DictionaryLoader {
         blocked: Set<String> = emptySet(),
         spellingSwaps: Map<String, String> = emptyMap(),
         alphabet: Alphabet = Alphabet.LATIN,
+        cases: Map<String, LearnedCase> = emptyMap(),
     ): LoadedDictionary {
         // Duplicate displays (corpus word also in the user dictionary) merge
         // by summing counts, so personal use adds to corpus evidence.
@@ -59,17 +63,39 @@ object DictionaryLoader {
         // same reason. Rows learned earlier stay in the database and no longer reach the trie.
         val bundledSpellings = HashSet<String>()
         val bundledKeys = HashSet<String>()
+        // Each lowercase spelling's bundled spellings, `haus` -> [Haus], for the capital rules.
+        val bundledCases = HashMap<String, MutableList<String>>()
         if (extraWords.isNotEmpty()) {
             for (w in countByDisplay.keys) {
-                bundledSpellings.add(w.lowercase())
+                val lower = w.lowercase()
+                bundledSpellings.add(lower)
                 bundledKeys.add(AccentFolder.fold(w))
+                bundledCases.getOrPut(lower) { ArrayList(1) }.add(w)
             }
         }
         for ((word, count) in extraWords) {
             val lower = word.lowercase()
             if (lower in blocked) continue
             if (AccentFolder.fold(lower) == lower && lower !in bundledSpellings && lower in bundledKeys) continue
-            countByDisplay[word] = (countByDisplay[word] ?: 0) + count
+            val variants = bundledCases[lower].orEmpty()
+            val case = cases[lower]?.takeIf {
+                it.votes >= KineticaConstants.LEARNED_CAPITAL_MIN_VOTES && it.display.lowercase() == lower
+            }
+            val target = when {
+                // The user's settled capital leads: one count above the strongest spelling of the
+                // word, which stays behind it as a form, so `mark` is still offered under `Mark`.
+                case != null -> {
+                    val strongest = variants.maxOfOrNull { countByDisplay[it] ?: 0 } ?: 0
+                    countByDisplay[case.display] = maxOf(countByDisplay[case.display] ?: 0, strongest) + count
+                    continue
+                }
+                // Learned lowercase, held only with a capital, a German noun: the count goes to
+                // the capital. As a lowercase form of its own, two commits put `mitwirkung`
+                // ahead of `Mitwirkung`.
+                variants.isNotEmpty() && lower !in variants -> variants.maxBy { countByDisplay[it] ?: 0 }
+                else -> word
+            }
+            countByDisplay[target] = (countByDisplay[target] ?: 0) + count
         }
 
         // After both sources are counted, so a personal commit of either spelling is exchanged
@@ -125,6 +151,16 @@ object DictionaryLoader {
             if (from.isEmpty() || to.isEmpty() || from == to) return@forEachLine
             out[from] = to
         }
+        return out
+    }
+
+    /**
+     * The learned capitals among user rows (word, display, votes), keyed by the lowercase word,
+     * for [load]'s cases. A row with no capital is left out.
+     */
+    fun learnedCases(rows: List<Triple<String, String?, Int>>): Map<String, LearnedCase> {
+        val out = HashMap<String, LearnedCase>()
+        for ((word, display, votes) in rows) if (display != null) out[word] = LearnedCase(display, votes)
         return out
     }
 
