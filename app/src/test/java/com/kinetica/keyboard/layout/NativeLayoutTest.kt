@@ -62,7 +62,7 @@ class NativeLayoutTest {
     @Test
     fun hebrewIsTheIsraeliStandard() = assertBoard(
         "native_he", "hebrew",
-        listOf("קראטוןםפ" to 0f, "שדגכעיחלךף" to 0f, "זסבהנמצתץ" to 0.5f),
+        listOf("קראטוןםפ" to 1f, "שדגכעיחלךף" to 0f, "זסבהנמצתץ" to 0f),
     )
 
     @Test
