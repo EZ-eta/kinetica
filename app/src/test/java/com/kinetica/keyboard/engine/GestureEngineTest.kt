@@ -102,6 +102,61 @@ class GestureEngineTest {
     }
 
     @Test
+    fun aRestingThumbCannotHideTheOtherThumbsCommittedSwipe() {
+        assertTrue(down(0, 'a', 0))
+        assertTrue(down(1, 'l', 10))
+        assertFalse(engine.hasCommittedSwipe())
+        val (x, y) = at('k')
+        engine.onPointerMove(1, x + 5f, y - 4f, 100)
+        assertFalse(engine.isSwipeCommitted(0))
+        assertTrue(engine.hasCommittedSwipe())
+        // Refusing a hold must not remove the resting letter's eventual token.
+        assertTrue(engine.isTracking(0))
+        up(0, 'a', 700)
+        assertEquals('a' - 'a', (tokens.single() as TapToken).code)
+        assertTrue(engine.hasCommittedSwipe())
+        up(1, 'k', 750)
+        assertFalse(engine.hasCommittedSwipe())
+    }
+
+    @Test
+    fun twoTappingThumbsDoNotSuppressHoldsOrLoseTheirLetters() {
+        assertTrue(down(0, 'a', 0))
+        assertTrue(down(1, 'l', 10))
+        val (x, y) = at('a')
+        engine.onPointerMove(0, x + 3f, y - 2f, 40)
+        assertFalse(engine.hasCommittedSwipe())
+        up(1, 'l', 70)
+        up(0, 'a', 90)
+        assertEquals(listOf('l' - 'a', 'a' - 'a'), tokens.map { (it as TapToken).code })
+        assertFalse(engine.hasCommittedSwipe())
+    }
+
+    @Test
+    fun aSwipeStaysCommittedAfterRetractingAndClearsOnCancellation() {
+        assertTrue(down(0, 'a', 0))
+        val (x, y) = at('s')
+        engine.onPointerMove(0, x, y, 50)
+        val (ax, ay) = at('a')
+        engine.onPointerMove(0, ax, ay, 100)
+        assertTrue(engine.hasCommittedSwipe())
+        engine.cancelPointer(0)
+        assertFalse(engine.hasCommittedSwipe())
+        assertTrue(down(0, 'l', 200))
+        assertFalse(engine.hasCommittedSwipe())
+    }
+
+    @Test
+    fun cancellingAllPointersClearsTheHoldSuppression() {
+        assertTrue(down(0, 'a', 0))
+        val (x, y) = at('s')
+        engine.onPointerMove(0, x, y, 50)
+        assertTrue(engine.hasCommittedSwipe())
+        engine.cancelAll()
+        assertFalse(engine.hasCommittedSwipe())
+    }
+
+    @Test
     fun aLandingNextToTheOtherThumbIsTracedWithItsDistance() {
         val lines = ArrayList<String>()
         DecodeTrace.sink = { lines.add(it) }

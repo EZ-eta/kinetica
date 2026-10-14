@@ -1124,7 +1124,9 @@ class KeyboardView @JvmOverloads constructor(
         val holdCapable = key != null &&
             (key.type == KeyType.MODE_SYMBOLS || key.alternates.isNotEmpty())
         // A chord candidate's own menu would open mid-chord and cancel the key.
-        if (holdCapable && chord == null && popup == null && pendingHoldPid == -1) {
+        if (holdCapable && chord == null && popup == null && pendingHoldPid == -1 &&
+            engine?.hasCommittedSwipe() != true
+        ) {
             scheduleHold(pid, keyIdx)
         }
         if (keyIdx != -1) {
@@ -1240,7 +1242,7 @@ class KeyboardView @JvmOverloads constructor(
         val pid = pendingHoldPid
         val keyIdx = pendingHoldKeyIdx
         cancelHold()
-        if (pid == -1 || keyIdx == -1) return
+        if (pid == -1 || keyIdx == -1 || engine?.hasCommittedSwipe() == true) return
         val l = layout ?: return
         if (keyIdx !in l.keys.indices) return
         val key = l.keys[keyIdx]
@@ -1292,9 +1294,6 @@ class KeyboardView @JvmOverloads constructor(
             }
             key.alternates.isNotEmpty() && (route == ROUTE_ENGINE || route == ROUTE_SPECIAL) -> {
                 if (route == ROUTE_ENGINE) {
-                    // Travel past the tap threshold cancels the hold timer, so a committed swipe
-                    // cannot get here; the check guards against event-order races.
-                    if (engine?.isSwipeCommitted(pid) == true) return
                     engine?.cancelPointer(pid)
                 }
                 routeByPointer[pid] = ROUTE_ALT_POPUP
@@ -1578,6 +1577,9 @@ class KeyboardView @JvmOverloads constructor(
                 }
             }
         }
+        // Check after every pointer (including history) has moved, not just the held finger.
+        // Only the timer is discarded: a resting letter still belongs to its engine stream.
+        if (e?.hasCommittedSwipe() == true) cancelHold()
     }
 
     /**
