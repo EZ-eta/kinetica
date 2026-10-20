@@ -39,6 +39,7 @@ object ActionRow {
         EditorAction.TIME,
         EditorAction.ENTER,
         EditorAction.COPY_LINE,
+        EditorAction.CLEAN_LINKS,
         EditorAction.TOGGLE_NEXT_WORD,
         EditorAction.TOGGLE_RECENT_WORDS,
         EditorAction.TOGGLE_NUMBER_ROW,
@@ -95,6 +96,7 @@ object ActionRow {
         EditorAction.TIME -> "◷"              // a clock face with one quarter marked
         EditorAction.ENTER -> "⏎"             // the return symbol
         EditorAction.COPY_LINE -> "≡"         // lines of text
+        EditorAction.CLEAN_LINKS -> "⚯"       // a link with its chain broken
         EditorAction.TOGGLE_NEXT_WORD -> "⇢"  // the word that comes next
         EditorAction.TOGGLE_RECENT_WORDS -> "☰" // rows of words
         EditorAction.TOGGLE_NUMBER_ROW -> "123" // not `#`, which a letter's list may hold as text
@@ -284,7 +286,7 @@ object ActionRow {
         EditorAction.UNDO, EditorAction.REDO, EditorAction.PASTE, EditorAction.COPY,
         EditorAction.CUT, EditorAction.SELECT_ALL, EditorAction.RETYPE, EditorAction.EXPANDIFY,
         EditorAction.DATE, EditorAction.TIME, EditorAction.ENTER, EditorAction.COPY_LINE,
-        EditorAction.TAB, EditorAction.ESCAPE, EditorAction.FORWARD_DELETE, EditorAction.HOME,
+        EditorAction.CLEAN_LINKS, EditorAction.TAB, EditorAction.ESCAPE, EditorAction.FORWARD_DELETE, EditorAction.HOME,
         EditorAction.END, EditorAction.ARROW_UP, EditorAction.ARROW_DOWN, EditorAction.ARROW_LEFT,
         EditorAction.ARROW_RIGHT, EditorAction.PAGE_UP, EditorAction.PAGE_DOWN,
         EditorAction.BACKSPACE,

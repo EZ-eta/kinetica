@@ -64,6 +64,28 @@ class LearnOnCommitTest {
     }
 
     @Test
+    fun anAutospaceCommitTypedOnIntoAnotherWordIsTakenBack() {
+        // `Fake` spaced automatically, the space taken back, then `CompanyName`: the commit of
+        // `Fake` was not a word the user wrote, so its count and its capital go back.
+        assertTrue(takesBackReopened("fake", "FakeCompanyName"))
+        // `car`, spaced, then `pet`.
+        assertTrue(takesBackReopened("car", "carpet"))
+        // An elision's piece: `al` spaced, then `tro`.
+        assertTrue(takesBackReopened("al", "altro"))
+    }
+
+    @Test
+    fun anAutospaceCommitCommittedAgainUnchangedStaysLearnedOnce() {
+        // The space deleted and put back: the word was meant, and learnsOnCommit already keeps
+        // the second commit from counting.
+        assertFalse(takesBackReopened("hello", "hello"))
+        assertFalse(takesBackReopened("fake", "Fake"))
+        // Nothing reopened, the ordinary commit, and nothing committed.
+        assertFalse(takesBackReopened(null, "hello"))
+        assertFalse(takesBackReopened("fake", ""))
+    }
+
+    @Test
     fun anAccentedWordMatchesItselfAndNotItsFoldedForm() {
         // The seed is the editor's own text, accents included (that divergence is
         // the shipped pattern), so a re-commit of "perché" matches. Its folded

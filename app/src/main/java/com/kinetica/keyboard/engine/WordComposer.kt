@@ -166,6 +166,21 @@ class WordComposer(
         requestDecode()
     }
 
+    /**
+     * Keeps the first [count] tokens, in the order the thumbs lifted, and decodes them again:
+     * backspace taking the last tap or swipe of the word back. Decoding is deterministic, so the
+     * bar comes back as it was before that gesture. At 0 the word is gone, as after [clear].
+     */
+    fun truncate(count: Int) {
+        if (count >= tokens.size) return
+        if (count <= 0) {
+            clear()
+            return
+        }
+        while (tokens.size > count) tokens.removeAt(tokens.size - 1)
+        requestDecode()
+    }
+
     fun literal(): String = buildLiteral(tokens)
 
     /** Word committed to the editor: becomes bigram context, buffer resets. */
@@ -238,6 +253,16 @@ class WordComposer(
         if (context.lastOrNull() == p) return
         context.clear()
         context.addLast(p)
+    }
+
+    /**
+     * Takes [word] back out of the context when it is the last commit: reopened to keep
+     * typing, it is the word in progress again, not the one before it. False when it is not.
+     */
+    fun reopenLastCommit(word: String): Boolean {
+        if (context.lastOrNull() != word.lowercase()) return false
+        context.removeLast()
+        return true
     }
 
     /** The correction strip swapped the last committed word. */

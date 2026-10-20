@@ -69,7 +69,8 @@ channel can install and update over the other.
   in a text size of your choice.
 - After a commit the bar becomes a correction strip: tap another word and it replaces the one just
   written, taking its learned weight with it.
-- Next-word suggestions while nothing is being typed (Typing, on).
+- Next-word suggestions while nothing is being typed (Typing, on). After a word, one to three of its
+  corrections stay on the left of the bar and the next words fill the rest (Typing, on).
 - Recent words: the last two words stay on the bar, each with the words it beat; tap one to swap it
   in (off by default). They have their own text size and a swipe direction to choose.
 - A tapped word with one stray or one missing letter is offered on the bar, never changed for you.
@@ -87,12 +88,20 @@ channel can install and update over the other.
 - Backspace to the end of a word to keep working on it with taps or swipes.
 - Slide along the spacebar to move the cursor, by letter or by word.
 - Slide left from backspace to mark words for deletion; slide back to keep them, lift to delete.
+  The distance per word can be set, and the slide can stop at punctuation, so a link goes a piece
+  at a time (Shortcuts and gestures > Swipes and slides).
+- A tap on backspace can take back the last tap or swipe of the word in progress (Typing, off).
 - Swipe shift up for `ABC`, right for `Abc`, down for `abc`, or hold it for the menu: on the word at
   the cursor or on selected text. The swipes are edge swipes like any other, so they can be changed.
+  A double tap on shift locks caps, at a sentence start too.
 - Enter searches, sends or goes where the app asks for it, and its label says which; hold it for a
   new line (Typing, on). In a chat box, *Hold enter to send* swaps the two (Typing, off).
-- Keys that fit the field: `@` on the comma in an email field, `/` in a web address, no capital at
-  their start (Typing, on). Number and phone fields can open on the number pad (Typing, off).
+- Keys that fit the field: `@` on the comma in an email field, `/` in a web address, `.com`, `.net`
+  and `.org` on the period in both, no capital at their start (Typing, on). Number and phone fields
+  can open on the number pad (Typing, off).
+- Clean links: tracking parameters like `utm_source`, `fbclid` or YouTube's `si` come out of a link,
+  as a shortcut action or on the keyboard's own paste (Typing, off). The rest of the link stays as
+  written.
 - A new field opens on the letters, wherever the last one was left (Typing, on).
 - Tidy spaces: never two spaces in a row and none before a closing quote (Typing > Spacing, off).
 - The marks that take back an automatic space are a list you can edit (Typing > Spacing > *No space
@@ -109,9 +118,10 @@ channel can install and update over the other.
 - Text expansions: a short trigger becomes longer text, fired by the Expand action. A trigger can
   have several targets, picked on the bar, and targets can chain. A capital in the trigger can be
   matched exactly, ignored, or carried into the text (`Andor` gives `And/or`), set on the Text
-  expansions screen.
+  expansions screen. A space inside a trigger is an error, with a button to remove it.
 - A chord, an edge swipe or an expansion can type text, run an action (paste, copy, undo, Tab, the
-  arrows, Home, End, Esc, forward delete, the date) or press Ctrl and a key (Ctrl+A, Ctrl+Del).
+  arrows, Home, End, Esc, forward delete, the date, clean links) or press Ctrl and a key (Ctrl+A,
+  Ctrl+Del).
 - Shortcuts on the bar when there is nothing to suggest, and in the `?123` hold menu; both sets are
   chosen and ordered in Typing > Suggestion bar. While the chords show, the menu sits on the
   spacebar so it covers none of them.
@@ -159,7 +169,8 @@ channel can install and update over the other.
   common one. Hold a suggestion and slide up or down to change its weight, one badge tier per step;
   slide past the lowest tier to block it.
 - A word you keep capitalizing yourself, a name or `GitHub`, comes out with its capital. Writing it
-  in lowercase over the capital talks it back out.
+  in lowercase over the capital takes it back. Long words you have taught it complete from their
+  first letters (`fakeco` offers `FakeCompanyName`).
 - Phrase learning (optional): which word you tend to type after which.
 - Dictionary: learned and blocked words per language, with search; import of an AOSP word list,
   merged on the phone.

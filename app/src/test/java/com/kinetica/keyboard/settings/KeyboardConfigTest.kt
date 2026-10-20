@@ -42,4 +42,12 @@ class KeyboardConfigTest {
         assertEquals(listOf(":"), KeyboardConfig.parseEnterAlternates(":"))
         assertEquals(listOf("(", ")"), KeyboardConfig.parseEnterAlternates("( )"))
     }
+
+    @Test
+    fun theBackspaceStepIsClampedToTheSlider() {
+        assertEquals(40f, MapPrefs.config().backspaceStepDp, 0f)
+        assertEquals(24f, MapPrefs.config(mapOf(Prefs.BACKSPACE_STEP_DP to 24)).backspaceStepDp, 0f)
+        assertEquals(20f, MapPrefs.config(mapOf(Prefs.BACKSPACE_STEP_DP to 3)).backspaceStepDp, 0f)
+        assertEquals(80f, MapPrefs.config(mapOf(Prefs.BACKSPACE_STEP_DP to 500)).backspaceStepDp, 0f)
+    }
 }

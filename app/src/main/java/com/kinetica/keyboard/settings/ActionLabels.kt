@@ -27,6 +27,7 @@ object ActionLabels {
         EditorAction.TIME -> R.string.action_time
         EditorAction.ENTER -> R.string.action_enter
         EditorAction.COPY_LINE -> R.string.action_copy_line
+        EditorAction.CLEAN_LINKS -> R.string.action_clean_links
         EditorAction.TOGGLE_NEXT_WORD -> R.string.action_toggle_next_word
         EditorAction.TOGGLE_RECENT_WORDS -> R.string.action_toggle_recent_words
         EditorAction.TOGGLE_NUMBER_ROW -> R.string.action_toggle_number_row
@@ -81,6 +82,7 @@ object ActionLabels {
         EditorAction.TIME -> R.string.notice_time
         EditorAction.ENTER -> R.string.notice_enter
         EditorAction.COPY_LINE -> R.string.notice_copy_line
+        EditorAction.CLEAN_LINKS -> R.string.notice_clean_links
         EditorAction.TAB -> R.string.notice_tab
         EditorAction.ESCAPE -> R.string.notice_escape
         EditorAction.FORWARD_DELETE -> R.string.notice_forward_delete

@@ -54,6 +54,42 @@ class LearnedCapitalsTest {
     }
 
     @Test
+    fun aCamelCaseWordVotesAtASentenceStart() {
+        // The first capital is the shift's, the inner ones are not: a company name written first
+        // in a message, or in an empty field, is the user's spelling.
+        assertEquals(CaseVote(1, "FakeCompanyName"), vote("FakeCompanyName", "fakecompanyname", before = ""))
+        assertEquals(CaseVote(1, "GitHub"), vote("GitHub", "github", before = "Done. "))
+        assertEquals(CaseVote(1, "iPhone"), vote("iPhone", "iphone", before = "\n"))
+        // Still only against the keyboard: the settled capital proposed and written votes nothing.
+        assertEquals(CaseVote.NONE, vote("FakeCompanyName", "FakeCompanyName", before = ""))
+    }
+
+    @Test
+    fun aTitleCaseWordAtASentenceStartDoesNot() {
+        assertEquals(CaseVote.NONE, vote("Fakecompanyname", "fakecompanyname", before = ""))
+        assertEquals(CaseVote.NONE, vote("NASA", "nasa", before = ""))
+        assertEquals(CaseVote.NONE, vote("I'm", "i'm", before = ""))
+        assertFalse(hasInnerCapital("Hello"))
+        assertFalse(hasInnerCapital("NASA"))
+        assertTrue(hasInnerCapital("FakeCompanyName"))
+        assertTrue(hasInnerCapital("iPhone"))
+    }
+
+    @Test
+    fun aVoteOfNothingNamesItsRule() {
+        assertEquals("sentence", vote("Dennis", "dennis", before = "").why)
+        assertEquals("unread", vote("Dennis", "dennis", before = null).why)
+        assertEquals("short", vote("A", "a").why)
+        assertEquals("caps", vote("NASA", "nasa").why)
+        assertEquals("auto", vote("I'm", "i'm", before = "so ").why)
+        assertEquals("held", vote("Haus", null, held = true, before = "das ", lang = "de").why)
+        assertEquals("proposed", vote("Dennis", "Dennis", learned = "Dennis").why)
+        assertEquals("lower", vote("mark", "mark").why)
+        // A vote carries no reason.
+        assertEquals("", vote("Dennis", "dennis").why)
+    }
+
+    @Test
     fun capitalsThatAreNotTheUsersChoiceSayNothing() {
         // The dictionary's own spellings: a German noun, and `Sie` beside `sie`.
         assertEquals(CaseVote.NONE, vote("Haus", null, held = true, before = "das ", lang = "de"))

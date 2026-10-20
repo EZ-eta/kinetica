@@ -6,6 +6,7 @@ import com.kinetica.keyboard.engine.KineticaConstants
 import com.kinetica.keyboard.ime.TriggerCase
 import com.kinetica.keyboard.ime.singleLetterDelayMs
 import com.kinetica.keyboard.keys.ActionRow
+import com.kinetica.keyboard.keys.DeleteSpan
 import com.kinetica.keyboard.keys.EdgeSwipeBindings
 import com.kinetica.keyboard.keys.SpacebarCursorController
 import com.kinetica.keyboard.layout.LandscapeArrangement
@@ -69,6 +70,12 @@ data class KeyboardConfig(
     val alternateSwipes: Boolean,
     /** Backspace slide stages single characters instead of whole words. */
     val backspaceCharSlide: Boolean,
+    /** Travel per staged word of the backspace slide; lower is faster. */
+    val backspaceStepDp: Float,
+    /** Backspace word slide stops at punctuation; see [Prefs.BACKSPACE_PUNCTUATION_STOPS]. */
+    val backspacePunctuationStops: Boolean,
+    /** A backspace tap takes the word's last gesture back; see [Prefs.BACKSPACE_UNDO]. */
+    val backspaceUndo: Boolean,
     /** Suggestion bar reserves its right edge for a retype button. */
     val retypeButton: Boolean,
     /** Width of that button in dp, clamped to BarMetrics' settable range. */
@@ -118,6 +125,8 @@ data class KeyboardConfig(
     val lettersOnNewField: Boolean,
     /** The comma key fits email and web-address fields. */
     val fieldKeys: Boolean,
+    /** The keyboard's paste cleans the links it pastes; see [Prefs.CLEAN_LINKS_ON_PASTE]. */
+    val cleanLinksOnPaste: Boolean,
     /** A number field opens on the number pad. */
     val numpadForNumbers: Boolean,
     /** Words per minute on the spacebar (TypingSpeed). */
@@ -162,6 +171,10 @@ data class KeyboardConfig(
     val menuActionOrder: List<String>,
     /** Next-word predictions in the idle bar. */
     val nextWord: Boolean,
+    /** After a commit, one correction zone beside the next words instead of the whole strip. */
+    val nextWordBeside: Boolean,
+    /** How many corrections stand beside the next words, 1 to [BESIDE_COUNT_MAX]. */
+    val nextWordBesideCount: Int,
     /** Recent words and their alternatives on a taller bar. */
     val recentWords: Boolean,
     /** Digits in their own row above the letters. */
@@ -293,6 +306,12 @@ data class KeyboardConfig(
             backspaceCharSlide = prefs.getBoolean(
                 Prefs.BACKSPACE_CHAR_SLIDE, Prefs.DEFAULT_BACKSPACE_CHAR_SLIDE,
             ),
+            backspaceStepDp = prefs.getInt(Prefs.BACKSPACE_STEP_DP, Prefs.DEFAULT_BACKSPACE_STEP_DP)
+                .coerceIn(DeleteSpan.MIN_WORD_STEP_DP, DeleteSpan.MAX_WORD_STEP_DP).toFloat(),
+            backspacePunctuationStops = prefs.getBoolean(
+                Prefs.BACKSPACE_PUNCTUATION_STOPS, Prefs.DEFAULT_BACKSPACE_PUNCTUATION_STOPS,
+            ),
+            backspaceUndo = prefs.getBoolean(Prefs.BACKSPACE_UNDO, Prefs.DEFAULT_BACKSPACE_UNDO),
             retypeButton = prefs.getBoolean(Prefs.RETYPE_BUTTON, Prefs.DEFAULT_RETYPE_BUTTON),
             sidePadDp = prefs.getInt(Prefs.SIDE_PAD_DP, Prefs.DEFAULT_SIDE_PAD_DP)
                 .coerceIn(0, LayoutTransforms.MAX_SIDE_PAD_DP),
@@ -340,6 +359,7 @@ data class KeyboardConfig(
                 Prefs.LETTERS_ON_NEW_FIELD, Prefs.DEFAULT_LETTERS_ON_NEW_FIELD,
             ),
             fieldKeys = prefs.getBoolean(Prefs.FIELD_KEYS, Prefs.DEFAULT_FIELD_KEYS),
+            cleanLinksOnPaste = prefs.getBoolean(Prefs.CLEAN_LINKS_ON_PASTE, Prefs.DEFAULT_CLEAN_LINKS_ON_PASTE),
             numpadForNumbers = prefs.getBoolean(Prefs.NUMPAD_FOR_NUMBERS, Prefs.DEFAULT_NUMPAD_FOR_NUMBERS),
             typingSpeed = prefs.getBoolean(Prefs.TYPING_SPEED, Prefs.DEFAULT_TYPING_SPEED),
             noPrimary = prefs.getBoolean(Prefs.NO_PRIMARY, Prefs.DEFAULT_NO_PRIMARY),
@@ -383,6 +403,10 @@ data class KeyboardConfig(
             barActionOrder = ActionRow.decodeOrder(prefs.getString(Prefs.BAR_ACTIONS_ORDER, null)),
             menuActionOrder = ActionRow.decodeOrder(prefs.getString(Prefs.MENU_ACTIONS_ORDER, null)),
             nextWord = prefs.getBoolean(Prefs.NEXT_WORD, Prefs.DEFAULT_NEXT_WORD),
+            nextWordBeside = prefs.getBoolean(Prefs.NEXT_WORD_BESIDE, Prefs.DEFAULT_NEXT_WORD_BESIDE),
+            nextWordBesideCount = parseBesideCount(
+                prefs.getString(Prefs.NEXT_WORD_BESIDE_COUNT, Prefs.DEFAULT_NEXT_WORD_BESIDE_COUNT),
+            ),
             recentWords = prefs.getBoolean(Prefs.RECENT_WORDS, Prefs.DEFAULT_RECENT_WORDS),
             numberRow = prefs.getBoolean(Prefs.NUMBER_ROW, Prefs.DEFAULT_NUMBER_ROW),
             enabledLanguages = enabledLanguages(prefs),
@@ -481,6 +505,14 @@ data class KeyboardConfig(
         val LIST_DIGITS: List<Char> = "1234567890".toList()
 
         private val DEFAULT_ENTER_ALTERNATES_LIST = listOf("?", "!", ",")
+
+        /** Most corrections beside the next words: past three the next words leave the first page. */
+        const val BESIDE_COUNT_MAX = 3
+
+        /** The stored count of corrections beside the next words; anything unreadable is the default. */
+        fun parseBesideCount(raw: String?): Int =
+            raw?.trim()?.toIntOrNull()?.takeIf { it in 1..BESIDE_COUNT_MAX }
+                ?: Prefs.DEFAULT_NEXT_WORD_BESIDE_COUNT.toInt()
 
         /**
          * Space-separated symbols for enter's slide-up popup; the first is the primary (committed on

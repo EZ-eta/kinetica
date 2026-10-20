@@ -82,6 +82,12 @@ enum class EditorAction(val output: String) {
     COPY_LINE("${ACTION_PREFIX}copy_line"),
 
     /**
+     * Take the tracking parameters out of the links in the selection, or out of the link just
+     * before the cursor (#26). Done by the keyboard, since the app has no such command.
+     */
+    CLEAN_LINKS("${ACTION_PREFIX}clean_links"),
+
+    /**
      * Settings flipped from the keyboard itself: the idle bar's predictions, the recent words, the
      * numbers row, tidy spaces and the typing speed.
      */

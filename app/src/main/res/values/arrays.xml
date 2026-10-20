@@ -235,6 +235,16 @@
         <item>Medium (+5)</item>
         <item>Large (+10)</item>
     </string-array>
+    <string-array name="beside_count_entries">
+        <item>One word</item>
+        <item>Two words</item>
+        <item>Three words</item>
+    </string-array>
+    <string-array name="beside_count_values" translatable="false">
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+    </string-array>
     <string-array name="reinforce_values" translatable="false">
         <item>small</item>
         <item>medium</item>

@@ -31,6 +31,7 @@ import com.kinetica.keyboard.layout.LayoutTransforms
 import com.kinetica.keyboard.engine.models.StreamId
 import com.kinetica.keyboard.keys.ActionRow
 import com.kinetica.keyboard.keys.BackspaceController
+import com.kinetica.keyboard.keys.DeleteSpan
 import com.kinetica.keyboard.keys.ChordTrigger
 import com.kinetica.keyboard.keys.EdgeSwipeBinding
 import com.kinetica.keyboard.keys.EdgeSwipeBindings
@@ -68,15 +69,16 @@ class KeyboardView @JvmOverloads constructor(
         /** Spacebar slide: one cursor step left (-1) or right (+1), a whole word when [byWord]. */
         fun onCursorMove(direction: Int, byWord: Boolean)
 
-        fun onDeleteChar()
+        /** One backspace: [tap] true for a tap, false for a tick of the hold's repeat. */
+        fun onDeleteChar(tap: Boolean)
 
         /**
          * Backspace slide staged [units] units for deletion (0 = retracted to
-         * nothing), where a unit is a single character when [chars] is true and a
-         * whole word otherwise. Nothing is deleted yet; the service computes the
-         * span and feeds the preview back via [setDeletePreview].
+         * nothing), each a character, a word or a piece of one as [granularity] says.
+         * Nothing is deleted yet; the service computes the span and feeds the preview
+         * back via [setDeletePreview].
          */
-        fun onStageDelete(units: Int, chars: Boolean)
+        fun onStageDelete(units: Int, granularity: DeleteSpan.Granularity)
 
         /** Backspace slide lifted with a staged span: commit its deletion. */
         fun onCommitStagedDelete()
@@ -152,6 +154,16 @@ class KeyboardView @JvmOverloads constructor(
     var backspaceCharSlide: Boolean
         get() = backspaceController.charMode
         set(value) { backspaceController.charMode = value }
+
+    /** Backspace word slide stops at punctuation. */
+    var backspacePunctuationStops: Boolean
+        get() = backspaceController.stopsAtPunctuation
+        set(value) { backspaceController.stopsAtPunctuation = value }
+
+    /** Travel per staged word of the backspace slide; lower is faster. */
+    var backspaceStepDp: Float
+        get() = backspaceController.wordStepDp
+        set(value) { backspaceController.wordStepDp = value }
 
     /** Travel that advances the spacebar's cursor slide by one step; lower is faster. */
     var spacebarStepDp: Float
@@ -354,8 +366,8 @@ class KeyboardView @JvmOverloads constructor(
     private val backspaceController = BackspaceController(
         density,
         Handler(Looper.getMainLooper()),
-        onDeleteChar = { listener?.onDeleteChar() },
-        onStageUnits = { units, chars -> listener?.onStageDelete(units, chars) },
+        onDeleteChar = { tap -> listener?.onDeleteChar(tap) },
+        onStageUnits = { units, granularity -> listener?.onStageDelete(units, granularity) },
         onCommitStaged = { listener?.onCommitStagedDelete() },
     )
     private var spacePointer = -1
@@ -403,6 +415,9 @@ class KeyboardView @JvmOverloads constructor(
     // EdgeSwipeDetector: a flick off the top row is short and curves back before the lift.
     private val peakDxByPointer = FloatArray(MAX_POINTERS)
     private val peakDyByPointer = FloatArray(MAX_POINTERS)
+    // Whether this engine pointer has been over a numbers-row digit. Read only by
+    // EdgeSwipeDetector: a glide through the digits and back down is a word, not an up-flick.
+    private val overNumberRowByPointer = BooleanArray(MAX_POINTERS)
     private val downTimeByPointer = LongArray(MAX_POINTERS)
     private val pressedKeys = LinkedHashSet<Int>()
     // Whether another stream was down at any time during this pointer's: a resting finger is
@@ -1052,6 +1067,7 @@ class KeyboardView @JvmOverloads constructor(
         downYByPointer[pid] = y
         peakDxByPointer[pid] = 0f
         peakDyByPointer[pid] = 0f
+        overNumberRowByPointer[pid] = false
         downTimeByPointer[pid] = t
         val key = if (keyIdx != -1) l.keys[keyIdx] else null
         overlappedByPointer[pid] = false
@@ -1169,6 +1185,7 @@ class KeyboardView @JvmOverloads constructor(
         downYByPointer[pid] = y
         peakDxByPointer[pid] = 0f
         peakDyByPointer[pid] = 0f
+        overNumberRowByPointer[pid] = false
         downTimeByPointer[pid] = t
         digitDuringSwipe[pid] = false
         markOverlap(pid)
@@ -1523,6 +1540,7 @@ class KeyboardView @JvmOverloads constructor(
                     val hx = ev.getHistoricalX(p, h)
                     val hy = ev.getHistoricalY(p, h)
                     val ht = ev.getHistoricalEventTime(h)
+                    trackNumberRow(pid, hx, hy)
                     e.onPointerMove(pid, hx, hy, ht)
                     addTrailPoint(e, pid, hx, hy, ht)
                 }
@@ -1585,6 +1603,7 @@ class KeyboardView @JvmOverloads constructor(
      * one pair of values serves all four directions; compared squared, so the move path takes no roots.
      */
     private fun trackPeak(pid: Int, x: Float, y: Float) {
+        trackNumberRow(pid, x, y)
         val dx = x - downXByPointer[pid]
         val dy = y - downYByPointer[pid]
         val px = peakDxByPointer[pid]
@@ -1593,6 +1612,16 @@ class KeyboardView @JvmOverloads constructor(
             peakDxByPointer[pid] = dx
             peakDyByPointer[pid] = dy
         }
+    }
+
+    private fun trackNumberRow(pid: Int, x: Float, y: Float) {
+        if (overNumberRowByPointer[pid] || routeByPointer[pid] != ROUTE_ENGINE) return
+        // The digits are above the letter the pointer went down on; most samples stop here.
+        val down = keyRects.getOrNull(downKeyByPointer[pid]) ?: return
+        if (y >= down.top) return
+        val idx = keyIndexAt(x, y)
+        val l = layout ?: return
+        overNumberRowByPointer[pid] = idx in l.keys.indices && LayoutMutations.isNumberRowKey(l.keys[idx])
     }
 
     private fun addTrailPoint(e: GestureEngine, pid: Int, x: Float, y: Float, t: Long) {
@@ -1609,12 +1638,20 @@ class KeyboardView @JvmOverloads constructor(
         val dx = x - downXByPointer[pid]
         val dy = y - downYByPointer[pid]
         trackPeak(pid, x, y)
+        // Back below the digits, read from the down key's top so a lift in a key gap counts.
+        val returnedFromNumberRow = overNumberRowByPointer[pid] &&
+            keyRects.getOrNull(downKeyByPointer[pid])?.let { y >= it.top } == true
+        if (returnedFromNumberRow && routeByPointer[pid] == ROUTE_ENGINE) {
+            // The lift sample can reach one more letter, and the detector counts letters. The
+            // engine drops the repeat of this sample in onPointerUp.
+            engine?.onPointerMove(pid, x, y, t)
+        }
         val shortcut = key?.let {
             // Read before the stream is cancelled or finished below; after that the engine no
             // longer knows where this pointer has been.
             EdgeSwipeDetector.detect(
                 it, dx, dy, peakDxByPointer[pid], peakDyByPointer[pid], density,
-                edgeSwipeBindings, engine?.contactCount(pid) ?: 1,
+                edgeSwipeBindings, engine?.contactCount(pid) ?: 1, returnedFromNumberRow,
             )
         }
 

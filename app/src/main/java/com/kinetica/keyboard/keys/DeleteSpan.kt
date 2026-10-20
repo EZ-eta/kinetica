@@ -9,15 +9,26 @@ package com.kinetica.keyboard.keys
  */
 object DeleteSpan {
 
+    /** What one staged unit is: a character, a word, or a word cut at punctuation. */
+    enum class Granularity { CHARS, WORDS, PIECES }
+
+    /** A word's step as shipped, and the setting's bounds. */
+    const val WORD_STEP_DP = 40
+    const val MIN_WORD_STEP_DP = 20
+    const val MAX_WORD_STEP_DP = 80
+
     /**
-     * Leftward travel, in dp, that stages one more unit.
+     * Leftward travel, in dp, that stages one more unit, for a word step of [wordStepDp].
      *
-     * A character's step is smaller than a word's, but not proportionally. It stays above the
-     * touch slop at every density, so a staged count is reached by intent and not by hand
-     * tremor, and a full keyboard width spans a long word, not a sentence. Ten characters cost
-     * 180dp, about the travel of 4-5 words.
+     * A character's step is smaller than a word's, but not proportionally: 18dp at the shipped
+     * 40. It never drops under 16dp, twice the touch slop, so a staged count is reached by intent
+     * and not by hand tremor, and a full keyboard width spans a long word, not a sentence.
      */
-    fun slideDpPerUnit(charMode: Boolean): Float = if (charMode) 18f else 40f
+    fun slideDpPerUnit(charMode: Boolean, wordStepDp: Float = WORD_STEP_DP.toFloat()): Float =
+        if (charMode) (wordStepDp * CHAR_STEP_SHARE).coerceAtLeast(MIN_CHAR_STEP_DP) else wordStepDp
+
+    private const val CHAR_STEP_SHARE = 0.45f
+    private const val MIN_CHAR_STEP_DP = 16f
 
     /**
      * Characters a staged slide of [units] covers when the editor already holds a selection of
@@ -27,14 +38,18 @@ object DeleteSpan {
      * thing, so one step removes it and further steps continue into [before] (the text preceding
      * the selection start). With no selection this is the plain word or character walk.
      */
-    fun staged(selectionLength: Int, before: CharSequence, units: Int, charMode: Boolean): Int {
+    fun staged(selectionLength: Int, before: CharSequence, units: Int, granularity: Granularity): Int {
         if (units <= 0) return 0
-        if (selectionLength <= 0) {
-            return if (charMode) chars(before, units) else words(before, units)
-        }
-        val rest = units - 1
-        return selectionLength + if (charMode) chars(before, rest) else words(before, rest)
+        if (selectionLength <= 0) return walk(before, units, granularity)
+        return selectionLength + walk(before, units - 1, granularity)
     }
+
+    private fun walk(text: CharSequence, units: Int, granularity: Granularity): Int =
+        when (granularity) {
+            Granularity.CHARS -> chars(text, units)
+            Granularity.WORDS -> words(text, units)
+            Granularity.PIECES -> pieces(text, units)
+        }
 
     /**
      * Length of the tail of [text] holding the last [units] whitespace-delimited
@@ -51,6 +66,41 @@ object DeleteSpan {
             n++
         }
         return text.length - i
+    }
+
+    /**
+     * Length of the tail of [text] holding the last [units] pieces: a word cut at punctuation,
+     * so `example.com/path` goes `path`, `com/`, `example.`. Each piece keeps the punctuation
+     * and whitespace after it, as [words] does, and the marks that open a word, so prose still
+     * goes `word, ` or `"word" ` in one step.
+     *
+     * Letters, digits and combining marks make a piece; everything else that is not whitespace
+     * cuts one. A surrogate pair is never split: both halves are on the same side of that line.
+     */
+    fun pieces(text: CharSequence, units: Int): Int {
+        if (units <= 0) return 0
+        var i = text.length
+        var n = 0
+        while (n < units && i > 0) {
+            while (i > 0 && text[i - 1].isWhitespace()) i--
+            while (i > 0 && isMark(text[i - 1])) i--
+            while (i > 0 && isPieceChar(text[i - 1])) i--
+            var open = i
+            while (open > 0 && isMark(text[open - 1])) open--
+            if (open == 0 || text[open - 1].isWhitespace()) i = open
+            n++
+        }
+        return text.length - i
+    }
+
+    private fun isMark(c: Char): Boolean = !c.isWhitespace() && !isPieceChar(c)
+
+    private fun isPieceChar(c: Char): Boolean = c.isLetterOrDigit() || when (Character.getType(c)) {
+        Character.NON_SPACING_MARK.toInt(),
+        Character.COMBINING_SPACING_MARK.toInt(),
+        Character.ENCLOSING_MARK.toInt(),
+        -> true
+        else -> false
     }
 
     /**

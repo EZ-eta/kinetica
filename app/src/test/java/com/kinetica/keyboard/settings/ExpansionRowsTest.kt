@@ -3,8 +3,7 @@ package com.kinetica.keyboard.settings
 import com.kinetica.keyboard.data.Expansion
 import com.kinetica.keyboard.ime.MAX_TRIGGER_CHARS
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 /**
@@ -50,13 +49,15 @@ class ExpansionRowsTest {
         assertEquals(4, ExpansionRows.filtered(rows(), "   ").size)
     }
 
+    private fun problem(raw: String) = ExpansionRows.triggerProblem(raw, MAX_TRIGGER_CHARS)
+
     @Test
     fun aTriggerWithWhitespaceIsRefused() {
         // The cursor walk stops at whitespace, so such a trigger could never fire.
-        assertFalse(ExpansionRows.isValidTrigger("two words", MAX_TRIGGER_CHARS))
-        assertFalse(ExpansionRows.isValidTrigger("a\tb", MAX_TRIGGER_CHARS))
-        assertFalse(ExpansionRows.isValidTrigger("", MAX_TRIGGER_CHARS))
-        assertFalse(ExpansionRows.isValidTrigger("x".repeat(MAX_TRIGGER_CHARS + 1), MAX_TRIGGER_CHARS))
+        assertEquals(ExpansionRows.TriggerProblem.SPACES, problem("two words"))
+        assertEquals(ExpansionRows.TriggerProblem.SPACES, problem("a\tb"))
+        assertEquals(ExpansionRows.TriggerProblem.BLANK, problem(""))
+        assertEquals(ExpansionRows.TriggerProblem.TOO_LONG, problem("x".repeat(MAX_TRIGGER_CHARS + 1)))
     }
 
     @Test
@@ -64,19 +65,43 @@ class ExpansionRowsTest {
         // #19: the automatic space after a typed trigger used to refuse the save with a toast.
         assertEquals("degc", ExpansionRows.cleanTrigger("degc "))
         assertEquals("andor", ExpansionRows.cleanTrigger(" and\tor\n"))
-        assertTrue(ExpansionRows.isValidTrigger(ExpansionRows.cleanTrigger("degc "), MAX_TRIGGER_CHARS))
+        assertNull(problem(ExpansionRows.cleanTrigger("degc ")))
         assertEquals("^^", ExpansionRows.cleanTrigger("^^"))
+        // Trimmed on save, with no button press: the space at either end is the keyboard's.
+        assertNull(problem("degc "))
+        assertNull(problem(" degc"))
+        assertEquals("degc", ExpansionRows.savedTrigger("degc "))
+        assertNull(problem("x".repeat(MAX_TRIGGER_CHARS) + " "))
+    }
+
+    @Test
+    fun aSpaceInsideIsAnErrorUntilRemoved() {
+        // #19: a space typed inside was removed without a word, giving a trigger the user never
+        // typed. It is now an error, and the remove-spaces button fixes the field.
+        assertEquals(ExpansionRows.TriggerProblem.SPACES, problem("deg c"))
+        assertEquals(ExpansionRows.TriggerProblem.SPACES, problem(" deg c "))
+        assertEquals("degc", ExpansionRows.cleanTrigger(" deg c "))
+        assertNull(problem(ExpansionRows.cleanTrigger(" deg c ")))
+    }
+
+    @Test
+    fun spacesAreReportedBeforeLength() {
+        // Removing them may be all a long trigger needs, so the editor names them first.
+        val long = "x ".repeat(MAX_TRIGGER_CHARS)
+        assertEquals(ExpansionRows.TriggerProblem.SPACES, problem(long))
+        assertNull(problem(ExpansionRows.cleanTrigger(long)))
     }
 
     @Test
     fun aTriggerThatIsOnlySpaceIsStillBlank() {
-        assertFalse(ExpansionRows.isValidTrigger(ExpansionRows.cleanTrigger("   "), MAX_TRIGGER_CHARS))
+        assertEquals(ExpansionRows.TriggerProblem.BLANK, problem(ExpansionRows.cleanTrigger("   ")))
+        assertEquals(ExpansionRows.TriggerProblem.BLANK, problem("   "))
     }
 
     @Test
     fun theReportersOwnTriggersAreAllValid() {
         for (t in listOf("x", "vv", "^^", ".", "(-.-)'", "Laziness")) {
-            assertTrue(t, ExpansionRows.isValidTrigger(t, MAX_TRIGGER_CHARS))
+            assertNull(t, problem(t))
         }
     }
 

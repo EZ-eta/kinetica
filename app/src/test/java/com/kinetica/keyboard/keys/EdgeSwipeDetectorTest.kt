@@ -3,6 +3,8 @@ package com.kinetica.keyboard.keys
 import com.kinetica.keyboard.keys.EdgeSwipeBinding.Direction
 import com.kinetica.keyboard.layout.Key
 import com.kinetica.keyboard.layout.KeyType
+import com.kinetica.keyboard.layout.KeyboardLayout
+import com.kinetica.keyboard.layout.LayoutMutations
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -43,6 +45,46 @@ class EdgeSwipeDetectorTest {
         py: Float = dy,
         contacts: Int = 1,
     ) = EdgeSwipeDetector.detect(key, dx, dy, px, py, 1f, bindings, contacts)
+
+    // ---- a glide through the numbers row and back down ---------------------
+
+    private val numbered = LayoutMutations.withNumberRow(KeyboardLayout("probe", "en_US", listOf(y, b)))
+    private val numberedY = numbered.keys.first { it.id == "y" }
+    private val implicitOnly = EdgeSwipeBindings.withImplicitAlternates(numbered, EdgeSwipeBindings(emptyList()))
+
+    private fun glide(
+        dx: Float, dy: Float, px: Float = dx, py: Float = dy,
+        contacts: Int = 2, returned: Boolean = true,
+        active: EdgeSwipeBindings = implicitOnly,
+    ) = EdgeSwipeDetector.detect(numberedY, dx, dy, px, py, 1f, active, contacts, returned)
+
+    @Test
+    fun aGlideBackAcrossLettersCannotFireOnItsUpwardPeak() {
+        assertEquals("6", glide(22f, -14f, 6f, -38f, returned = false))
+        assertNull(glide(22f, -14f, 6f, -38f))
+    }
+
+    @Test
+    fun aGlideBackAcrossLettersCannotFireOnAnUpwardLiftEither() {
+        assertEquals("6", glide(2f, -32f, 4f, -80f, returned = false))
+        assertNull(glide(2f, -32f, 4f, -80f))
+    }
+
+    @Test
+    fun aSingleLetterFlickStillFiresWithTheNumbersRow() {
+        assertEquals("6", glide(2f, -40f, contacts = 1, returned = false))
+        assertEquals("6", glide(22f, -14f, 6f, -38f, contacts = 1))
+        assertEquals("6", glide(1f, -18f, 2f, -34f, contacts = 1))
+        // Lifted up among the digits: the flick it looks like.
+        assertEquals("6", glide(2f, -40f, contacts = 2, returned = false))
+    }
+
+    @Test
+    fun anUpBindingTheUserSetStillFiresOnAGlide() {
+        val explicit = EdgeSwipeBindings.withImplicitAlternates(numbered, bindings)
+        assertEquals("6", glide(22f, -14f, 6f, -38f, active = explicit))
+        assertEquals("6", glide(2f, -32f, 4f, -80f, active = explicit))
+    }
 
     @Test
     fun aCleanUpFlickStillFires() {

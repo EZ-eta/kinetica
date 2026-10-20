@@ -59,6 +59,27 @@ class WordPredictor(
     /** Commit count for [word], 0 when never committed. */
     fun personalCount(word: String): Int = personalCounts[word.lowercase()] ?: 0
 
+    // The learned words a completion cannot reach under COMPLETION_MAX_EXTRA, as letter codes,
+    // and the size of the count map they were read from. Decode thread only. Read again when the
+    // map grows; a word reaches the trie only through a load, which builds a new predictor.
+    private var longLearned: List<IntArray> = emptyList()
+    private var longLearnedFrom = -1
+
+    private fun longLearnedWords(): List<IntArray> {
+        val size = personalCounts.size
+        if (size == longLearnedFrom) return longLearned
+        val reach = KineticaConstants.COMPLETION_MIN_PREFIX + KineticaConstants.COMPLETION_MAX_EXTRA
+        val out = ArrayList<IntArray>()
+        for ((word, count) in personalCounts) {
+            if (count < KineticaConstants.PERSONAL_MERGE_MIN_COUNT) continue
+            val codes = alphabet.encode(AccentFolder.fold(word)) ?: continue
+            if (codes.size > reach && codes.size <= KineticaConstants.MAX_WORD_LEN) out.add(codes)
+        }
+        longLearned = out
+        longLearnedFrom = size
+        return out
+    }
+
     /**
      * The boost [word]'s commit count earns at a perfect fit. A candidate
      * receives this passed through [KineticaConstants.appliedBoost], which
@@ -1249,7 +1270,10 @@ class WordPredictor(
             }
             if (ti == pattern.size) {
                 if (depth > 0 && trie.isWord(node)) emit(node, depth, tapPen, contactKeep)
-                if (completesPrefix) completeFrom(node, depth, extra = 0, tapPen = tapPen, contactKeep = contactKeep)
+                if (completesPrefix) {
+                    completeFrom(node, depth, extra = 0, tapPen = tapPen, contactKeep = contactKeep)
+                    completeLearned(node, depth, tapPen, contactKeep)
+                }
                 // The last letter was never tapped.
                 if (editsLeft > 0 && depth > 0 && depth < KineticaConstants.MAX_WORD_LEN) {
                     val first = trie.firstChild(node)
@@ -1715,6 +1739,40 @@ class WordPredictor(
                 }
                 completeFrom(child, depth + 1, extra + 1, tapPen, contactKeep)
             }
+        }
+
+        /**
+         * The learned words [completeFrom] stops short of, charged as it charges, a letter at a
+         * time. A word typed again and again is worth offering from its first letters however
+         * long it is: `fakeco` for `FakeCompanyName`.
+         */
+        private fun completeLearned(node: Int, depth: Int, tapPen: Float, contactKeep: Float) {
+            for (codes in longLearnedWords()) {
+                if (passExhausted()) return
+                val extra = codes.size - depth
+                if (extra <= KineticaConstants.COMPLETION_MAX_EXTRA) continue
+                if (!sharesLetters(codes, depth)) continue
+                var cur = node
+                var i = depth
+                while (i < codes.size && cur != -1) {
+                    cur = trie.child(cur, codes[i])
+                    letters[i] = codes[i]
+                    i++
+                }
+                if (cur == -1 || !trie.isWord(cur)) continue
+                emit(
+                    cur, codes.size,
+                    tapPen + KineticaConstants.COMPLETION_PENALTY_PER_LETTER * extra,
+                    contactKeep,
+                    completion = true,
+                )
+            }
+        }
+
+        /** Whether [codes] starts with the [depth] letters this branch has spelled. */
+        private fun sharesLetters(codes: IntArray, depth: Int): Boolean {
+            for (i in 0 until depth) if (codes[i] != letters[i]) return false
+            return true
         }
 
         private fun emit(

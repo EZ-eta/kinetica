@@ -5,7 +5,7 @@ import android.view.inputmethod.EditorInfo
 
 /**
  * What a field holds, as far as its keys go: an email address or a web address wants a key the
- * comma can give up, and a number field may want the number pad.
+ * comma can give up and domain endings on the period, and a number field may want the number pad.
  */
 enum class FieldKind {
     TEXT, EMAIL, URL, NUMERIC;
@@ -17,6 +17,20 @@ enum class FieldKind {
             URL -> "/"
             else -> null
         }
+
+    /**
+     * Endings the period key's menu opens on in this kind of field. An address ends in one, and
+     * there is no autospace in either kind, so a cell writes straight onto the name before it.
+     */
+    val domainEndings: List<String>
+        get() = when (this) {
+            EMAIL, URL -> DOMAIN_ENDINGS
+            else -> emptyList()
+        }
+
+    private companion object {
+        val DOMAIN_ENDINGS = listOf(".com", ".net", ".org")
+    }
 }
 
 /**

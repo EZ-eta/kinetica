@@ -198,6 +198,25 @@ class RealDictionaryTest {
     }
 
     @Test
+    fun learnedCompletionLatencyIsBounded() {
+        // The learned-word reach past COMPLETION_MAX_EXTRA, at its worst: every long word of the
+        // list learned, each too long for the cap, on the "co" prefix that fans out the most.
+        val p = assetPath("en_wordlist.txt")
+        val trie = loadTrie()
+        val long = Files.readAllLines(p).map { it.substringBefore('\t') }
+            .filter { it.length > 10 && it.all { c -> c in 'a'..'z' } }
+        val learned = (long.filter { it.startsWith("co") } + long).distinct().take(5_000).associateWith { 3 }
+        val g = TestData.qwertyGeometry()
+        val predictor = WordPredictor(trie, BigramTable.EMPTY, g, personalCounts = learned)
+        val tokens = listOf(TestData.tap('c', g, 0), TestData.tap('o', g, 100))
+        predictor.decode(tokens, emptyList()) // warmup
+        val t0 = System.nanoTime()
+        repeat(20) { predictor.decode(tokens, emptyList()) }
+        val perDecodeMs = (System.nanoTime() - t0) / 20 / 1_000_000.0
+        assertTrue("learned completion decode took $perDecodeMs ms", perDecodeMs < 100.0)
+    }
+
+    @Test
     fun multiAnchorDecodeLatencyIsBounded() {
         // Worst-case merge fan-out: a swipe carrying two cross-stream anchors
         // emits the multi-anchor interleave in three trim variants on top of

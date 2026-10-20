@@ -73,7 +73,7 @@ object AlphaLayouts {
         // A field-fitting key only stands in for a comma the user kept: a comma they removed or
         // repurposed stays as they set it. It goes through the custom character's path, so `,`
         // stays first in the key's menu and the period is untouched.
-        val fieldChar = field.commaChar.takeIf { config.fieldKeys && config.commaMode == KEEP_COMMA }
+        val fieldChar = field.commaChar.takeIf { config.fieldKeys && config.commaMode == KEEP_MODE }
         if (fieldChar != null) {
             l = LayoutMutations.withCommaKey(l, "char", fieldChar)
             if (field == FieldKind.URL) l = LayoutMutations.withCommaAlternateAfterComma(l, ":")
@@ -83,6 +83,10 @@ object AlphaLayouts {
         // After the comma, so removing both keys is defined: the comma hands its emoji
         // alternate to the period, which has nowhere left to pass it.
         l = LayoutMutations.withPeriodKey(l, config.periodMode, config.periodCustom)
+        // The same rule for the period: its menu opens on domain endings only where it was kept.
+        if (config.fieldKeys && config.periodMode == KEEP_MODE) {
+            l = LayoutMutations.withPeriodAlternatesFirst(l, field.domainEndings)
+        }
         // Last: it moves every key, and the mutations above find keys by row.
         if (config.numberRow) {
             l = LayoutMutations.withNumberRow(l)
@@ -97,5 +101,5 @@ object AlphaLayouts {
      */
     private fun cell(entry: String): String = ActionRow.glyphForToken(entry) ?: entry
 
-    private const val KEEP_COMMA = "keep"
+    private const val KEEP_MODE = "keep"
 }

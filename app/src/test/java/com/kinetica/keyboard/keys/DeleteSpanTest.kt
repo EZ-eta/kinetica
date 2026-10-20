@@ -1,5 +1,6 @@
 package com.kinetica.keyboard.keys
 
+import com.kinetica.keyboard.keys.DeleteSpan.Granularity
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -84,18 +85,18 @@ class DeleteSpanTest {
         // selection = 5. One step takes the selection and nothing else, in either
         // mode, because the user already picked it out as one thing.
         val before = "hello "
-        assertEquals(5, DeleteSpan.staged(5, before, 1, charMode = false))
-        assertEquals(5, DeleteSpan.staged(5, before, 1, charMode = true))
+        assertEquals(5, DeleteSpan.staged(5, before, 1, Granularity.WORDS))
+        assertEquals(5, DeleteSpan.staged(5, before, 1, Granularity.CHARS))
     }
 
     @Test
     fun furtherStepsContinueIntoTheTextBeforeTheSelection() {
         val before = "hello "
         // Word mode: the selection, then "hello " as one word with its space.
-        assertEquals(5 + 6, DeleteSpan.staged(5, before, 2, charMode = false))
+        assertEquals(5 + 6, DeleteSpan.staged(5, before, 2, Granularity.WORDS))
         // Char mode: the selection, then one character of "hello " at a time.
-        assertEquals(5 + 1, DeleteSpan.staged(5, before, 2, charMode = true))
-        assertEquals(5 + 2, DeleteSpan.staged(5, before, 3, charMode = true))
+        assertEquals(5 + 1, DeleteSpan.staged(5, before, 2, Granularity.CHARS))
+        assertEquals(5 + 2, DeleteSpan.staged(5, before, 3, Granularity.CHARS))
     }
 
     @Test
@@ -104,21 +105,22 @@ class DeleteSpanTest {
         // counts included.
         val t = "hello world, again"
         for (units in 0..4) {
-            assertEquals(DeleteSpan.words(t, units), DeleteSpan.staged(0, t, units, false))
-            assertEquals(DeleteSpan.chars(t, units), DeleteSpan.staged(0, t, units, true))
+            assertEquals(DeleteSpan.words(t, units), DeleteSpan.staged(0, t, units, Granularity.WORDS))
+            assertEquals(DeleteSpan.chars(t, units), DeleteSpan.staged(0, t, units, Granularity.CHARS))
+            assertEquals(DeleteSpan.pieces(t, units), DeleteSpan.staged(0, t, units, Granularity.PIECES))
         }
-        assertEquals(0, DeleteSpan.staged(0, t, -1, false))
+        assertEquals(0, DeleteSpan.staged(0, t, -1, Granularity.WORDS))
     }
 
     @Test
     fun aSelectionAtTheStartOfTheFieldCannotOverrun() {
         // Nothing before it, so every further step is a no-op, never a walk past offset zero.
-        assertEquals(4, DeleteSpan.staged(4, "", 1, charMode = false))
-        assertEquals(4, DeleteSpan.staged(4, "", 9, charMode = false))
-        assertEquals(4, DeleteSpan.staged(4, "", 9, charMode = true))
+        assertEquals(4, DeleteSpan.staged(4, "", 1, Granularity.WORDS))
+        assertEquals(4, DeleteSpan.staged(4, "", 9, Granularity.WORDS))
+        assertEquals(4, DeleteSpan.staged(4, "", 9, Granularity.CHARS))
         // And a zero-unit slide stages nothing even with a selection up: the
         // slide must stay retractable to a no-op.
-        assertEquals(0, DeleteSpan.staged(4, "abc", 0, charMode = false))
+        assertEquals(0, DeleteSpan.staged(4, "abc", 0, Granularity.WORDS))
     }
 
     @Test
@@ -128,18 +130,82 @@ class DeleteSpanTest {
         // otherwise the highlight would grow on a retraction.
         val before = "the quick brown fox jumps over"
         for (sel in listOf(0, 5)) {
-            for (charMode in listOf(false, true)) {
+            for (granularity in Granularity.values()) {
                 var last = 0
                 for (units in 0..8) {
-                    val span = DeleteSpan.staged(sel, before, units, charMode)
+                    val span = DeleteSpan.staged(sel, before, units, granularity)
                     assertTrue(
-                        "span shrank at units=$units (sel=$sel char=$charMode)",
+                        "span shrank at units=$units (sel=$sel $granularity)",
                         span >= last,
                     )
                     last = span
                 }
             }
         }
+    }
+
+    // ---- pieces: the word walk cut at punctuation ---------------------------
+
+    @Test
+    fun aLinkGoesOnePieceAtATime() {
+        val t = "see https://example.com/path"
+        assertEquals("path", tailOf(t, DeleteSpan.pieces(t, 1)))
+        assertEquals("com/path", tailOf(t, DeleteSpan.pieces(t, 2)))
+        assertEquals("example.com/path", tailOf(t, DeleteSpan.pieces(t, 3)))
+        assertEquals("https://example.com/path", tailOf(t, DeleteSpan.pieces(t, 4)))
+        assertEquals("see https://example.com/path", tailOf(t, DeleteSpan.pieces(t, 5)))
+        // The whole link is one step for the plain word walk: the reason for the option.
+        assertEquals("https://example.com/path", tailOf(t, DeleteSpan.words(t, 1)))
+    }
+
+    @Test
+    fun aSelectionThenPiecesOfTheLinkBeforeIt() {
+        // "see example.com/|path|" with "path" selected: the selection, then "com/".
+        val before = "see example.com/"
+        assertEquals(4, DeleteSpan.staged(4, before, 1, Granularity.PIECES))
+        assertEquals(4 + 4, DeleteSpan.staged(4, before, 2, Granularity.PIECES))
+        assertEquals(4 + 12, DeleteSpan.staged(4, before, 2, Granularity.WORDS))
+    }
+
+    @Test
+    fun aQueryStringStopsAtEachMark() {
+        val t = "x.com/a?utm_source=feed&id=7"
+        assertEquals("7", tailOf(t, DeleteSpan.pieces(t, 1)))
+        assertEquals("id=7", tailOf(t, DeleteSpan.pieces(t, 2)))
+        assertEquals("feed&id=7", tailOf(t, DeleteSpan.pieces(t, 3)))
+        assertEquals("source=feed&id=7", tailOf(t, DeleteSpan.pieces(t, 4)))
+    }
+
+    @Test
+    fun proseStillGoesAWordWithItsPunctuation() {
+        // Trailing marks belong to the piece before them, so plain text steps as the word
+        // walk does.
+        for (t in listOf("hello world, again ", "Fine. Thanks! ", "wait... ", "said \"no\" ", "(see) x")) {
+            for (units in 0..4) {
+                assertEquals(t, DeleteSpan.words(t, units), DeleteSpan.pieces(t, units))
+            }
+        }
+    }
+
+    @Test
+    fun anElisionIsTwoPieces() {
+        val t = "dell'altro"
+        assertEquals("altro", tailOf(t, DeleteSpan.pieces(t, 1)))
+        assertEquals(t, tailOf(t, DeleteSpan.pieces(t, 2)))
+    }
+
+    @Test
+    fun accentsAndEmojiStayWhole() {
+        // A decomposed accent is a combining mark, part of the piece; an emoji is a mark run,
+        // its surrogate pair taken together.
+        val decomposed = "re\u0301sume\u0301"
+        assertEquals(decomposed.length, DeleteSpan.pieces(decomposed, 1))
+        val emoji = "ok \uD83D\uDE00\uD83D\uDE00"
+        assertEquals(4, DeleteSpan.pieces(emoji, 1))
+        assertEquals(emoji.length, DeleteSpan.pieces(emoji, 2))
+        assertEquals(0, DeleteSpan.pieces("", 3))
+        assertEquals(0, DeleteSpan.pieces("abc", 0))
+        assertEquals(3, DeleteSpan.pieces("abc", 9))
     }
 
     // ---- the two granularities are the same gesture ------------------------
@@ -156,6 +222,34 @@ class DeleteSpanTest {
         // screen and a half of travel.
         org.junit.Assert.assertTrue("char step must clear the touch slop: $char", char >= 16f)
         org.junit.Assert.assertTrue("char step must stay a fraction of a word: $char", char < word / 2f)
+    }
+
+    @Test
+    fun theStepSettingKeepsBothGranularitiesApartAndAboveTheSlop() {
+        // Every value the slider offers: a word step as set, a character step shorter than a
+        // word and never under twice the 8dp touch slop.
+        for (word in DeleteSpan.MIN_WORD_STEP_DP..DeleteSpan.MAX_WORD_STEP_DP) {
+            val w = DeleteSpan.slideDpPerUnit(false, word.toFloat())
+            val c = DeleteSpan.slideDpPerUnit(true, word.toFloat())
+            assertEquals(word.toFloat(), w, 1e-4f)
+            org.junit.Assert.assertTrue("char step under the slop floor at $word: $c", c >= 16f)
+            org.junit.Assert.assertTrue("char step not shorter than a word at $word: $c", c < w)
+        }
+        // The shipped step is the default of both the setting and the function.
+        assertEquals(18f, DeleteSpan.slideDpPerUnit(true, DeleteSpan.WORD_STEP_DP.toFloat()), 1e-4f)
+        assertEquals(
+            com.kinetica.keyboard.settings.Prefs.DEFAULT_BACKSPACE_STEP_DP,
+            DeleteSpan.WORD_STEP_DP,
+        )
+    }
+
+    @Test
+    fun aLongerStepIsSlowerInBothGranularities() {
+        for (charMode in listOf(false, true)) {
+            val fast = DeleteSpan.slideDpPerUnit(charMode, DeleteSpan.MIN_WORD_STEP_DP.toFloat())
+            val slow = DeleteSpan.slideDpPerUnit(charMode, DeleteSpan.MAX_WORD_STEP_DP.toFloat())
+            org.junit.Assert.assertTrue("char=$charMode: $fast vs $slow", fast < slow)
+        }
     }
 
     // ---- the forward mirror, for the spacebar's word slide -----------------

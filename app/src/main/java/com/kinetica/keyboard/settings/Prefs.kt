@@ -50,9 +50,23 @@ object Prefs {
 
     /**
      * Offer the words that usually follow the last one while nothing is being typed. They
-     * take the shortcut row's place; the correction strip still comes first after a commit.
+     * take the shortcut row's place; after a commit they share the bar with the strip's best
+     * alternative ([NEXT_WORD_BESIDE]) or wait for the strip to go.
      */
     const val NEXT_WORD = "pref_next_word"
+
+    /**
+     * After a commit, the correction strip's best alternative keeps one zone and the next words
+     * fill the rest. With recent words off the strip held the bar after every commit, so the
+     * next words never showed; with recent words on they already follow every word.
+     */
+    const val NEXT_WORD_BESIDE = "pref_next_word_beside"
+
+    /**
+     * How many of the commit's corrections lead the bar beside the next words, one to three. The
+     * bar fits words by width and pages the rest, so a short alternative leaves room for more.
+     */
+    const val NEXT_WORD_BESIDE_COUNT = "pref_next_word_beside_count"
 
     /**
      * The last two words stay on the bar, each with the two candidates it beat, so a wrong
@@ -264,6 +278,26 @@ object Prefs {
     const val BACKSPACE_CHAR_SLIDE = "pref_backspace_char_slide"
 
     /**
+     * Travel, in dp, that stages one more word on the backspace slide. Lower is faster. A
+     * character's step follows it at a little under half, floored above the touch slop.
+     */
+    const val BACKSPACE_STEP_DP = "pref_backspace_step_dp"
+
+    /**
+     * The backspace word slide stops at punctuation, so a link or a path goes a piece at a time
+     * instead of whole. Off by default: in prose a word with its comma is the expected unit, and
+     * that does not change, but `l'altro` and `e.g.` take two steps.
+     */
+    const val BACKSPACE_PUNCTUATION_STOPS = "pref_backspace_punctuation_stops"
+
+    /**
+     * A tap on backspace while a word is in progress takes back its last tap or swipe, and the bar
+     * goes back to what it showed before it. Off by default: a swiped word then loses the whole
+     * swipe to one tap, where every other keyboard deletes a letter.
+     */
+    const val BACKSPACE_UNDO = "pref_backspace_undo"
+
+    /**
      * Reserve the suggestion bar's right edge for a retype button: one tap throws the
      * current word away so it can be gestured again in place.
      *
@@ -343,8 +377,17 @@ object Prefs {
     /** A tap on enter writes a newline and a hold runs the field's action. */
     const val ENTER_HOLD_SENDS = "pref_enter_hold_sends"
 
-    /** The comma key types `@` in an email field and `/` in a web address. */
+    /**
+     * The comma key types `@` in an email field and `/` in a web address; in both, the period's
+     * menu opens on domain endings.
+     */
     const val FIELD_KEYS = "pref_field_keys"
+
+    /**
+     * The keyboard's own paste takes tracking parameters out of the links it pastes. Off by
+     * default: it changes what was copied, and the app's own paste menu is never touched.
+     */
+    const val CLEAN_LINKS_ON_PASTE = "pref_clean_links_on_paste"
 
     /** A field that takes only numbers opens on the number pad. */
     const val NUMPAD_FOR_NUMBERS = "pref_numpad_for_numbers"
@@ -539,6 +582,9 @@ object Prefs {
     const val DEFAULT_POPUP_SHAPE = "row"
     const val DEFAULT_ALTERNATE_SWIPES = true
     const val DEFAULT_BACKSPACE_CHAR_SLIDE = false
+    const val DEFAULT_BACKSPACE_STEP_DP = 40
+    const val DEFAULT_BACKSPACE_PUNCTUATION_STOPS = false
+    const val DEFAULT_BACKSPACE_UNDO = false
     const val DEFAULT_RETYPE_BUTTON = false
     const val DEFAULT_SPACEBAR_STEP_DP = 20
     const val DEFAULT_REINFORCE_STEP_DP = 24
@@ -581,6 +627,7 @@ object Prefs {
 
     /** On: a comma is never part of an address, and the key keeps it in its menu. */
     const val DEFAULT_FIELD_KEYS = true
+    const val DEFAULT_CLEAN_LINKS_ON_PASTE = false
 
     /** Off: some type a word into a number field and expand it to the number. */
     const val DEFAULT_NUMPAD_FOR_NUMBERS = false
@@ -599,6 +646,8 @@ object Prefs {
     const val DEFAULT_EDIT_FROM_MENU = false
     const val DEFAULT_LEARN_PHRASES = false
     const val DEFAULT_NEXT_WORD = true
+    const val DEFAULT_NEXT_WORD_BESIDE = true
+    const val DEFAULT_NEXT_WORD_BESIDE_COUNT = "2"
     const val DEFAULT_RECENT_WORDS = false
     const val DEFAULT_NUMBER_ROW = false
     const val DEFAULT_ENTER_ALTERNATES = "? ! ,"

@@ -28,6 +28,51 @@ class CompletionTest {
     private fun words(candidates: List<WordCandidate>): List<String> =
         candidates.map { it.word }
 
+    /**
+     * `fakecompanyname` committed [count] times with its capital settled, beside dictionary words
+     * that share its start; [learned] off holds it as a dictionary word nobody typed.
+     */
+    private fun longWord(count: Int, learned: Boolean = true): WordPredictor {
+        val list = "fake\t900\nfakes\t300\nfaked\t200\ncompany\t800\n" +
+            if (learned) "" else "fakecompanyname\t50\n"
+        val dict = DictionaryLoader.load(
+            list.reader().buffered(),
+            extraWords = if (learned) listOf("fakecompanyname" to count) else emptyList(),
+            cases = mapOf("fakecompanyname" to DictionaryLoader.LearnedCase("FakeCompanyName", 2)),
+        )
+        val counts = if (learned) mapOf("fakecompanyname" to count) else emptyMap()
+        return WordPredictor(dict.trie, BigramTable.EMPTY, g, dict.forms, personalCounts = counts)
+    }
+
+    @Test
+    fun aLearnedWordCompletesPastTheCap() {
+        // Nine letters past `fakeco`, one more than a completion reaches: the user's own word
+        // is offered anyway, with its capitals.
+        val result = longWord(count = 2).decode(taps("fakeco"), emptyList())
+        assertEquals("FakeCompanyName", result.firstOrNull()?.word)
+        assertEquals(WordCandidate.Source.COMPLETION, result.first().source)
+    }
+
+    @Test
+    fun anUnlearnedLongWordStillStopsAtTheCap() {
+        // A dictionary word nobody typed keeps the bound, and so does one typed once.
+        val dictionary = longWord(count = 0, learned = false)
+        assertTrue(dictionary.decode(taps("fakeco"), emptyList()).none { it.word.equals("fakecompanyname", true) })
+        assertTrue(dictionary.decode(taps("fakecom"), emptyList()).any { it.word.equals("fakecompanyname", true) })
+        val once = longWord(count = 1)
+        assertTrue(once.decode(taps("fakeco"), emptyList()).none { it.word.equals("fakecompanyname", true) })
+    }
+
+    @Test
+    fun aLearnedCompletionNeverAutocorrects() {
+        // Pick-only like every completion: a space after `fakeco` keeps `fakeco`.
+        val p = longWord(count = 5)
+        val result = p.decode(taps("fakeco"), emptyList())
+        assertEquals("FakeCompanyName", result.first().word)
+        assertNull(p.autocorrectTarget("fakeco", result, 0.5f))
+        assertNull(p.tapAutocorrect("fakeco", result.first(), 0.5f))
+    }
+
     @Test
     fun twoTapPrefixSurfacesTopCompletion() {
         // t,h is not a word; its most frequent extension must be immediately

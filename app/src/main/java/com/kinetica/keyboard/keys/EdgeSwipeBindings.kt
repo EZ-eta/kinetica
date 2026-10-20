@@ -21,7 +21,11 @@ data class EdgeSwipeBinding(
  * consulted by [EdgeSwipeDetector] at pointer lift. Bindings are keyed on the
  * layout key id, which is stable across languages and layout modes.
  */
-class EdgeSwipeBindings(val bindings: List<EdgeSwipeBinding>) {
+class EdgeSwipeBindings(
+    val bindings: List<EdgeSwipeBinding>,
+    /** Keys whose up binding is a letter's own corner hint, not one the user set. */
+    private val implicitUpKeys: Set<String> = emptySet(),
+) {
 
     private val byKeyAndDir = HashMap<String, String>(bindings.size * 2)
 
@@ -41,6 +45,12 @@ class EdgeSwipeBindings(val bindings: List<EdgeSwipeBinding>) {
      */
     fun outputFor(key: Key, direction: EdgeSwipeBinding.Direction): String? =
         outputFor(key.id, direction) ?: key.chordChar?.let { outputFor(it.toString(), direction) }
+
+    /**
+     * Whether [key]'s up binding is the implicit corner hint. A binding the user set stays
+     * theirs even with the same output, so a guard that yields to a word never takes it.
+     */
+    fun isImplicitUp(key: Key): Boolean = key.id in implicitUpKeys
 
     fun serialize(): String {
         val arr = JSONArray()
@@ -158,7 +168,13 @@ class EdgeSwipeBindings(val bindings: List<EdgeSwipeBinding>) {
                 val symbol = k.hintChar ?: continue
                 implicit.add(EdgeSwipeBinding(k.id, direction, symbol))
             }
-            return EdgeSwipeBindings(implicit + explicit.bindings)
+            val explicitUp = explicit.bindings
+                .filter { it.direction == EdgeSwipeBinding.Direction.UP }
+                .mapTo(HashSet()) { it.keyId }
+            val implicitUp = implicit
+                .filter { it.direction == EdgeSwipeBinding.Direction.UP && it.keyId !in explicitUp }
+                .mapTo(HashSet()) { it.keyId }
+            return EdgeSwipeBindings(implicit + explicit.bindings, implicitUp)
         }
 
         /**

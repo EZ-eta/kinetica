@@ -55,6 +55,28 @@ class EdgeSwipeBindingsTest {
     private val empty = EdgeSwipeBindings(emptyList())
 
     @Test
+    fun onlyTheTopRowsOwnCornerHintsAreImplicitUpFlicks() {
+        val numbered = LayoutMutations.withNumberRow(LayoutMutations.withNumberRowSymbols(layout()))
+        val b = EdgeSwipeBindings.withImplicitAlternates(numbered, empty)
+        val byId = numbered.keys.associateBy { it.id }
+        assertEquals(byId.getValue("q").hintChar, b.outputFor(byId.getValue("q"), Direction.UP))
+        assertTrue(b.isImplicitUp(byId.getValue("q")))
+        org.junit.Assert.assertFalse(b.isImplicitUp(byId.getValue("a")))
+        org.junit.Assert.assertFalse(b.isImplicitUp(byId.getValue("z")))
+        assertNull(b.outputFor("num_1", Direction.UP))
+    }
+
+    @Test
+    fun anUpBindingTheUserSetIsNotImplicitEvenWithTheSameOutput() {
+        val numbered = LayoutMutations.withNumberRow(layout())
+        val q = numbered.keys.first { it.id == "q" }
+        val explicit = EdgeSwipeBindings(listOf(EdgeSwipeBinding("q", Direction.UP, "1")))
+        val b = EdgeSwipeBindings.withImplicitAlternates(numbered, explicit)
+        assertEquals("1", b.outputFor(q, Direction.UP))
+        org.junit.Assert.assertFalse(b.isImplicitUp(q))
+    }
+
+    @Test
     fun theNumbersRowLeavesTheFlicksOnTheirRows() {
         // The numbers row moves the letter rows to y 0.2 / 0.4 / 0.6. Fixed bands would lose the
         // top row's up-flicks and give the home row down-flicks.

@@ -1,0 +1,9 @@
+Corrections beside the next words, one to three
+Double tap on shift locks caps at a sentence start too
+Backspace can undo the last tap or swipe (off)
+Backspace slide: set its distance, stop at punctuation
+.com, .net, .org on the period in web and email fields
+Clean links: tracking parts out, as a shortcut or on paste
+A space inside a trigger is an error, with Remove spaces
+Long learned words complete from their first letters
+A glide from the digits back onto letters is a word, thanks lurebat

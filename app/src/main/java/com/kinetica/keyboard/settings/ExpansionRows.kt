@@ -40,22 +40,39 @@ object ExpansionRows {
     }
 
     /**
-     * Whether a trigger can be saved.
+     * Why a trigger cannot be saved, in the order the editor reports them.
      *
      * Whitespace is the boundary the cursor walk uses, so a trigger containing any would be
      * unreachable: no typing puts it at the cursor as one token. Blank is refused for the same
      * reason, and the length bound matches the walk's own.
      */
-    fun isValidTrigger(trigger: String, maxLen: Int): Boolean =
-        trigger.isNotEmpty() && trigger.length <= maxLen && trigger.none { it.isWhitespace() }
+    enum class TriggerProblem { BLANK, SPACES, TOO_LONG }
 
     /**
-     * A trigger as it is saved: every whitespace character removed.
+     * What is wrong with [raw] once [savedTrigger] has trimmed it, or null if it can be saved.
      *
-     * A space can never be part of a trigger, and the usual one is the keyboard's own automatic
-     * space after the word (#19). Removed, not refused, so the only refusals are blank and too
-     * long.
+     * Spaces come before length: removing them may be all a long trigger needs.
      */
+    fun triggerProblem(raw: String, maxLen: Int): TriggerProblem? {
+        val t = savedTrigger(raw)
+        return when {
+            t.isEmpty() -> TriggerProblem.BLANK
+            t.any { it.isWhitespace() } -> TriggerProblem.SPACES
+            t.length > maxLen -> TriggerProblem.TOO_LONG
+            else -> null
+        }
+    }
+
+    /**
+     * A trigger as it is saved: whitespace at either end trimmed.
+     *
+     * The usual trailing space is another keyboard's automatic one after the word (#19), and
+     * trimming it surprises no one. A space inside is refused with an error instead: removed
+     * silently, it made a trigger the user did not type.
+     */
+    fun savedTrigger(raw: String): String = raw.trim()
+
+    /** The editor's remove-spaces button: every whitespace character removed, nothing saved. */
     fun cleanTrigger(raw: String): String = raw.filterNot { it.isWhitespace() }
 
     /**

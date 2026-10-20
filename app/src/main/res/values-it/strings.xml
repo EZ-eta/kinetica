@@ -233,6 +233,7 @@
     <string name="action_time">Ora</string>
     <string name="action_enter">Invio</string>
     <string name="action_copy_line">Copia la riga</string>
+    <string name="action_clean_links">Pulisci i link</string>
     <string name="notice_undo">Annulla</string>
     <string name="notice_redo">Ripeti</string>
     <string name="notice_paste">Incolla</string>
@@ -282,6 +283,7 @@
     <string name="notice_time">Ora</string>
     <string name="notice_enter">Invio</string>
     <string name="notice_copy_line">Riga copiata</string>
+    <string name="notice_clean_links">Link puliti</string>
     <string name="notice_tab">Tab</string>
     <string name="notice_backspace">Cancella</string>
     <string name="notice_name_ctrl">Ctrl</string>
@@ -298,6 +300,8 @@
     <string name="clip_label_line">Riga</string>
     <string name="pref_bar_actions_title">Scorciatoie nella barra dei suggerimenti</string>
     <string name="pref_next_word_title">Suggerisci la parola successiva</string>
+    <string name="pref_next_word_beside_title">Parole successive accanto alla correzione</string>
+    <string name="pref_next_word_beside_count_title">Correzioni accanto alle parole successive</string>
     <string name="pref_recent_words_title">Parole recenti sulla barra</string>
     <string name="size_preview_portrait">Verticale</string>
     <string name="size_preview_landscape">Orizzontale</string>
@@ -334,7 +338,9 @@
     <string name="pref_enter_hold_sends_title">Tieni premuto invio per inviare</string>
     <string name="pref_enter_hold_sends_summary">In un campo su più righe con un\'azione, come una chat, un tocco su invio va a capo e la pressione lunga la esegue. I campi su una riga e le pagine dei simboli tengono l\'azione sul tocco</string>
     <string name="pref_field_keys_title">Tasti adatti al campo</string>
-    <string name="pref_field_keys_summary">Il tasto virgola scrive @ in un campo email, e / in un indirizzo web con : nel suo menu. La virgola resta nel menu. Nessuna maiuscola all\'inizio dell\'uno o dell\'altro</string>
+    <string name="pref_clean_links_on_paste_title">Pulisci i link quando incolli</string>
+    <string name="pref_clean_links_on_paste_summary">Incollando dalla tastiera si tolgono dai link le parti di tracciamento come utm_source o si. Il menu Incolla dell\'app non cambia. La scorciatoia Pulisci i link fa lo stesso per un link già scritto</string>
+    <string name="pref_field_keys_summary">Il tasto virgola scrive @ in un campo email, e / in un indirizzo web con : nel suo menu. La virgola resta nel menu. In entrambi, il menu del punto si apre su .com, .net e .org. Nessuna maiuscola all\'inizio dell\'uno o dell\'altro</string>
     <string name="pref_numpad_for_numbers_title">Tastierino numerico nei campi numerici</string>
     <string name="pref_numpad_for_numbers_summary">Un campo che accetta solo numeri, un numero di telefono o una data si apre sul tastierino numerico. Se disattivato, sulle lettere, così si può ancora scrivere ed espandere una parola</string>
     <string name="pref_letters_on_new_field_title">Lettere in ogni nuovo campo</string>
@@ -350,7 +356,8 @@
     <string name="pref_number_row_title">Riga dei numeri</string>
     <string name="pref_number_row_summary">Cifre in una riga tutta loro sopra le lettere, solo a tocchi. La tastiera cresce di una riga, così le lettere restano grandi uguali</string>
     <string name="pref_recent_words_summary">Le ultime due parole restano a sinistra della barra, ognuna con sopra e sotto le due alternative scartate. Toccane una per scambiarla. La barra si allarga per contenerle</string>
-    <string name="pref_next_word_summary">Quando non stai scrivendo, la barra propone le parole che di solito vengono dopo, al posto delle scorciatoie (che restano nel menu di ?123). Con le parole recenti attive, compaiono dopo ogni parola</string>
+    <string name="pref_next_word_summary">Quando non stai scrivendo, la barra propone le parole che di solito vengono dopo, al posto delle scorciatoie (che restano nel menu di ?123)</string>
+    <string name="pref_next_word_beside_summary">Dopo una parola, le sue alternative migliori restano a sinistra della barra, quante indicato sotto, e le parole successive riempiono il resto. Disattivato: le alternative occupano la barra finché non inizia la parola successiva. Con le parole recenti attive, le parole successive compaiono sempre dopo ogni parola</string>
     <string name="pref_bar_actions_summary">Compaiono quando non c\'è niente da suggerire. Ognuna si può assegnare anche a un accordo o a uno swipe sui tasti</string>
     <string name="pref_menu_actions_title">Scorciatoie nel menu di ?123</string>
     <string name="shortcut_set_intro">Spunta una scorciatoia per mostrarla; le frecce spostano quelle spuntate. Se la riga non basta, restano le prime.</string>
@@ -368,7 +375,10 @@
     <string name="expansion_trigger_hint">Cosa scrivi</string>
     <string name="expansion_target_label">Testo</string>
     <string name="expansion_target_hint">Cosa la sostituisce</string>
-    <string name="expansion_bad_trigger">Vuota, o più lunga di 32 caratteri. Gli spazi vengono tolti.</string>
+    <string name="expansion_trigger_blank">Scrivi un\'abbreviazione</string>
+    <string name="expansion_trigger_spaces">Un\'abbreviazione non può contenere spazi</string>
+    <string name="expansion_trigger_too_long">Più lunga di 32 caratteri</string>
+    <string name="expansion_remove_spaces">Togli gli spazi</string>
     <string name="chord_expansion_hint">Testo da scrivere</string>
     <string name="chord_empty_hint">Nessun accordo assegnato. La funzione resta disattivata finché non ne aggiungi uno.</string>
     <string name="chord_list_hint">Tieni fermo il tasto scelto, poi tocca l\'altro tasto. In una pagina di simboli, ?123 è il tasto pagina.</string>
@@ -434,9 +444,15 @@
     <string name="dict_personal_import_replace">Sostituisci</string>
     <string name="dict_import_note">Accetta un file wordlist.combined di AOSP, per esempio main_it dal mirror Helium314/aosp-dictionaries (Apache-2.0). Viene unito all\'elenco incluso sul telefono; abbreviazioni, voci offensive e grafie senza gli accenti di una parola inclusa vengono scartate. Le coppie di parole restano quelle incluse.</string>
     <string name="pref_backspace_char_slide_title">Il trascinamento di cancella toglie lettere</string>
+    <string name="pref_backspace_undo_title">Cancella annulla l\'ultimo tocco o swipe</string>
+    <string name="pref_backspace_undo_summary">Mentre scrivi una parola, un tocco su cancella annulla il suo ultimo tocco o swipe, e la barra torna a mostrare quello che mostrava prima. Tenendo premuto cancella si tolgono ancora lettere, come con un tocco a parola finita</string>
     <string name="pref_backspace_char_slide_summary">Trascinando a sinistra da cancella si seleziona una lettera alla volta invece di una parola. Niente viene cancellato finché non sollevi il dito; tornando indietro si annulla</string>
     <string name="pref_retype_button_title">Pulsante Riscrivi sulla barra dei suggerimenti</string>
     <string name="pref_retype_button_summary">Un pulsante ↻ all\'estremità destra della barra. Un tocco toglie la parola che stai scrivendo, o quella appena finita, per rifarla con uno swipe</string>
+    <string name="pref_backspace_punctuation_stops_title">Il trascinamento di cancella si ferma alla punteggiatura</string>
+    <string name="pref_backspace_punctuation_stops_summary">Trascinando per parole, un link o un percorso si seleziona un pezzo alla volta, quindi esempio.it/pagina richiede tre passi. Nel testo normale una parola va ancora con la sua virgola</string>
+    <string name="pref_backspace_step_title">Distanza di trascinamento di cancella</string>
+    <string name="pref_backspace_step_summary">Quanto trascinare a sinistra da cancella per selezionare una parola in più. Una lettera richiede poco meno della metà. Più basso è più veloce</string>
     <string name="pref_spacebar_word_slide_title">La barra spaziatrice sposta di una parola</string>
     <string name="pref_spacebar_word_slide_summary">Il trascinamento sulla barra spaziatrice sposta il cursore di una parola alla volta, come quello di cancella. La punteggiatura si sposta con la parola</string>
     <string name="backup_heading">Backup completo</string>

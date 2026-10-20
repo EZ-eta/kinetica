@@ -23,16 +23,40 @@ class CommitMemory {
     var languages: Map<String, String> = emptyMap()
         private set
 
+    // The letters as typed when an autocorrect changed them, and the word a pick or a re-case
+    // rewrote: the two answers besideWords puts ahead of the runners-up.
+    private var typed: String? = null
+    private var swappedFrom: String? = null
+
     fun onCommit(
         word: String,
         stripShown: Boolean,
         alternatives: List<String> = emptyList(),
         languages: Map<String, String> = emptyMap(),
+        typed: String? = null,
     ) {
         retypeWord = word
         stripWord = if (stripShown) word else null
         this.alternatives = alternatives
         this.languages = languages
+        this.typed = typed
+        swappedFrom = null
+    }
+
+    /**
+     * The alternatives the bar keeps beside the next words, at most [max]: first the word a swap
+     * replaced, so a second tap undoes it; then the letters as typed, the way back from an
+     * autocorrect; then the runners-up. None is the word written, in any case.
+     */
+    fun besideWords(max: Int): List<String> {
+        val word = retypeWord ?: return emptyList()
+        val out = ArrayList<String>(max)
+        for (w in listOfNotNull(swappedFrom, typed) + alternatives) {
+            if (out.size >= max) break
+            if (w.equals(word, ignoreCase = true) || out.any { it.equals(w, ignoreCase = true) }) continue
+            out.add(w)
+        }
+        return out
     }
 
     /**
@@ -53,6 +77,7 @@ class CommitMemory {
 
     /** The commit was rewritten in place, by a correction pick or a re-case. */
     fun onReplaced(word: String) {
+        swappedFrom = retypeWord
         retypeWord = word
         if (stripWord != null) stripWord = word
     }
@@ -62,5 +87,7 @@ class CommitMemory {
         retypeWord = null
         alternatives = emptyList()
         languages = emptyMap()
+        typed = null
+        swappedFrom = null
     }
 }

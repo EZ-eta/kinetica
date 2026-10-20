@@ -236,17 +236,6 @@ class ExpansionSettingsActivity : AppCompatActivity() {
             // Tells Kinetica this field holds one token, so it writes no automatic space here.
             privateImeOptions = EditorState.ONE_TOKEN_OPTION
             setText(existing?.trigger.orEmpty())
-            // Shown under the field as it is typed, not in a toast after OK.
-            addTextChangedListener(object : TextWatcher {
-                override fun afterTextChanged(s: Editable?) {
-                    val t = ExpansionRows.cleanTrigger(s?.toString().orEmpty())
-                    error = if (t.length > MAX_TRIGGER_CHARS) getString(R.string.expansion_bad_trigger) else null
-                }
-
-                override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) = Unit
-
-                override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) = Unit
-            })
         }
         // What the expansion does, from ShortcutKinds, shared with the chord and edge-swipe editors
         // (#19: text, Ctrl + a key, or an action), minus the actions an expansion must not fire.
@@ -294,18 +283,49 @@ class ExpansionSettingsActivity : AppCompatActivity() {
             .setView(content)
             .setPositiveButton(android.R.string.ok, null)
             .setNegativeButton(android.R.string.cancel, null)
+            .setNeutralButton(R.string.expansion_remove_spaces, null)
             .create()
         // Wired after show so a refused trigger keeps the dialog and what was typed in it;
         // the builder's own listener always dismisses.
         dialog.setOnShowListener {
+            val removeSpaces = dialog.getButton(AlertDialog.BUTTON_NEUTRAL)
+            // Shown under the field as it is typed, not after OK. Blank waits for OK: an empty
+            // field is where every new trigger starts.
+            fun showProblem(onSave: Boolean) {
+                val problem = ExpansionRows.triggerProblem(trigger.text.toString(), MAX_TRIGGER_CHARS)
+                trigger.error = when (problem) {
+                    ExpansionRows.TriggerProblem.SPACES -> getString(R.string.expansion_trigger_spaces)
+                    ExpansionRows.TriggerProblem.TOO_LONG -> getString(R.string.expansion_trigger_too_long)
+                    ExpansionRows.TriggerProblem.BLANK ->
+                        if (onSave) getString(R.string.expansion_trigger_blank) else null
+                    null -> null
+                }
+                removeSpaces.visibility =
+                    if (problem == ExpansionRows.TriggerProblem.SPACES) View.VISIBLE else View.GONE
+            }
+            showProblem(onSave = false)
+            trigger.addTextChangedListener(object : TextWatcher {
+                override fun afterTextChanged(s: Editable?) = showProblem(onSave = false)
+
+                override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) = Unit
+
+                override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) = Unit
+            })
+            // Fixes the field and leaves the dialog open, so the result is seen before OK.
+            removeSpaces.setOnClickListener {
+                val cleaned = ExpansionRows.cleanTrigger(trigger.text.toString())
+                trigger.setText(cleaned)
+                trigger.setSelection(cleaned.length)
+                trigger.requestFocus()
+            }
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val t = ExpansionRows.cleanTrigger(trigger.text.toString())
                 val kind = kinds[kindSpinner.selectedItemPosition]
-                if (!ExpansionRows.isValidTrigger(t, MAX_TRIGGER_CHARS)) {
-                    trigger.error = getString(R.string.expansion_bad_trigger)
+                if (ExpansionRows.triggerProblem(trigger.text.toString(), MAX_TRIGGER_CHARS) != null) {
+                    showProblem(onSave = true)
                     trigger.requestFocus()
                     return@setOnClickListener
                 }
+                val t = ExpansionRows.savedTrigger(trigger.text.toString())
                 val v = ShortcutKinds.encode(kind, target.text.toString())
                 if (v == null) {
                     if (kind == ShortcutKind.CtrlKey) target.error = getString(R.string.combo_key_unsendable)

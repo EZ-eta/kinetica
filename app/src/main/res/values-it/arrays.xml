@@ -49,6 +49,11 @@
         <item>Arancione</item>
         <item>Marrone</item>
     </string-array>
+    <string-array name="beside_count_entries">
+        <item>Una parola</item>
+        <item>Due parole</item>
+        <item>Tre parole</item>
+    </string-array>
     <string-array name="reinforce_entries">
         <item>Piccolo (+1)</item>
         <item>Medio (+5)</item>

@@ -1,5 +1,6 @@
 package com.kinetica.keyboard.engine
 
+import com.kinetica.keyboard.engine.models.StreamId
 import com.kinetica.keyboard.engine.models.WordCandidate
 import java.util.concurrent.Executor
 import org.junit.Assert.assertEquals
@@ -78,6 +79,54 @@ class WordComposerTest {
         composer.commitWord("you")
         assertEquals(listOf("are", "you"), composer.contextSnapshot())
         assertFalse(composer.hasPendingWord)
+    }
+
+    @Test
+    fun aReopenedCommitLeavesTheContext() {
+        // `Fake`, an automatic space, then `C`: the word is in progress again, so it is not the
+        // previous word of its own decode, nor of the pair the next commit learns.
+        val composer = WordComposer(predictor, direct, direct, Capture())
+        composer.commitWord("see")
+        composer.commitWord("fake")
+        assertTrue(composer.reopenLastCommit("Fake"))
+        assertEquals(listOf("see"), composer.contextSnapshot())
+        // Only the last commit: a word further back is not the one being reopened.
+        assertFalse(composer.reopenLastCommit("fake"))
+        assertFalse(composer.reopenLastCommit("other"))
+        assertEquals(listOf("see"), composer.contextSnapshot())
+    }
+
+    @Test
+    fun takingTheLastGestureBackBringsBackTheDecodeBeforeIt() {
+        // Two thumbs: a sloppy swipe, a tap from the other thumb, then the rest of the word.
+        // Backspace takes the last one back, and the bar must read as it did before it.
+        val cap = Capture()
+        val composer = WordComposer(predictor, direct, direct, cap)
+        composer.onToken(TestData.sloppySwipe("some", g, 0, 300, 0.3f, StreamId.LEFT))
+        composer.onToken(TestData.tap('t', g, 350, StreamId.RIGHT))
+        val words = cap.candidates.map { it.word }
+        val lead = cap.tentative?.word
+        assertTrue("the two gestures decode to something", words.isNotEmpty())
+        composer.onToken(TestData.sloppySwipe("hing", g, 450, 300, 0.3f, StreamId.LEFT))
+        assertTrue("the third gesture changes the bar", cap.candidates.map { it.word } != words)
+        assertEquals(3, composer.tokenCount)
+        composer.truncate(2)
+        assertEquals(2, composer.tokenCount)
+        assertEquals(words, cap.candidates.map { it.word })
+        assertEquals(lead, cap.tentative?.word)
+        // A count past the buffer changes nothing.
+        composer.truncate(5)
+        assertEquals(2, composer.tokenCount)
+    }
+
+    @Test
+    fun takingTheFirstGestureBackLeavesNoWord() {
+        val cap = Capture()
+        val composer = WordComposer(predictor, direct, direct, cap)
+        composer.onToken(TestData.tap('t', g, 0))
+        composer.truncate(0)
+        assertFalse(composer.hasPendingWord)
+        assertEquals("", composer.literal())
     }
 
     @Test

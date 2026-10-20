@@ -83,11 +83,33 @@
             android:summary="@string/pref_next_word_summary"
             android:defaultValue="true" />
         <SwitchPreferenceCompat
+            android:key="pref_next_word_beside"
+            android:title="@string/pref_next_word_beside_title"
+            app:singleLineTitle="false"
+            android:summary="@string/pref_next_word_beside_summary"
+            android:dependency="pref_next_word"
+            android:defaultValue="true" />
+        <ListPreference
+            android:key="pref_next_word_beside_count"
+            android:title="@string/pref_next_word_beside_count_title"
+            app:singleLineTitle="false"
+            android:entries="@array/beside_count_entries"
+            android:entryValues="@array/beside_count_values"
+            android:dependency="pref_next_word_beside"
+            android:defaultValue="2"
+            app:useSimpleSummaryProvider="true" />
+        <SwitchPreferenceCompat
             android:key="pref_enter_action"
             android:title="@string/pref_enter_action_title"
             app:singleLineTitle="false"
             android:summary="@string/pref_enter_action_summary"
             android:defaultValue="true" />
+        <SwitchPreferenceCompat
+            android:key="pref_backspace_undo"
+            android:title="@string/pref_backspace_undo_title"
+            app:singleLineTitle="false"
+            android:summary="@string/pref_backspace_undo_summary"
+            android:defaultValue="false" />
         <SwitchPreferenceCompat
             android:key="pref_enter_hold_sends"
             android:title="@string/pref_enter_hold_sends_title"
@@ -100,6 +122,12 @@
             app:singleLineTitle="false"
             android:summary="@string/pref_field_keys_summary"
             android:defaultValue="true" />
+        <SwitchPreferenceCompat
+            android:key="pref_clean_links_on_paste"
+            android:title="@string/pref_clean_links_on_paste_title"
+            app:singleLineTitle="false"
+            android:summary="@string/pref_clean_links_on_paste_summary"
+            android:defaultValue="false" />
         <SwitchPreferenceCompat
             android:key="pref_numpad_for_numbers"
             android:title="@string/pref_numpad_for_numbers_title"
@@ -704,6 +732,21 @@
                 app:singleLineTitle="false"
                 android:summary="@string/pref_backspace_char_slide_summary"
                 android:defaultValue="false" />
+            <SwitchPreferenceCompat
+                android:key="pref_backspace_punctuation_stops"
+                android:title="@string/pref_backspace_punctuation_stops_title"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_backspace_punctuation_stops_summary"
+                android:defaultValue="false" />
+            <SeekBarPreference
+                android:key="pref_backspace_step_dp"
+                android:title="@string/pref_backspace_step_title"
+                android:summary="@string/pref_backspace_step_summary"
+                app:singleLineTitle="false"
+                android:defaultValue="40"
+                android:max="80"
+                app:min="20"
+                app:showSeekBarValue="true" />
             <SwitchPreferenceCompat
                 android:key="pref_spacebar_word_slide"
                 android:title="@string/pref_spacebar_word_slide_title"

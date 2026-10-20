@@ -15,13 +15,14 @@ import android.os.Handler
 class BackspaceController(
     private val density: Float,
     private val handler: Handler,
-    private val onDeleteChar: () -> Unit,
+    /** One deletion: true for a tap, false for a tick of the hold's repeat. */
+    private val onDeleteChar: (Boolean) -> Unit,
     /**
-     * Staged unit count changed; 0 clears the preview without deleting. The boolean is
-     * [charMode] at the time of the event, so the receiver needs no second copy of the setting
-     * to know what the count means.
+     * Staged unit count changed; 0 clears the preview without deleting. The granularity is the
+     * one in force at the time of the event, so the receiver needs no second copy of the
+     * settings to know what the count means.
      */
-    private val onStageUnits: (Int, Boolean) -> Unit,
+    private val onStageUnits: (Int, DeleteSpan.Granularity) -> Unit,
     /** Pointer lifted with a staged span: delete that span. */
     private val onCommitStaged: () -> Unit,
 ) {
@@ -31,6 +32,19 @@ class BackspaceController(
      */
     var charMode = false
 
+    /** A staged word stops at punctuation, so a link goes a piece at a time. Ignored in [charMode]. */
+    var stopsAtPunctuation = false
+
+    private val granularity: DeleteSpan.Granularity
+        get() = when {
+            charMode -> DeleteSpan.Granularity.CHARS
+            stopsAtPunctuation -> DeleteSpan.Granularity.PIECES
+            else -> DeleteSpan.Granularity.WORDS
+        }
+
+    /** Travel per staged word, in dp; a character's step follows it (DeleteSpan.slideDpPerUnit). */
+    var wordStepDp = DeleteSpan.WORD_STEP_DP.toFloat()
+
     private var startX = 0f
     private var stagedUnits = 0
     private var everStaged = false
@@ -39,7 +53,7 @@ class BackspaceController(
     private val repeatRunnable = object : Runnable {
         override fun run() {
             repeating = true
-            onDeleteChar()
+            onDeleteChar(false)
             handler.postDelayed(this, REPEAT_MS)
         }
     }
@@ -53,7 +67,7 @@ class BackspaceController(
     }
 
     fun onMove(x: Float) {
-        val threshold = DeleteSpan.slideDpPerUnit(charMode) * density
+        val threshold = DeleteSpan.slideDpPerUnit(charMode, wordStepDp) * density
         val crossings = ((startX - x) / threshold).toInt().coerceAtLeast(0)
         if (crossings != stagedUnits) {
             if (crossings > 0) {
@@ -62,7 +76,7 @@ class BackspaceController(
                 everStaged = true
             }
             stagedUnits = crossings
-            onStageUnits(crossings, charMode)
+            onStageUnits(crossings, granularity)
         }
     }
 
@@ -73,7 +87,7 @@ class BackspaceController(
             // Slid out and back to zero: an explicit cancel, not a tap. A
             // finished hold-repeat run also must not add a tap delete.
             everStaged || repeating -> Unit
-            else -> onDeleteChar()
+            else -> onDeleteChar(true)
         }
         stagedUnits = 0
         everStaged = false
@@ -81,7 +95,7 @@ class BackspaceController(
 
     fun cancel() {
         handler.removeCallbacks(repeatRunnable)
-        if (everStaged) onStageUnits(0, charMode)
+        if (everStaged) onStageUnits(0, granularity)
         stagedUnits = 0
         everStaged = false
     }

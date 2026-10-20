@@ -245,6 +245,28 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     /** The last autocorrect, until anything else is typed: a backspace puts the letters back. */
     private class AutocorrectUndo(val typed: String, val corrected: String, val end: Int)
     private var autocorrectUndo: AutocorrectUndo? = null
+
+    /** What one commit taught: its count, the capital before its vote, and its pair. */
+    private class CommitLesson(
+        val word: String,
+        val lang: String,
+        val voted: Boolean,
+        val caseBefore: DictionaryLoader.LearnedCase?,
+        val pair: Pair<String, String>?,
+    )
+
+    // The last commit's lesson, and the one an automatic space was taken back from to keep
+    // typing that word; see takeBack.
+    private var lastLesson: CommitLesson? = null
+    private var reopenedLesson: CommitLesson? = null
+
+    // The strip's words as the commit showed them, and whether the bar shows its one alternative
+    // beside the next words instead; see showBeside.
+    private var stripOptions: List<String> = emptyList()
+    private var besideShown = false
+
+    // The word in progress before each of its gestures, for a backspace that takes one back.
+    private val gestureUndo = GestureUndo()
     private var midWordHistory: CommitHistory.Record? = null
     // The word reloadWordUnderCursor seeded back from the editor, if any. Read
     // once at commit to keep a re-commit of unchanged text from being learned
@@ -873,6 +895,8 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         kv.popupColumns = config.popupColumns
         kv.autospaceDot = config.autospace
         kv.backspaceCharSlide = config.backspaceCharSlide
+        kv.backspaceStepDp = config.backspaceStepDp
+        kv.backspacePunctuationStops = config.backspacePunctuationStops
         kv.spacebarStepDp = config.spacebarStepDp
         kv.spacebarWordSlide = config.spacebarWordSlide
         kv.spacelessSpace = config.spacelessSpace
@@ -1154,6 +1178,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     // -------------------------------------------------- engine listener (UI)
 
     override fun onTokenFinalized(token: InputToken) {
+        shift.onOtherKey()
         autocorrectUndo = null
         cancelAutospace()
         clearCorrection()
@@ -1212,6 +1237,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
                     // The letter that caused this: the reopened word must land before it.
                     retractAutospace(token.tStart)
                 }
+                rememberWordBeforeGesture()
                 if (tentativeLength == 0) wordShift = shift.state
                 val ch = shift.apply(boardAlphabet.charOf(token.code))
                 commitTracked(ch.toString())
@@ -1228,11 +1254,12 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
                 comp?.onToken(token)
             }
             is SwipeToken -> {
-                if (tentativeLength == 0) wordShift = shift.state
                 if (comp == null) {
                     Log.w(TAG, "swipe before dictionary ready, dropped")
                     return
                 }
+                rememberWordBeforeGesture()
+                if (tentativeLength == 0) wordShift = shift.state
                 seededWithoutTokens = false
                 comp.onToken(token)
                 if (shift.state == ShiftState.State.SHIFT) {
@@ -1241,6 +1268,50 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
                 }
             }
         }
+    }
+
+    /** The word as it stands before the gesture about to join it; see [undoLastGesture]. */
+    private fun rememberWordBeforeGesture() {
+        val comp = composer ?: return
+        gestureUndo.push(
+            GestureUndo.State(tentativeWord, comp.tokenCount, shift.state, wordShift, swipeDecodeEmpty),
+        )
+    }
+
+    /**
+     * Takes the word's last tap or swipe back (#38): the editor shows the word as it stood before
+     * it and the composer decodes the tokens before it again, so the bar comes back as it was.
+     * Until the next gesture the word stays open: no automatic space arms on the decode.
+     */
+    private fun undoLastGesture(): Boolean {
+        val comp = composer ?: return false
+        val state = gestureUndo.pop() ?: return false
+        val from = comp.tokenCount
+        if (state.tokens >= from) {
+            gestureUndo.clear()
+            return false
+        }
+        DecodeTrace.log { "  backspace undo tokens=$from->${state.tokens} text=${state.text}" }
+        replaceTentative(state.text)
+        if (state.tokens == 0) {
+            abandonWord()
+        } else {
+            wordShift = state.wordShift
+            swipeDecodeEmpty = state.decodeEmpty
+            seededWithoutTokens = true
+            lastCandidates = emptyList()
+            lastTentative = null
+            lastLiteral = ""
+            suggestionBar?.clearSuggestions()
+            comp.truncate(state.tokens)
+            updateBarWordPending()
+        }
+        // A capital the undone letter spent comes back with it.
+        if (state.shift == ShiftState.State.SHIFT && shift.state == ShiftState.State.NONE) {
+            shift.autoShift(true)
+            keyboardView?.setShiftUppercase(shift.isShifted)
+        }
+        return true
     }
 
     override fun onKeyTransition(streamId: StreamId, code: Int) {
@@ -1411,6 +1482,10 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         return tail.isNotEmpty() && p.isLivePrefix(tail + next)
     }
 
+    /** Whether a resident lexicon holds [word], case aside: English `don't` with Italian active. */
+    private fun isResidentWord(word: String): Boolean =
+        residentLanguages().any { predictorFor(it)?.isWordIgnoringCase(word) == true }
+
     /** Whether [literal] is one letter that is a word by itself in the active language. */
     private fun standaloneLetter(literal: String): Boolean =
         literal.length == 1 && StandaloneLetters.isWord(literal[0], config.language)
@@ -1473,10 +1548,11 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
 
     private val keyboardListener = object : KeyboardView.Listener {
         override fun onKeyTap(key: Key) {
+            if (key.type != KeyType.SHIFT) shift.onOtherKey()
             when (key.type) {
                 KeyType.CHAR -> onPunctuation(key.output)
                 KeyType.SPACE -> onSpace()
-                KeyType.BACKSPACE -> onBackspace()
+                KeyType.BACKSPACE -> onBackspace(tap = true)
                 KeyType.ENTER -> onEnter()
                 KeyType.SHIFT -> {
                     shift.onShiftKey()
@@ -1517,9 +1593,10 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             )
         }
 
-        override fun onDeleteChar() = onBackspace()
+        override fun onDeleteChar(tap: Boolean) = onBackspace(tap)
 
-        override fun onStageDelete(units: Int, chars: Boolean) = stageDeletion(units, chars)
+        override fun onStageDelete(units: Int, granularity: DeleteSpan.Granularity) =
+            stageDeletion(units, granularity)
 
         override fun onCommitStagedDelete() = commitStagedDeletion()
 
@@ -1544,6 +1621,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         }
 
         override fun onKeyAlternate(key: Key, text: String) {
+            if (key.type != KeyType.SHIFT) shift.onOtherKey()
             cancelAutospace()
             if (text.isEmpty()) return
             // Shift's cells are labels, not text: the key is the command and the cell its
@@ -1830,6 +1908,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         val idle = quiet && config.nextWord && !editorState.privateMode && tentativeLength == 0 &&
             composer?.hasPendingWord != true
         if (!idle) {
+            if (showBeside(bar)) return
             if (barPredictions.isNotEmpty()) {
                 barPredictions = emptyList()
                 if (quiet) bar.clearSuggestions()
@@ -1854,6 +1933,45 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             .associate { it.word.lowercase() to it.language }
         bar.setSuggestions(shown.map { barSuggestion(it) })
         DecodeTrace.log { "  predict next prev=$prev n=${found.size} first=${found.first().word}" }
+    }
+
+    /**
+     * The strip's first alternatives beside the next words, after a commit: up after every commit
+     * with an alternative, the strip kept the next words off the bar. False, and the bar left as
+     * it is, when [showsBeside] refuses, so the strip stays.
+     */
+    private fun showBeside(bar: SuggestionBarView): Boolean {
+        val stripWord = lastCommit.stripWord ?: return false
+        if (lastCandidates.isNotEmpty() || keptBar != null || expansionChoice != null) return false
+        if (editorState.privateMode || tentativeLength > 0 || composer?.hasPendingWord == true) return false
+        val zones = lastCommit.besideWords(config.nextWordBesideCount)
+        val prev = previousWordForPrediction(ich.textBeforeCursor(PREDICT_TAIL_CHARS))
+        val found = if (prev == null || zones.isEmpty()) {
+            emptyList()
+        } else {
+            predictNext(prev).filter { p ->
+                p.word.lowercase() !in blockedSpellings && zones.none { it.equals(p.word, ignoreCase = true) }
+            }
+        }
+        if (!showsBeside(true, config.nextWord, config.nextWordBeside, config.recentWords, zones.size, found.isNotEmpty())) {
+            // A swap can leave a word nothing follows: the strip comes back, picked word chosen.
+            if (besideShown) {
+                besideShown = false
+                barPredictions = emptyList()
+                bar.showCorrection(stripOptions.map { barSuggestion(it) }, stripOptions.indexOf(stripWord).coerceAtLeast(0))
+            }
+            return false
+        }
+        val shown = found.map { AutoCapitalization.forWord(it.word, config.language, it.language.ifEmpty { config.language }) }
+        barPredictions = found
+        besideShown = true
+        candidateLanguages = found.filter { it.language.isNotEmpty() }
+            .associate { it.word.lowercase() to it.language }
+        bar.showCorrectionBeside(zones.map { barSuggestion(it) }, shown.map { barSuggestion(it) })
+        DecodeTrace.log {
+            "  predict next beside=${zones.joinToString("|")} prev=$prev n=${found.size} first=${found.first().word}"
+        }
+        return true
     }
 
     /**
@@ -2092,8 +2210,8 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             EditorAction.RETYPE, EditorAction.EXPANDIFY, EditorAction.SETTINGS,
             EditorAction.NEXT_LANGUAGE, EditorAction.TOGGLE_AUTOSPACE,
             EditorAction.ONE_HANDED, EditorAction.DATE, EditorAction.TIME,
-            EditorAction.ENTER, EditorAction.COPY_LINE, EditorAction.TOGGLE_NEXT_WORD,
-            EditorAction.TOGGLE_RECENT_WORDS, EditorAction.TOGGLE_NUMBER_ROW,
+            EditorAction.ENTER, EditorAction.COPY_LINE, EditorAction.CLEAN_LINKS,
+            EditorAction.TOGGLE_NEXT_WORD, EditorAction.TOGGLE_RECENT_WORDS, EditorAction.TOGGLE_NUMBER_ROW,
             EditorAction.TOGGLE_TIDY_SPACES, EditorAction.TOGGLE_TYPING_SPEED,
             EditorAction.TOGGLE_PECK_MODE,
             EditorAction.TAB, EditorAction.ESCAPE, EditorAction.FORWARD_DELETE, EditorAction.HOME,
@@ -2107,6 +2225,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             performLocalAction(action)
             return true
         }
+        if (action == EditorAction.PASTE && pasteCleaned()) return true
         finalizePendingWord()
         ich.performContextMenuAction(menuId)
         selectionLedger.expectAny(SystemClock.uptimeMillis())
@@ -2132,6 +2251,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             EditorAction.TIME -> insertNow(date = false)
             EditorAction.ENTER -> onEnter()
             EditorAction.COPY_LINE -> copyLine()
+            EditorAction.CLEAN_LINKS -> cleanLinks()
             EditorAction.TOGGLE_NEXT_WORD -> togglePref(Prefs.NEXT_WORD, !config.nextWord)
             EditorAction.TOGGLE_RECENT_WORDS -> togglePref(Prefs.RECENT_WORDS, !config.recentWords)
             EditorAction.TOGGLE_NUMBER_ROW -> togglePref(Prefs.NUMBER_ROW, !config.numberRow)
@@ -2233,6 +2353,70 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         }
         getSystemService(ClipboardManager::class.java)
             ?.setPrimaryClip(ClipData.newPlainText(getString(R.string.clip_label_line), line))
+    }
+
+    /**
+     * Tracking parameters out of the selection's links, or out of the link just before the
+     * cursor, as after a paste (#26). Nothing to clean buzzes, as a refused line copy does. A
+     * private field is never read for it.
+     */
+    private fun cleanLinks() {
+        cancelAutospace()
+        finalizePendingWord()
+        if (editorState.privateMode) return
+        if (selectionLength() > 0) {
+            val text = ich.selectedText()?.toString() ?: return
+            val cleaned = if (text.length > CLEAN_LINKS_READ_CHARS) text else LinkCleaner.clean(text)
+            DecodeTrace.log { "  clean links src=selection len=${text.length}->${cleaned.length}" }
+            if (cleaned == text) {
+                vibrateForKeyPress()
+                return
+            }
+            val at = minOf(selStart, selEnd)
+            ich.replaceSelection(at, cleaned)
+            // The length changes, unlike a re-case: the words recorded after it move.
+            commitHistory.onEdit(at + text.length, text.length, cleaned.length)
+            expectAt(at, at + cleaned.length)
+            return
+        }
+        val before = ich.textBeforeCursor(CLEAN_LINKS_READ_CHARS) ?: return
+        val found = LinkCleaner.cleanLastLink(before)
+        DecodeTrace.log { "  clean links src=cursor changed=${found != null}" }
+        if (found == null) {
+            vibrateForKeyPress()
+            return
+        }
+        ich.replaceBeforeCursor(found.span, found.text)
+        expectAfter(found.span, found.text.length)
+        updateAutoShift()
+    }
+
+    /**
+     * The clipboard's text with its links cleaned, written by the keyboard, when the setting
+     * asks and a link changes. False leaves the paste to the app, which keeps any formatting:
+     * only the keyboard's own paste can be cleaned, the app's menu never comes here.
+     *
+     * One plain-text item only. The app joins several items, and a URI item would be read on
+     * the main thread, so both are left to the app's paste.
+     */
+    private fun pasteCleaned(): Boolean {
+        if (!config.cleanLinksOnPaste || editorState.privateMode) return false
+        val clip = getSystemService(ClipboardManager::class.java)?.primaryClip ?: return false
+        if (clip.itemCount != 1) return false
+        val text = clip.getItemAt(0).text?.toString() ?: return false
+        val cleaned = LinkCleaner.clean(text)
+        if (cleaned == text) return false
+        cancelAutospace()
+        finalizePendingWord()
+        val replacing = selectionLength() > 0
+        ich.commitText(cleaned)
+        // A replaced selection moves the cursor by its own length too, as the app's paste does.
+        if (replacing) selectionLedger.expectAny(SystemClock.uptimeMillis()) else expectAfter(0, cleaned.length)
+        autospaceInserted = false
+        autospaceFromTaps = false
+        DecodeTrace.log { "  paste cleaned len=${text.length}->${cleaned.length}" }
+        updateAutoShift()
+        return true
     }
 
     /** Opens settings, at [screen] with [reveal] scrolled to and flashed when given. */
@@ -2594,7 +2778,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         autospaceInserted = false
         autospaceFromTaps = false
         DecodeTrace.log { "  autospace retract" }
-        reloadWordUnderCursor(beforeTime)
+        reloadWordUnderCursor(beforeTime, reopensCommit = true)
     }
 
     /**
@@ -2637,6 +2821,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         if (code < 0 || !g.hasKey(code)) return false
         if (comp.tokenCount >= KineticaConstants.MAX_WORD_LEN) return false
         clearCorrection()
+        rememberWordBeforeGesture()
         if (tentativeLength == 0) wordShift = shift.state
         // The popup already applied the layout's case to its cells, so the glyph goes in
         // as chosen, not through shift.apply again.
@@ -2670,7 +2855,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     private var stageSelectedText = ""
 
 
-    private fun stageDeletion(units: Int, chars: Boolean) {
+    private fun stageDeletion(units: Int, granularity: DeleteSpan.Granularity) {
         if (units <= 0) {
             if (stagedDeletionLength > 0) clearStagedDeletion(restoreCursor = true)
             return
@@ -2699,7 +2884,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             }
         }
         val before = stageBefore
-        val span = DeleteSpan.staged(stageSelected, before, units, chars)
+        val span = DeleteSpan.staged(stageSelected, before, units, granularity)
         stagedDeletionLength = span
         val tail = (span - stageSelected).coerceIn(0, before.length)
         stagedDeletion =
@@ -3028,12 +3213,21 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         finalizePendingWord()
         commitTracked(text)
         updateAutoShift()
+        // No pair is read across punctuation: next words offered before it go, and beside the
+        // correction the whole strip comes back.
+        refreshPredictions()
     }
 
-    private fun onBackspace() {
+    /** [tap]: a tap on the key, which may take a gesture back; a repeat or an action may not. */
+    private fun onBackspace(tap: Boolean = false) {
         if (consumeCtrl("backspace")) return
         cancelAutospace()
         if (undoAutocorrect()) return
+        if (undoesGesture(tap, config.backspaceUndo, tentativeLength, selectionLength(), gestureUndo.size) &&
+            undoLastGesture()
+        ) {
+            return
+        }
         val eating = if (DecodeTrace.enabled) lastCommit.retypeWord ?: backspaceTarget else null
         // Whether this delete is aimed at the keyboard's own space, decided before the
         // deletion because afterwards the evidence is gone. Deleting the space itself makes
@@ -3066,7 +3260,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             forgetAutospace()
             DecodeTrace.log { "  autospace refuse src=backspace" }
         }
-        reloadWordUnderCursor()
+        reloadWordUnderCursor(reopensCommit = deletedAutospace && selected == 0)
     }
 
     /**
@@ -3076,8 +3270,14 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
      * accent-folded onto their base keys, so an Italian "perch" continues to
      * "perché"; apostrophes are skipped (the trie search re-inserts
      * dictionary apostrophes for free).
+     *
+     * [reopensCommit]: an automatic space was taken back, so the word is the last commit,
+     * in progress again; see takeBack.
      */
-    private fun reloadWordUnderCursor(beforeTime: Long = SystemClock.uptimeMillis()) {
+    private fun reloadWordUnderCursor(
+        beforeTime: Long = SystemClock.uptimeMillis(),
+        reopensCommit: Boolean = false,
+    ) {
         if (editorState.privateMode) return
         // Peck mode has no prediction to re-seed; reloading would resurrect
         // the suggestion pipeline through the backspace path.
@@ -3087,13 +3287,19 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         val after = ich.textAfterCursor(1)
         if (after != null && after.isNotEmpty() && after[0].isLetter()) return
         val before = ich.textBeforeCursor(KineticaConstants.MAX_WORD_LEN + 1) ?: return
-        val fragment = trailingLetterRun(before)
+        val fragment = reloadFragment(trailingLetterRun(before), ::isResidentWord)
         if (fragment.isEmpty() || fragment.length > KineticaConstants.MAX_WORD_LEN) return
         val taps = tapAnchors(fragment, g, beforeTime) ?: return
         wordShift = shiftOf(fragment)
         tentativeLength = fragment.length
         tentativeWord = fragment
         reloadedWord = fragment
+        gestureUndo.clear()
+        if (reopensCommit) {
+            reopenedLesson = lastLesson?.takeIf { it.word == fragment.lowercase() }
+            // Not the previous word of its own decode, nor of the pair its commit learns.
+            comp.reopenLastCommit(fragment)
+        }
         // Whatever the timer was armed for, it is not what the composer holds now.
         cancelAutospace()
         comp.seed(taps)
@@ -3136,6 +3342,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         // The decode follows the word before this one, not the commits made since, which can
         // include the word itself.
         comp.reset()
+        gestureUndo.clear()
         wordBefore(before, word.head)?.let { comp.anchorContext(it) }
         comp.seed(taps)
         seededWithoutTokens = true
@@ -3346,6 +3553,9 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         }
         lastLearnedWord = replacement.lowercase()
         lastLearnedWordLang = replacementLang
+        // Beside the next words, the first zone now holds the word replaced and the next words
+        // follow the new one; the full strip is left as it is.
+        if (config.nextWordBeside) refreshPredictions()
     }
 
     // ---------------------------------------------------------- word state
@@ -3465,12 +3675,13 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
      * mirror and written whole, behind the count the same commit queued, so the row exists; a
      * capital that now leads, or no longer does, needs a load to show.
      */
-    private fun voteCase(word: String, lang: String, case: CaseVote) {
-        if (case.vote == 0 || editorState.teachesNothing) return
+    /** Applies [case] to [word]'s learned capital; true when it changed. */
+    private fun voteCase(word: String, lang: String, case: CaseVote): Boolean {
+        if (case.vote == 0 || editorState.teachesNothing) return false
         val w = word.lowercase()
         val map = casesFor(lang)
         val old = map[w]
-        val next = nextCase(old, case) ?: return
+        val next = nextCase(old, case) ?: return false
         map[w] = next
         val reload = leadChanged(old, next)
         DecodeTrace.log { "  learn capital word=$w display=${next.display} votes=${next.votes} lang=$lang" }
@@ -3482,6 +3693,45 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
                 return@execute
             }
             if (reload) mainHandler.post { scheduleUserDictReload() }
+        }
+        return true
+    }
+
+    /** Puts [w]'s learned capital back to [before], as it stood before a vote now taken back. */
+    private fun restoreCase(w: String, lang: String, before: DictionaryLoader.LearnedCase?) {
+        val map = casesFor(lang)
+        val now = map[w]
+        if (before == null) map.remove(w) else map[w] = before
+        val reload = leadChanged(now, before)
+        dbExecutor.execute {
+            try {
+                KineticaDb.get(this).userWords().setCase(w, lang, before?.display, before?.votes ?: 0)
+            } catch (e: RuntimeException) {
+                Log.w(TAG, "case restore failed for $w", e)
+                return@execute
+            }
+            if (reload) mainHandler.post { scheduleUserDictReload() }
+        }
+    }
+
+    /**
+     * Takes back what [lesson]'s commit taught: its count, its case vote and its pair. That
+     * commit came from an automatic space the next letter took back, so it was not the word:
+     * `Fake`, spaced, then typed on into `FakeCompanyName`, must not settle `Fake` as `fake`'s
+     * capital.
+     */
+    private fun takeBack(lesson: CommitLesson) {
+        DecodeTrace.log {
+            "  learn takeback word=${lesson.word} lang=${lesson.lang} case=${lesson.voted} pair=${lesson.pair != null}"
+        }
+        unlearnWord(lesson.word, lesson.lang)
+        if (lesson.voted) restoreCase(lesson.word, lesson.lang, lesson.caseBefore)
+        lesson.pair?.let { pair ->
+            if (lastLearnedPair == pair) {
+                lastLearnedPair = null
+                lastLearnedPairLang = null
+            }
+            unlearnPair(pair, lesson.lang)
         }
     }
 
@@ -3762,13 +4012,14 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
      * `held -> glee` and `keys -> myers`, all decodes the user then retyped. [retypeCurrentWord]
      * takes the last pair back so the store does not learn the errors it exists to fix.
      */
-    private fun learnPair(context: List<String>?, word: String, lang: String) {
-        if (!config.learnPhrases || editorState.teachesNothing) return
-        val prev = context?.getOrNull((context.size) - 2) ?: return
+    /** Learns the pair ending in [word]; returns it, or null when nothing was learned. */
+    private fun learnPair(context: List<String>?, word: String, lang: String): Pair<String, String>? {
+        if (!config.learnPhrases || editorState.teachesNothing) return null
+        val prev = context?.getOrNull((context.size) - 2) ?: return null
         val w = word.lowercase()
         val p = prev.lowercase()
-        if (!WORD_RE.matches(w) || !WORD_RE.matches(p)) return
-        if (w.length > KineticaConstants.MAX_WORD_LEN || p.length > KineticaConstants.MAX_WORD_LEN) return
+        if (!WORD_RE.matches(w) || !WORD_RE.matches(p)) return null
+        if (w.length > KineticaConstants.MAX_WORD_LEN || p.length > KineticaConstants.MAX_WORD_LEN) return null
         lastLearnedPair = p to w
         lastLearnedPairLang = lang
         pairsFor(lang).compute(pairKey(p, w)) { _, v -> (v ?: 0) + 1 }
@@ -3780,6 +4031,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
                 Log.w(TAG, "phrase learn failed", e)
             }
         }
+        return p to w
     }
 
     /**
@@ -3826,6 +4078,10 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         val lang = lastLearnedPairLang ?: return
         lastLearnedPair = null
         lastLearnedPairLang = null
+        unlearnPair(pair, lang)
+    }
+
+    private fun unlearnPair(pair: Pair<String, String>, lang: String) {
         val key = pairKey(pair.first, pair.second)
         pairsFor(lang).computeIfPresent(key) { _, v -> (v - 1).coerceAtLeast(0) }
         val now = System.currentTimeMillis()
@@ -3839,11 +4095,11 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     }
 
     /** Inverse of [learnWord] for commits the user explicitly took back. */
-    private fun unlearnWord(word: String) {
+    private fun unlearnWord(word: String, filed: String? = null) {
         if (editorState.teachesNothing) return
         val w = word.lowercase()
         if (w.length > KineticaConstants.MAX_WORD_LEN || !WORD_RE.matches(w)) return
-        val lang = lastLearnedWordLang?.takeIf { w == lastLearnedWord } ?: languageOf(word)
+        val lang = filed ?: lastLearnedWordLang?.takeIf { w == lastLearnedWord } ?: languageOf(word)
         countsFor(lang).computeIfPresent(w) { _, v -> (v - 1).coerceAtLeast(0) }
         val now = System.currentTimeMillis()
         dbExecutor.execute {
@@ -3904,7 +4160,9 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         candidateLanguages = emptyMap()
         lastLiteral = ""
         suggestionBar?.clearSuggestions()
+        lastLesson = null
         if (word.isNotEmpty() && !editorState.teachesNothing) {
+            reopenedLesson?.let { if (takesBackReopened(it.word, word)) takeBack(it) }
             // Every commit (top prediction, tapped correction or manual typing) is one unit of
             // personal evidence, filed to the dictionary the word came from by its per-word
             // provenance. The one commit that learns nothing is a swipe whose full-buffer
@@ -3913,20 +4171,26 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
                 val filed = sharedFiling.languageFor(heldBy(word), lang)
                 learnWord(word, lang = filed)
                 val held = predictorFor(filed)?.holdsExactSpelling(word) == true
-                voteCase(word, filed, caseVote(word, proposal, held, textBefore, casesFor(filed)[word.lowercase()]?.display, filed))
+                val caseBefore = casesFor(filed)[word.lowercase()]
+                val vote = caseVote(word, proposal, held, textBefore, caseBefore?.display, filed)
+                if (vote.vote == 0 && word.any { it.isUpperCase() }) {
+                    DecodeTrace.log { "  learn capital none word=$word why=${vote.why} lang=$filed" }
+                }
+                val voted = voteCase(word, filed, vote)
                 lastLearnedWord = word.lowercase()
                 lastLearnedWordLang = filed
                 // The pair is learned from the same evidence as the word, under the same
                 // guards. composer.commitWord has already pushed, so the predecessor is the
                 // second-from-last context entry; lastCommit is emptied on every field change.
-                learnPair(composer?.contextSnapshot(), word, filed)
+                val pair = learnPair(composer?.contextSnapshot(), word, filed)
+                lastLesson = CommitLesson(word.lowercase(), filed, voted, caseBefore, pair)
             }
         }
         // Not under the learning guard above, and not the same condition: see
         // showsCorrectionStrip. With recent words on, the alternatives are already in the
         // word's column, so the strip gives the bar back to next-word predictions.
         val strip = showsCorrectionStrip(word, editorState.offersCorrections, options.size) && !config.recentWords
-        if (word.isNotEmpty()) lastCommit.onCommit(word, strip, options.drop(1), correctionLanguages)
+        if (word.isNotEmpty()) lastCommit.onCommit(word, strip, options.drop(1), correctionLanguages, typed)
         // The letters as typed lead a corrected word's column: the strip's way back from a wrong
         // autocorrect, which the recent column replaces when it is on.
         if (word.isNotEmpty()) {
@@ -3934,14 +4198,15 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             recentWords.onCommit(word, alts, correctionLanguages + (typed?.let { mapOf(it.lowercase() to lang) } ?: emptyMap()))
         }
         backspaceTarget = null
+        besideShown = false
         if (strip) {
-            suggestionBar?.showCorrection(
-                options.take(KineticaConstants.TOP_K).map { barSuggestion(it) },
-                selected = 0,
-            )
+            stripOptions = options.take(KineticaConstants.TOP_K)
+            suggestionBar?.showCorrection(stripOptions.map { barSuggestion(it) }, selected = 0)
         }
         swipeDecodeEmpty = false
         reloadedWord = null
+        reopenedLesson = null
+        gestureUndo.clear()
         updateBarWordPending()
     }
 
@@ -3953,6 +4218,8 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         expansionChoice = null
         composer?.clear()
         reloadedWord = null
+        reopenedLesson = null
+        gestureUndo.clear()
         seededWithoutTokens = false
         tentativeLength = 0
         tentativeWord = ""
@@ -3983,6 +4250,8 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         keptBar = KeptBar(tentativeWord, tail)
         composer?.clear()
         reloadedWord = null
+        reopenedLesson = null
+        gestureUndo.clear()
         seededWithoutTokens = false
         tentativeLength = 0
         tentativeWord = ""
@@ -3997,6 +4266,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     private fun clearCorrection() {
         val stripUp = lastCommit.stripWord != null
         lastCommit.clear()
+        besideShown = false
         if (stripUp) suggestionBar?.clearCorrection()
     }
 
@@ -4109,6 +4379,10 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         // How far each way COPY_LINE reads for the line's ends. A longer line is refused,
         // not half copied.
         const val COPY_LINE_READ_CHARS = 2000
+
+        // How far back the clean-links action reads for the link before the cursor, and the
+        // longest selection it cleans. A link is rarely past a few hundred characters.
+        const val CLEAN_LINKS_READ_CHARS = 4000
         // Backspace slide: how much text to fetch for word-span staging.
         const val STAGE_FETCH_CHARS = 256
         // Spacebar word slide: how far to read for one word boundary. Smaller than the staging
@@ -4528,6 +4802,16 @@ internal fun trailingLetterRun(before: CharSequence, end: Int = before.length): 
     val stop = start
     while (start > 0 && isWordChar(before[start - 1])) start--
     return before.subSequence(start, stop).toString()
+}
+
+/**
+ * The part of [run] a reload reopens: all of it when it is a word (`don't`), else what follows
+ * its last apostrophe. The apostrophe key ends a word, so `l'al` was typed as `l` and `al` and
+ * reopens as `al`; whole, its letters would come back as `laltro` and commit `l'altro` as new.
+ */
+internal fun reloadFragment(run: String, isWord: (String) -> Boolean): String {
+    if (run.indexOf('\'') < 0 || isWord(run)) return run
+    return tailAfterLastApostrophe(run)
 }
 
 /** What [trailingLetterRun] and [commitSpan] both count as belonging to a word. */
@@ -5010,6 +5294,15 @@ internal fun learnsOnCommit(word: String, reloadedFrom: String?): Boolean {
 }
 
 /**
+ * Whether committing [committed] takes back the commit [reopened] names: the word an automatic
+ * space followed, the space then taken back to keep typing. Typed on into another word, that
+ * commit was not the word (`Fake` of `FakeCompanyName`); committed again unchanged, it stays
+ * learned once, as [learnsOnCommit] keeps it.
+ */
+internal fun takesBackReopened(reopened: String?, committed: String): Boolean =
+    reopened != null && committed.isNotEmpty() && learnsOnCommit(committed, reopened)
+
+/**
  * Whether a commit puts the correction strip up. [offersCorrections] is the field's own
  * answer, which is where the privateMode / noLearning split is decided and documented.
  *
@@ -5021,6 +5314,20 @@ internal fun showsCorrectionStrip(
     offersCorrections: Boolean,
     optionCount: Int,
 ): Boolean = word.isNotEmpty() && offersCorrections && optionCount > 1
+
+/**
+ * Whether the bar after a commit shows the strip's first [corrections] beside the next words
+ * instead of the whole strip. Recent words on already give the bar to the next words, and with
+ * none found (after a period) the strip stays, so a correction is never lost.
+ */
+internal fun showsBeside(
+    stripUp: Boolean,
+    nextWordOn: Boolean,
+    besideOn: Boolean,
+    recentWords: Boolean,
+    corrections: Int,
+    nextFound: Boolean,
+): Boolean = stripUp && nextWordOn && besideOn && !recentWords && corrections > 0 && nextFound
 
 /**
  * The typed letters' zone on the bar, or "" for none. Letters that leave the accents off a word

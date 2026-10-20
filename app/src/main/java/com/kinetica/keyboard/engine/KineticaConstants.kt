@@ -111,7 +111,9 @@ object KineticaConstants {
     const val COMPLETION_MIN_PREFIX = 2
     // 8 extra letters on a 2-letter prefix reaches 10-letter words; longer completions are rarely
     // picked before the user types on, and subtree fan-out grows with every level
-    // (MAX_CANDIDATES still bounds emission per pass).
+    // (MAX_CANDIDATES still bounds emission per pass). A learned word past it is walked on its
+    // own, without the fan-out: one typed at least PERSONAL_MERGE_MIN_COUNT times completes at
+    // any length.
     const val COMPLETION_MAX_EXTRA = 8
     // Additive dTotal per completed letter. Any positive value keeps a typed word ahead of its own
     // extensions; 0.25 is above a worst-case fuzzy substitution (FUZZY_TAP_LAMBDA * 1.0 kw = 0.15),

@@ -279,6 +279,25 @@ object LayoutMutations {
         return layout.copy(keys = keys)
     }
 
+    /**
+     * [cells] open the period key's menu, after a leading emoji entry: an address field's
+     * domain endings. Found by id, like the period's own setting; a cell already there moves up.
+     */
+    fun withPeriodAlternatesFirst(layout: KeyboardLayout, cells: List<String>): KeyboardLayout {
+        if (cells.isEmpty()) return layout
+        val keys = layout.keys.map { k ->
+            if (k.id != "period") return@map k
+            val rest = k.alternates.filter { it !in cells }
+            val alts = if (rest.firstOrNull() == EMOJI_ALTERNATE) {
+                listOf(EMOJI_ALTERNATE) + cells + rest.drop(1)
+            } else {
+                cells + rest
+            }
+            k.copy(alternates = alts)
+        }
+        return layout.copy(keys = keys)
+    }
+
     /** [ch] joins the popup right after a leading emoji entry, if any. */
     private fun ownCharFirst(alternates: List<String>, ch: String): List<String> =
         if (alternates.firstOrNull() == EMOJI_ALTERNATE) {

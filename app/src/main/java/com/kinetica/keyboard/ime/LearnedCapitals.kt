@@ -7,8 +7,14 @@ import com.kinetica.keyboard.keys.WordCase
 
 /** One commit's say on how a learned word is capitalized: up, down, or nothing. */
 internal data class CaseVote(val vote: Int, val display: String?) {
+    /** Which rule kept a capital from voting, for the trace; outside equality, so every NONE matches. */
+    var why: String = ""
+        private set
+
     companion object {
         val NONE = CaseVote(0, null)
+
+        fun none(why: String): CaseVote = CaseVote(0, null).also { it.why = why }
     }
 }
 
@@ -20,10 +26,11 @@ internal data class CaseVote(val vote: Int, val display: String?) {
  * talked out of. So: up, with the capital to store, for a capital the user wrote over a
  * lowercase proposal; down for a lowercase word written over the proposed [learned] capital.
  *
- * Only mid-sentence: at a sentence start, or the start of a field, a capital is the shift's.
- * [before] is the text before the word, null when it could not be read. Neither a word written
- * in capitals, nor English `I`, nor a spelling the dictionary holds as written ([held]: German
- * `Haus`, `Sie` beside `sie`) is the user's capital.
+ * At a sentence start, or the start of a field, the first capital is the shift's; one past it
+ * is the user's, so `FakeCompanyName` votes there too. [before] is the text before the word,
+ * null when it could not be read. Neither a word written in capitals, nor English `I`, nor a
+ * spelling the dictionary holds as written ([held]: German `Haus`, `Sie` beside `sie`) is the
+ * user's capital.
  */
 internal fun caseVote(
     committed: String,
@@ -33,16 +40,23 @@ internal fun caseVote(
     learned: String?,
     lang: String,
 ): CaseVote {
-    if (before == null || committed.length < 2 || startsNewSentence(before)) return CaseVote.NONE
+    if (before == null) return CaseVote.none("unread")
+    if (committed.length < 2) return CaseVote.none("short")
+    if (startsNewSentence(before) && !hasInnerCapital(committed)) return CaseVote.none("sentence")
     val lower = committed.lowercase()
     if (committed == lower) {
-        return if (learned != null && proposal == learned) CaseVote(-1, null) else CaseVote.NONE
+        return if (learned != null && proposal == learned) CaseVote(-1, null) else CaseVote.none("lower")
     }
-    if (committed.count { it.isLetter() } > 1 && committed.none { it.isLowerCase() }) return CaseVote.NONE
-    if (AutoCapitalization.forWord(lower, lang) == committed) return CaseVote.NONE
-    if (held || committed == proposal) return CaseVote.NONE
+    if (committed.count { it.isLetter() } > 1 && committed.none { it.isLowerCase() }) return CaseVote.none("caps")
+    if (AutoCapitalization.forWord(lower, lang) == committed) return CaseVote.none("auto")
+    if (held) return CaseVote.none("held")
+    if (committed == proposal) return CaseVote.none("proposed")
     return CaseVote(1, committed)
 }
+
+/** A capital past the first letter, beside a lowercase one: `GitHub`, not `Hello` or `NASA`. */
+internal fun hasInnerCapital(word: String): Boolean =
+    word.drop(1).any { it.isUpperCase() } && word.any { it.isLowerCase() }
 
 /**
  * A learned capital after [case], or null when nothing changes. A new spelling contests a

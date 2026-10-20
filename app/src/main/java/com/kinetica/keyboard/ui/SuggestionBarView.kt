@@ -199,6 +199,9 @@ class SuggestionBarView @JvmOverloads constructor(
     private var words: List<Suggestion> = emptyList()
     private var correctionMode = false
     private var selectedIndex = -1
+    // Leading zones that are the commit's corrections beside the next words: a tap swaps the word
+    // written, as a strip pick does, and the rest are next-word picks. 0 to 3.
+    private var besideZones = 0
     private var page = 0
     private var downZone = -1
     private var downX = 0f
@@ -264,7 +267,7 @@ class SuggestionBarView @JvmOverloads constructor(
         }
         if (target != null) {
             adjustSource = BarAdjust.blockSource(
-                zone, ZONE_RECENT, correctionMode, pageStart() + zone, selectedIndex,
+                zone, ZONE_RECENT, correctionMode || isBesideZone(zone), pageStart() + zone, selectedIndex,
                 recent.getOrNull(recentDownCell / RECENT_ROWS)?.back, wordPending,
             )
             // Arm adjustment; the touch is consumed either way, so lifting does not also
@@ -306,6 +309,10 @@ class SuggestionBarView @JvmOverloads constructor(
         typeface = Typeface.DEFAULT_BOLD
     }
     private val chipPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    // The corrections beside the next words, in the accent, so they do not read as predictions.
+    private val besidePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textAlign = Paint.Align.CENTER
+    }
     private val dividerPaint = Paint()
     private val badgePaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val timerPaint = Paint()
@@ -352,6 +359,7 @@ class SuggestionBarView @JvmOverloads constructor(
         textPaint.color = theme.suggestionText
         primaryPaint.color = theme.suggestionPrimary
         chipPaint.color = theme.chip
+        besidePaint.color = theme.accent
         dividerPaint.color = theme.keyHint
         dividerPaint.alpha = 60
         badgePaint.color = theme.accent
@@ -364,21 +372,41 @@ class SuggestionBarView @JvmOverloads constructor(
         words = candidates
         correctionMode = false
         selectedIndex = -1
+        besideZones = 0
         page = 0
         invalidate()
     }
 
     /** Whether the bar shows exactly [candidates] as its composition words right now. */
     fun showsWords(candidates: List<String>): Boolean =
-        !correctionMode && words.size == candidates.size && words.indices.all { words[it].word == candidates[it] }
+        !correctionMode && besideZones == 0 && words.size == candidates.size &&
+            words.indices.all { words[it].word == candidates[it] }
 
     fun clearSuggestions() {
         if (!correctionMode && words.isNotEmpty()) {
             words = emptyList()
+            besideZones = 0
             page = 0
             invalidate()
         }
     }
+
+    /**
+     * After a commit: the [corrections], words the commit beat, in the first zones, and the [next]
+     * words after them. Composition mode with its first zones marked, through the same zone code,
+     * so the words fit by width and page as any other.
+     */
+    fun showCorrectionBeside(corrections: List<Suggestion>, next: List<Suggestion>) {
+        words = corrections + next
+        correctionMode = false
+        selectedIndex = -1
+        besideZones = corrections.size
+        page = 0
+        invalidate()
+    }
+
+    /** Whether [zone], page-relative, is one of the corrections beside the next words. */
+    private fun isBesideZone(zone: Int): Boolean = zone >= 0 && pageStart() + zone < besideZones
 
     /**
      * Correction mode: the committed word at [selected] plus the alternatives it beat, all as
@@ -387,16 +415,18 @@ class SuggestionBarView @JvmOverloads constructor(
     fun showCorrection(candidates: List<Suggestion>, selected: Int) {
         words = candidates
         correctionMode = true
+        besideZones = 0
         selectedIndex = selected.coerceIn(0, (words.size - 1).coerceAtLeast(0))
         page = 0
         invalidate()
     }
 
     fun clearCorrection() {
-        if (correctionMode) {
+        if (correctionMode || besideZones > 0) {
             words = emptyList()
             correctionMode = false
             selectedIndex = -1
+            besideZones = 0
             page = 0
             invalidate()
         }
@@ -504,6 +534,7 @@ class SuggestionBarView @JvmOverloads constructor(
         val orn = BarMetrics.scale(rh, density)
         textPaint.textSize = BarMetrics.textSize(rh, textScale)
         primaryPaint.textSize = BarMetrics.textSize(rh, textScale)
+        besidePaint.textSize = textPaint.textSize
         val baseY = h / 2f - (textPaint.descent() + textPaint.ascent()) / 2f
         // Drawn before the early return: an empty bar is when a botched word most needs
         // restarting.
@@ -544,7 +575,7 @@ class SuggestionBarView @JvmOverloads constructor(
             val cx = layout.centers[i]
             // Bold goes to the overall top candidate, or the committed word, on whatever page it
             // falls.
-            val emphasized = if (correctionMode) fullIdx == selectedIndex else fullIdx == 0
+            val emphasized = if (correctionMode) fullIdx == selectedIndex else fullIdx == besideZones
             if (correctionMode && fullIdx == selectedIndex) {
                 val pad = 4f * density * orn
                 // Compact zones run to the bar's edges; the chip hugs the word instead.
@@ -557,7 +588,11 @@ class SuggestionBarView @JvmOverloads constructor(
                 val corner = 6f * density * orn
                 canvas.drawRoundRect(zoneRect, corner, corner, chipPaint)
             }
-            val paint = if (emphasized) primaryPaint else textPaint
+            val paint = when {
+                fullIdx < besideZones -> besidePaint
+                emphasized -> primaryPaint
+                else -> textPaint
+            }
             val shown = fit(s.word, paint, zoneW)
             canvas.drawText(shown, cx, baseY, paint)
             // While a slide is armed on this zone, the badge previews the pending tier.
@@ -724,7 +759,7 @@ class SuggestionBarView @JvmOverloads constructor(
                 if (downZone >= 0 || recentHold) {
                     longPressHandler.postDelayed(reinforceRunnable, REINFORCE_HOLD_MS)
                 }
-                if (flickEnabled && !correctionMode && downZone != ZONE_RETYPE) {
+                if (flickEnabled && !correctionMode && downZone != ZONE_RETYPE && !isBesideZone(downZone)) {
                     velocityTracker?.recycle()
                     velocityTracker = VelocityTracker.obtain().also { it.addMovement(ev) }
                 }
@@ -774,7 +809,7 @@ class SuggestionBarView @JvmOverloads constructor(
                     return true
                 }
                 velocityTracker?.addMovement(ev)
-                if (flickEnabled && !correctionMode && downZone >= 0) {
+                if (flickEnabled && !correctionMode && downZone >= 0 && !isBesideZone(downZone)) {
                     val vt = velocityTracker
                     if (vt != null) {
                         vt.computeCurrentVelocity(1000)
@@ -790,7 +825,7 @@ class SuggestionBarView @JvmOverloads constructor(
             MotionEvent.ACTION_UP -> {
                 longPressHandler.removeCallbacks(reinforceRunnable)
                 // A recent cell is never a correction pick, so its hold in place reinforces.
-                val correcting = correctionMode && adjustZone >= 0
+                val correcting = (correctionMode || isBesideZone(adjustZone)) && adjustZone >= 0
                 if (adjustArmed && BarAdjust.appliesOnLift(correcting, adjustSteps)) {
                     adjustTarget?.let {
                         if (BarAdjust.blockArmed(it.count, adjustSteps)) {
@@ -872,6 +907,8 @@ class SuggestionBarView @JvmOverloads constructor(
                                 invalidate()
                                 listener?.onCorrectionPicked(s.word)
                             }
+                        } else if (fullIdx < besideZones) {
+                            listener?.onCorrectionPicked(s.word)
                         } else {
                             listener?.onSuggestionPicked(s.word)
                         }

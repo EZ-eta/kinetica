@@ -261,6 +261,7 @@
     <string name="action_time">Time</string>
     <string name="action_enter">Enter</string>
     <string name="action_copy_line">Copy the line</string>
+    <string name="action_clean_links">Clean links</string>
     <string name="notice_undo">Undo</string>
     <string name="notice_redo">Redo</string>
     <string name="notice_paste">Paste</string>
@@ -310,6 +311,7 @@
     <string name="notice_time">Time</string>
     <string name="notice_enter">Enter</string>
     <string name="notice_copy_line">Copy line</string>
+    <string name="notice_clean_links">Clean links</string>
     <string name="notice_tab">Tab</string>
     <string name="notice_backspace">Backspace</string>
     <string name="notice_name_ctrl">Ctrl</string>
@@ -326,6 +328,8 @@
     <string name="clip_label_line">Line</string>
     <string name="pref_bar_actions_title">Shortcuts in the suggestion bar</string>
     <string name="pref_next_word_title">Suggest the next word</string>
+    <string name="pref_next_word_beside_title">Next words beside the correction</string>
+    <string name="pref_next_word_beside_count_title">Corrections beside the next words</string>
     <string name="pref_recent_words_title">Recent words on the bar</string>
     <string name="size_preview_portrait">Portrait</string>
     <string name="size_preview_landscape">Landscape</string>
@@ -362,7 +366,9 @@
     <string name="pref_enter_hold_sends_title">Hold enter to send</string>
     <string name="pref_enter_hold_sends_summary">In a multi-line field with an action, such as a chat box, a tap on enter writes a new line and a hold runs the action. Single-line fields and the symbol pages keep the action on the tap</string>
     <string name="pref_field_keys_title">Keys that fit the field</string>
-    <string name="pref_field_keys_summary">The comma key types @ in an email field, and / in a web address with : in its menu. The comma stays in the menu. No capital at the start of either</string>
+    <string name="pref_clean_links_on_paste_title">Clean links when pasting</string>
+    <string name="pref_clean_links_on_paste_summary">Pasting from the keyboard takes tracking parts like utm_source or si out of the links it pastes. The app\'s own paste menu is not changed. The Clean links shortcut does the same for a link already written</string>
+    <string name="pref_field_keys_summary">The comma key types @ in an email field, and / in a web address with : in its menu. The comma stays in the menu. In both, the period\'s menu opens on .com, .net and .org. No capital at the start of either</string>
     <string name="pref_numpad_for_numbers_title">Number pad in number fields</string>
     <string name="pref_numpad_for_numbers_summary">A field that takes only numbers, a phone number or a date opens on the number pad. Off: the letters, so a word can still be typed and expanded there</string>
     <string name="pref_letters_on_new_field_title">Letters in every new field</string>
@@ -378,7 +384,8 @@
     <string name="pref_number_row_title">Numbers row</string>
     <string name="pref_number_row_summary">Digits in their own row above the letters, tap only. The keyboard grows a row so the letters keep their size</string>
     <string name="pref_recent_words_summary">The last two words stay on the left of the bar, each with the two words it beat above and below it. Tap one to swap it in. The bar grows to fit</string>
-    <string name="pref_next_word_summary">When nothing is being typed, the bar offers the words that usually come next, in place of the shortcuts (the ?123 menu keeps them). With recent words on, they follow every word</string>
+    <string name="pref_next_word_summary">When nothing is being typed, the bar offers the words that usually come next, in place of the shortcuts (the ?123 menu keeps them)</string>
+    <string name="pref_next_word_beside_summary">After a word, its best alternatives stay on the left of the bar, as many as set below, and the next words fill the rest. Off: the alternatives fill the bar until the next word starts. With recent words on, the next words always follow every word</string>
     <string name="pref_bar_actions_summary">Shown when there is nothing to suggest. Each is also assignable to a chord or an edge swipe</string>
     <string name="pref_menu_actions_title">Shortcuts in the ?123 long-press menu</string>
     <string name="shortcut_set_intro">Tick a shortcut to show it; the arrows move a ticked one. The first ones are kept when the row runs out of room.</string>
@@ -399,7 +406,10 @@
     <string name="expansion_trigger_hint">What you type</string>
     <string name="expansion_target_label">Target</string>
     <string name="expansion_target_hint">What replaces it</string>
-    <string name="expansion_bad_trigger">Blank, or longer than 32 characters. Spaces are removed.</string>
+    <string name="expansion_trigger_blank">Type a trigger</string>
+    <string name="expansion_trigger_spaces">A trigger cannot hold a space</string>
+    <string name="expansion_trigger_too_long">Longer than 32 characters</string>
+    <string name="expansion_remove_spaces">Remove spaces</string>
     <string name="chord_expansion_hint">Expansion text</string>
     <string name="chord_empty_hint">No chords assigned. The feature stays off until you add one.</string>
     <string name="chord_list_hint">Hold the trigger still, then tap the key. On a symbol page, ?123 is the page key.</string>
@@ -492,9 +502,15 @@
     <string name="dict_import_note">Takes an AOSP wordlist.combined file, such as main_it from the Helium314/aosp-dictionaries mirror (Apache-2.0). It is merged with the bundled list on the phone; abbreviations, offensive entries and spellings missing a bundled word\'s accents are dropped. Word pairs stay the bundled ones.</string>
 
     <string name="pref_backspace_char_slide_title">Backspace slide deletes letters</string>
+    <string name="pref_backspace_undo_title">Backspace undoes the last tap or swipe</string>
+    <string name="pref_backspace_undo_summary">While a word is being typed, a tap on backspace takes back its last tap or swipe, and the bar shows what it showed before it. Holding backspace still deletes letters, and so does a tap once the word is finished</string>
     <string name="pref_backspace_char_slide_summary">Sliding left from backspace marks one letter at a time instead of a word. Nothing is deleted until you lift; sliding back undoes it</string>
     <string name="pref_retype_button_title">Retype button on the suggestion bar</string>
     <string name="pref_retype_button_summary">A \u21bb button at the right end of the bar. One tap removes the word you are writing, or the one just finished, so you can swipe it again</string>
+    <string name="pref_backspace_punctuation_stops_title">Backspace slide stops at punctuation</string>
+    <string name="pref_backspace_punctuation_stops_summary">Sliding by word marks a link or a path one piece at a time, so example.com/path takes three steps. In plain text a word still goes with its comma</string>
+    <string name="pref_backspace_step_title">Backspace slide distance</string>
+    <string name="pref_backspace_step_summary">How far you slide left from backspace to mark one more word. A letter takes a little under half. Lower is faster</string>
     <string name="pref_spacebar_word_slide_title">Spacebar slide moves by word</string>
     <string name="pref_spacebar_word_slide_summary">The spacebar slide moves the cursor a word at a time, as the backspace slide does. Punctuation moves with the word</string>
     <string name="backup_heading">Backup everything</string>
