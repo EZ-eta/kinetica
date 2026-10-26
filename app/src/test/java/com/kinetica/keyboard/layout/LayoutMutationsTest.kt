@@ -174,7 +174,7 @@ class LayoutMutationsTest {
 
     @Test
     fun withNumberPriorityFindsNothingLeftToReorderAfterTheTrim() {
-        // The two settings compose: the trim must run first, which KineticaIME.alphaLayout does.
+        // The two settings compose: the trim must run first, which KeyboardViews.alphaLayout does.
         val trimmed = LayoutMutations.withoutForeignAlternates(accentLayout())
         assertEquals(trimmed, LayoutMutations.withNumberPriority(trimmed))
     }
@@ -499,7 +499,7 @@ class LayoutMutationsTest {
 
     @Test
     fun theEmojiEntryStillLandsFirstOnAUserCommaList() {
-        // Order matters in KineticaIME.alphaLayout: the punctuation mutation runs before
+        // Order matters in KeyboardViews.alphaLayout: the punctuation mutation runs before
         // withEmojiOnComma, so the emoji cell still leads.
         val custom = LayoutMutations.withPunctuationAlternates(
             punctuationLayout(), emptyList(), listOf(":", "-"),

@@ -57,6 +57,52 @@ class GestureUndoTest {
     }
 
     @Test
+    fun theWordTheAutomaticSpaceCommittedIsKeptOnceAndDroppedByAnything() {
+        // `Fa` tapped, a swipe, the space: one tap after it takes the swipe back.
+        val undo = GestureUndo()
+        undo.push(state("", 0))
+        undo.push(state("F", 1))
+        undo.push(state("Fa", 2))
+        val states = undo.snapshot()
+        undo.clear()
+        undo.keep(GestureUndo.Committed("Fake", end = 15, tokens = emptyList(), states = states))
+        val kept = undo.takeCommitted()
+        assertEquals(listOf(state("", 0), state("F", 1), state("Fa", 2)), kept?.states)
+        assertNull("once", undo.takeCommitted())
+        // The rest of the stack goes back, so the next tap takes the `a`.
+        undo.restore(kept!!.states.dropLast(1))
+        assertEquals(state("F", 1), undo.pop())
+        // A commit, an abandon or a reload clears it; any text or gesture forgets it.
+        undo.keep(kept)
+        undo.clear()
+        assertNull(undo.takeCommitted())
+        undo.keep(kept)
+        undo.forgetCommitted()
+        assertNull(undo.takeCommitted())
+    }
+
+    @Test
+    fun onlyATapRightAfterTheAutomaticSpaceTakesItBack() {
+        assertTrue(undoesSpacedGesture(tap = true, enabled = true, tentativeLength = 0, selection = 0, kept = true))
+        assertFalse("the hold's repeat", undoesSpacedGesture(tap = false, enabled = true, tentativeLength = 0, selection = 0, kept = true))
+        assertFalse("the setting", undoesSpacedGesture(tap = true, enabled = false, tentativeLength = 0, selection = 0, kept = true))
+        assertFalse("a word in progress", undoesSpacedGesture(tap = true, enabled = true, tentativeLength = 2, selection = 0, kept = true))
+        assertFalse("a selection", undoesSpacedGesture(tap = true, enabled = true, tentativeLength = 0, selection = 3, kept = true))
+        assertFalse("a space the user typed", undoesSpacedGesture(tap = true, enabled = true, tentativeLength = 0, selection = 0, kept = false))
+    }
+
+    @Test
+    fun theEditorMustStillHoldTheWordAndItsSpace() {
+        val kept = GestureUndo.Committed("Fake", end = 15, tokens = emptyList(), states = listOf(state("Fa", 2)))
+        assertTrue(committedStillThere("see the Fake ", 15, kept))
+        // The cursor moved, the space went, the word changed, or there is no gesture to give back.
+        assertFalse(committedStillThere("see the Fake ", 14, kept))
+        assertFalse(committedStillThere("see the Fake", 15, kept))
+        assertFalse(committedStillThere("see the Fame ", 15, kept))
+        assertFalse(committedStillThere("see the Fake ", 15, GestureUndo.Committed("Fake", 15, emptyList(), emptyList())))
+    }
+
+    @Test
     fun theUndoIsOffByDefault() {
         assertFalse(com.kinetica.keyboard.settings.Prefs.DEFAULT_BACKSPACE_UNDO)
         val xml = com.kinetica.keyboard.settings.PrefsXml.read()

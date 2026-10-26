@@ -90,7 +90,8 @@ channel can install and update over the other.
 - Slide left from backspace to mark words for deletion; slide back to keep them, lift to delete.
   The distance per word can be set, and the slide can stop at punctuation, so a link goes a piece
   at a time (Shortcuts and gestures > Swipes and slides).
-- A tap on backspace can take back the last tap or swipe of the word in progress (Typing, off).
+- A tap on backspace can take back the last tap or swipe of the word in progress, or of the word
+  just written with its automatic space (Typing, off).
 - Swipe shift up for `ABC`, right for `Abc`, down for `abc`, or hold it for the menu: on the word at
   the cursor or on selected text. The swipes are edge swipes like any other, so they can be changed.
   A double tap on shift locks caps, at a sentence start too.
@@ -145,6 +146,7 @@ channel can install and update over the other.
 - Words per minute on the spacebar while you type (Keys, off).
 - Themes: dark, light, Material You, or a palette from one colour of your choice. Zen mode turns
   animations off.
+- Swipe trail in one colour, a hue of your own, the theme's colour, or rainbow (Look and feel).
 
 ### Languages
 
@@ -170,7 +172,8 @@ channel can install and update over the other.
   slide past the lowest tier to block it.
 - A word you keep capitalizing yourself, a name or `GitHub`, comes out with its capital. Writing it
   in lowercase over the capital takes it back. Long words you have taught it complete from their
-  first letters (`fakeco` offers `FakeCompanyName`).
+  first letters (`fakeco` offers `FakeCompanyName`); tapped as `Fake`, shift, `CompanyName`, it
+  stays one word past the automatic space.
 - Phrase learning (optional): which word you tend to type after which.
 - Dictionary: learned and blocked words per language, with search; import of an AOSP word list,
   merged on the phone.

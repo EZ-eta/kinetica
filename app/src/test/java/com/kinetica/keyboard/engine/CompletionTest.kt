@@ -170,7 +170,7 @@ class CompletionTest {
 
     @Test
     fun literalIsTheLastZoneAndNeverDuplicated() {
-        // Part B contract (KineticaIME.pushSuggestions): the all-tap literal
+        // Part B contract (BarContents.pushSuggestions): the all-tap literal
         // is appended as the final pickable zone; a literal already among the
         // candidates, or the empty literal of a swipe-bearing buffer, adds
         // nothing.

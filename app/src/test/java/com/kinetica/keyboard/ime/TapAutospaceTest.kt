@@ -111,6 +111,36 @@ class TapAutospaceTest {
     }
 
     @Test
+    fun aTapUnderASwipeThatStartedFirstIsANewWord() {
+        // `I`, its space, then `noticed` with the right thumb swiping first. The left tap
+        // lifted first and took the space back, so `I` fused into `Noticed`.
+        assertFalse(
+            retractsAutospace(
+                fromTappedWord = true, tentativeLength = 0, elapsedMs = 120, windowMs = 600,
+                fusedIsPrefix = true, swipeStartedFirst = true,
+            ),
+        )
+    }
+
+    @Test
+    fun aKeptSpaceNamesTheGateThatKeptIt() {
+        // The first `car`, `pet` kept its space and an `if` at a longer gap did not: without a
+        // reason the capture could not tell the window from the dictionary.
+        assertEquals("late", retractRefusal(true, 0, elapsedMs = 412, windowMs = 400, fusedIsPrefix = true))
+        assertEquals("prefix", retractRefusal(true, 0, elapsedMs = 120, windowMs = 400, fusedIsPrefix = false))
+        assertEquals(
+            "held",
+            retractRefusal(true, 0, elapsedMs = 120, windowMs = 400, fusedIsPrefix = true, swipeStartedFirst = true),
+        )
+        // The window is asked first, so a late letter that also fuses into nothing reads late.
+        assertEquals("late", retractRefusal(true, 0, elapsedMs = 412, windowMs = 400, fusedIsPrefix = false))
+        assertEquals(null, retractRefusal(true, 0, elapsedMs = 400, windowMs = 400, fusedIsPrefix = true))
+        // The preconditions have names of their own, never traced as a kept space.
+        assertEquals("space", retractRefusal(false, 0, elapsedMs = 120, windowMs = 400, fusedIsPrefix = true))
+        assertEquals("word", retractRefusal(true, 2, elapsedMs = 120, windowMs = 400, fusedIsPrefix = true))
+    }
+
+    @Test
     fun aWordAlreadyUnderwayIsNotAContinuation() {
         assertFalse(retractsAutospace(fromTappedWord = true, tentativeLength = 3, elapsedMs = 120, windowMs = 600, fusedIsPrefix = true))
     }
@@ -121,6 +151,81 @@ class TapAutospaceTest {
         assertFalse(retractsAutospace(fromTappedWord = true, tentativeLength = 0, elapsedMs = 5_000, windowMs = 600, fusedIsPrefix = true))
         // ...and the boundary itself belongs to the retraction, not to the new word.
         assertTrue(retractsAutospace(fromTappedWord = true, tentativeLength = 0, elapsedMs = 600, windowMs = 600, fusedIsPrefix = true))
+    }
+
+    @Test
+    fun aShiftPressStopsTheClockForACamelCaseCapital() {
+        // `Fake`, its space at 1 000, shift at 1 120, `C` at 1 520: read to the letter, the press
+        // spent the window (350 at a 175 ms tap delay), so without the stop `Fake` stayed a word.
+        assertEquals(520, retractClockMs(now = 1_520, autospaceAt = 1_000, shiftAt = -1))
+        assertFalse(retractsAutospace(true, 0, retractClockMs(1_520, 1_000, -1), 350, fusedIsPrefix = true))
+        assertEquals(120, retractClockMs(now = 1_520, autospaceAt = 1_000, shiftAt = 1_120))
+        val window = shiftRetractMs(350)
+        assertTrue(retractsAutospace(true, 0, retractClockMs(1_520, 1_000, 1_120), window, fusedIsPrefix = true))
+        // A pause after the shift is not counted; the learned spelling still has to agree.
+        assertTrue(retractsAutospace(true, 0, retractClockMs(9_000, 1_000, 1_120), window, fusedIsPrefix = true))
+        assertEquals(
+            "shift",
+            retractRefusal(true, 0, retractClockMs(1_520, 1_000, 1_120), window, fusedIsPrefix = false, shifted = true),
+        )
+    }
+
+    @Test
+    fun aLearnedCamelCaseWordRejoinsAfterAShiftPress() {
+        // `Fake`, its space at 1 000, shift at 1 992, `C`: the press came at 992 ms, past this
+        // phone's 800 ms window, so `Fake` stayed a word. `FakeCompanyName` is learned.
+        val learned = listOf("Dennis", "FakeCompanyName")
+        val clock = retractClockMs(now = 2_400, autospaceAt = 1_000, shiftAt = 1_992)
+        assertEquals(992, clock)
+        assertEquals("late", retractRefusal(true, 0, clock, 800, fusedIsPrefix = true))
+        assertTrue(learnedCamelPrefix("Fake", 'C', learned))
+        assertEquals(
+            null,
+            retractRefusal(true, 0, clock, shiftRetractMs(800), learnedCamelPrefix("Fake", 'C', learned), shifted = true),
+        )
+        // The bound is a floor under the user's window, and its edge belongs to the retraction.
+        assertEquals(1_500, shiftRetractMs(400))
+        assertEquals(2_000, shiftRetractMs(2_000))
+        assertEquals(null, retractRefusal(true, 0, 1_500, shiftRetractMs(800), fusedIsPrefix = true, shifted = true))
+        assertEquals("late", retractRefusal(true, 0, 1_501, shiftRetractMs(800), fusedIsPrefix = true, shifted = true))
+    }
+
+    @Test
+    fun aShiftWithNoLearnedCamelCaseWordKeepsTheSpace() {
+        // `is`, shift at 423, `Land`. `isl` is a live prefix, so the dictionary's answer took the
+        // space back; no learned spelling continues `is` with `L`.
+        val learned = listOf("FakeCompanyName", "GitHub")
+        assertEquals(null, retractRefusal(true, 0, 423, 800, fusedIsPrefix = true))
+        assertFalse(learnedCamelPrefix("is", 'L', learned))
+        assertEquals("shift", retractRefusal(true, 0, 423, shiftRetractMs(800), fusedIsPrefix = false, shifted = true))
+    }
+
+    @Test
+    fun aCamelCaseMatchIsTheBaseCaseAsideThenTheCapitalAsTyped() {
+        val learned = listOf("FakeCompanyName", "Fakes", "iPhone")
+        // A sentence start writes `Fake`, mid-sentence `fake`: either rejoins.
+        assertTrue(learnedCamelPrefix("fake", 'C', learned))
+        assertTrue(learnedCamelPrefix("i", 'P', learned))
+        // A press that left the letter lowercase, as leaving caps lock does, rejoins nothing.
+        assertFalse(learnedCamelPrefix("Fake", 'c', learned))
+        assertFalse(learnedCamelPrefix("Fake", 's', learned))
+        // The letter must be the learned word's capital there, not its next lowercase letter.
+        assertFalse(learnedCamelPrefix("Fake", 'S', learned))
+        assertFalse(learnedCamelPrefix("Fake", 'D', learned))
+        // The whole learned word is no continuation, and nothing continues no word.
+        assertFalse(learnedCamelPrefix("FakeCompanyName", 'X', learned))
+        assertFalse(learnedCamelPrefix("", 'F', learned))
+    }
+
+    @Test
+    fun aShiftPressAfterTheWindowStopsNothingInTime() {
+        // `is`, a break, shift, `Land`: the press came past the shift bound, too late to be part
+        // of the word, even had a learned spelling agreed.
+        assertEquals(2_000, retractClockMs(now = 3_300, autospaceAt = 1_000, shiftAt = 3_000))
+        assertEquals(
+            "late",
+            retractRefusal(true, 0, retractClockMs(3_300, 1_000, 3_000), shiftRetractMs(350), fusedIsPrefix = true, shifted = true),
+        )
     }
 
     // --------------------------------------------------- when it never arms at all

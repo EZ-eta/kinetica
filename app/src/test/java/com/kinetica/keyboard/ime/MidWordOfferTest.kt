@@ -17,6 +17,7 @@ import org.junit.Test
 class MidWordOfferTest {
 
     private val g = TestData.qwertyGeometry()
+    private val none: (String) -> Boolean = { false }
 
     @Test
     fun theWholeWordIsOfferedApostropheIncluded() {
@@ -47,12 +48,43 @@ class MidWordOfferTest {
     @Test
     fun aPickIsRefusedOnceTheTextAroundTheCursorChanged() {
         val offer = WordAround("fo", "rm")
-        assertTrue(midWordStillThere("the fo", "rm is", offer))
+        assertTrue(midWordStillThere("the fo", "rm is", offer, none))
         // A letter typed, the cursor moved one, the word rewritten by the app.
-        assertFalse(midWordStillThere("the fox", "rm is", offer))
-        assertFalse(midWordStillThere("the f", "orm is", offer))
-        assertFalse(midWordStillThere("the fo", "r is", offer))
-        assertFalse(midWordStillThere("the ", "form", offer))
+        assertFalse(midWordStillThere("the fox", "rm is", offer, none))
+        assertFalse(midWordStillThere("the f", "orm is", offer, none))
+        assertFalse(midWordStillThere("the fo", "r is", offer, none))
+        assertFalse(midWordStillThere("the ", "form", offer, none))
+    }
+
+    @Test
+    fun anElisionIsOfferedAfterItsApostrophe() {
+        // `l'al|tro`: tapping wrote `l` and `altro`, so the offer is for `altro`, split as before.
+        val around = wordAroundCursor("vediamo l'al", "tro e", 24)!!
+        assertEquals(WordAround("l'al", "tro"), around)
+        assertEquals(WordAround("al", "tro"), midWordPiece(around, none))
+        assertEquals(WordAround("an", "no"), midWordPiece(WordAround("dell'an", "no"), none))
+        // A run that is a word stays whole: `don|'t` as before.
+        assertEquals(WordAround("don", "'t"), midWordPiece(WordAround("don", "'t")) { it == "don't" })
+        assertEquals(WordAround("fo", "rm"), midWordPiece(WordAround("fo", "rm"), none))
+        // The pick re-reads the word the same way.
+        assertTrue(midWordStillThere("vediamo l'al", "tro e", WordAround("al", "tro"), none))
+        assertFalse(midWordStillThere("vediamo l'al", "tro e", WordAround("l'al", "tro"), none))
+    }
+
+    @Test
+    fun theCursorBeforeTheApostropheIsOfferedNothing() {
+        // In the article, or right after the apostrophe: the reload refuses these too.
+        assertNull(midWordPiece(WordAround("l", "'altro"), none))
+        assertNull(midWordPiece(WordAround("l'", "altro"), none))
+        assertNull(midWordPiece(WordAround("d", "ell'anno"), none))
+    }
+
+    @Test
+    fun anApostropheEndingTheRunSplitsNothing() {
+        // A possessive and a truncation, not elisions: offered whole, as before.
+        assertEquals(WordAround("p", "o'"), midWordPiece(WordAround("p", "o'"), none))
+        assertEquals(WordAround("do", "gs'"), midWordPiece(WordAround("do", "gs'"), none))
+        assertEquals(WordAround("dogs", "'"), midWordPiece(WordAround("dogs", "'"), none))
     }
 
     @Test
@@ -82,5 +114,8 @@ class MidWordOfferTest {
         assertEquals("plus", wordBefore("plus, ke", "ke"))
         assertEquals("l'anno", wordBefore("l'anno ke", "ke"))
         assertEquals(null, wordBefore("ke", "ke"))
+        // The piece after an elision follows its article as tapping committed it.
+        assertEquals("l", wordBefore("se l'al", "al"))
+        assertEquals("dell", wordBefore("dell'an", "an"))
     }
 }

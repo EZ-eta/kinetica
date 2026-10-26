@@ -4,7 +4,7 @@ package com.kinetica.keyboard.ui
  * The arithmetic of the suggestion bar's long-press weight slide, including the
  * step past the bottom that blocks a word outright.
  *
- * The personal count clamps at zero (KineticaIME.learnWord, and again in SQL), so downward
+ * The personal count clamps at zero (Learner.learnWord, and again in SQL), so downward
  * travel past zero did nothing; block is bound to that travel and needs no second gesture or
  * timer. It arms one full step below the step that zeroed the word, so pushing a word down to
  * nothing cannot overshoot into a block.

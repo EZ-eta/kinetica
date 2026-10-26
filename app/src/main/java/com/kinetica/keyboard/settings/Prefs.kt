@@ -152,6 +152,16 @@ object Prefs {
     const val SINGLE_LETTER_MIN_DELAY_MS = 300
 
     /**
+     * The floor on how long after a tapped word's automatic space a shift press can still take it
+     * back. Not a preference: there is no key for it.
+     *
+     * After a shift a learned camel-case word decides, not the dictionary, so this bound only ends
+     * a pause. Camel-case presses came at 992 ms, and one more under 1 482 by its taps; 1 500 covers
+     * both. Six presses meant apart, 423 to 6 243 ms, had no learned word to rejoin at any bound.
+     */
+    const val SHIFT_RETRACT_MIN_MS = 1500
+
+    /**
      * The word in progress ends only at a delimiter, never on a timer.
      *
      * An all-tap word already behaves this way, since the autospace is gated on a swipe in the

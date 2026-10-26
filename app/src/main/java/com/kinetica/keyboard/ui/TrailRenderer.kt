@@ -7,9 +7,8 @@ import android.graphics.Path
 import com.kinetica.keyboard.engine.models.StreamId
 
 /**
- * Per-stream swipe trails. Hue starts at the configured base (offset for the right thumb so
- * simultaneous trails can be told apart) and advances 30 deg on every key transition; points
- * fade and shrink over TRAIL_LIFE_MS.
+ * Per-stream swipe trails, in the hue [TrailHue] gives; points fade and shrink over
+ * TRAIL_LIFE_MS.
  *
  * One smoothed piece per sample, so a fast swipe does not read as facets; the joins are
  * [TrailPath]'s and are tested there.
@@ -28,6 +27,7 @@ class TrailRenderer(private val density: Float) {
     private val pointPool = ArrayDeque<TrailPoint>()
     private val hues = floatArrayOf(0f, 0f)
     private val forceNextPoint = BooleanArray(2)
+    private val sampling = TrailSampling(MIN_SAMPLE_INTERVAL_MS)
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeCap = Paint.Cap.ROUND
@@ -39,12 +39,15 @@ class TrailRenderer(private val density: Float) {
     private val path = Path()
     private val quad = FloatArray(TrailPath.SIZE)
 
-    /** Base hue in degrees; the right stream starts offset by 60 deg. */
+    /** Base hue in degrees. */
     var baseHue = 0f
+
+    /** Rainbow: the hue steps per key and the right stream starts offset. */
+    var cycles = true
 
     fun startStream(stream: StreamId) {
         val i = stream.ordinal
-        hues[i] = (baseHue + if (stream == StreamId.RIGHT) 60f else 0f) % 360f
+        hues[i] = TrailHue.start(baseHue, stream, cycles)
         forceNextPoint[i] = true
     }
 
@@ -55,10 +58,9 @@ class TrailRenderer(private val density: Float) {
         val last = trail.lastOrNull()
         // MotionEvent history can deliver several samples per frame. The decoder keeps them
         // all; the trail needs one point per ~8 ms, so the endpoint moves instead, bounding
-        // draw work and allocation on high-refresh screens. A hue change forces a new point.
-        if (!forceNextPoint[i] && last != null && last.hue == hue &&
-            t >= last.t && t - last.t < MIN_SAMPLE_INTERVAL_MS
-        ) {
+        // draw work and allocation on high-refresh screens. TrailSampling holds the rule.
+        val lays = sampling.lays(i, t, forceNextPoint[i], last?.hue == hue, hasLast = last != null)
+        if (!lays && last != null) {
             last.x = x
             last.y = y
             last.t = t
@@ -81,7 +83,7 @@ class TrailRenderer(private val density: Float) {
     }
 
     fun bumpHue(stream: StreamId) {
-        hues[stream.ordinal] = (hues[stream.ordinal] + HUE_STEP) % 360f
+        hues[stream.ordinal] = TrailHue.next(hues[stream.ordinal], cycles)
     }
 
     /** Drops expired points; returns true while anything is still visible. */
@@ -144,6 +146,5 @@ class TrailRenderer(private val density: Float) {
         const val TRAIL_LIFE_MS = 250L
         const val MIN_SAMPLE_INTERVAL_MS = 8L
         const val MAX_POOLED_POINTS = 128
-        const val HUE_STEP = 30f
     }
 }

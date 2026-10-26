@@ -584,7 +584,8 @@ data class KeyboardConfig(
                 "violet" -> 275f
                 "custom" -> prefs.getInt(Prefs.TRAIL_COLOR_CUSTOM_HUE, 200)
                     .coerceIn(0, 360).toFloat()
-                else -> 0f   // rainbow: base 0, the per-key cycling does the rest
+                // Rainbow starts at 0 and TrailHue steps it per key; theme takes the accent instead.
+                else -> 0f
             }
     }
 }

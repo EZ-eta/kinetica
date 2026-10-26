@@ -1,0 +1,8 @@
+Backspace undo also takes back a word the automatic space just wrote
+A learned FakeCompanyName stays one word tapped as Fake, shift, CompanyName
+The swipe trail keeps the colour you pick
+Chord keys show a key combination as symbols: ⌃⌦, ⌃⇞
+Text expansions: the back arrow works
+A tap under the other thumb's swipe no longer joins the word before
+A word no longer fuses with the next during a dictionary reload
+Italian: inside l'altro the bar offers altro

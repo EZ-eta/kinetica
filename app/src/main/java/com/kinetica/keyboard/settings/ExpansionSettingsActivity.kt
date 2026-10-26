@@ -102,6 +102,11 @@ class ExpansionSettingsActivity : AppCompatActivity() {
         refresh()
     }
 
+    override fun onSupportNavigateUp(): Boolean {
+        finish()
+        return true
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         io.shutdown()

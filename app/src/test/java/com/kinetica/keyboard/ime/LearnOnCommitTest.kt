@@ -86,6 +86,21 @@ class LearnOnCommitTest {
     }
 
     @Test
+    fun aCommitBackspacedIntoAndRetypedStaysLearnedOnce() {
+        // `hello`, backspaced to `hell`, then `o`: the reload's letters are `hell`, so
+        // learnsOnCommit alone would count the same word twice.
+        assertTrue(learnsOnCommit("hello", "hell"))
+        assertTrue(keepsReopened("hello", "hello"))
+        assertTrue(keepsReopened("fake", "Fake"))
+        assertFalse(takesBackReopened("hello", "hello"))
+        // Changed into another word, it goes back and the new one is learned.
+        assertFalse(keepsReopened("hello", "help"))
+        assertTrue(takesBackReopened("hello", "help"))
+        // Nothing reopened: the ordinary rules.
+        assertFalse(keepsReopened(null, "hello"))
+    }
+
+    @Test
     fun anAccentedWordMatchesItselfAndNotItsFoldedForm() {
         // The seed is the editor's own text, accents included (that divergence is
         // the shipped pattern), so a re-commit of "perché" matches. Its folded

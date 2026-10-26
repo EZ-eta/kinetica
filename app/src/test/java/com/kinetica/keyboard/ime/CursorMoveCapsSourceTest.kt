@@ -1,10 +1,6 @@
 package com.kinetica.keyboard.ime
 
-import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.Paths
 import org.junit.Assert.assertTrue
-import org.junit.Assume.assumeTrue
 import org.junit.Test
 
 /**
@@ -15,23 +11,14 @@ import org.junit.Test
  * live editor, so the guard is a source scan, like `SteppedSliderSourceTest`. The decision
  * itself is `startsNewSentence`, covered by `SentenceCapsTest`.
  *
- * Read off disk, so a fail-first check here needs `--rerun-tasks`.
+ * Read off disk ([ImeSources]), so a fail-first check here needs `--rerun-tasks`.
  */
 class CursorMoveCapsSourceTest {
 
-    private fun source(): String {
-        val rel = "src/main/java/com/kinetica/keyboard/ime/KineticaIME.kt"
-        val direct = Paths.get(rel)
-        val p: Path = if (Files.exists(direct)) direct else Paths.get("app/$rel")
-        assumeTrue("KineticaIME.kt not found", Files.exists(p))
-        return Files.newBufferedReader(p).use { it.readText() }
-    }
-
     @Test
     fun aUserCursorMoveRedecidesTheShift() {
-        val src = source()
+        val src = ImeSources.declaring("override fun onUpdateSelection(").text
         val start = src.indexOf("override fun onUpdateSelection(")
-        require(start >= 0) { "onUpdateSelection not found" }
         val end = src.indexOf("\n    }\n", start)
         val body = src.substring(start, end)
         // Past the early return for the keyboard's own reports: only a user move re-decides.

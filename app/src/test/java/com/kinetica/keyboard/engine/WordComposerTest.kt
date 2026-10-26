@@ -97,6 +97,23 @@ class WordComposerTest {
     }
 
     @Test
+    fun aReopenedCommitTheCursorLeavesComesBack() {
+        // `hello`, `world`, the cursor parked after `world`, then moved away: the next word
+        // follows `world` again, not `hello`.
+        val composer = WordComposer(predictor, direct, direct, Capture())
+        composer.commitWord("hello")
+        composer.commitWord("world")
+        assertTrue(composer.reopenLastCommit("world"))
+        assertEquals(listOf("hello"), composer.contextSnapshot())
+        composer.clear()
+        composer.restoreLastCommit("World")
+        assertEquals(listOf("hello", "world"), composer.contextSnapshot())
+        // Never deeper than the context: the oldest goes.
+        composer.restoreLastCommit("again")
+        assertEquals(listOf("world", "again"), composer.contextSnapshot())
+    }
+
+    @Test
     fun takingTheLastGestureBackBringsBackTheDecodeBeforeIt() {
         // Two thumbs: a sloppy swipe, a tap from the other thumb, then the rest of the word.
         // Backspace takes the last one back, and the bar must read as it did before it.
@@ -117,6 +134,30 @@ class WordComposerTest {
         // A count past the buffer changes nothing.
         composer.truncate(5)
         assertEquals(2, composer.tokenCount)
+    }
+
+    @Test
+    fun aWordTheAutomaticSpaceCommittedComesBackWithoutItsLastGesture() {
+        // The same two-thumb buffer, committed by its space: put back without the last gesture,
+        // it decodes as it did before that gesture, and the word is not its own previous word.
+        val cap = Capture()
+        val composer = WordComposer(predictor, direct, direct, cap)
+        composer.commitWord("see")
+        composer.onToken(TestData.sloppySwipe("some", g, 0, 300, 0.3f, StreamId.LEFT))
+        composer.onToken(TestData.tap('t', g, 350, StreamId.RIGHT))
+        val words = cap.candidates.map { it.word }
+        val lead = cap.tentative?.word
+        composer.onToken(TestData.sloppySwipe("hing", g, 450, 300, 0.3f, StreamId.LEFT))
+        val tokens = composer.tokensSnapshot()
+        assertEquals(3, tokens.size)
+        composer.commitWord("something")
+        assertEquals(listOf("see", "something"), composer.contextSnapshot())
+        assertTrue(composer.reopenLastCommit("something"))
+        composer.seed(tokens.take(2))
+        assertEquals(2, composer.tokenCount)
+        assertEquals(words, cap.candidates.map { it.word })
+        assertEquals(lead, cap.tentative?.word)
+        assertEquals(listOf("see"), composer.contextSnapshot())
     }
 
     @Test

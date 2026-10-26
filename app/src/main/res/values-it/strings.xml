@@ -445,7 +445,7 @@
     <string name="dict_import_note">Accetta un file wordlist.combined di AOSP, per esempio main_it dal mirror Helium314/aosp-dictionaries (Apache-2.0). Viene unito all\'elenco incluso sul telefono; abbreviazioni, voci offensive e grafie senza gli accenti di una parola inclusa vengono scartate. Le coppie di parole restano quelle incluse.</string>
     <string name="pref_backspace_char_slide_title">Il trascinamento di cancella toglie lettere</string>
     <string name="pref_backspace_undo_title">Cancella annulla l\'ultimo tocco o swipe</string>
-    <string name="pref_backspace_undo_summary">Mentre scrivi una parola, un tocco su cancella annulla il suo ultimo tocco o swipe, e la barra torna a mostrare quello che mostrava prima. Tenendo premuto cancella si tolgono ancora lettere, come con un tocco a parola finita</string>
+    <string name="pref_backspace_undo_summary">Mentre scrivi una parola, o subito dopo il suo spazio automatico, un tocco su cancella annulla il suo ultimo tocco o swipe, e la barra torna a mostrare quello che mostrava prima. Tenendo premuto cancella si tolgono ancora lettere, come con un tocco dopo aver scritto altro</string>
     <string name="pref_backspace_char_slide_summary">Trascinando a sinistra da cancella si seleziona una lettera alla volta invece di una parola. Niente viene cancellato finché non sollevi il dito; tornando indietro si annulla</string>
     <string name="pref_retype_button_title">Pulsante Riscrivi sulla barra dei suggerimenti</string>
     <string name="pref_retype_button_summary">Un pulsante ↻ all\'estremità destra della barra. Un tocco toglie la parola che stai scrivendo, o quella appena finita, per rifarla con uno swipe</string>

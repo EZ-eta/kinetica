@@ -183,6 +183,9 @@ class WordComposer(
 
     fun literal(): String = buildLiteral(tokens)
 
+    /** The buffer as it stands, in lift order; kept past a commit so a backspace can restore it. */
+    fun tokensSnapshot(): List<InputToken> = tokens.toList()
+
     /** Word committed to the editor: becomes bigram context, buffer resets. */
     fun commitWord(word: String) {
         if (DecodeTrace.enabled) traceCommitMiss(word)
@@ -263,6 +266,15 @@ class WordComposer(
         if (context.lastOrNull() != word.lowercase()) return false
         context.removeLast()
         return true
+    }
+
+    /**
+     * Puts back a commit [reopenLastCommit] took out, when the cursor left the word standing: the
+     * next word follows it again.
+     */
+    fun restoreLastCommit(word: String) {
+        context.addLast(word.lowercase())
+        while (context.size > 2) context.removeFirst()
     }
 
     /** The correction strip swapped the last committed word. */

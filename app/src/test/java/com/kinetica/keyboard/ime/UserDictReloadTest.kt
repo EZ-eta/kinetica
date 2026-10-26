@@ -1,6 +1,7 @@
 package com.kinetica.keyboard.ime
 
 import com.kinetica.keyboard.engine.KineticaConstants
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -51,5 +52,68 @@ class UserDictReloadTest {
     @Test
     fun deReinforcingAsksForNothing() {
         assertFalse(userDictNeedsReload(floor + 1, floor - 1, trieHasWord = false))
+    }
+
+    // On one capture the reload fired after `is` with nothing pending, and installed while `land`
+    // was being tapped. The new composer had no tokens, so no space, and the next word fused on.
+
+    @Test
+    fun aWordOnScreenHoldsTheInstall() {
+        assertTrue(holdsDictionaryInstall(tentativeLength = 4, composerPending = true))
+        // Its tokens can be gone while its letters are still on screen, and the other way round.
+        assertTrue(holdsDictionaryInstall(tentativeLength = 4, composerPending = false))
+        assertTrue(holdsDictionaryInstall(tentativeLength = 0, composerPending = true))
+    }
+
+    @Test
+    fun noWordInstallsAtOnce() {
+        assertFalse(holdsDictionaryInstall(tentativeLength = 0, composerPending = false))
+    }
+
+    @Test
+    fun aLoadReadyUnderATypedWordInstallsAtItsEnd() {
+        val held = HeldInstall()
+        var installs = 0
+        assertTrue(held.offer(wordPending = true) { installs++ })
+        assertEquals(0, installs)
+        // A word end with the next word already started keeps waiting.
+        assertFalse(held.release(wordPending = true))
+        assertEquals(0, installs)
+        assertTrue(held.release(wordPending = false))
+        assertEquals(1, installs)
+        assertFalse(held.isHeld)
+        // Once only: a later word end has nothing to run.
+        assertFalse(held.release(wordPending = false))
+        assertEquals(1, installs)
+    }
+
+    @Test
+    fun aLoadReadyBetweenWordsInstallsAtOnce() {
+        val held = HeldInstall()
+        var installs = 0
+        assertFalse(held.offer(wordPending = false) { installs++ })
+        assertEquals(1, installs)
+        assertFalse(held.isHeld)
+    }
+
+    @Test
+    fun theNewestHeldLoadIsTheOneInstalled() {
+        // A second reload under the same word read newer rows; the first must never install.
+        val held = HeldInstall()
+        val ran = mutableListOf<String>()
+        held.offer(wordPending = true) { ran += "old" }
+        held.offer(wordPending = true) { ran += "new" }
+        held.release(wordPending = false)
+        assertEquals(listOf("new"), ran)
+    }
+
+    @Test
+    fun aLoadReadyBetweenWordsDropsTheHeldOne() {
+        val held = HeldInstall()
+        val ran = mutableListOf<String>()
+        held.offer(wordPending = true) { ran += "old" }
+        held.offer(wordPending = false) { ran += "new" }
+        held.release(wordPending = false)
+        assertEquals(listOf("new"), ran)
     }
 }

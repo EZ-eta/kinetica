@@ -85,4 +85,20 @@ class ElisionReloadTest {
         assertTrue(learnsOnCommit(written, fragment))
         assertFalse(written.contains('\''))
     }
+
+    @Test
+    fun anElisionOfferedMidWordDecodesItsPiece() {
+        // The cursor parked in `l'al|tro`: the offer seeds `altro`, not `laltro`, and follows `l`.
+        val p = italian()
+        val g = TestData.qwertyGeometry()
+        val before = "vediamo se l'al"
+        val around = wordAroundCursor(before, "tro e poi", 24) ?: error("no word around the cursor")
+        val piece = midWordPiece(around, p::isWordIgnoringCase) ?: error("no piece offered")
+        assertEquals(WordAround("al", "tro"), piece)
+        val taps = tapAnchors(piece.head + piece.tail, g, 10_000L) ?: error("no anchors")
+        assertEquals("altro", literalOf(taps, p))
+        val context = listOfNotNull(wordBefore(before, piece.head))
+        assertEquals(listOf("l"), context)
+        assertEquals("altro", p.decode(taps, context).first().word)
+    }
 }

@@ -503,7 +503,7 @@
 
     <string name="pref_backspace_char_slide_title">Backspace slide deletes letters</string>
     <string name="pref_backspace_undo_title">Backspace undoes the last tap or swipe</string>
-    <string name="pref_backspace_undo_summary">While a word is being typed, a tap on backspace takes back its last tap or swipe, and the bar shows what it showed before it. Holding backspace still deletes letters, and so does a tap once the word is finished</string>
+    <string name="pref_backspace_undo_summary">While a word is being typed, or right after its automatic space, a tap on backspace takes back its last tap or swipe, and the bar shows what it showed before it. Holding backspace still deletes letters, and so does a tap once anything else is typed</string>
     <string name="pref_backspace_char_slide_summary">Sliding left from backspace marks one letter at a time instead of a word. Nothing is deleted until you lift; sliding back undoes it</string>
     <string name="pref_retype_button_title">Retype button on the suggestion bar</string>
     <string name="pref_retype_button_summary">A \u21bb button at the right end of the bar. One tap removes the word you are writing, or the one just finished, so you can swipe it again</string>

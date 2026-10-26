@@ -119,8 +119,8 @@ class KeyboardView @JvmOverloads constructor(
         /** A chord key typed instead of firing, for the trace: the trigger lifted, or it moved. */
         fun onChordMissed(trigger: ChordTrigger, key: Char, reason: String) = Unit
 
-        /** Any key-down; the service decides whether to vibrate. */
-        fun onKeyPressFeedback()
+        /** Any key-down, [key] the one pressed; the service decides whether to vibrate. */
+        fun onKeyPressFeedback(key: Key)
 
         /**
          * Spacebar tapped inside its spaceless zone: end the word, write no space. Its own
@@ -145,6 +145,13 @@ class KeyboardView @JvmOverloads constructor(
         get() = trailRenderer.baseHue
         set(value) {
             trailRenderer.baseHue = value
+        }
+
+    /** Rainbow trails only: the hue steps per key. */
+    var trailCycles: Boolean
+        get() = trailRenderer.cycles
+        set(value) {
+            trailRenderer.cycles = value
         }
 
     /** Arm delay for backspace hold-repeat. */
@@ -668,7 +675,7 @@ class KeyboardView @JvmOverloads constructor(
         }
     }
 
-    /** Swipe path entered a new key: cycle the trail hue and burst the key. */
+    /** Swipe path entered a new key: step a rainbow trail's hue and burst the key. */
     fun onEngineKeyTransition(streamId: StreamId, code: Int) {
         if (zenMode || !trailsEnabled) return
         trailRenderer.bumpHue(streamId)
@@ -1082,7 +1089,7 @@ class KeyboardView @JvmOverloads constructor(
             return
         }
 
-        if (keyIdx != -1) listener?.onKeyPressFeedback()
+        if (key != null) listener?.onKeyPressFeedback(key)
 
         // The symbol pages arm from their page key, as the letters do from ?123.
         if ((key?.type == KeyType.MODE_SYMBOLS || key?.type == KeyType.MODE_SYMBOLS2) && modeHoldPointer == -1) {
