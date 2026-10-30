@@ -19,6 +19,11 @@
         <item>A una mano, destra</item>
         <item>A una mano, sinistra</item>
     </string-array>
+    <string-array name="swipe_look_entries">
+        <item>Scia</item>
+        <item>Tasti che si illuminano</item>
+        <item>Entrambi</item>
+    </string-array>
     <string-array name="trail_color_entries">
         <item>Arcobaleno</item>
         <item>Rosso</item>
@@ -26,7 +31,7 @@
         <item>Verde</item>
         <item>Ciano</item>
         <item>Viola</item>
-        <item>Tonalità a scelta</item>
+        <item>Colore a scelta</item>
         <item>Colore del tema</item>
     </string-array>
     <string-array name="theme_mode_entries">
@@ -58,6 +63,11 @@
         <item>Piccolo (+1)</item>
         <item>Medio (+5)</item>
         <item>Grande (+10)</item>
+    </string-array>
+    <string-array name="language_mode_entries">
+        <item>Una lingua alla volta</item>
+        <item>Mescola le lingue attive (sperimentale)</item>
+        <item>Segui la lingua in cui scrivo (sperimentale)</item>
     </string-array>
     <string-array name="comma_mode_entries">
         <item>Virgola (predefinito)</item>

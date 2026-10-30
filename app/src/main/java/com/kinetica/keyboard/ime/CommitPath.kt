@@ -5,6 +5,7 @@ import com.kinetica.keyboard.engine.DecodeTrace
 import com.kinetica.keyboard.engine.KineticaConstants
 import com.kinetica.keyboard.engine.models.InputToken
 import com.kinetica.keyboard.keys.AutoCapitalization
+import com.kinetica.keyboard.settings.LanguageMode
 import kotlin.math.roundToInt
 
 /**
@@ -50,8 +51,10 @@ internal class CommitPath(private val ime: KineticaIME) {
         var finalWord = ime.wordState.tentativeWord
         val p = ime.residents.predictor
         val threshold = ime.config.autocorrectConfidence
+        val asWritten = keepsAsWritten(ime.wordState.reloadedWord, ime.wordState.tentativeWord)
+        if (asWritten) DecodeTrace.log { "  reloaded word kept as written" }
         if (p != null && !comp.hasSwipeToken() && ime.wordState.lastLiteral.isNotEmpty() &&
-            !ime.editorState.privateMode
+            !ime.editorState.privateMode && !asWritten
         ) {
             val target = if (threshold != null) {
                 p.tapAutocorrect(ime.wordState.lastLiteral, ime.wordState.lastTentative, threshold)
@@ -152,7 +155,7 @@ internal class CommitPath(private val ime: KineticaIME) {
             // A reopened commit committed again unchanged stays learned once: backspaced into and
             // retyped, the reload's letters are not the word, so learnsOnCommit alone counts it twice.
             if (!ime.wordState.swipeDecodeEmpty && learnsOnCommit(word, ime.wordState.reloadedWord) && !keepsReopened(reopened?.word, word)) {
-                val filed = ime.sharedFiling.languageFor(ime.heldBy(word), lang)
+                val filed = ime.filedLanguage(word, lang)
                 val counted = ime.learner.learnWord(word, lang = filed)
                 val held = ime.predictorFor(filed)?.holdsExactSpelling(word) == true
                 val caseBefore = ime.casesFor(filed)[word.lowercase()]
@@ -333,7 +336,7 @@ internal class CommitPath(private val ime: KineticaIME) {
         ime.learner.unlearnLastPair()
         ime.forgetCommitMarks()
         ime.composer?.replaceLastCommit(replacement.lowercase())
-        val replacementLang = ime.sharedFiling.languageFor(ime.heldBy(replacement), ime.languageOf(replacement))
+        val replacementLang = ime.filedLanguage(replacement, ime.languageOf(replacement))
         if (prevForPair != null) {
             ime.learner.learnPair(listOf(prevForPair, replacement.lowercase()), replacement, replacementLang)
         }
@@ -386,14 +389,15 @@ internal class CommitPath(private val ime: KineticaIME) {
 
     /**
      * Moves each resident language's standing toward the word just committed, and hands the
-     * composer the new weights. A word a language does not hold scores zero there.
+     * composer the new weights. A word a language does not hold scores zero there, and so does
+     * one its trie holds only because the user learned it.
      */
     private fun noteLanguageMomentum(word: String) {
-        if (!ime.config.noPrimary || word.isEmpty() || ime.editorState.teachesNothing) return
+        if (ime.config.languageMode != LanguageMode.FOLLOW || word.isEmpty() || ime.editorState.teachesNothing) return
         val scores = HashMap<String, Float>(3)
         for ((lang, p) in listOf(ime.config.language to ime.residents.predictor, ime.residents.secondaryLanguage to ime.residents.secondaryPredictor, ime.residents.extraLanguage to ime.residents.extraPredictor)) {
             if (lang == null || p == null) continue
-            scores[lang] = if (p.isWordIgnoringCase(word)) p.frequencyByte(word).coerceAtLeast(0) / 255f else 0f
+            scores[lang] = p.momentumScore(word)
         }
         if (scores.size < 2) return
         ime.momentum.observe(scores)

@@ -133,17 +133,16 @@ class KeyboardThemeTest {
     }
 
     @Test
-    fun theHueOnlyAffectsTheCustomPalette() {
-        // The settings preview caption relies on this: a swatch that moved with the slider
-        // under the bundled or Material You palettes would claim an effect the hue does not
-        // have there.
-        assertTrue(KeyboardTheme.hueAffects(KeyboardTheme.MODE_CUSTOM))
-        assertFalse(KeyboardTheme.hueAffects(KeyboardTheme.MODE_DEFAULT))
-        assertFalse(KeyboardTheme.hueAffects(KeyboardTheme.MODE_DYNAMIC))
+    fun theColourOnlyAffectsTheCustomPalette() {
+        // The settings preview caption relies on this: a swatch that moved with the colour
+        // under the bundled or Material You palettes would claim an effect it does not have there.
+        assertTrue(KeyboardTheme.colourAffects(KeyboardTheme.MODE_CUSTOM))
+        assertFalse(KeyboardTheme.colourAffects(KeyboardTheme.MODE_DEFAULT))
+        assertFalse(KeyboardTheme.colourAffects(KeyboardTheme.MODE_DYNAMIC))
         // A stale or misspelt stored mode falls through to the bundled palette in
         // resolve, so it must report the same here.
-        assertFalse(KeyboardTheme.hueAffects(""))
-        assertFalse(KeyboardTheme.hueAffects("Custom"))
+        assertFalse(KeyboardTheme.colourAffects(""))
+        assertFalse(KeyboardTheme.colourAffects("Custom"))
     }
 
     @Test
@@ -176,5 +175,83 @@ class KeyboardThemeTest {
             val c = KeyboardTheme.primaryForHue(h)
             assertEquals("alpha at hue $h", 0xFF, (c shr 24) and 0xFF)
         }
+    }
+
+    /** Every 30 degrees, at four saturations and five values: what a typed colour can be. */
+    private val typed: List<Int> = hues.flatMap { h ->
+        listOf(0f, 0.3f, 0.72f, 1f).flatMap { sat ->
+            listOf(0f, 0.25f, 0.5f, 0.75f, 1f).map { v -> Hsv.toColor(h, sat, v) }
+        }
+    }
+
+    @Test
+    fun aMigratedColourGivesThePaletteTheSliderGave() {
+        // Hue 233, the shipped blue: every role as the slider drew it before colours were typed.
+        val dark = KeyboardTheme.fromPrimary(KeyboardTheme.primaryForHue(233f), light = false)
+        val light = KeyboardTheme.fromPrimary(KeyboardTheme.primaryForHue(233f), light = true)
+        assertEquals(DARK_233, roles(dark))
+        assertEquals(LIGHT_233, roles(light))
+    }
+
+    @Test
+    fun anyTypedColourKeepsTheTextReadable() {
+        for (c in typed) {
+            for (light in listOf(false, true)) {
+                val t = KeyboardTheme.fromPrimary(c, light)
+                val label = "${Integer.toHexString(c)} light=$light"
+                assertTrue("$label key text", contrast(t.keyText, t.key) >= 4.5)
+                assertTrue("$label hint", contrast(t.keyHint, t.key) >= 2.0)
+                assertTrue("$label bar text", contrast(t.suggestionText, t.suggestionBg) >= 4.5)
+                assertTrue("$label bar word", contrast(t.suggestionPrimary, t.suggestionBg) >= 4.5)
+                assertNotEquals("$label key on background", t.background, t.key)
+            }
+        }
+    }
+
+    @Test
+    fun aDarkerTypedColourDimsTheSurfaces() {
+        for (light in listOf(false, true)) {
+            val full = KeyboardTheme.fromPrimary(Hsv.toColor(120f, 0.6f, 1f), light)
+            val dim = KeyboardTheme.fromPrimary(Hsv.toColor(120f, 0.6f, 0.3f), light)
+            assertTrue("light=$light", luminance(dim.background) < luminance(full.background))
+            assertTrue("light=$light", luminance(dim.key) < luminance(full.key))
+        }
+    }
+
+    @Test
+    fun theDarkAccentIsTheTypedColourUnlessItWouldVanish() {
+        val bright = 0xFFFF8800.toInt()
+        assertEquals(bright, KeyboardTheme.fromPrimary(bright, light = false).accent)
+        for (c in typed) {
+            val a = KeyboardTheme.fromPrimary(c, light = false).accent
+            assertTrue("accent for ${Integer.toHexString(c)}", Hsv.valueOf(a) >= 0.59f)
+        }
+    }
+
+    @Test
+    fun greyGivesANeutralPalette() {
+        for (light in listOf(false, true)) {
+            val t = KeyboardTheme.fromPrimary(0xFF808080.toInt(), light)
+            for (role in listOf(t.background, t.key, t.keySpecial, t.keyPressed, t.suggestionBg, t.popupBg)) {
+                assertEquals("light=$light", 0f, Hsv.saturationOf(role), 0f)
+            }
+        }
+    }
+
+    private fun roles(t: KeyboardTheme): List<String> = listOf(
+        t.background, t.key, t.keySpecial, t.keyPressed, t.keyText, t.keyHint,
+        t.suggestionBg, t.suggestionText, t.suggestionPrimary, t.chip, t.popupBg, t.accent,
+    ).map { Integer.toHexString(it) }
+
+    private companion object {
+        // Read from the build before colours were typed, when a hue slider set them.
+        val DARK_233 = listOf(
+            "ff12131a", "ff272936", "ff1e1f29", "ff1f2659", "ffededf2", "ff8f92a8",
+            "ff171821", "ffd8d8e0", "ffffffff", "ff1f244d", "ff323445", "ff475dff",
+        )
+        val LIGHT_233 = listOf(
+            "ffcacde6", "fff1f3ff", "ffd5d8f0", "ff7d87d1", "ff1d1e29", "ff4b4f73",
+            "ffdddff5", "ff2e3142", "ff12141f", "ff7984db", "ffeef0ff", "ff3241b3",
+        )
     }
 }

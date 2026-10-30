@@ -81,11 +81,14 @@ class PreferenceTreeTest {
     }
 
     @Test
-    fun theThemePreviewSharesAScreenWithTheHueSlider() {
-        // wireThemePreview returns early when the preview is absent, taking the hue, mode
-        // and brightness listeners with it. The failure is a dead swatch, not a crash.
+    fun theThemePreviewSharesAScreenWithWhatItShows() {
+        // wireThemePreview returns early when the preview is absent, taking the colour, mode,
+        // brightness and border listeners with it. The failure is a dead swatch, not a crash.
         val where = screenOf(prefsXml())
-        for (k in listOf("pref_theme_hue", "pref_theme_mode", "pref_theme_brightness")) {
+        for (k in listOf(
+            "pref_theme_color_hex", "pref_theme_mode", "pref_theme_brightness",
+            "pref_key_borders", "pref_key_border_width",
+        )) {
             assertEquals("$k must sit with the preview", where["pref_theme_preview"], where[k])
         }
     }
@@ -114,14 +117,32 @@ class PreferenceTreeTest {
         // The fragment makes a size slider update continuously only when its screen holds a
         // size preview, so a slider moved away from one stops showing its effect live.
         val where = screenOf(prefsXml())
-        val previews = listOf("pref_size_preview", "pref_bar_preview").map { where[it] }.toSet()
+        val previews = listOf("pref_size_preview", "pref_size_preview_landscape", "pref_bar_preview").map { where[it] }.toSet()
         for (k in listOf(
             "pref_keyboard_height_pct", "pref_keyboard_height_pct_landscape", "pref_suggestion_bar_dp",
             "pref_side_pad_dp", "pref_bottom_pad_dp", "pref_drag_handle_dp", "pref_landscape_split_gap_pct",
             "pref_home_row_spread",
-        )) {
+        ) + Prefs.LANDSCAPE_TWINS.map(Prefs::landscapeTwin)) {
             assertTrue("$k is on ${where[k]}, which has no size preview", where.containsKey(k) && where[k] in previews)
         }
+    }
+
+    @Test
+    fun noSubmenuHoldsASingleRow() {
+        // A submenu with one row is a tap that shows nothing new: "More language options" held
+        // only the language mode once Mix and Follow became one list.
+        val xml = prefsXml()
+        val rows = screenOf(xml).values.filterNotNull().groupingBy { it }.eachCount()
+        val single = depthOf(xml).keys.filter { (rows[it] ?: 0) == 1 }
+        assertTrue("submenus with one row: $single", single.isEmpty())
+    }
+
+    @Test
+    fun theLanguageModeSitsWithTheEnabledLanguages() {
+        // It chooses how the enabled languages share the bar, so it is read beside them.
+        val where = screenOf(prefsXml())
+        assertEquals("pref_group_languages", where[Prefs.LANGUAGE_MODE])
+        assertEquals(where[Prefs.LANGUAGE_MODE], where["pref_enabled_languages"])
     }
 
     @Test

@@ -1,5 +1,7 @@
 package com.kinetica.keyboard.ime
 
+import android.os.SystemClock
+import android.view.KeyEvent
 import com.kinetica.keyboard.engine.DecodeTrace
 import com.kinetica.keyboard.engine.WordComposer
 import com.kinetica.keyboard.engine.models.InputToken
@@ -173,14 +175,16 @@ internal class Backspace(private val ime: KineticaIME) {
         // live selection is one this method made, and reading it as the user's would grow the
         // span by a unit per crossing, retractions included.
         if (stagedDeletionLength == 0) {
-            stageAnchor = ime.selEnd
+            // Read from the editor, not the cache: the highlight below is placed by it.
+            val live = ime.ich.liveSelection()
+            stageAnchor = live?.second ?: -1
             // A selection the user had when the slide began is the first staged unit
             // (DeleteSpan.staged); its text is captured for the chip while still readable.
-            stageSelected = ime.selectionLength()
+            stageSelected = live?.let { it.second - it.first } ?: ime.selectionLength()
             stageBefore = ime.ich.textBeforeCursor(STAGE_FETCH_CHARS)?.toString() ?: ""
             stageSelectedText = if (stageSelected > 0) {
                 ime.ich.selectedText()?.toString()?.takeIf { it.length == stageSelected }
-                    ?: "\u00b7".repeat(stageSelected)
+                    ?: UNREADABLE.repeat(stageSelected)
             } else {
                 ""
             }
@@ -194,7 +198,7 @@ internal class Backspace(private val ime: KineticaIME) {
         // Highlight what would go in the text itself. The chip stays, because the text may
         // have scrolled out of view or be a password field. Presentation only: the span
         // deleted on lift is the same either way.
-        if (stageAnchor >= span) {
+        if (stageAnchor >= span && span > 0) {
             ime.ich.setSelection(stageAnchor - span, stageAnchor)
             ime.expectAt(stageAnchor - span, stageAnchor)
         }
@@ -227,19 +231,26 @@ internal class Backspace(private val ime: KineticaIME) {
         val span = stagedDeletionLength
         val anchor = stageAnchor
         val staged = stagedDeletion
+        val selectedPart = stageSelected
+        val placeholder = selectedPart > 0 && stageSelectedText.startsWith(UNREADABLE)
         // No cursor restore here: the span is about to go, and collapsing the selection
         // first would make the delete flicker.
         clearStaged(restoreCursor = false)
         if (span <= 0) return
-        // The span is highlighted by now, so delete back from the anchor, or relative to the
-        // cursor when no anchor was captured.
         // Whether the span holds the keyboard's own space is decided before the delete, as
         // onBackspace does: afterwards the evidence is gone.
         val deletedAutospace = ime.autospace.inserted && staged.endsWith(" ")
         val eating = if (DecodeTrace.enabled) ime.lastCommit.retypeWord ?: target else null
         if (anchor >= span) {
-            ime.ich.deleteEndingAt(anchor, span)
-            ime.expectAt(anchor - span)
+            // The span is highlighted by now. What goes is the editor's live selection, and
+            // only when it is the staged text: a selection moved meanwhile is left alone.
+            val live = ime.ich.selectedText()?.toString()
+            if (!stagedStillSelected(live, staged, if (placeholder) selectedPart else 0)) {
+                DecodeTrace.log { "  backspace stage stale span=$span live=${live?.length}" }
+                return
+            }
+            ime.ich.deleteLiveSelection()
+            ime.selectionLedger.expectAny(SystemClock.uptimeMillis())
             ime.forgetCommitMarks()
         } else {
             ime.ich.deleteBeforeCursor(span)
@@ -284,8 +295,13 @@ internal class Backspace(private val ime: KineticaIME) {
             1
         }
         if (selected > 0) {
-            ime.ich.deleteEndingAt(ime.selEnd, selected)
-            ime.expectAt(ime.selEnd - selected)
+            // The editor's live selection, never the cached offsets: a cache behind the editor
+            // put this delete somewhere else in the text. An editor that cannot report its
+            // selection gets the key instead, which deletes what it holds selected itself.
+            val live = ime.ich.deleteLiveSelection()
+            if (live == 0) ime.ich.sendKey(KeyEvent.KEYCODE_DEL, 0)
+            DecodeTrace.log { "  selection delete cached=$selected live=$live" }
+            ime.selectionLedger.expectAny(SystemClock.uptimeMillis())
             ime.forgetCommitMarks()
         } else {
             ime.ich.deleteBeforeCursor(span)
@@ -311,6 +327,9 @@ internal class Backspace(private val ime: KineticaIME) {
 
         /** Spaces read back for a backspace to collapse; a longer run collapses in steps. */
         const val SPACE_RUN_READ_CHARS = 32
+
+        /** Stands for a selected character the editor would not hand over, in the chip. */
+        const val UNREADABLE = "\u00b7"
     }
 }
 

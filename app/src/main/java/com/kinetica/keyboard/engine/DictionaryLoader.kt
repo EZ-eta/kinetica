@@ -14,6 +14,8 @@ data class WordForm(val display: String, val freqByte: Int)
 class LoadedDictionary(
     val trie: Trie,
     val forms: Map<Int, List<WordForm>>,
+    /** Lowercase spellings the trie holds only because the user learned them, none of the list's. */
+    val learned: Set<String> = emptySet(),
 )
 
 /**
@@ -73,10 +75,12 @@ object DictionaryLoader {
                 bundledCases.getOrPut(lower) { ArrayList(1) }.add(w)
             }
         }
+        val learned = HashSet<String>()
         for ((word, count) in extraWords) {
             val lower = word.lowercase()
             if (lower in blocked) continue
             if (AccentFolder.fold(lower) == lower && lower !in bundledSpellings && lower in bundledKeys) continue
+            if (lower !in bundledSpellings) learned.add(lower)
             val variants = bundledCases[lower].orEmpty()
             val case = cases[lower]?.takeIf {
                 it.votes >= KineticaConstants.LEARNED_CAPITAL_MIN_VOTES && it.display.lowercase() == lower
@@ -134,7 +138,7 @@ object DictionaryLoader {
                 .sortedByDescending { it.second }
                 .map { WordForm(it.first, Trie.freqByteFor(it.second, maxCount)) }
         }
-        return LoadedDictionary(trie, forms)
+        return LoadedDictionary(trie, forms, learned)
     }
 
     /**

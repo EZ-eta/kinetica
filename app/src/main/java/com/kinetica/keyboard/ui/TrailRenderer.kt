@@ -42,6 +42,10 @@ class TrailRenderer(private val density: Float) {
     /** Base hue in degrees. */
     var baseHue = 0f
 
+    /** Saturation and value every point is drawn at: a typed colour keeps its own. */
+    var saturation = 0.85f
+    var value = 1f
+
     /** Rainbow: the hue steps per key and the right stream starts offset. */
     var cycles = true
 
@@ -82,6 +86,9 @@ class TrailRenderer(private val density: Float) {
         trail.addLast(point)
     }
 
+    /** The hue [stream] is drawing in now. */
+    fun hueOf(stream: StreamId): Float = hues[stream.ordinal]
+
     fun bumpHue(stream: StreamId) {
         hues[stream.ordinal] = TrailHue.next(hues[stream.ordinal], cycles)
     }
@@ -120,8 +127,8 @@ class TrailRenderer(private val density: Float) {
                 val f = 1f - age / TRAIL_LIFE_MS.toFloat()
                 if (f <= 0f) continue
                 hsv[0] = p.hue
-                hsv[1] = 0.85f
-                hsv[2] = 1f
+                hsv[1] = saturation
+                hsv[2] = value
                 paint.color = Color.HSVToColor((200 * f).toInt(), hsv)
                 paint.strokeWidth = (3f + 7f * f) * density
                 // A run ends at a break as well as at the finger, so a lift stays a gap, not a

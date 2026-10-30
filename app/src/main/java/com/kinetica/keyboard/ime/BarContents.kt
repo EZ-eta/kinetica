@@ -115,7 +115,7 @@ internal class BarContents(private val ime: KineticaIME) {
         DecodeTrace.log { "  recent pick back=$back old=${entry.word} new=$replacement" }
         // The swap is the user's correction, so the weight moves as a correction pick's does,
         // and the pairs with its neighbours move with it.
-        val lang = ime.sharedFiling.languageFor(ime.heldBy(replacement), entry.languages[word.lowercase()] ?: ime.languageOf(replacement))
+        val lang = ime.filedLanguage(replacement, entry.languages[word.lowercase()] ?: ime.languageOf(replacement))
         ime.learner.learnWord(replacement, lang = lang)
         if (!entry.word.equals(replacement, ignoreCase = true)) ime.learner.unlearnWord(entry.word)
         // A neighbour counts only across whitespace: `end. Next` is no pair, as learnPair agrees.

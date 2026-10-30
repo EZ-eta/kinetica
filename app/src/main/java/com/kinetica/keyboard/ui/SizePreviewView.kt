@@ -12,7 +12,8 @@ import com.kinetica.keyboard.layout.LayoutMode
 import com.kinetica.keyboard.layout.LayoutTransforms
 
 /**
- * The keyboard at the size the settings give it, drawn across the view's full width with
+ * The keyboard at the size the settings give it, drawn across the view's width, or narrower
+ * and centred when that would fill the screen (SizePreviewFit), with
  * a band of the app above it: the bar, the resize handle, the real alpha layout placed by the
  * same mode transform the keyboard uses (split and one-handed included) with its side margin,
  * and the bottom gap, in proportion. Sizes come from the service's own arithmetic.
@@ -51,24 +52,37 @@ class SizePreviewView @JvmOverloads constructor(
     private val line = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
     private val rect = RectF()
 
-    /** As tall as the keyboard is at this width, plus the app's band, so nothing is shrunk twice. */
+    /**
+     * As tall as the keyboard is at the width it is drawn, plus the app's band, so nothing is
+     * shrunk twice. The width narrows when that would take more than half the screen.
+     */
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val w = MeasureSpec.getSize(widthMeasureSpec)
         val s = spec
         val h = if (s == null || s.screenW <= 0f) {
             (APP_BAND_DP * 3 * density).toInt()
         } else {
-            ((s.barPx + s.handlePx + s.boardPx + s.bottomPx) * w / s.screenW + APP_BAND_DP * density).toInt()
+            SizePreviewFit.heightPx(drawWidth(s, w.toFloat()), s.screenW, contentPx(s), APP_BAND_DP * density).toInt()
         }
         setMeasuredDimension(w, h)
     }
+
+    private fun contentPx(s: Spec): Float = s.barPx + s.handlePx + s.boardPx + s.bottomPx
+
+    private fun drawWidth(s: Spec, viewW: Float): Float = SizePreviewFit.widthPx(
+        viewW, s.screenW, contentPx(s), APP_BAND_DP * density,
+        resources.displayMetrics.heightPixels * SizePreviewFit.MAX_SCREEN_SHARE,
+    )
 
     override fun onDraw(canvas: Canvas) {
         val s = spec ?: return
         if (width <= 0 || height <= 0 || s.screenW <= 0f) return
         val t = s.theme
-        val scale = width / s.screenW
-        val w = width.toFloat()
+        val w = drawWidth(s, width.toFloat())
+        val scale = w / s.screenW
+        // A narrowed picture sits in the middle of the row.
+        canvas.save()
+        canvas.translate((width - w) / 2f, 0f)
         val band = APP_BAND_DP * density
         val corner = 8f * density
 
@@ -118,6 +132,7 @@ class SizePreviewView @JvmOverloads constructor(
         line.strokeWidth = density
         rect.set(0f, 0f, w, height.toFloat())
         canvas.drawRoundRect(rect, corner, corner, line)
+        canvas.restore()
     }
 
     private companion object {

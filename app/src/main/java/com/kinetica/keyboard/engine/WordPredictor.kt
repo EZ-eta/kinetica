@@ -41,6 +41,8 @@ class WordPredictor(
      * for the single-language fixtures, so it is defaulted and last.
      */
     val language: String = "",
+    /** [LoadedDictionary.learned]: spellings in the trie that the bundled list does not hold. */
+    private val learnedOnly: Set<String> = emptySet(),
 ) {
     /** The letters this predictor's trie and geometry are spelled in. */
     val alphabet: Alphabet get() = trie.alphabet
@@ -194,6 +196,21 @@ class WordPredictor(
         val variants = forms[node] ?: return trie.wordOf(node) == word
         return variants.any { it.display == word }
     }
+
+    /**
+     * [holdsSpelling], by the bundled list alone. With no primary language a learned spelling would
+     * otherwise claim the list it was first filed to, and every later commit would be filed and
+     * scored there.
+     */
+    fun holdsListSpelling(word: String): Boolean = holdsSpelling(word) && word.lowercase() !in learnedOnly
+
+    /**
+     * What a commit of [word] tells LanguageMomentum about this language: its frequency byte over
+     * 255, or 0 where the list does not hold it. A learned-only spelling scores 0, or a word filed
+     * here by mistake pulls the momentum here too.
+     */
+    fun momentumScore(word: String): Float =
+        if (isWordIgnoringCase(word) && word.lowercase() !in learnedOnly) frequencyByte(word).coerceAtLeast(0) / 255f else 0f
 
     fun holdsSpelling(word: String): Boolean {
         val w = word.lowercase()

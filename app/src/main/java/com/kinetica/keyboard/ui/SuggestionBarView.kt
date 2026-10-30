@@ -350,6 +350,14 @@ class SuggestionBarView @JvmOverloads constructor(
             invalidate()
         }
 
+    /** A background image shows through: the bar paints no fill of its own. */
+    var overBackdrop = false
+        set(value) {
+            if (field == value) return
+            field = value
+            invalidate()
+        }
+
     init {
         applyThemePaints()
     }
@@ -516,7 +524,7 @@ class SuggestionBarView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         val w = width.toFloat()
         val h = height.toFloat()
-        canvas.drawRect(0f, 0f, w, h, bgPaint)
+        if (!overBackdrop) canvas.drawRect(0f, 0f, w, h, bgPaint)
         if (timerDuration > 0L) {
             val left = 1f - (SystemClock.uptimeMillis() - timerStart).toFloat() / timerDuration
             if (left > 0f) {

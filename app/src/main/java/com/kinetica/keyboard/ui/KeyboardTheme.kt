@@ -14,7 +14,7 @@ import kotlin.math.min
  *  - "default": the bundled palette in colors.xml
  *  - "dynamic": the Android 12+ Material You palette, read from android.R.color.system_*
  *    (no Material Components dependency: the keyboard is a Canvas surface, not themed views)
- *  - "custom": every role derived from one user-picked hue by fixed HSV transforms
+ *  - "custom": every role derived from one user-typed colour by fixed HSV transforms
  *
  * and, separately, light or dark (the BRIGHTNESS_* values). Crossing the two gives "Material
  * You but light" and "my own hue but light" without a named theme for every pair.
@@ -49,12 +49,29 @@ class KeyboardTheme(
         const val BRIGHTNESS_SYSTEM = "system"
 
         /**
-         * Saturation and value the custom hue is rendered at. The user picks the hue alone:
-         * the roles below re-derive saturation per surface, so two more sliders would add
-         * nothing but ways to get it wrong.
+         * Saturation and value the retired hue slider rendered its hue at; kept to migrate a stored
+         * hue to the same colour.
          */
         private const val CUSTOM_SAT = 0.72f
         private const val CUSTOM_VAL = 1.0f
+
+        /**
+         * How far a dark typed colour dims the surfaces. Black takes them to 60% of their
+         * brightness; any lower and the keys sink into the background.
+         */
+        private const val DARK_VALUE_REACH = 0.4f
+
+        /**
+         * The same on the light table, held smaller: down to black, body text stays above 4.5:1 on
+         * the dimmed keys and bar.
+         */
+        private const val LIGHT_VALUE_REACH = 0.2f
+
+        /**
+         * The dark table's accent is the typed colour itself, unless it is too dark to show on the
+         * keys: then the same hue and saturation at this value.
+         */
+        private const val ACCENT_MIN_VALUE = 0.6f
 
         // The dark table's three text roles, as literals so no android.graphics.Color call
         // reaches the JVM test runtime, where its statics throw "not mocked".
@@ -62,27 +79,17 @@ class KeyboardTheme(
         private const val DARK_SUGGESTION_TEXT = 0xFFD8D8E0.toInt()
         private const val DARK_SUGGESTION_PRIMARY = 0xFFFFFFFF.toInt()
 
-        /** HSV saturation of a packed colour; the companion to [Hsv.hueOf]. */
-        private fun saturationOf(color: Int): Float {
-            val r = ((color shr 16) and 0xFF) / 255f
-            val g = ((color shr 8) and 0xFF) / 255f
-            val b = (color and 0xFF) / 255f
-            val max = maxOf(r, g, b)
-            if (max <= 0f) return 0f
-            return (max - minOf(r, g, b)) / max
-        }
-
         /** Hue of a stored colour, for migrating the retired colour list. */
         fun hueOf(color: Int): Float = Hsv.hueOf(color)
 
-        /** A user-chosen hue as a primary color for [fromPrimary]. */
+        /** A hue from the retired slider as a primary color for [fromPrimary]. */
         fun primaryForHue(hue: Float): Int = Hsv.toColor(hue, CUSTOM_SAT, CUSTOM_VAL)
 
         /**
-         * True when the accent-hue setting has any effect in [mode]. The bundled and Material
-         * You palettes ignore it, so the settings preview must not move with the slider there.
+         * True when the typed colour has any effect in [mode]. The bundled and Material You
+         * palettes ignore it, and a preview that does not say so looks broken.
          */
-        fun hueAffects(mode: String): Boolean = mode == MODE_CUSTOM
+        fun colourAffects(mode: String): Boolean = mode == MODE_CUSTOM
 
         /** True when [brightness] resolves to a light palette in this context. */
         fun isLight(context: Context, brightness: String): Boolean = when (brightness) {
@@ -189,7 +196,8 @@ class KeyboardTheme(
         /**
          * One primary color spreads across the role set by pinning value (brightness) per role
          * and damping saturation on large surfaces, so a loud primary still yields readable
-         * surfaces.
+         * surfaces. The primary's own value dims the surfaces within a bounded reach; at full
+         * value the palette is the one the hue slider gave, so a migrated colour does not move.
          *
          * Two tone tables, one per brightness. The dark table keeps fixed near-white text
          * constants so existing custom dark themes do not shift; the light table derives its
@@ -197,41 +205,43 @@ class KeyboardTheme(
          */
         fun fromPrimary(primary: Int, light: Boolean = false): KeyboardTheme {
             val h = Hsv.hueOf(primary)
-            val s = saturationOf(primary)
+            val s = Hsv.saturationOf(primary)
+            val v = Hsv.valueOf(primary)
             fun tone(sat: Float, value: Float): Int = Hsv.toColor(h, sat, value)
             val surfaceSat = min(s, 0.55f)
+            val dim = 1f - (if (light) LIGHT_VALUE_REACH else DARK_VALUE_REACH) * (1f - v)
             return if (light) {
                 KeyboardTheme(
                     // Surfaces near white, tinted enough to read as the hue. Keys sit brighter
                     // than the background so the gaps read as the darker line, as in the dark
                     // palette.
-                    background = tone(surfaceSat * 0.22f, 0.90f),
-                    key = tone(surfaceSat * 0.10f, 1.00f),
-                    keySpecial = tone(surfaceSat * 0.20f, 0.94f),
-                    keyPressed = tone(min(s, 0.40f), 0.82f),
+                    background = tone(surfaceSat * 0.22f, 0.90f * dim),
+                    key = tone(surfaceSat * 0.10f, 1.00f * dim),
+                    keySpecial = tone(surfaceSat * 0.20f, 0.94f * dim),
+                    keyPressed = tone(min(s, 0.40f), 0.82f * dim),
                     keyText = tone(min(s, 0.30f), 0.16f),
                     keyHint = tone(min(s, 0.35f), 0.45f),
-                    suggestionBg = tone(surfaceSat * 0.18f, 0.96f),
+                    suggestionBg = tone(surfaceSat * 0.18f, 0.96f * dim),
                     suggestionText = tone(min(s, 0.30f), 0.26f),
                     suggestionPrimary = tone(min(s, 0.40f), 0.12f),
-                    chip = tone(min(s, 0.45f), 0.86f),
-                    popupBg = tone(surfaceSat * 0.12f, 1.00f),
+                    chip = tone(min(s, 0.45f), 0.86f * dim),
+                    popupBg = tone(surfaceSat * 0.12f, 1.00f * dim),
                     accent = tone(min(s, 0.85f), 0.70f),
                 )
             } else {
                 KeyboardTheme(
-                    background = tone(surfaceSat * 0.55f, 0.10f),
-                    key = tone(surfaceSat * 0.50f, 0.21f),
-                    keySpecial = tone(surfaceSat * 0.50f, 0.16f),
-                    keyPressed = tone(min(s, 0.65f), 0.35f),
+                    background = tone(surfaceSat * 0.55f, 0.10f * dim),
+                    key = tone(surfaceSat * 0.50f, 0.21f * dim),
+                    keySpecial = tone(surfaceSat * 0.50f, 0.16f * dim),
+                    keyPressed = tone(min(s, 0.65f), 0.35f * dim),
                     keyText = DARK_KEY_TEXT,
                     keyHint = tone(0.15f, 0.66f),
-                    suggestionBg = tone(surfaceSat * 0.55f, 0.13f),
+                    suggestionBg = tone(surfaceSat * 0.55f, 0.13f * dim),
                     suggestionText = DARK_SUGGESTION_TEXT,
                     suggestionPrimary = DARK_SUGGESTION_PRIMARY,
-                    chip = tone(min(s, 0.60f), 0.30f),
-                    popupBg = tone(surfaceSat * 0.50f, 0.27f),
-                    accent = primary,
+                    chip = tone(min(s, 0.60f), 0.30f * dim),
+                    popupBg = tone(surfaceSat * 0.50f, 0.27f * dim),
+                    accent = if (v >= ACCENT_MIN_VALUE) primary else tone(s, ACCENT_MIN_VALUE),
                 )
             }
         }

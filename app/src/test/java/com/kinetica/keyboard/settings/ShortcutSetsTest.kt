@@ -19,7 +19,7 @@ class ShortcutSetsTest {
             mapOf(
                 Prefs.BAR_ACTIONS to setOf(EditorAction.UNDO.name),
                 Prefs.MENU_ACTIONS to setOf(EditorAction.SETTINGS.name),
-            ) + HUE_SET,
+            ),
         )
         val config = KeyboardConfig.from(prefs)
         assertEquals(setOf(EditorAction.UNDO.name), config.barActions)
@@ -30,11 +30,7 @@ class ShortcutSetsTest {
     fun anUntouchedMenuShowsTheShippedDefaultNotTheBarsChoice() {
         // Nothing to migrate: the row and the menu's own set shipped in the same release, so no
         // published build has a customised bar set for the menu to inherit.
-        val prefs = MapPrefs(mapOf(Prefs.BAR_ACTIONS to setOf(EditorAction.UNDO.name)) + HUE_SET)
+        val prefs = MapPrefs(mapOf(Prefs.BAR_ACTIONS to setOf(EditorAction.UNDO.name)))
         assertEquals(ActionRow.DEFAULT, KeyboardConfig.from(prefs).menuActions)
-    }
-
-    private companion object {
-        val HUE_SET: Map<String, Any> = MapPrefs.HUE_SET
     }
 }

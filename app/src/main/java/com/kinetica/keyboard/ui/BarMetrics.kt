@@ -25,6 +25,16 @@ object BarMetrics {
      */
     const val MIN_DP = 24f
 
+    /**
+     * Floor for the landscape bar. A landscape key row is about 26dp, so a 24dp bar is nearly
+     * another row. At 16dp the default text is 9.6dp; every ornament scales with the bar, so the
+     * dots still clear the word.
+     */
+    const val MIN_LANDSCAPE_DP = 16f
+
+    /** The height setting's floor in [landscape] or portrait. */
+    fun minDp(landscape: Boolean): Float = if (landscape) MIN_LANDSCAPE_DP else MIN_DP
+
     /** Ceiling, roughly two default bars; past that it is wasted screen. */
     const val MAX_DP = 72f
 

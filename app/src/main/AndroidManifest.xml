@@ -55,6 +55,10 @@
             android:exported="false" />
 
         <activity
+            android:name=".settings.BackdropCropActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".settings.BackupSettingsActivity"
             android:label="@string/backup_settings_title"
             android:exported="false" />

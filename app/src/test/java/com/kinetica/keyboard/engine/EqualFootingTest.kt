@@ -11,7 +11,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * No primary language (Prefs.NO_PRIMARY): the resident languages rank as one list,
+ * No primary language (LanguageMode.FOLLOW): the resident languages rank as one list,
  * each word weighed by how much its language is being typed (LanguageMomentum).
  */
 class EqualFootingTest {

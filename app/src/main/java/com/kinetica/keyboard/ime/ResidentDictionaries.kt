@@ -14,6 +14,7 @@ import com.kinetica.keyboard.engine.KeyboardGeometry
 import com.kinetica.keyboard.engine.KineticaConstants
 import com.kinetica.keyboard.engine.WordPredictor
 import com.kinetica.keyboard.settings.KeyboardConfig
+import com.kinetica.keyboard.settings.LanguageMode
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 
@@ -48,7 +49,7 @@ internal class ResidentDictionaries(private val context: Context, private val ma
     var secondaryLanguage: String? = null
         private set
 
-    // The third resident, only with no primary language (Prefs.NO_PRIMARY). Same contract as the
+    // The third resident, only with no primary language (LanguageMode.FOLLOW). Same contract as the
     // secondary fields above.
     var extraPredictor: WordPredictor? = null
         private set
@@ -92,9 +93,10 @@ internal class ResidentDictionaries(private val context: Context, private val ma
         // Same script only: another script's words cannot be drawn on this board, and its
         // codes would read this board's keys as its own letters.
         val sameScript = config().enabledLanguages.filter { it != lang && Alphabet.forLanguage(it) == Alphabet.forLanguage(lang) }
-        val detectLang = if (config().autoDetectLanguage || config().noPrimary) sameScript.firstOrNull() else null
+        val mode = config().languageMode
+        val detectLang = if (mode != LanguageMode.ONE) sameScript.firstOrNull() else null
         // With no primary language, a third resident: the next enabled one in the same script.
-        val extraLang = if (config().noPrimary && KineticaConstants.MAX_RESIDENT_LANGUAGES > 2) sameScript.getOrNull(1) else null
+        val extraLang = if (mode == LanguageMode.FOLLOW && KineticaConstants.MAX_RESIDENT_LANGUAGES > 2) sameScript.getOrNull(1) else null
         Thread({
             try {
                 // Learned words merge into the trie at load, gated and scaled by
@@ -198,7 +200,7 @@ internal class ResidentDictionaries(private val context: Context, private val ma
                         val pairs = pairMap(pairRows)
                         personalPairs = pairs
                         val p = WordPredictor(
-                            dict.trie, bigrams, geometry(), dict.forms, counts, pairs, lang,
+                            dict.trie, bigrams, geometry(), dict.forms, counts, pairs, lang, dict.learned,
                         )
                         predictor = p
                         val altCounts = ConcurrentHashMap<String, Int>(altRows.size * 2)
@@ -211,7 +213,7 @@ internal class ResidentDictionaries(private val context: Context, private val ma
                         secondaryPredictor = alt?.let { (d, b) ->
                             WordPredictor(
                                 d.trie, b, geometry(), d.forms, altCounts, altPairs,
-                                language = detectLang ?: "",
+                                language = detectLang ?: "", learnedOnly = d.learned,
                             )
                         }
                         val xCounts = ConcurrentHashMap<String, Int>(extraRows.size * 2)
@@ -221,7 +223,7 @@ internal class ResidentDictionaries(private val context: Context, private val ma
                         extraPairs = xPairs
                         extraLanguage = if (extra != null) extraLang else null
                         extraPredictor = extra?.let { (d, b) ->
-                            WordPredictor(d.trie, b, geometry(), d.forms, xCounts, xPairs, language = extraLang ?: "")
+                            WordPredictor(d.trie, b, geometry(), d.forms, xCounts, xPairs, language = extraLang ?: "", learnedOnly = d.learned)
                         }
                         onReady(p)
                         Log.i(
@@ -230,7 +232,7 @@ internal class ResidentDictionaries(private val context: Context, private val ma
                                 "${bigrams.size} bigrams, ${dict.forms.size} display forms" +
                                 (detectLang?.let { d -> ", auto-detect vs $d" } ?: "") +
                                 (extraLanguage?.let { x -> " and $x" } ?: "") +
-                                (if (config().noPrimary) ", no primary" else ""),
+                                (if (config().languageMode == LanguageMode.FOLLOW) ", no primary" else ""),
                         )
                     }
                     if (held) DecodeTrace.log { "  userdict install held lang=$lang" }
@@ -287,15 +289,17 @@ internal class ResidentDictionaries(private val context: Context, private val ma
 
     /**
      * The resident languages whose lexicon holds [word], each with its frequency byte there.
-     * Empty with one language resident, which leaves every filing to provenance.
+     * Empty with one language resident, which leaves every filing to provenance. [listsOnly]
+     * leaves out a spelling only the user's learning put in a trie.
      */
-    fun heldBy(word: String, active: String): Map<String, Int> {
+    fun heldBy(word: String, active: String, listsOnly: Boolean = false): Map<String, Int> {
         val second = secondaryPredictor ?: return emptyMap()
         val secondLang = secondaryLanguage ?: return emptyMap()
         val out = HashMap<String, Int>(3)
         // Held means this exact spelling: `è` is Italian's, not English's through its `e`.
         fun held(p: WordPredictor, lang: String) {
-            if (p.holdsSpelling(word)) p.frequencyByte(word).takeIf { it >= 0 }?.let { out[lang] = it }
+            val holds = if (listsOnly) p.holdsListSpelling(word) else p.holdsSpelling(word)
+            if (holds) p.frequencyByte(word).takeIf { it >= 0 }?.let { out[lang] = it }
         }
         predictor?.let { held(it, active) }
         held(second, secondLang)

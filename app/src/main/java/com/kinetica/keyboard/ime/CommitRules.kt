@@ -5,6 +5,26 @@ import com.kinetica.keyboard.engine.models.WordCandidate
 import com.kinetica.keyboard.ui.BarAdjust
 
 /**
+ * Whether the editor's selection [live] is still the span the backspace slide highlighted
+ * ([staged]), so lifting may delete it. A selection moved meanwhile is not deleted: the delete
+ * acts on what the editor holds, and that must be what the slide showed. [unreadableTail]
+ * characters at the end were a selection the editor would not hand over, so only their count
+ * is compared. An editor that reports no selected text is trusted with its own highlight.
+ */
+internal fun stagedStillSelected(live: String?, staged: String, unreadableTail: Int): Boolean {
+    if (live == null) return true
+    // Equal heads of equal drops: the lengths agree too.
+    return live.dropLast(unreadableTail) == staged.dropLast(unreadableTail)
+}
+
+/**
+ * A word reloaded under the cursor and not typed on since is committed as written: punctuation
+ * after a word the user returned to must not swap it for a prediction (a name read as a word).
+ */
+internal fun keepsAsWritten(reloadedWord: String?, tentativeWord: String): Boolean =
+    reloadedWord != null && reloadedWord == tentativeWord
+
+/**
  * How much of the committed [word] is left before the cursor while backspace eats it: -1 while
  * it is still whole, the letters left while the run before the cursor is a prefix of it, 0 once
  * it is gone, null once the cursor has left it.

@@ -13,6 +13,14 @@ object KineticaConstants {
     const val TAP_MAX_DISP_DP = 12f
 
     /**
+     * Drift a held chord trigger may make once its chord labels show, before it counts as
+     * moved. Twice [TAP_MAX_DISP_DP], so a resting thumb keeps them; under the 30 dp `?123`
+     * slide, so that slide still reads as one. Reasoned, not measured: a moved trigger was not
+     * traced before this value.
+     */
+    const val CHORD_HOLD_WIGGLE_DP = 24f
+
+    /**
      * A touch held still this long while the other thumb typed is a resting finger, dropped at
      * its lift instead of joining the word as a letter. Four times a typing tap's ~100 ms, and
      * past the 150 ms of [TAP_MAX_MS] that marks a deliberate press. Reasoned, not measured.

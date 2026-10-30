@@ -229,7 +229,8 @@ internal class EditorCommands(private val ime: KineticaIME) {
                 ime.views.vibrateForKeyPress()
                 return
             }
-            val at = minOf(ime.selStart, ime.selEnd)
+            // Re-selected from the editor's own offsets: the cached ones may lag it.
+            val at = ime.ich.liveSelection()?.first ?: return
             ime.ich.replaceSelection(at, cleaned)
             // The length changes, unlike a re-case: the words recorded after it move.
             ime.commitHistory.onEdit(at + text.length, text.length, cleaned.length)

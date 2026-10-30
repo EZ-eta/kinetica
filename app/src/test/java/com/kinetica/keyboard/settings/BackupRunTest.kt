@@ -31,6 +31,16 @@ class BackupRunTest {
     }
 
     @Test
+    fun theBackgroundImageStampStaysOnTheDevice() {
+        // The file is not in the backup; a restored stamp would name an image that is not there.
+        assertFalse(Backup.carried(Prefs.BACKDROP))
+        assertFalse(Backup.carried(Prefs.BACKDROP_CROP))
+        assertFalse(Backup.carried(Prefs.BACKDROP_CROP_LANDSCAPE))
+        assertTrue(Backup.carried(Prefs.BACKDROP_ALPHA))
+        assertTrue(Backup.carried(Prefs.KEY_ALPHA))
+    }
+
+    @Test
     fun oneRunAtATime() {
         val p = BackupProgress()
         assertFalse(p.running)

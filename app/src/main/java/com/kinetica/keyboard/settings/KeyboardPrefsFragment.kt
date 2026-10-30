@@ -3,17 +3,25 @@ package com.kinetica.keyboard.settings
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ObjectAnimator
+import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
+import android.content.res.Configuration
 import android.content.pm.PackageManager
 import android.graphics.drawable.ColorDrawable
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.util.TypedValue
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.TextView
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import java.io.IOException
 import org.json.JSONException
@@ -23,13 +31,16 @@ import androidx.preference.Preference
 import androidx.preference.PreferenceCategory
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceGroup
+import androidx.preference.PreferenceManager
 import androidx.preference.PreferenceScreen
 import androidx.preference.SeekBarPreference
+import androidx.preference.TwoStatePreference
 import androidx.recyclerview.widget.RecyclerView
 import com.kinetica.keyboard.R
 import com.kinetica.keyboard.engine.Alphabet
 import com.kinetica.keyboard.ime.AlphaLayouts
 import com.kinetica.keyboard.keys.ActionRow
+import com.kinetica.keyboard.layout.Key
 import com.kinetica.keyboard.layout.LandscapeArrangement
 import com.kinetica.keyboard.layout.LayoutLoader
 import com.kinetica.keyboard.layout.LayoutTransforms
@@ -39,11 +50,20 @@ import com.kinetica.keyboard.ui.SizePreviewView
 class KeyboardPrefsFragment : PreferenceFragmentCompat() {
 
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
+        // Before inflation, which would store and show the defaults over the old settings.
+        preferenceManager.sharedPreferences?.let {
+            LanguageMode.migrate(it)
+            ColorPrefs.migrate(it)
+            OrientationPrefs.migrate(it)
+        }
         setPreferencesFromResource(R.xml.keyboard_prefs, rootKey)
         if (rootKey == SettingsSynonyms.LONGPRESS_GROUP) addLetterRows()
         dropIconSpace(preferenceScreen)
         wireThemePreview()
+        wireBackdrop()
         wireSizePreview()
+        wireSizeGroups()
+        wireSymbolRows()
         showVersion()
     }
 
@@ -59,6 +79,7 @@ class KeyboardPrefsFragment : PreferenceFragmentCompat() {
         // A search result asks for its row before this fragment has a list to scroll, so
         // the request is held and spent here, once, whichever way it arrived.
         applyReveal()
+        refreshBackdropRow()
         if (sizePreview() != null) {
             preferenceManager.sharedPreferences?.registerOnSharedPreferenceChangeListener(sizeListener)
             refreshSizePreview()
@@ -96,12 +117,44 @@ class KeyboardPrefsFragment : PreferenceFragmentCompat() {
      * same layout chain the service uses.
      */
     private fun refreshSizePreview() {
-        val preview = sizePreview() ?: return
         val ctx = context ?: return
         val prefs = preferenceManager.sharedPreferences ?: return
-        val config = KeyboardConfig.from(prefs)
         val dm = resources.displayMetrics
-        val keys = try {
+        // Both orientations whichever way the phone is held: each has its own sizes, and
+        // landscape its own arrangement, so split can be on in one and off in the other.
+        val short = minOf(dm.widthPixels, dm.heightPixels).toFloat()
+        val long = maxOf(dm.widthPixels, dm.heightPixels).toFloat()
+        fun spec(landscape: Boolean): SizePreviewView.Spec {
+            val config = KeyboardConfig.from(prefs, landscape)
+            val w = if (landscape) long else short
+            val h = if (landscape) short else long
+            val pct = if (landscape) config.heightPctLandscape else config.heightPct
+            return SizePreviewView.Spec(
+                screenW = w,
+                screenH = h,
+                barPx = KeyboardHeights.barDp(config.suggestionBarDp, config.recentWords) * dm.density,
+                handlePx = config.dragHandleDp * dm.density,
+                boardPx = KeyboardHeights.boardPx(KeyboardHeights.targetPx(h.toInt(), dm.density, pct), config.numberRow).toFloat(),
+                bottomPx = config.bottomPadDp * dm.density,
+                sidePadPx = LayoutTransforms.sidePadPx(config.sidePadDp, dm.density, w),
+                keys = previewKeys(ctx, config),
+                theme = KeyboardTheme.resolve(ctx, config.themeMode, config.themeColor, config.themeBrightness),
+                mode = config.layoutMode,
+                landscapeArrangement = config.landscapeArrangement.takeIf {
+                    LandscapeArrangement.appliesTo(landscape, (w / dm.density).toInt(), config.wideArrangement)
+                },
+                splitGapPct = config.landscapeSplitGapPct,
+            )
+        }
+        // The suggestion bar's sliders are the portrait ones, so its picture is too.
+        for (key in SIZE_PREVIEW_KEYS) {
+            findPreference<SizePreviewPreference>(key)?.show(spec(landscape = key == LANDSCAPE_PREVIEW_KEY))
+        }
+    }
+
+    /** The alpha layout as the service builds it, for [config]'s orientation (its row spread). */
+    private fun previewKeys(ctx: Context, config: KeyboardConfig): List<Key> =
+        try {
             val bundled = (ctx.assets.list("layouts") ?: emptyArray()).map { it.removeSuffix(".json") }.toSet()
             val base = LayoutLoader.load(ctx.assets, "layouts/${AlphaLayouts.name(config, bundled)}.json")
             AlphaLayouts.build(base, config).keys
@@ -112,33 +165,53 @@ class KeyboardPrefsFragment : PreferenceFragmentCompat() {
             Log.w(TAG, "size preview layout", e)
             emptyList()
         }
-        val theme = KeyboardTheme.resolve(ctx, config.themeMode, config.themeColor, config.themeBrightness)
-        // Both orientations whichever way the phone is held: each has its own height, and
-        // landscape its own arrangement, so split can be on in one and off in the other.
-        val short = minOf(dm.widthPixels, dm.heightPixels).toFloat()
-        val long = maxOf(dm.widthPixels, dm.heightPixels).toFloat()
-        fun spec(w: Float, h: Float, pct: Int, landscape: Boolean) = SizePreviewView.Spec(
-            screenW = w,
-            screenH = h,
-            barPx = KeyboardHeights.barDp(config.suggestionBarDp, config.recentWords) * dm.density,
-            handlePx = config.dragHandleDp * dm.density,
-            boardPx = KeyboardHeights.boardPx(KeyboardHeights.targetPx(h.toInt(), dm.density, pct), config.numberRow).toFloat(),
-            bottomPx = config.bottomPadDp * dm.density,
-            sidePadPx = LayoutTransforms.sidePadPx(config.sidePadDp, dm.density, w),
-            keys = keys,
-            theme = theme,
-            mode = config.layoutMode,
-            landscapeArrangement = config.landscapeArrangement.takeIf {
-                LandscapeArrangement.appliesTo(landscape, (w / dm.density).toInt(), config.wideArrangement)
-            },
-            splitGapPct = config.landscapeSplitGapPct,
-        )
-        preview.show(
-            spec(short, long, config.heightPct, landscape = false),
-            spec(long, short, config.heightPctLandscape, landscape = true),
-        )
+
+    // ------------------------------------------------------------------ orientation groups
+
+    /** Each orientation's header opens and closes its rows; [SizeGroups] says which starts open. */
+    private fun wireSizeGroups() {
+        val landscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+        for ((headerKey, rowsKey) in SizeGroups.GROUPS) {
+            val header = findPreference<Preference>(headerKey) ?: continue
+            val rows = findPreference<PreferenceCategory>(rowsKey) ?: continue
+            setGroupOpen(header, rows, SizeGroups.startsOpen(rowsKey, landscape))
+            header.setOnPreferenceClickListener {
+                setGroupOpen(header, rows, !rows.isVisible)
+                true
+            }
+        }
     }
 
+    private fun setGroupOpen(header: Preference, rows: PreferenceCategory, open: Boolean) {
+        rows.isVisible = open
+        header.setIcon(if (open) R.drawable.ic_group_open else R.drawable.ic_group_closed)
+    }
+
+    /** A search result inside a closed group opens it first, or there is no row to scroll to. */
+    private fun openGroupOf(key: String) {
+        val parent = findPreference<Preference>(key)?.parent ?: return
+        for ((headerKey, rowsKey) in SizeGroups.GROUPS) {
+            if (parent.key != rowsKey || parent.isVisible) continue
+            val header = findPreference<Preference>(headerKey) ?: continue
+            setGroupOpen(header, parent as? PreferenceCategory ?: continue, true)
+        }
+    }
+
+    // ------------------------------------------------------------------ symbol pages
+
+    /** Each symbol page's row opens its editor and says whether its rows are edited. */
+    private fun wireSymbolRows() {
+        val prefs = preferenceManager.sharedPreferences ?: return
+        for (page in 1..2) {
+            val row = findPreference<Preference>("pref_symbol_rows_$page") ?: continue
+            val ctx = row.context
+            row.summary = SymbolRowsDialog.summary(ctx, prefs, page)
+            row.setOnPreferenceClickListener {
+                SymbolRowsDialog.show(ctx, prefs, page) { row.summary = SymbolRowsDialog.summary(ctx, prefs, page) }
+                true
+            }
+        }
+    }
 
     // ------------------------------------------------------------------ search
 
@@ -205,6 +278,7 @@ class KeyboardPrefsFragment : PreferenceFragmentCompat() {
         val key = revealKey ?: return
         if (!isAdded || view == null) return
         revealKey = null
+        openGroupOf(key)
         scrollToPreference(key)
         val list = listView ?: return
         list.post { flashRow(list, key) }
@@ -446,27 +520,36 @@ class KeyboardPrefsFragment : PreferenceFragmentCompat() {
     }
 
     /**
-     * Keeps the palette swatch under the hue slider in step with the three preferences that decide
-     * it. The change listeners take the new value from the callback: onPreferenceChange runs
+     * Keeps the palette swatch under the colour in step with the preferences that decide it. The change listeners take the new value from the callback: onPreferenceChange runs
      * before the value is persisted, so reading preferences here would show the previous palette.
      */
     private fun wireThemePreview() {
         val preview = findPreference<ThemePreviewPreference>(PREVIEW_KEY) ?: return
-        val hue = findPreference<SeekBarPreference>(Prefs.THEME_HUE)
+        val colour = findPreference<ColorHexPreference>(Prefs.THEME_COLOR_HEX)
         val mode = findPreference<ListPreference>(Prefs.THEME_MODE)
         val brightness = findPreference<ListPreference>(Prefs.THEME_BRIGHTNESS)
+        val borders = findPreference<TwoStatePreference>(Prefs.KEY_BORDERS)
+        val borderWidth = findPreference<SeekBarPreference>(Prefs.KEY_BORDER_WIDTH)
 
-        // Repaint while the thumb moves; otherwise the swatch only catches up on release.
-        hue?.updatesContinuously = true
-
-        fun refresh(newHue: Int? = null, newMode: String? = null, newBrightness: String? = null) {
+        fun refresh(
+            newColour: String? = null,
+            newMode: String? = null,
+            newBrightness: String? = null,
+            newBorders: Boolean? = null,
+            newBorderWidth: Int? = null,
+        ) {
             val prefs = preferenceManager.sharedPreferences ?: return
-            // KeyboardConfig owns the migration from the retired colour list, so going through it
-            // keeps the swatch correct on first open, before the hue preference is written.
+            // KeyboardConfig owns the default, so going through it keeps the swatch correct on
+            // first open, before a colour is typed.
             val config = KeyboardConfig.from(prefs)
-            val primary = newHue?.let { KeyboardTheme.primaryForHue(it.toFloat()) }
-                ?: config.themeColor
+            val primary = HexColor.colorOr(newColour, config.themeColor)
             val resolvedMode = newMode ?: config.themeMode
+            val bordersOn = newBorders ?: (borders?.isChecked ?: Prefs.DEFAULT_KEY_BORDERS)
+            val borderDp = if (bordersOn) {
+                newBorderWidth ?: borderWidth?.value ?: Prefs.DEFAULT_KEY_BORDER_WIDTH
+            } else {
+                0
+            }
             preview.show(
                 KeyboardTheme.resolve(
                     requireContext(),
@@ -475,17 +558,18 @@ class KeyboardPrefsFragment : PreferenceFragmentCompat() {
                     newBrightness ?: config.themeBrightness,
                 ),
                 getString(
-                    if (KeyboardTheme.hueAffects(resolvedMode)) {
+                    if (KeyboardTheme.colourAffects(resolvedMode)) {
                         R.string.theme_preview_note_custom
                     } else {
                         R.string.theme_preview_note_fixed
                     },
                 ),
+                borderDp,
             )
         }
 
-        hue?.setOnPreferenceChangeListener { _, value ->
-            refresh(newHue = value as? Int)
+        colour?.setOnPreferenceChangeListener { _, value ->
+            refresh(newColour = value as? String)
             true
         }
         mode?.setOnPreferenceChangeListener { _, value ->
@@ -496,7 +580,113 @@ class KeyboardPrefsFragment : PreferenceFragmentCompat() {
             refresh(newBrightness = value as? String)
             true
         }
+        borders?.setOnPreferenceChangeListener { _, value ->
+            refresh(newBorders = value as? Boolean)
+            true
+        }
+        borderWidth?.setOnPreferenceChangeListener { _, value ->
+            refresh(newBorderWidth = value as? Int)
+            true
+        }
         refresh()
+    }
+
+    // ------------------------------------------------------------------ background image
+
+    private val pickBackdrop =
+        registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            if (uri != null) importBackdrop(uri)
+        }
+
+    /** The image row picks a picture, or offers another or none once one is set. */
+    private fun wireBackdrop() {
+        val row = findPreference<Preference>(BACKDROP_ROW_KEY) ?: return
+        row.setOnPreferenceClickListener {
+            val ctx = requireContext()
+            val prefs = preferenceManager.sharedPreferences
+            if (prefs != null && BackdropStore.isSet(ctx, prefs)) {
+                AlertDialog.Builder(ctx)
+                    .setTitle(R.string.backdrop_title)
+                    .setItems(
+                        arrayOf(
+                            getString(R.string.backdrop_change), getString(R.string.backdrop_adjust),
+                            getString(R.string.backdrop_remove),
+                        ),
+                    ) { _, which ->
+                        when (which) {
+                            0 -> pickBackdrop.launch(arrayOf("image/*"))
+                            1 -> startActivity(Intent(ctx, BackdropCropActivity::class.java))
+                            else -> removeBackdrop()
+                        }
+                    }
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show()
+            } else {
+                pickBackdrop.launch(arrayOf("image/*"))
+            }
+            true
+        }
+        refreshBackdropRow()
+    }
+
+    /** The row says whether an image is set; its two opacities only act while one is. */
+    private fun refreshBackdropRow() {
+        val row = findPreference<Preference>(BACKDROP_ROW_KEY) ?: return
+        val ctx = context ?: return
+        val prefs = preferenceManager.sharedPreferences ?: return
+        val set = BackdropStore.isSet(ctx, prefs)
+        row.setSummary(if (set) R.string.backdrop_set else R.string.backdrop_none)
+        findPreference<Preference>(Prefs.BACKDROP_ALPHA)?.isEnabled = set
+        findPreference<Preference>(Prefs.KEY_ALPHA)?.isEnabled = set
+    }
+
+    /**
+     * Copies the picked image in off the main thread, then opens the crop screen on it; that
+     * screen's Save makes it the image and writes the stamp the keyboard watches.
+     */
+    private fun importBackdrop(uri: Uri) {
+        val app = requireContext().applicationContext
+        val dm = resources.displayMetrics
+        val maxLong = maxOf(dm.widthPixels, dm.heightPixels)
+        val main = Handler(Looper.getMainLooper())
+        Thread({
+            val ok = try {
+                BackdropStore.import(app, uri, maxLong)
+                true
+            } catch (e: IOException) {
+                Log.w(TAG, "background image not imported", e)
+                false
+            } catch (e: SecurityException) {
+                Log.w(TAG, "background image not readable", e)
+                false
+            } catch (e: OutOfMemoryError) {
+                Log.w(TAG, "background image too large", e)
+                false
+            }
+            main.post {
+                val host = activity
+                when {
+                    !ok -> Toast.makeText(app, R.string.backdrop_failed, Toast.LENGTH_LONG).show()
+                    // The settings closed while the copy ran: nothing to fit it in, so it goes.
+                    host == null -> BackdropStore.dropPending(app)
+                    else -> host.startActivity(
+                        Intent(host, BackdropCropActivity::class.java).putExtra(BackdropCropActivity.EXTRA_PENDING, true),
+                    )
+                }
+                refreshBackdropRow()
+            }
+        }, "kinetica-backdrop-import").start()
+    }
+
+    private fun removeBackdrop() {
+        val ctx = requireContext()
+        BackdropStore.remove(ctx)
+        preferenceManager.sharedPreferences?.edit()
+            ?.putString(Prefs.BACKDROP, "")
+            ?.remove(Prefs.BACKDROP_CROP)
+            ?.remove(Prefs.BACKDROP_CROP_LANDSCAPE)
+            ?.apply()
+        refreshBackdropRow()
     }
 
     private var revealKey: String? = null
@@ -506,12 +696,14 @@ class KeyboardPrefsFragment : PreferenceFragmentCompat() {
         const val RESET_LETTER_LISTS_KEY = "pref_letter_alternates_reset"
         const val LETTER_NOTE_KEY = "pref_letter_alternates_note"
         const val PREVIEW_KEY = "pref_theme_preview"
-        val SIZE_PREVIEW_KEYS = listOf("pref_size_preview", "pref_bar_preview")
+        const val BACKDROP_ROW_KEY = "pref_backdrop_image"
+        const val LANDSCAPE_PREVIEW_KEY = "pref_size_preview_landscape"
+        val SIZE_PREVIEW_KEYS = listOf("pref_size_preview", LANDSCAPE_PREVIEW_KEY, "pref_bar_preview")
         val SIZE_SLIDERS = listOf(
             Prefs.KEYBOARD_HEIGHT_PCT, Prefs.KEYBOARD_HEIGHT_PCT_LANDSCAPE, Prefs.SUGGESTION_BAR_DP,
             Prefs.SIDE_PAD_DP, Prefs.BOTTOM_PAD_DP, Prefs.DRAG_HANDLE_DP, Prefs.LANDSCAPE_SPLIT_GAP_PCT,
             Prefs.HOME_ROW_SPREAD_PCT,
-        )
+        ) + Prefs.LANDSCAPE_TWINS.map(Prefs::landscapeTwin)
         const val VERSION_KEY = "pref_version"
         // Visible enough to find by eye, faint enough not to read as a selection, and long
         // enough to still be fading when the scroll settles.

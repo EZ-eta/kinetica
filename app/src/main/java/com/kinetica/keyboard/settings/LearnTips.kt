@@ -22,7 +22,7 @@ object LearnTips {
         "tip_double_space" to Target("pref_group_spacing", "pref_double_space_period"),
         "tip_enter" to Target("pref_group_typing", "pref_enter_action"),
         "tip_languages" to Target("pref_group_languages", "pref_enabled_languages"),
-        "tip_follow_language" to Target("pref_group_languages_more", "pref_no_primary"),
+        "tip_follow_language" to Target("pref_group_languages", "pref_language_mode"),
         "tip_peck" to Target("pref_group_typing", "pref_peck_mode"),
         "tip_rank" to Target("pref_group_learning", "pref_reinforce_step_dp"),
         "tip_chords" to Target("pref_group_gestures", "pref_chords"),

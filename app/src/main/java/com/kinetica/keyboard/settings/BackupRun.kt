@@ -155,6 +155,7 @@ object BackupRun {
         val p = PreferenceManager.getDefaultSharedPreferences(app)
         val e = p.edit()
         for (pref in data.prefs) {
+            if (!Backup.carried(pref.key)) continue
             when (pref.type) {
                 Backup.PrefType.BOOL -> e.putBoolean(pref.key, pref.value == "true")
                 Backup.PrefType.INT -> pref.value.toIntOrNull()?.let { e.putInt(pref.key, it) }
@@ -166,6 +167,11 @@ object BackupRun {
             }
         }
         e.commit()
+        // A backup from before the language choice brings the two old switches back, one from
+        // before the typed colours the hue sliders.
+        LanguageMode.migrate(p)
+        ColorPrefs.migrate(p)
+        OrientationPrefs.migrate(p)
         p.edit()
             .putInt(Prefs.DICT_GENERATION, p.getInt(Prefs.DICT_GENERATION, 0) + 1)
             .putInt(Prefs.EXPANSION_GENERATION, p.getInt(Prefs.EXPANSION_GENERATION, 0) + 1)
@@ -215,6 +221,7 @@ object BackupRun {
             // A change counter, not a setting: copying it would leave the new device's
             // generation ahead of or behind its own data.
             if (key == Prefs.DICT_GENERATION || key == Prefs.EXPANSION_GENERATION) continue
+            if (!Backup.carried(key)) continue
             val row = when (value) {
                 is Boolean -> Backup.Pref(key, Backup.PrefType.BOOL, value.toString())
                 is Int -> Backup.Pref(key, Backup.PrefType.INT, value.toString())

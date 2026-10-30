@@ -181,7 +181,8 @@ internal class WordEdits(private val ime: KineticaIME) {
         val recased = want.applyToText(text)
         DecodeTrace.log { "  recase selection to=$want len=${text.length}" }
         if (recased == text) return true
-        val at = minOf(ime.selStart, ime.selEnd)
+        // Re-selected from the editor's own offsets: the cached ones may lag it.
+        val at = ime.ich.liveSelection()?.first ?: return true
         ime.ich.replaceSelection(at, recased)
         ime.expectAt(at, at + recased.length)
         ime.forgetCommitMarks()

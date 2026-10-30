@@ -26,14 +26,8 @@ internal class MapPrefs(private val values: Map<String, Any>) : SharedPreference
     ) = Unit
 
     companion object {
-        /**
-         * A stored hue keeps KeyboardConfig off the retired colour-string migration, which
-         * calls android.graphics.Color and has no JVM implementation.
-         */
-        val HUE_SET: Map<String, Any> = mapOf(Prefs.THEME_HUE to 233)
-
-        /** A config from [values], with the hue set. */
+        /** A config from [values]. */
         fun config(values: Map<String, Any> = emptyMap()): KeyboardConfig =
-            KeyboardConfig.from(MapPrefs(values + HUE_SET))
+            KeyboardConfig.from(MapPrefs(values))
     }
 }

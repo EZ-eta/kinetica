@@ -40,8 +40,11 @@ import com.kinetica.keyboard.keys.ShiftState
 import com.kinetica.keyboard.layout.Key
 import com.kinetica.keyboard.layout.KeyType
 import com.kinetica.keyboard.layout.LayoutMutations
+import com.kinetica.keyboard.settings.ColorPrefs
 import com.kinetica.keyboard.settings.EdgeSwipeDefaults
 import com.kinetica.keyboard.settings.KeyboardConfig
+import com.kinetica.keyboard.settings.LanguageMode
+import com.kinetica.keyboard.settings.OrientationPrefs
 import com.kinetica.keyboard.settings.Prefs
 import com.kinetica.keyboard.settings.SettingsSynonyms
 import com.kinetica.keyboard.ui.EmojiPickerView
@@ -156,7 +159,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     internal var selEnd = 0
         private set
 
-    internal val sharedFiling = SharedWordFiling()
+    private val sharedFiling = SharedWordFiling()
     internal val lastCommit = CommitMemory()
 
     override fun onCreate() {
@@ -175,10 +178,13 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         views.vibrator = getSystemService(VIBRATOR_SERVICE) as? Vibrator
         val prefs = PreferenceManager.getDefaultSharedPreferences(this)
         EdgeSwipeDefaults.applyTo(prefs)
-        config = KeyboardConfig.from(prefs)
+        LanguageMode.migrate(prefs)
+        ColorPrefs.migrate(prefs)
+        OrientationPrefs.migrate(prefs)
+        config = readConfig(prefs)
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { p, _ ->
             val previous = config
-            config = KeyboardConfig.from(p)
+            config = readConfig(p)
             // What decides the automatic space, whenever any of it changes and from wherever.
             if (config.autospace != previous.autospace || config.tidySpaces != previous.tidySpaces ||
                 config.wordEndsOnSpace != previous.wordEndsOnSpace ||
@@ -212,8 +218,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
                 loadDictionaryAsync()
                 languageSync.requestLanguageSubtype(config.language)
             } else if (config.dictionaryGeneration != previous.dictionaryGeneration ||
-                config.autoDetectLanguage != previous.autoDetectLanguage ||
-                config.noPrimary != previous.noPrimary ||
+                config.languageMode != previous.languageMode ||
                 config.enabledLanguages != previous.enabledLanguages ||
                 config.learnPhrases != previous.learnPhrases ||
                 // British spelling is applied while the trie is built, so it
@@ -242,6 +247,12 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             ) {
                 views.closeEmojiPicker()
                 keyboardView?.setKeyboardLayout(views.alphaLayout())
+            } else if (config.symbolRowLines != previous.symbolRowLines) {
+                // An edit made with a symbol page up shows at once; otherwise the next page switch reads it.
+                val shown = keyboardView?.shownBoard
+                if (shown == KeyboardViews.SYMBOLS || shown == KeyboardViews.SYMBOLS2) {
+                    keyboardView?.setKeyboardLayout(views.symbolLayout(shown))
+                }
             }
         }
         prefListener = listener
@@ -263,6 +274,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         alternateDecodeExecutor.shutdown()
         extraDecodeExecutor.shutdown()
         dbExecutor.shutdown()
+        views.backdrop.shutdown()
         super.onDestroy()
     }
 
@@ -327,10 +339,21 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
+        // Landscape has its own sizes: the turned phone reads its set before the views rebuild.
+        config = readConfig(
+            PreferenceManager.getDefaultSharedPreferences(this),
+            newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE,
+        )
         if (keyboardView != null) {
             setInputView(onCreateInputView())
         }
     }
+
+    /** The settings for the orientation the keyboard is shown in. */
+    private fun readConfig(
+        prefs: SharedPreferences,
+        landscape: Boolean = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE,
+    ): KeyboardConfig = KeyboardConfig.from(prefs, landscape)
 
     // ------------------------------------------------------------- lifecycle
 
@@ -663,8 +686,8 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
                 }
                 // ?123 always lands on page 1, so leaving and re-entering the
                 // symbols layer resets any page-2 state.
-                KeyType.MODE_SYMBOLS -> keyboardView?.setKeyboardLayout(views.layoutFor("symbols"))
-                KeyType.MODE_SYMBOLS2 -> keyboardView?.setKeyboardLayout(views.layoutFor("symbols2"))
+                KeyType.MODE_SYMBOLS -> keyboardView?.setKeyboardLayout(views.symbolLayout(KeyboardViews.SYMBOLS))
+                KeyType.MODE_SYMBOLS2 -> keyboardView?.setKeyboardLayout(views.symbolLayout(KeyboardViews.SYMBOLS2))
                 KeyType.MODE_ALPHA -> keyboardView?.setKeyboardLayout(views.alphaLayout())
                 KeyType.MODE_NUMPAD -> keyboardView?.setKeyboardLayout(views.layoutFor("numpad"))
                 KeyType.EMOJI -> views.openEmojiPicker()
@@ -931,19 +954,24 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
      * instead of jumping somewhere wrong. A selection collapses to the edge the movement heads for.
      */
     private fun moveCursorByWord(direction: Int): Boolean {
+        // Measured from where the editor's cursor is now. The cached offsets lag a tap in the
+        // text, and a step from them landed inside a word; no read, no jump, the arrow instead.
+        val live = ich.liveSelection() ?: return false
         if (direction > 0) {
             val after = ich.textAfterCursor(CURSOR_WORD_WINDOW) ?: return false
             if (after.isEmpty()) return false
             val n = DeleteSpan.wordsForward(after, 1)
             if (n <= 0) return false
-            val to = selEnd + n
+            val to = live.second + n
+            DecodeTrace.log { "  cursor move word n=$n" }
             ich.setSelection(to, to)
         } else {
             val before = ich.textBeforeCursor(CURSOR_WORD_WINDOW) ?: return false
             if (before.isEmpty()) return false
             val n = DeleteSpan.words(before, 1)
             if (n <= 0) return false
-            val to = (selStart - n).coerceAtLeast(0)
+            val to = (live.first - n).coerceAtLeast(0)
+            DecodeTrace.log { "  cursor move word n=-$n" }
             ich.setSelection(to, to)
         }
         return true
@@ -1056,7 +1084,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
 
     /** Weights for the composer with no primary language, or null for the pairwise merge. */
     private fun equalWeights(): Map<String, Float>? =
-        if (config.noPrimary && residents.secondaryPredictor != null) momentum.weightsFor(residentLanguages()) else null
+        if (config.languageMode == LanguageMode.FOLLOW && residents.secondaryPredictor != null) momentum.weightsFor(residentLanguages()) else null
 
     // ---------------------------------------------------------- word state
 
@@ -1077,10 +1105,15 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         languageSync.onSubtypeChanged(newSubtype)
 
     /**
-     * The resident languages whose lexicon holds [word], each with its frequency byte there.
-     * Empty with one language resident, which leaves every filing to provenance.
+     * The language a commit of [word] is learned into ([SharedWordFiling]); [provenance] is the list
+     * the decode drew it from. With no primary language the bundled lists say which hold the word,
+     * since the active language says nothing about the text and a learned copy can be a misfiling.
      */
-    internal fun heldBy(word: String): Map<String, Int> = residents.heldBy(word, config.language)
+    internal fun filedLanguage(word: String, provenance: String): String {
+        val follow = config.languageMode == LanguageMode.FOLLOW
+        val held = residents.heldBy(word, config.language, listsOnly = follow)
+        return sharedFiling.languageFor(held, provenance, if (follow) residentLanguages() else emptyList())
+    }
 
     /**
      * The dictionary a word on offer came from, defaulting to the active language for anything

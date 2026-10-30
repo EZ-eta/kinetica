@@ -192,7 +192,29 @@ object Prefs {
     const val VIBRATION = "pref_vibration"
     const val VIBRATION_INTENSITY = "pref_vibration_intensity"
     const val TRAIL_COLOR = "pref_trail_color"
+    /** The retired custom-trail hue slider, read only to migrate ([ColorPrefs.migrate]). */
     const val TRAIL_COLOR_CUSTOM_HUE = "pref_trail_color_custom_hue"
+    /** The custom trail colour, `#RRGGBB`. */
+    const val TRAIL_COLOR_HEX = "pref_trail_color_hex"
+    const val KEY_BORDERS = "pref_key_borders"
+    /** trail | keys | both ([com.kinetica.keyboard.ui.SwipeLook]). */
+    const val SWIPE_LOOK = "pref_swipe_look"
+    const val KEY_BORDER_WIDTH = "pref_key_border_width"
+
+    /**
+     * When the background image was picked, as millis; empty for none. The image is a file in
+     * app storage ([BackdropStore]); a new value tells the keyboard to read it again. Not backed
+     * up, since the file is not.
+     */
+    const val BACKDROP = "pref_backdrop"
+    /** The background image's opacity over the theme background, 0-100. */
+    const val BACKDROP_ALPHA = "pref_backdrop_alpha"
+    /** The keys' opacity over the background image, 10-100. */
+    const val KEY_ALPHA = "pref_key_alpha"
+    /** The image's cut for portrait, fractions `l,t,r,b` ([com.kinetica.keyboard.ui.BackdropCrop]). */
+    const val BACKDROP_CROP = "pref_backdrop_crop"
+    /** The image's cut for landscape. */
+    const val BACKDROP_CROP_LANDSCAPE = "pref_backdrop_crop_landscape"
     const val LANGUAGE = "pref_language"
     /** Last language agreed with Android; detects Settings edits while the IME is inactive. */
     const val SYNCED_LANGUAGE = "pref_synced_language"
@@ -255,6 +277,12 @@ object Prefs {
      * never holds the tab or newline the backup format cannot carry.
      */
     fun letterAlternatesKey(letter: Char): String = "pref_alt_$letter"
+
+    /**
+     * Row [row] (1 to 3) of symbol page [page] (1 or 2), keys apart by spaces, absent for the
+     * built-in row (SymbolRows). A key a row, so a value never holds a newline.
+     */
+    fun symbolRowKey(page: Int, row: Int): String = "pref_symbols_${page}_row_$row"
 
     /** Comma-key role: keep | remove | char | text | paste | select_all. */
     const val COMMA_MODE = "pref_comma_mode"
@@ -368,6 +396,9 @@ object Prefs {
     /** Keys show their chords while ?123 or the spacebar is held still. */
     const val CHORD_LABELS = "pref_chord_labels"
 
+    /** The spacebar keeps its chord labels through a small drift; its cursor slide waits past it. */
+    const val SPACE_CHORD_WIGGLE = "pref_space_chord_wiggle"
+
     /** Blocking the word at the cursor from the bar also takes it out of the text. */
     const val DELETE_ON_BLOCK = "pref_delete_on_block"
 
@@ -405,6 +436,14 @@ object Prefs {
     /** A new field opens on the letters, whatever page the last one was left on. */
     const val LETTERS_ON_NEW_FIELD = "pref_letters_on_new_field"
     const val TYPING_SPEED = "pref_typing_speed"
+
+    /**
+     * Which languages suggest: one, mix (the active language leads) or follow (no primary).
+     * Replaced the two switches below, which allowed a state where mix did nothing.
+     */
+    const val LANGUAGE_MODE = "pref_language_mode"
+
+    /** The old "Follow the language I type" switch, read only to migrate ([LanguageMode.migrate]). */
     const val NO_PRIMARY = "pref_no_primary"
 
     /** Holding a letter's long-press menu still opens that letter's list in settings (#8). */
@@ -463,7 +502,7 @@ object Prefs {
      */
     const val LANG_CYCLE_KEY = "pref_lang_cycle_key"
 
-    /** "Mix enabled languages": every word also decodes against a second language. */
+    /** The old "Mix enabled languages" switch, read only to migrate ([LanguageMode.migrate]). */
     const val AUTO_DETECT_LANGUAGE = "pref_auto_detect_language"
 
     /**
@@ -489,6 +528,18 @@ object Prefs {
     const val BOTTOM_PAD_DP = "pref_bottom_pad_dp"
 
     /**
+     * Sizes landscape keeps a copy of, each under its key plus [LANDSCAPE_SUFFIX], as the height
+     * already was. Filled from the portrait value by OrientationPrefs.migrate.
+     */
+    val LANDSCAPE_TWINS: List<String> = listOf(
+        SIDE_PAD_DP, BOTTOM_PAD_DP, HOME_ROW_SPREAD_PCT, DRAG_HANDLE_DP,
+        SUGGESTION_BAR_DP, BAR_TEXT_PCT, RECENT_TEXT_PCT,
+    )
+    const val LANDSCAPE_SUFFIX = "_landscape"
+
+    fun landscapeTwin(key: String): String = key + LANDSCAPE_SUFFIX
+
+    /**
      * Peck-type mode: swipes and predictions off, taps commit literally, for text the engine would
      * mangle (slang, codes).
      */
@@ -497,17 +548,18 @@ object Prefs {
     /** Legacy: the reserved peck-toggle letter, converted the same way as [LANG_CYCLE_KEY]. */
     const val PECK_CHORD_KEY = "pref_peck_chord_key"
     const val THEME_MODE = "pref_theme_mode"
+
+    /** The retired thirteen-colour list's pick, read only to migrate ([ColorPrefs.migrate]). */
     const val THEME_COLOR = "pref_theme_color"
 
     /** dark | light | system. Orthogonal to THEME_MODE, which picks the source. */
     const val THEME_BRIGHTNESS = "pref_theme_brightness"
 
-    /**
-     * Accent hue in degrees, 0-360, replacing the fixed thirteen-colour list. Absent means never
-     * set: KeyboardConfig then derives it from [THEME_COLOR] so an existing install keeps its
-     * colour.
-     */
+    /** The retired accent hue slider, read only to migrate ([ColorPrefs.migrate]). */
     const val THEME_HUE = "pref_theme_hue"
+
+    /** The custom theme's colour, `#RRGGBB`; every surface is derived from it. */
+    const val THEME_COLOR_HEX = "pref_theme_color_hex"
 
     const val DEFAULT_HEIGHT_PCT = 35
 
@@ -568,6 +620,12 @@ object Prefs {
     const val DEFAULT_VIBRATION = true
     const val DEFAULT_VIBRATION_INTENSITY = 2
     const val DEFAULT_TRAIL_COLOR = "rainbow"
+    /** Hue 200, as the retired slider drew it. */
+    const val DEFAULT_TRAIL_COLOR_HEX = "#26B7FF"
+    const val DEFAULT_SWIPE_LOOK = "trail"
+    // Off: an upgrade draws the keys as before.
+    const val DEFAULT_KEY_BORDERS = false
+    const val DEFAULT_KEY_BORDER_WIDTH = 1
     const val DEFAULT_LANGUAGE = "en"
     const val DEFAULT_KEY_ARRANGEMENT = "qwerty"
     const val DEFAULT_ARRANGEMENT_AUTO_APPLIED = false
@@ -614,6 +672,9 @@ object Prefs {
     /** On: a chord is hard to remember unseen, and a quick ?123 tap shows nothing. */
     const val DEFAULT_CHORD_LABELS = true
 
+    /** On: a held thumb drifts, and a hold that shows the labels is not a cursor slide yet. */
+    const val DEFAULT_SPACE_CHORD_WIGGLE = true
+
     /** Off: a block changes only the bar; some block a word they still mean to type. */
     const val DEFAULT_DELETE_ON_BLOCK = false
 
@@ -649,10 +710,10 @@ object Prefs {
     const val DEFAULT_TYPING_SPEED = false
 
     /**
-     * Off: the equal-footing mode changes 6% of captured leads, more than an engine change may
-     * move by default, so it is the user's to choose.
+     * One: the equal-footing mode changes 6% of captured leads, more than an engine change may
+     * move by default, so it is the user's to choose, and mix was off too.
      */
-    const val DEFAULT_NO_PRIMARY = false
+    const val DEFAULT_LANGUAGE_MODE = "one"
     const val DEFAULT_EDIT_FROM_MENU = false
     const val DEFAULT_LEARN_PHRASES = false
     const val DEFAULT_NEXT_WORD = true
@@ -668,8 +729,14 @@ object Prefs {
     const val DEFAULT_PERIOD_CUSTOM = ""
     const val DEFAULT_THEME_MODE = "default"
     const val DEFAULT_THEME_COLOR = "#5468FF"
+
+    /** The shipped blue as the hue slider drew it, so a fresh install looks as before. */
+    const val DEFAULT_THEME_COLOR_HEX = "#475DFF"
+
+    /** The default of a typed-colour key. */
+    fun colorHexDefault(key: String?): String =
+        if (key == TRAIL_COLOR_HEX) DEFAULT_TRAIL_COLOR_HEX else DEFAULT_THEME_COLOR_HEX
     const val DEFAULT_THEME_BRIGHTNESS = "dark"
-    const val DEFAULT_AUTO_DETECT_LANGUAGE = false
     const val DEFAULT_SYNC_SYSTEM_LANGUAGE = true
     const val DEFAULT_BRITISH_SPELLING = false
 

@@ -167,6 +167,16 @@
         <item>one_handed_left</item>
     </string-array>
 
+    <string-array name="swipe_look_entries">
+        <item>Trail</item>
+        <item>Keys light up</item>
+        <item>Both</item>
+    </string-array>
+    <string-array name="swipe_look_values" translatable="false">
+        <item>trail</item>
+        <item>keys</item>
+        <item>both</item>
+    </string-array>
     <string-array name="trail_color_entries">
         <item>Rainbow</item>
         <item>Red</item>
@@ -174,7 +184,7 @@
         <item>Green</item>
         <item>Cyan</item>
         <item>Violet</item>
-        <item>Custom hue</item>
+        <item>Custom colour</item>
         <item>Theme colour</item>
     </string-array>
     <string-array name="trail_color_values" translatable="false">
@@ -295,6 +305,17 @@
         <item>off</item>
         <item>normal</item>
         <item>aggressive</item>
+    </string-array>
+
+    <string-array name="language_mode_entries">
+        <item>One language at a time</item>
+        <item>Mix enabled languages (experimental)</item>
+        <item>Follow the language I type (experimental)</item>
+    </string-array>
+    <string-array name="language_mode_values" translatable="false">
+        <item>one</item>
+        <item>mix</item>
+        <item>follow</item>
     </string-array>
 
     <string-array name="language_entries">

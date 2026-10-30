@@ -17,9 +17,17 @@ class SharedWordFiling(private val margin: Int = KineticaConstants.SHARED_WORD_F
      * The language to learn a commit into. [held] maps each resident language whose lexicon
      * holds the word to its frequency byte; [provenance] is where the decode said it came from,
      * and is the answer whenever the word is not shared.
+     *
+     * [residents] is given only with no primary language, where [held] reads the bundled lists
+     * alone: there one holder is the word's language even when provenance read a copy the user's
+     * own learning put in another list. A word no list holds goes where the last word only one
+     * list holds went, since provenance then is the active language, which says nothing about the
+     * text: Italian words missing from its list were learned into English.
      */
-    fun languageFor(held: Map<String, Int>, provenance: String): String {
+    fun languageFor(held: Map<String, Int>, provenance: String, residents: Collection<String> = emptyList()): String {
         if (held.size == 1) lastSingle = held.keys.first()
+        if (residents.isNotEmpty() && held.size == 1) return held.keys.first()
+        if (residents.isNotEmpty() && held.isEmpty()) return lastSingle?.takeIf { it in residents } ?: provenance
         if (held.size < 2) return provenance
         val ranked = held.entries.sortedByDescending { it.value }
         if (ranked[0].value - ranked[1].value > margin) return ranked[0].key

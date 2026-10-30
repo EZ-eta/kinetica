@@ -3,6 +3,7 @@ package com.kinetica.keyboard.ui
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.RectF
@@ -138,14 +139,38 @@ class KeyboardView @JvmOverloads constructor(
     /** Disables all animation work (trails, bursts) at enqueue time. */
     var zenMode = false
 
-    /** Extra trail gate: also cleared in private (password) fields. */
+    /** Extra trail gate: also cleared in private (password) fields. Covers the lit keys too. */
     var trailsEnabled = true
+
+    /** The trail, the keys a swipe crosses lit, or both. */
+    var swipeLook = SwipeLook.TRAIL
+        set(value) {
+            if (field == value) return
+            field = value
+            keyWake.clear()
+        }
 
     var trailBaseHue: Float
         get() = trailRenderer.baseHue
         set(value) {
             trailRenderer.baseHue = value
         }
+
+    /** The line round each key in dp, 0 = off; drawn in the theme's hint colour. */
+    var keyBorderDp = 0
+        set(value) {
+            if (field == value) return
+            field = value
+            updateBorderWidth()
+            if (width > 0 && height > 0) renderStaticLayer()
+            invalidate()
+        }
+
+    /** Saturation and value of the trail, from a typed colour or the presets'. */
+    fun setTrailTone(saturation: Float, value: Float) {
+        trailRenderer.saturation = saturation
+        trailRenderer.value = value
+    }
 
     /** Rainbow trails only: the hue steps per key. */
     var trailCycles: Boolean
@@ -239,6 +264,10 @@ class KeyboardView @JvmOverloads constructor(
             field = clamped
             if (width > 0 && height > 0) rebuild()
         }
+
+    /** Inset that clears a display cutout meeting the keys; the larger of it and the margin wins. */
+    private var cutoutPadPx = 0f
+    private val windowXy = IntArray(2)
 
     /**
      * The landscape arrangement, or null in portrait. Only the full layout mode takes it; the
@@ -349,11 +378,14 @@ class KeyboardView @JvmOverloads constructor(
 
     private val trailRenderer = TrailRenderer(density)
     private val burstRenderer = BurstRenderer(density)
+    private val keyWake = KeyWake()
+    private val wakePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
+    private val wakeRect = RectF()
     private var animating = false
     private val frameCallback = object : Choreographer.FrameCallback {
         override fun doFrame(frameTimeNanos: Long) {
             val now = SystemClock.uptimeMillis()
-            val alive = trailRenderer.prune(now) or burstRenderer.prune(now)
+            val alive = trailRenderer.prune(now) or burstRenderer.prune(now) or keyWake.anyLit(now)
             invalidate()
             if (alive) {
                 Choreographer.getInstance().postFrameCallback(this)
@@ -366,6 +398,7 @@ class KeyboardView @JvmOverloads constructor(
     // Sized for the widest alphabet, indexed by the board's own letter codes.
     private val letterCenterX = FloatArray(Alphabet.MAX_SIZE)
     private val letterCenterY = FloatArray(Alphabet.MAX_SIZE)
+    private val keyOfCode = IntArray(Alphabet.MAX_SIZE) { -1 }
 
     private val spaceController = SpacebarCursorController(density) { dir, byWord ->
         listener?.onCursorMove(dir, byWord)
@@ -390,6 +423,9 @@ class KeyboardView @JvmOverloads constructor(
     private val hintPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textAlign = Paint.Align.RIGHT
     }
+    private val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
+    private val borderRect = RectF()
+    private var narrowestKeySidePx = 0f
 
     /** Resolved color roles; the setter restains every paint and re-renders. */
     var theme: KeyboardTheme = KeyboardTheme.fromResources(context)
@@ -400,13 +436,32 @@ class KeyboardView @JvmOverloads constructor(
             invalidate()
         }
 
+    /** A background image shows through: no board fill, keys at [keyAlpha]. */
+    private var overBackdrop = false
+    private var keyAlpha = 255
+
+    /** Draws the board for a background image underneath, or back to its own fill. */
+    fun setBackdropLook(on: Boolean, keyAlpha: Int) {
+        val alpha = if (on) keyAlpha.coerceIn(0, 255) else 255
+        if (on == overBackdrop && alpha == this.keyAlpha) return
+        overBackdrop = on
+        this.keyAlpha = alpha
+        applyThemePaints()
+        if (width > 0 && height > 0) renderStaticLayer()
+        invalidate()
+    }
+
     private fun applyThemePaints() {
         bgPaint.color = theme.background
         keyPaint.color = theme.key
         specialKeyPaint.color = theme.keySpecial
+        // After the colours, which carry their own alpha; the image's opacity scales it.
+        keyPaint.alpha = Color.alpha(theme.key) * keyAlpha / 255
+        specialKeyPaint.alpha = Color.alpha(theme.keySpecial) * keyAlpha / 255
         pressedPaint.color = theme.keyPressed
         labelPaint.color = theme.keyText
         hintPaint.color = theme.keyHint
+        borderPaint.color = theme.keyHint
         popupBgPaint.color = theme.popupBg
         popupSelectedPaint.color = theme.accent
         deletePreviewPaint.color = theme.keyText
@@ -618,6 +673,18 @@ class KeyboardView @JvmOverloads constructor(
         }
     }
     private val holdSlopPx = KineticaConstants.TAP_MAX_DISP_DP * density
+    private val wiggleSlopPx = KineticaConstants.CHORD_HOLD_WIGGLE_DP * density
+
+    /** Whether the spacebar keeps its labels through the wiggle too; ?123 always does. */
+    var spaceWiggle = true
+
+    /** How far a trigger had drifted when it latched as moved, and whether its labels showed. */
+    private fun traceTriggerMoved(trigger: ChordTrigger, distSq: Float, labelsUp: Boolean) {
+        DecodeTrace.log {
+            val dp = kotlin.math.sqrt(distSq) / density
+            "  chord trigger moved trigger=${trigger.name.lowercase()} dist=${dp.toInt()}dp labels=${if (labelsUp) "up" else "down"}"
+        }
+    }
 
     private val popupBgPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val popupSelectedPaint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -659,6 +726,9 @@ class KeyboardView @JvmOverloads constructor(
     /** Whether the board on screen is a letters page: the symbol pages and the numpad have none. */
     val showsLetters: Boolean get() = layout?.keys?.any { it.isLetter } == true
 
+    /** The name of the board on screen, so an edited symbol page can be put up again in place. */
+    val shownBoard: String? get() = layout?.name
+
     fun setKeyboardLayout(l: KeyboardLayout) {
         cancelActivePointers()
         layout = l
@@ -675,22 +745,55 @@ class KeyboardView @JvmOverloads constructor(
         }
     }
 
-    /** Swipe path entered a new key: step a rainbow trail's hue and burst the key. */
+    /** Swipe path entered a new key: step a rainbow trail's hue, burst the key or light it. */
     fun onEngineKeyTransition(streamId: StreamId, code: Int) {
         if (zenMode || !trailsEnabled) return
+        // Stepped with the trail hidden too: the lit keys take their colour from it.
         trailRenderer.bumpHue(streamId)
-        if (code in letterCenterX.indices) {
-            burstRenderer.spawn(letterCenterX[code], letterCenterY[code], SystemClock.uptimeMillis())
-            ensureAnimating()
-        }
+        if (code !in letterCenterX.indices) return
+        val now = SystemClock.uptimeMillis()
+        if (swipeLook.drawsTrail) burstRenderer.spawn(letterCenterX[code], letterCenterY[code], now)
+        if (swipeLook.drawsKeys) keyWake.mark(keyOfCode[code], trailRenderer.hueOf(streamId), now)
+        ensureAnimating()
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
         if (w > 0 && h > 0) {
+            cutoutPadPx = readCutoutPad(w, h)
             rebuild()
             claimEdgeGestures(w, h)
         }
+    }
+
+    override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
+        super.onLayout(changed, left, top, right, bottom)
+        // The view's place in the window is known only now; a size change alone may have read it early.
+        if (width <= 0 || height <= 0) return
+        val pad = readCutoutPad(width, height)
+        if (pad != cutoutPadPx) {
+            cutoutPadPx = pad
+            rebuild()
+        }
+    }
+
+    /**
+     * Inset that keeps the keys off a display cutout the window now reaches into, in pixels.
+     * The cutout rects come in window coordinates and are moved into the view's own.
+     */
+    private fun readCutoutPad(w: Int, h: Int): Float {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return 0f
+        val rects = rootWindowInsets?.displayCutout?.boundingRects ?: return 0f
+        if (rects.isEmpty()) return 0f
+        getLocationInWindow(windowXy)
+        val flat = FloatArray(rects.size * 4)
+        for ((i, r) in rects.withIndex()) {
+            flat[4 * i] = (r.left - windowXy[0]).toFloat()
+            flat[4 * i + 1] = (r.top - windowXy[1]).toFloat()
+            flat[4 * i + 2] = (r.right - windowXy[0]).toFloat()
+            flat[4 * i + 3] = (r.bottom - windowXy[1]).toFloat()
+        }
+        return LayoutTransforms.cutoutPadPx(flat, w.toFloat(), h.toFloat())
     }
 
     /**
@@ -725,7 +828,7 @@ class KeyboardView @JvmOverloads constructor(
         keyInsets.clear()
         val w = width.toFloat()
         val h = height.toFloat()
-        val sidePad = LayoutTransforms.sidePadPx(sidePadDp, density, w)
+        val sidePad = maxOf(LayoutTransforms.sidePadPx(sidePadDp, density, w), cutoutPadPx)
         val arrangement = landscapeArrangement
             ?.takeIf { it != LandscapeArrangement.STRETCH && layoutMode == LayoutMode.FULL }
         val letter = l.keys.firstOrNull { it.isLetter }
@@ -746,6 +849,14 @@ class KeyboardView @JvmOverloads constructor(
             keyRects.add(rect)
             keyInsets.add(insetRect(rect))
         }
+        keyWake.resize(l.keys.size)
+        narrowestKeySidePx = 0f
+        for (i in l.keys.indices) {
+            if (l.keys[i].chromeless) continue
+            val side = minOf(keyInsets[i].width(), keyInsets[i].height())
+            if (side > 0f && (narrowestKeySidePx == 0f || side < narrowestKeySidePx)) narrowestKeySidePx = side
+        }
+        updateBorderWidth()
         buildGeometry(l)
         renderStaticLayer()
         invalidate()
@@ -755,6 +866,7 @@ class KeyboardView @JvmOverloads constructor(
         val rects = ArrayList<FloatArray>()
         val codes = ArrayList<Int>()
         var minLetterW = Float.MAX_VALUE
+        keyOfCode.fill(-1)
         for (i in l.keys.indices) {
             val k = l.keys[i]
             if (!k.isLetter) continue
@@ -764,6 +876,7 @@ class KeyboardView @JvmOverloads constructor(
             codes.add(code)
             letterCenterX[code] = r.centerX()
             letterCenterY[code] = r.centerY()
+            keyOfCode[code] = i
             if (r.width() < minLetterW) minLetterW = r.width()
         }
         engineActive = rects.isNotEmpty()
@@ -789,7 +902,11 @@ class KeyboardView @JvmOverloads constructor(
         val bmp = staticLayer?.takeIf { it.width == width && it.height == height }
             ?: Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).also { staticLayer = it }
         val c = Canvas(bmp)
-        c.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bgPaint)
+        if (overBackdrop) {
+            bmp.eraseColor(Color.TRANSPARENT)
+        } else {
+            c.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bgPaint)
+        }
         for (i in l.keys.indices) {
             drawKey(c, l.keys[i], keyInsets[i])
         }
@@ -801,6 +918,7 @@ class KeyboardView @JvmOverloads constructor(
         if (!key.chromeless) {
             val paint = if (key.type == KeyType.CHAR) keyPaint else specialKeyPaint
             c.drawRoundRect(inset, cornerPx, cornerPx, paint)
+            drawBorder(c, inset)
         }
 
         val action = if (key.type == KeyType.ENTER) enterLabel else null
@@ -864,6 +982,38 @@ class KeyboardView @JvmOverloads constructor(
         c.drawText(text, inset.centerX(), baseline, labelPaint)
     }
 
+    /** Each lit key's edge, in the hue it was crossed in, narrowing and fading as it ages. */
+    private fun drawWake(canvas: Canvas, now: Long) {
+        if (!keyWake.anyLit(now)) return
+        for (i in 0 until minOf(keyWake.size, keyInsets.size)) {
+            val b = keyWake.lightAt(i, now)
+            if (b <= 0f) continue
+            val w = KeyWake.widthDp(b) * density
+            val d = w / 2f
+            val inset = keyInsets[i]
+            wakeRect.set(inset.left + d, inset.top + d, inset.right - d, inset.bottom - d)
+            wakePaint.strokeWidth = w
+            wakePaint.color = Hsv.toColor(keyWake.hueOf(i), trailRenderer.saturation, trailRenderer.value)
+            wakePaint.alpha = (255 * b).toInt()
+            val r = (cornerPx - d).coerceAtLeast(0f)
+            canvas.drawRoundRect(wakeRect, r, r, wakePaint)
+        }
+    }
+
+    private fun updateBorderWidth() {
+        borderPaint.strokeWidth = KeyBorder.widthPx(keyBorderDp, density, narrowestKeySidePx)
+    }
+
+    /** The key's line, inside its fill so the gap between keys is unchanged. */
+    private fun drawBorder(c: Canvas, inset: RectF) {
+        val w = borderPaint.strokeWidth
+        if (keyBorderDp <= 0 || w <= 0f) return
+        val d = KeyBorder.inset(w)
+        borderRect.set(inset.left + d, inset.top + d, inset.right - d, inset.bottom - d)
+        val r = (cornerPx - d).coerceAtLeast(0f)
+        c.drawRoundRect(borderRect, r, r, borderPaint)
+    }
+
     private fun insetRect(rect: RectF): RectF = RectF(
         rect.left + keyGapPx, rect.top + keyGapPx,
         rect.right - keyGapPx, rect.bottom - keyGapPx,
@@ -882,6 +1032,7 @@ class KeyboardView @JvmOverloads constructor(
                 // RectF allocation on every animation frame while a key is held.
                 val inset = keyInsets[idx]
                 canvas.drawRoundRect(inset, cornerPx, cornerPx, pressedPaint)
+                drawBorder(canvas, inset)
                 val label = if (key.isLetter && uppercase) key.label.uppercase() else key.label
                 if (label.isNotEmpty() && key.type == KeyType.CHAR) {
                     labelPaint.textSize =
@@ -893,8 +1044,11 @@ class KeyboardView @JvmOverloads constructor(
         }
         if (!zenMode) {
             val now = SystemClock.uptimeMillis()
-            trailRenderer.draw(canvas, now)
-            burstRenderer.draw(canvas, now)
+            drawWake(canvas, now)
+            if (swipeLook.drawsTrail) {
+                trailRenderer.draw(canvas, now)
+                burstRenderer.draw(canvas, now)
+            }
         }
         drawSpeed(canvas)
         drawGhost(canvas)
@@ -1118,7 +1272,8 @@ class KeyboardView @JvmOverloads constructor(
                     // The board's own letter code: a Cyrillic key's char minus 'a' runs past the array.
                     val code = key?.letterCode?.takeIf { it in letterCenterX.indices }
                     if (code != null) {
-                        burstRenderer.spawn(letterCenterX[code], letterCenterY[code], t)
+                        if (swipeLook.drawsTrail) burstRenderer.spawn(letterCenterX[code], letterCenterY[code], t)
+                        if (swipeLook.drawsKeys) keyWake.mark(keyOfCode[code], trailRenderer.hueOf(stream), t)
                         ensureAnimating()
                     }
                 }
@@ -1564,13 +1719,20 @@ class KeyboardView @JvmOverloads constructor(
             ) {
                 val dx = x - downXByPointer[pid]
                 val dy = y - downYByPointer[pid]
-                if (dx * dx + dy * dy > holdSlopPx * holdSlopPx) {
-                    if (pid == pendingHoldPid) cancelHold()
-                    if (pid == modeHoldPointer) {
+                val distSq = dx * dx + dy * dy
+                if (pid == pendingHoldPid && distSq > holdSlopPx * holdSlopPx) cancelHold()
+                if (pid == modeHoldPointer && !modeHoldMoved) {
+                    val slop = triggerSlopPx(modeLabelsDue, true, holdSlopPx, wiggleSlopPx)
+                    if (distSq > slop * slop) {
+                        traceTriggerMoved(ChordTrigger.MODE, distSq, modeLabelsDue)
                         modeHoldMoved = true
                         dropChordLabels(ChordTrigger.MODE)
                     }
-                    if (pid == spacePointer) {
+                }
+                if (pid == spacePointer && !spaceHoldMoved) {
+                    val slop = triggerSlopPx(spaceLabelsDue, spaceWiggle, holdSlopPx, wiggleSlopPx)
+                    if (distSq > slop * slop) {
+                        traceTriggerMoved(ChordTrigger.SPACE, distSq, spaceLabelsDue)
                         spaceHoldMoved = true
                         dropChordLabels(ChordTrigger.SPACE)
                     }
@@ -1583,7 +1745,7 @@ class KeyboardView @JvmOverloads constructor(
                     addTrailPoint(e, pid, x, y, ev.eventTime)
                 }
                 // After a spacebar chord the touch is spent: it neither slides nor arms again.
-                ROUTE_SPACE -> if (!spaceChordFired) {
+                ROUTE_SPACE -> if (!spaceChordFired && spaceSlideAllowed(spaceLabelsDue, spaceWiggle)) {
                     spaceController.onMove(x)
                     if (spaceController.sliding && !spaceHoldMoved) {
                         spaceHoldMoved = true
@@ -1632,7 +1794,7 @@ class KeyboardView @JvmOverloads constructor(
     }
 
     private fun addTrailPoint(e: GestureEngine, pid: Int, x: Float, y: Float, t: Long) {
-        if (zenMode || !trailsEnabled) return
+        if (zenMode || !trailsEnabled || !swipeLook.drawsTrail) return
         if (!e.isSwipeCommitted(pid)) return
         val stream = e.streamIdOf(pid) ?: return
         trailRenderer.addPoint(stream, x, y, t)
@@ -1868,6 +2030,7 @@ class KeyboardView @JvmOverloads constructor(
         pressedKeys.clear()
         trailRenderer.clear()
         burstRenderer.clear()
+        keyWake.clear()
         invalidate()
     }
 
@@ -1980,3 +2143,17 @@ internal fun chordArms(
     heldMs: Long,
     armMs: Long,
 ): Boolean = modeHeld && !modeMoved && heldMs >= armMs
+
+/**
+ * The travel past which a held trigger counts as moved: the tap slop until its chord labels
+ * show, then the wiggle. Before the labels a quick slide or page tap reads as it always did;
+ * after them a resting thumb's drift keeps the labels and the arm together.
+ */
+internal fun triggerSlopPx(labelsUp: Boolean, wiggleOn: Boolean, tapSlopPx: Float, wiggleSlopPx: Float): Float =
+    if (labelsUp && wiggleOn) maxOf(tapSlopPx, wiggleSlopPx) else tapSlopPx
+
+/**
+ * Whether the spacebar's cursor slide may read this move. Not while its labels show inside the
+ * wiggle: a drift past it drops the labels first, and the slide then starts from that point.
+ */
+internal fun spaceSlideAllowed(labelsUp: Boolean, wiggleOn: Boolean): Boolean = !(labelsUp && wiggleOn)

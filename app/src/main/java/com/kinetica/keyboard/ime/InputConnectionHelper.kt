@@ -2,6 +2,7 @@ package com.kinetica.keyboard.ime
 
 import android.os.SystemClock
 import android.view.KeyEvent
+import android.view.inputmethod.ExtractedTextRequest
 import android.view.inputmethod.InputConnection
 
 /**
@@ -42,21 +43,31 @@ class InputConnectionHelper(private val connection: () -> InputConnection?) {
         connection()?.setSelection(start, end) ?: false
 
     /**
-     * Batch-edit deletion of [count] characters ending at absolute offset [end],
-     * used to remove a selection.
-     *
-     * [InputConnection.deleteSurroundingText] works around the selection's boundaries and
-     * leaves the selection in place, so the cursor collapses to [end] first and the call
-     * becomes a backward delete. One batch edit, so the editor reports one selection change.
+     * The selection as the editor holds it now, in absolute offsets, or null when it cannot
+     * say. Read fresh for the few edits that need a position: the offsets cached from
+     * onUpdateSelection lag the editor, and an edit placed by them lands elsewhere.
      */
-    fun deleteEndingAt(end: Int, count: Int): Boolean {
-        if (count <= 0) return false
-        val ic = connection() ?: return false
-        ic.beginBatchEdit()
-        ic.setSelection(end, end)
-        ic.deleteSurroundingText(count, 0)
-        ic.endBatchEdit()
-        return true
+    fun liveSelection(): Pair<Int, Int>? {
+        val ic = connection() ?: return null
+        // One character asked for: only the offsets are wanted, not the field's text.
+        val request = ExtractedTextRequest().apply { hintMaxChars = 1 }
+        val et = ic.getExtractedText(request, 0) ?: return null
+        if (et.selectionStart < 0 || et.selectionEnd < 0) return null
+        val a = et.startOffset + et.selectionStart
+        val b = et.startOffset + et.selectionEnd
+        return minOf(a, b) to maxOf(a, b)
+    }
+
+    /**
+     * Deletes the editor's own selection, wherever it is now, and returns its length.
+     * Written over with nothing, so no offset is involved; 0 when the editor reports none.
+     */
+    fun deleteLiveSelection(): Int {
+        val ic = connection() ?: return 0
+        val selected = ic.getSelectedText(0)?.length ?: 0
+        if (selected == 0) return 0
+        ic.commitText("", 1)
+        return selected
     }
 
     /** Batch-edit replacement of the last [deleteCount] chars with [text]. */

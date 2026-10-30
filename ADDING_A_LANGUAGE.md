@@ -185,9 +185,9 @@ away and back preserves learned words.
 
 ## Known multi-language limitations (documented, not blockers)
 
-- Mix enabled languages pairs the active language with the first enabled
-  other language of the same alphabet (`KineticaIME` builds one
-  `secondaryPredictor`); Follow the language I type takes up to three.
+- Mix pairs the active language with the first enabled other language of
+  the same alphabet (`KineticaIME` builds one `secondaryPredictor`); Follow
+  the language I type takes up to three.
 - Enabled-languages cycle order is the canonical `ALL_LANGUAGES` order, not
   user-orderable.
 - A language whose own alphabet letters fold onto other letters that are

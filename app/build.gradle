@@ -30,8 +30,8 @@ android {
         applicationId "com.kinetica.keyboard"
         minSdk 26
         targetSdk 34
-        versionCode 88
-        versionName "2.1.3"
+        versionCode 101
+        versionName "2.2.0"
     }
 
     sourceSets {

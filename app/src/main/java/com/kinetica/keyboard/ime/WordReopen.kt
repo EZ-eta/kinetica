@@ -134,7 +134,7 @@ internal class WordReopen(private val ime: KineticaIME) {
         // Learned as a pick is, the old word left alone: nothing says this keyboard wrote it.
         if (!word.equals(old, ignoreCase = true)) {
             val from = history?.languages?.get(word.lowercase()) ?: ime.languageOf(word)
-            ime.learner.learnWord(word, lang = ime.sharedFiling.languageFor(ime.heldBy(word), from))
+            ime.learner.learnWord(word, lang = ime.filedLanguage(word, from))
         }
         ime.updateAutoShift()
         ime.barContents.refreshPredictions()

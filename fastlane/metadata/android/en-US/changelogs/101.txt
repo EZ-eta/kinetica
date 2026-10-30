@@ -1,0 +1,8 @@
+A background image under the keys, fitted per orientation, image and key opacity
+Colours picked with sliders, swatches or a #RRGGBB code
+Key borders; a swipe can light up the keys it crosses
+Symbol pages as text
+Landscape: its own margins, bar and text sizes; no margin on the camera side only
+Chord labels stay through a small drift
+Languages: one, mix or follow in one setting; Follow learns each word into its own language
+Fixed: a delete or a cursor step could land away from the cursor

@@ -1,7 +1,7 @@
 package com.kinetica.keyboard.ui
 
 /**
- * HSV to packed ARGB, and back far enough to recover a hue.
+ * HSV to packed ARGB, and back.
  *
  * Hand-rolled because the theme's whole palette comes from here and `android.graphics.Color`'s
  * static helpers throw "not mocked" in JVM unit tests; a palette built on them could ship
@@ -57,6 +57,20 @@ object Hsv {
         }
         return if (h < 0f) h + 360f else h
     }
+
+    /** HSV saturation of a packed colour, [0, 1]; 0 for black and any grey. */
+    fun saturationOf(color: Int): Float {
+        val r = ((color shr 16) and 0xFF) / 255f
+        val g = ((color shr 8) and 0xFF) / 255f
+        val b = (color and 0xFF) / 255f
+        val max = maxOf(r, g, b)
+        if (max <= 0f) return 0f
+        return (max - minOf(r, g, b)) / max
+    }
+
+    /** HSV value of a packed colour, [0, 1]: its brightest channel. */
+    fun valueOf(color: Int): Float =
+        maxOf((color shr 16) and 0xFF, (color shr 8) and 0xFF, color and 0xFF) / 255f
 
     /** Relative luminance (WCAG), for contrast checks on a derived palette. */
     fun luminance(color: Int): Double {

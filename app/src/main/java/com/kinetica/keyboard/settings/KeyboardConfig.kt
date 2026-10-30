@@ -12,8 +12,12 @@ import com.kinetica.keyboard.keys.SpacebarCursorController
 import com.kinetica.keyboard.layout.LandscapeArrangement
 import com.kinetica.keyboard.layout.LayoutMode
 import com.kinetica.keyboard.layout.LayoutTransforms
+import com.kinetica.keyboard.layout.SymbolRows
+import com.kinetica.keyboard.ui.BackdropFit
 import com.kinetica.keyboard.ui.BarMetrics
-import com.kinetica.keyboard.ui.KeyboardTheme
+import com.kinetica.keyboard.ui.Hsv
+import com.kinetica.keyboard.ui.KeyBorder
+import com.kinetica.keyboard.ui.SwipeLook
 
 /**
  * Immutable snapshot of all preferences the keyboard consumes, rebuilt on any preference change
@@ -51,6 +55,20 @@ data class KeyboardConfig(
     val vibration: Boolean,
     val vibrationIntensity: Int,
     val trailBaseHue: Float,
+    /** Saturation and value of the trail; the presets draw at the retired slider's. */
+    val trailSaturation: Float,
+    val trailValue: Float,
+    /** The line round each key in dp; 0 = off. */
+    val keyBorderDp: Int,
+    /** The background image's pick stamp, empty for none ([Prefs.BACKDROP]). */
+    val backdropStamp: String,
+    /** The image's opacity, percent. */
+    val backdropAlphaPct: Int,
+    /** The keys' opacity over the image, percent. */
+    val keyAlphaPct: Int,
+    /** This orientation's cut of the image, as stored; blank for the centre. */
+    val backdropCrop: String,
+    val swipeLook: SwipeLook,
     val longPressMs: Long,
     val chordArmMs: Long,
     /** The spacebar's own lead-in before a tap is a spacebar chord. */
@@ -113,6 +131,8 @@ data class KeyboardConfig(
     val recentSwipeReversed: Boolean,
     /** Keys show their ?123 chords while it is held. */
     val chordLabels: Boolean,
+    /** The spacebar's labels hold through a small drift, as ?123's do. */
+    val spaceChordWiggle: Boolean,
     /** How an expansion trigger's case is read. */
     val triggerCase: TriggerCase,
     /** A block from the bar also deletes the word at the cursor. */
@@ -131,8 +151,11 @@ data class KeyboardConfig(
     val numpadForNumbers: Boolean,
     /** Words per minute on the spacebar (TypingSpeed). */
     val typingSpeed: Boolean,
-    /** Up to three languages decode as equals, weighted by what is being typed (LanguageMomentum). */
-    val noPrimary: Boolean,
+    /**
+     * Which languages suggest. Follow: up to three decode as equals, weighted by what is being
+     * typed (LanguageMomentum). Mix: the next enabled one beside the active one.
+     */
+    val languageMode: LanguageMode,
     /** A letter's menu held still opens its list in settings. */
     val editFromMenu: Boolean,
     /** Learn word pairs from this user's own typing; opt-in, on-device only. */
@@ -181,17 +204,29 @@ data class KeyboardConfig(
     val numberRow: Boolean,
     /** Enabled languages in canonical cycle order; always contains [language]. */
     val enabledLanguages: List<String>,
-    /** "Mix enabled languages": swiped and tapped words also decode against a second one. */
-    val autoDetectLanguage: Boolean,
     /** Android's selected subtype decides the language at input start. */
     val syncSystemLanguage: Boolean,
     /** Prefer British spellings in English; ignored for every other language. */
     val britishSpelling: Boolean,
     /** Peck-type mode: swipes/predictions off, taps commit literally. */
     val peckMode: Boolean,
+    /** The symbol pages' edited rows, page 1's three then page 2's; null keeps a built-in row. */
+    val symbolRowLines: List<String?> = emptyList(),
 ) {
+    /** Page [page]'s three rows, for SymbolRows.apply. */
+    fun symbolRows(page: Int): List<String?> =
+        List(SymbolRows.ROWS) { symbolRowLines.getOrNull((page - 1) * SymbolRows.ROWS + it) }
+
     companion object {
-        fun from(prefs: SharedPreferences): KeyboardConfig {
+        /**
+         * The snapshot for one orientation: in [landscape] the sizes in Prefs.LANDSCAPE_TWINS read
+         * landscape's copy, falling back to portrait's while it is not stored.
+         */
+        fun from(prefs: SharedPreferences, landscape: Boolean = false): KeyboardConfig {
+            fun sized(key: String): String {
+                val twin = Prefs.landscapeTwin(key)
+                return if (landscape && prefs.contains(twin)) twin else key
+            }
             // Read once: the tap delay defaults to it and the retraction window to twice the tap
             // delay, so an untouched keyboard keeps the single-slider behaviour.
             val swipeDelay = prefs.getInt(
@@ -211,11 +246,11 @@ data class KeyboardConfig(
                 Prefs.LANDSCAPE_SPLIT_GAP_PCT, Prefs.DEFAULT_LANDSCAPE_SPLIT_GAP_PCT,
             ).coerceIn(0, Prefs.MAX_LANDSCAPE_SPLIT_GAP_PCT),
             suggestionBarDp = prefs.getInt(
-                Prefs.SUGGESTION_BAR_DP, Prefs.DEFAULT_SUGGESTION_BAR_DP,
-            ).coerceIn(BarMetrics.MIN_DP.toInt(), BarMetrics.MAX_DP.toInt()),
+                sized(Prefs.SUGGESTION_BAR_DP), Prefs.DEFAULT_SUGGESTION_BAR_DP,
+            ).coerceIn(BarMetrics.minDp(landscape).toInt(), BarMetrics.MAX_DP.toInt()),
             dragHandleDp = KeyboardHeights.handleDp(
-                if (prefs.contains(Prefs.DRAG_HANDLE_DP)) {
-                    prefs.getInt(Prefs.DRAG_HANDLE_DP, KeyboardHeights.MAX_HANDLE_DP)
+                if (prefs.contains(sized(Prefs.DRAG_HANDLE_DP))) {
+                    prefs.getInt(sized(Prefs.DRAG_HANDLE_DP), KeyboardHeights.MAX_HANDLE_DP)
                 } else {
                     null
                 },
@@ -264,6 +299,22 @@ data class KeyboardConfig(
                 Prefs.VIBRATION_INTENSITY, Prefs.DEFAULT_VIBRATION_INTENSITY,
             ).coerceIn(1, 3),
             trailBaseHue = trailHue(prefs),
+            trailSaturation = trailTone(prefs, Hsv::saturationOf, 0.85f),
+            trailValue = trailTone(prefs, Hsv::valueOf, 1f),
+            swipeLook = SwipeLook.fromPref(prefs.getString(Prefs.SWIPE_LOOK, Prefs.DEFAULT_SWIPE_LOOK)),
+            keyBorderDp = if (prefs.getBoolean(Prefs.KEY_BORDERS, Prefs.DEFAULT_KEY_BORDERS)) {
+                prefs.getInt(Prefs.KEY_BORDER_WIDTH, Prefs.DEFAULT_KEY_BORDER_WIDTH)
+                    .coerceIn(KeyBorder.MIN_DP, KeyBorder.MAX_DP)
+            } else {
+                0
+            },
+            backdropStamp = prefs.getString(Prefs.BACKDROP, "") ?: "",
+            backdropAlphaPct = prefs.getInt(Prefs.BACKDROP_ALPHA, BackdropFit.IMAGE_ALPHA_DEFAULT).coerceIn(0, 100),
+            keyAlphaPct = prefs.getInt(Prefs.KEY_ALPHA, BackdropFit.KEY_ALPHA_DEFAULT)
+                .coerceIn(BackdropFit.KEY_ALPHA_MIN, 100),
+            backdropCrop = prefs.getString(
+                if (landscape) Prefs.BACKDROP_CROP_LANDSCAPE else Prefs.BACKDROP_CROP, "",
+            ) ?: "",
             longPressMs = prefs.getInt(Prefs.LONG_PRESS_MS, Prefs.DEFAULT_LONG_PRESS_MS)
                 .coerceIn(Prefs.LONG_PRESS_MIN_MS, Prefs.LONG_PRESS_MAX_MS).toLong(),
             chordArmMs = prefs.getInt(Prefs.CHORD_ARM_MS, Prefs.DEFAULT_CHORD_ARM_MS)
@@ -313,11 +364,11 @@ data class KeyboardConfig(
             ),
             backspaceUndo = prefs.getBoolean(Prefs.BACKSPACE_UNDO, Prefs.DEFAULT_BACKSPACE_UNDO),
             retypeButton = prefs.getBoolean(Prefs.RETYPE_BUTTON, Prefs.DEFAULT_RETYPE_BUTTON),
-            sidePadDp = prefs.getInt(Prefs.SIDE_PAD_DP, Prefs.DEFAULT_SIDE_PAD_DP)
+            sidePadDp = prefs.getInt(sized(Prefs.SIDE_PAD_DP), Prefs.DEFAULT_SIDE_PAD_DP)
                 .coerceIn(0, LayoutTransforms.MAX_SIDE_PAD_DP),
-            homeRowSpreadPct = prefs.getInt(Prefs.HOME_ROW_SPREAD_PCT, Prefs.DEFAULT_HOME_ROW_SPREAD_PCT)
+            homeRowSpreadPct = prefs.getInt(sized(Prefs.HOME_ROW_SPREAD_PCT), Prefs.DEFAULT_HOME_ROW_SPREAD_PCT)
                 .coerceIn(0, 100),
-            bottomPadDp = prefs.getInt(Prefs.BOTTOM_PAD_DP, Prefs.DEFAULT_BOTTOM_PAD_DP)
+            bottomPadDp = prefs.getInt(sized(Prefs.BOTTOM_PAD_DP), Prefs.DEFAULT_BOTTOM_PAD_DP)
                 .coerceIn(0, LayoutTransforms.MAX_BOTTOM_PAD_DP),
             retypeButtonDp = BarMetrics.retypeDp(
                 prefs.getInt(Prefs.RETYPE_BUTTON_DP, Prefs.DEFAULT_RETYPE_BUTTON_DP),
@@ -342,12 +393,13 @@ data class KeyboardConfig(
             tidySpaces = prefs.getBoolean(Prefs.TIDY_SPACES, Prefs.DEFAULT_TIDY_SPACES),
             noSpaceBefore = parseNoSpaceBefore(prefs.getString(Prefs.NO_SPACE_BEFORE, null)),
             autospaceTimer = prefs.getBoolean(Prefs.AUTOSPACE_TIMER, Prefs.DEFAULT_AUTOSPACE_TIMER),
-            barTextScale = BarMetrics.textScale(prefs.getInt(Prefs.BAR_TEXT_PCT, BarMetrics.TEXT_PCT_DEFAULT)),
+            barTextScale = BarMetrics.textScale(prefs.getInt(sized(Prefs.BAR_TEXT_PCT), BarMetrics.TEXT_PCT_DEFAULT)),
             recentTextScale = BarMetrics.recentTextScale(
-                prefs.getInt(Prefs.RECENT_TEXT_PCT, BarMetrics.RECENT_PCT_DEFAULT),
+                prefs.getInt(sized(Prefs.RECENT_TEXT_PCT), BarMetrics.RECENT_PCT_DEFAULT),
             ),
             barCompact = prefs.getBoolean(Prefs.BAR_COMPACT, Prefs.DEFAULT_BAR_COMPACT),
             chordLabels = prefs.getBoolean(Prefs.CHORD_LABELS, Prefs.DEFAULT_CHORD_LABELS),
+            spaceChordWiggle = prefs.getBoolean(Prefs.SPACE_CHORD_WIGGLE, Prefs.DEFAULT_SPACE_CHORD_WIGGLE),
             triggerCase = TriggerCase.fromPref(prefs.getString(Prefs.TRIGGER_CASE, Prefs.DEFAULT_TRIGGER_CASE)),
             deleteOnBlock = prefs.getBoolean(Prefs.DELETE_ON_BLOCK, Prefs.DEFAULT_DELETE_ON_BLOCK),
             recentSwipeReversed = prefs.getBoolean(
@@ -362,7 +414,7 @@ data class KeyboardConfig(
             cleanLinksOnPaste = prefs.getBoolean(Prefs.CLEAN_LINKS_ON_PASTE, Prefs.DEFAULT_CLEAN_LINKS_ON_PASTE),
             numpadForNumbers = prefs.getBoolean(Prefs.NUMPAD_FOR_NUMBERS, Prefs.DEFAULT_NUMPAD_FOR_NUMBERS),
             typingSpeed = prefs.getBoolean(Prefs.TYPING_SPEED, Prefs.DEFAULT_TYPING_SPEED),
-            noPrimary = prefs.getBoolean(Prefs.NO_PRIMARY, Prefs.DEFAULT_NO_PRIMARY),
+            languageMode = LanguageMode.fromPref(prefs.getString(Prefs.LANGUAGE_MODE, Prefs.DEFAULT_LANGUAGE_MODE)),
             editFromMenu = prefs.getBoolean(Prefs.EDIT_FROM_MENU, Prefs.DEFAULT_EDIT_FROM_MENU),
             doubleSpacePeriod = prefs.getBoolean(
                 Prefs.DOUBLE_SPACE_PERIOD, Prefs.DEFAULT_DOUBLE_SPACE_PERIOD,
@@ -389,7 +441,10 @@ data class KeyboardConfig(
             periodCustom = punctuationCustom(prefs, Prefs.PERIOD_CUSTOM),
             themeMode = prefs.getString(Prefs.THEME_MODE, Prefs.DEFAULT_THEME_MODE)
                 ?: Prefs.DEFAULT_THEME_MODE,
-            themeColor = themePrimary(prefs),
+            themeColor = HexColor.colorOr(
+                prefs.getString(Prefs.THEME_COLOR_HEX, null),
+                HexColor.colorOr(Prefs.DEFAULT_THEME_COLOR_HEX, 0),
+            ),
             themeBrightness = prefs.getString(
                 Prefs.THEME_BRIGHTNESS, Prefs.DEFAULT_THEME_BRIGHTNESS,
             ) ?: Prefs.DEFAULT_THEME_BRIGHTNESS,
@@ -413,13 +468,13 @@ data class KeyboardConfig(
             britishSpelling = prefs.getBoolean(
                 Prefs.BRITISH_SPELLING, Prefs.DEFAULT_BRITISH_SPELLING,
             ),
-            autoDetectLanguage = prefs.getBoolean(
-                Prefs.AUTO_DETECT_LANGUAGE, Prefs.DEFAULT_AUTO_DETECT_LANGUAGE,
-            ),
             syncSystemLanguage = prefs.getBoolean(
                 Prefs.SYNC_SYSTEM_LANGUAGE, Prefs.DEFAULT_SYNC_SYSTEM_LANGUAGE,
             ),
             peckMode = prefs.getBoolean(Prefs.PECK_MODE, Prefs.DEFAULT_PECK_MODE),
+            symbolRowLines = (1..2).flatMap { page ->
+                (1..SymbolRows.ROWS).map { row -> prefs.getString(Prefs.symbolRowKey(page, row), null) }
+            },
         )
         }
 
@@ -540,29 +595,6 @@ data class KeyboardConfig(
             raw.orEmpty().split(Regex("\\s+")).filter { it.isNotEmpty() }.take(max)
 
         /**
-         * The custom-theme primary, from the hue slider. When THEME_HUE has never been written, the
-         * hue comes from the THEME_COLOR picked from the retired thirteen-colour list, so no
-         * keyboard changes colour on upgrade.
-         */
-        private fun themePrimary(prefs: SharedPreferences): Int {
-            val stored = prefs.getInt(Prefs.THEME_HUE, -1)
-            val hue = if (stored in 0..360) {
-                stored.toFloat()
-            } else {
-                KeyboardTheme.hueOf(
-                    parseColorOr(prefs.getString(Prefs.THEME_COLOR, Prefs.DEFAULT_THEME_COLOR)),
-                )
-            }
-            return KeyboardTheme.primaryForHue(hue)
-        }
-
-        private fun parseColorOr(value: String?): Int = try {
-            android.graphics.Color.parseColor(value ?: Prefs.DEFAULT_THEME_COLOR)
-        } catch (e: IllegalArgumentException) {
-            android.graphics.Color.parseColor(Prefs.DEFAULT_THEME_COLOR)
-        }
-
-        /**
          * Enabled set in canonical order; the active language is always a member so the cycle
          * cannot strand the keyboard on a language disabled while it was active.
          */
@@ -575,6 +607,19 @@ data class KeyboardConfig(
             return ordered.ifEmpty { listOf(active) }
         }
 
+        private fun trailCustom(prefs: SharedPreferences): Int = HexColor.colorOr(
+            prefs.getString(Prefs.TRAIL_COLOR_HEX, null),
+            HexColor.colorOr(Prefs.DEFAULT_TRAIL_COLOR_HEX, 0),
+        )
+
+        /** A typed trail colour keeps its own saturation and value; every preset is drawn at [preset]. */
+        private fun trailTone(prefs: SharedPreferences, of: (Int) -> Float, preset: Float): Float =
+            if (prefs.getString(Prefs.TRAIL_COLOR, Prefs.DEFAULT_TRAIL_COLOR) == "custom") {
+                of(trailCustom(prefs))
+            } else {
+                preset
+            }
+
         private fun trailHue(prefs: SharedPreferences): Float =
             when (prefs.getString(Prefs.TRAIL_COLOR, Prefs.DEFAULT_TRAIL_COLOR)) {
                 "red" -> 0f
@@ -582,8 +627,7 @@ data class KeyboardConfig(
                 "green" -> 120f
                 "cyan" -> 180f
                 "violet" -> 275f
-                "custom" -> prefs.getInt(Prefs.TRAIL_COLOR_CUSTOM_HUE, 200)
-                    .coerceIn(0, 360).toFloat()
+                "custom" -> Hsv.hueOf(trailCustom(prefs))
                 // Rainbow starts at 0 and TrailHue steps it per key; theme takes the accent instead.
                 else -> 0f
             }

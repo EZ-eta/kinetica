@@ -1,10 +1,12 @@
 package com.kinetica.keyboard.ime
 
 import android.content.res.Configuration
+import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.util.Log
 import android.util.TypedValue
+import android.view.WindowManager
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.preference.PreferenceManager
 import com.kinetica.keyboard.R
@@ -13,8 +15,11 @@ import com.kinetica.keyboard.keys.EdgeSwipeBindings
 import com.kinetica.keyboard.layout.KeyboardLayout
 import com.kinetica.keyboard.layout.LandscapeArrangement
 import com.kinetica.keyboard.layout.LayoutLoader
+import com.kinetica.keyboard.layout.SymbolRows
 import com.kinetica.keyboard.settings.KeyboardHeights
 import com.kinetica.keyboard.settings.Prefs
+import com.kinetica.keyboard.ui.BackdropCrop
+import com.kinetica.keyboard.ui.BackdropFit
 import com.kinetica.keyboard.ui.EmojiPickerView
 import com.kinetica.keyboard.ui.EmojiRecents
 import com.kinetica.keyboard.ui.Hsv
@@ -48,9 +53,17 @@ internal class KeyboardViews(private val ime: KineticaIME) {
 
     var vibrator: Vibrator? = null
 
+    val backdrop = BackdropLoader(ime, ime.mainHandler)
+
     fun alphaLayout(): KeyboardLayout =
         AlphaLayouts.build(layoutFor(AlphaLayouts.name(ime.config, bundledLayouts)), ime.config, ime.editorState.fieldKind)
             .also { layoutFieldKind = ime.editorState.fieldKind }
+
+    /** Symbol page `symbols` or `symbols2` with the user's rows over the bundled ones. */
+    fun symbolLayout(name: String): KeyboardLayout {
+        val page = if (name == SYMBOLS2) 2 else 1
+        return SymbolRows.apply(layoutFor(name), page, ime.config.symbolRows(page))
+    }
 
     fun openEmojiPicker() {
         val container = ime.containerView ?: return
@@ -136,13 +149,20 @@ internal class KeyboardViews(private val ime: KineticaIME) {
         ime.suggestionBar?.theme = theme
         ime.containerView?.applyTheme(theme)
         ime.emojiPicker?.theme = theme
+        backdrop.refresh(ime.config.backdropStamp) { applyBackdrop() }
+        applyBackdrop()
         applyNavigationBarColor(theme)
+        applyCutoutMode()
         kv.trailBaseHue =
             if (ime.config.trailColorMode == "theme") theme.accentHue else ime.config.trailBaseHue
         kv.trailCycles = ime.config.trailColorMode == "rainbow"
+        kv.setTrailTone(ime.config.trailSaturation, ime.config.trailValue)
+        kv.keyBorderDp = ime.config.keyBorderDp
+        kv.swipeLook = ime.config.swipeLook
         kv.longPressMs = ime.config.longPressMs
         kv.chordArmMs = ime.config.chordArmMs
         kv.chordLabelsEnabled = ime.config.chordLabels
+        kv.spaceWiggle = ime.config.spaceChordWiggle
         kv.spaceChordArmMs = ime.config.spaceChordArmMs
         kv.layoutMode = ime.config.layoutMode
         kv.landscapeSplitGapPct = ime.config.landscapeSplitGapPct
@@ -203,6 +223,17 @@ internal class KeyboardViews(private val ime: KineticaIME) {
         }
     }
 
+    /** The background image under the bar and keys, or each view's own fill when there is none. */
+    private fun applyBackdrop() {
+        val image = backdrop.bitmap
+        val on = image != null
+        ime.containerView?.setBackdrop(
+            image, BackdropFit.alpha255(ime.config.backdropAlphaPct), BackdropCrop.parse(ime.config.backdropCrop),
+        )
+        ime.keyboardView?.setBackdropLook(on, BackdropFit.alpha255(ime.config.keyAlphaPct))
+        ime.suggestionBar?.overBackdrop = on
+    }
+
     /**
      * Paints the system navigation bar to match the keyboard; left alone it is a black band
      * under a themed keyboard.
@@ -218,6 +249,21 @@ internal class KeyboardViews(private val ime: KineticaIME) {
         val lightBackground = Hsv.luminance(theme.background) > 0.5
         WindowInsetsControllerCompat(w, w.decorView)
             .isAppearanceLightNavigationBars = lightBackground
+    }
+
+    /**
+     * Lets the window reach into a cutout on a short edge. Left out, a phone held sideways shifts
+     * the whole keyboard off the camera side: a margin on one side only. The keys keep clear of
+     * the hole through `KeyboardView`'s cutout inset.
+     */
+    private fun applyCutoutMode() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return
+        val w = ime.window?.window ?: return
+        val lp = w.attributes
+        val mode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+        if (lp.layoutInDisplayCutoutMode == mode) return
+        lp.layoutInDisplayCutoutMode = mode
+        w.attributes = lp
     }
 
     /**
@@ -272,5 +318,11 @@ internal class KeyboardViews(private val ime: KineticaIME) {
             VibrationEffect.createOneShot(12, VibrationEffect.DEFAULT_AMPLITUDE)
         }
         v.vibrate(effect)
+    }
+
+    companion object {
+        /** The symbol pages' layout names, the bundled files' and the shown layout's. */
+        const val SYMBOLS = "symbols"
+        const val SYMBOLS2 = "symbols2"
     }
 }

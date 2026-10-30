@@ -30,6 +30,31 @@ object LayoutTransforms {
             .coerceAtMost(viewW * MAX_SIDE_PAD_FRACTION)
             .coerceAtLeast(0f)
 
+    /** Outer share of the width, per side, where a cutout counts as on that edge. */
+    private const val CUTOUT_EDGE_FRACTION = 0.25f
+
+    /**
+     * Side inset in pixels that keeps the keys off a display cutout, the same on both sides so the
+     * block stays centred. [cutouts] holds left, top, right, bottom per cutout in the view's own
+     * pixels. One that misses the view's height, or sits away from both edges, costs nothing: a
+     * side inset cannot clear a hole in the middle.
+     */
+    fun cutoutPadPx(cutouts: FloatArray, viewW: Float, viewH: Float): Float {
+        if (viewW <= 0f || viewH <= 0f) return 0f
+        var pad = 0f
+        val edge = viewW * CUTOUT_EDGE_FRACTION
+        for (i in 0 until cutouts.size / 4) {
+            val l = cutouts[4 * i]
+            val t = cutouts[4 * i + 1]
+            val r = cutouts[4 * i + 2]
+            val b = cutouts[4 * i + 3]
+            if (b <= 0f || t >= viewH || r <= 0f || l >= viewW) continue
+            if (r <= edge) pad = maxOf(pad, r)
+            if (l >= viewW - edge) pad = maxOf(pad, viewW - l)
+        }
+        return pad.coerceAtMost(viewW * MAX_SIDE_PAD_FRACTION)
+    }
+
     /**
      * Uniform scale the key block takes so a side inset preserves its aspect ratio.
      *

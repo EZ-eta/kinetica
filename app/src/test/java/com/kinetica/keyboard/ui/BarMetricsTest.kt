@@ -45,7 +45,7 @@ class BarMetricsTest {
         // must read at the same weight whatever the bar height.
         val d = 2.625f
         val ratios = HashMap<Float, MutableList<Float>>()
-        for (dp in listOf(BarMetrics.MIN_DP, 32f, BarMetrics.REFERENCE_DP, 60f, BarMetrics.MAX_DP)) {
+        for (dp in listOf(BarMetrics.MIN_LANDSCAPE_DP, BarMetrics.MIN_DP, 32f, BarMetrics.REFERENCE_DP, 60f, BarMetrics.MAX_DP)) {
             val h = dp * d
             for (orn in listOf(1.2f, 3.2f, 4f, 6f, 8f)) {
                 val r = BarMetrics.ornament(orn, h, d) / BarMetrics.textSize(h)
@@ -73,7 +73,7 @@ class BarMetricsTest {
     fun theLargestTextStillClearsThePageDots() {
         val scale = BarMetrics.textScale(BarMetrics.TEXT_PCT_MAX)
         for (d in densities) {
-            for (dp in listOf(BarMetrics.MIN_DP, BarMetrics.REFERENCE_DP, BarMetrics.MAX_DP)) {
+            for (dp in listOf(BarMetrics.MIN_LANDSCAPE_DP, BarMetrics.MIN_DP, BarMetrics.REFERENCE_DP, BarMetrics.MAX_DP)) {
                 val h = dp * d
                 val dotTop = h - BarMetrics.ornament(3.5f, h, d) - BarMetrics.ornament(1.5f, h, d)
                 val textBottom = h / 2f + BarMetrics.textSize(h, scale) / 2f
@@ -91,7 +91,7 @@ class BarMetricsTest {
         // An invariant, not a regression: a fixed ornament never clipped either, so this
         // guards against a future change to the fractions.
         for (d in densities) {
-            for (dp in listOf(BarMetrics.MIN_DP, BarMetrics.REFERENCE_DP, BarMetrics.MAX_DP)) {
+            for (dp in listOf(BarMetrics.MIN_LANDSCAPE_DP, BarMetrics.MIN_DP, BarMetrics.REFERENCE_DP, BarMetrics.MAX_DP)) {
                 val h = dp * d
                 val cy = h - BarMetrics.ornament(3.5f, h, d)
                 val r = BarMetrics.ornament(1.5f, h, d)
@@ -106,7 +106,7 @@ class BarMetricsTest {
 
     @Test
     fun textIsAConstantFractionOfTheBar() {
-        for (dp in listOf(BarMetrics.MIN_DP, BarMetrics.REFERENCE_DP, BarMetrics.MAX_DP)) {
+        for (dp in listOf(BarMetrics.MIN_LANDSCAPE_DP, BarMetrics.MIN_DP, BarMetrics.REFERENCE_DP, BarMetrics.MAX_DP)) {
             val h = dp * 2.625f
             assertEquals(h * BarMetrics.TEXT_FRACTION, BarMetrics.textSize(h), 1e-4f)
         }

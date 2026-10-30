@@ -9,7 +9,7 @@ import android.view.View
 
 /**
  * A few keys' worth of keyboard, painted from a resolved [KeyboardTheme], so settings can
- * show what a hue produces without leaving for a text field.
+ * show what a colour produces without leaving for a text field.
  *
  * The preference hands it the output of `KeyboardTheme.resolve`, the theme the service
  * builds, so the preview cannot drift from the keyboard. It draws rounded rectangles for the
@@ -24,9 +24,17 @@ class ThemePreviewView @JvmOverloads constructor(
     private val density = resources.displayMetrics.density
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
     private val label = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.CENTER }
+    private val line = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
     private val rect = RectF()
 
     var theme: KeyboardTheme? = null
+        set(value) {
+            field = value
+            invalidate()
+        }
+
+    /** The keys' line in dp, 0 = off, as the keyboard draws it. */
+    var keyBorderDp = 0
         set(value) {
             field = value
             invalidate()
@@ -74,6 +82,14 @@ class ThemePreviewView @JvmOverloads constructor(
             fill.color = roles[i]
             rect.set(left, top, left + cellW, bottom)
             canvas.drawRoundRect(rect, r, r, fill)
+            val lw = KeyBorder.widthPx(keyBorderDp, density, minOf(cellW, bottom - top))
+            if (lw > 0f) {
+                val d = KeyBorder.inset(lw)
+                line.strokeWidth = lw
+                line.color = t.keyHint
+                rect.set(left + d, top + d, left + cellW - d, bottom - d)
+                canvas.drawRoundRect(rect, r - d, r - d, line)
+            }
             // Hint colour on the last cell: the role a derived palette most often leaves unreadable.
             label.color = if (i == cells - 1) t.keyHint else t.keyText
             canvas.drawText(

@@ -1,5 +1,6 @@
 package com.kinetica.keyboard.onboarding
 
+import android.content.res.Configuration
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -43,7 +44,10 @@ class TutorActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         val pad = (16 * resources.displayMetrics.density).toInt()
-        val config = KeyboardConfig.from(PreferenceManager.getDefaultSharedPreferences(this))
+        val config = KeyboardConfig.from(
+            PreferenceManager.getDefaultSharedPreferences(this),
+            resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE,
+        )
         letters = try {
             val bundled = (assets.list("layouts") ?: emptyArray()).map { it.removeSuffix(".json") }.toSet()
             // The lessons are English words, so a board in another script would hold none of
