@@ -84,7 +84,7 @@ class LanguageSelectionTest {
         // picker entry is dead, as nb_NO once was.
         val declared = listOf(
             "en_US", "it_IT", "es_ES", "pl_PL", "cs_CZ", "nl_NL", "de_DE", "fr_FR", "nb_NO",
-            "ru_RU", "iw_IL", "ar",
+            "ro_RO", "ru_RU", "iw_IL", "ar",
         )
         for (locale in declared) {
             val code = kineticaLanguageOf(locale.substringBefore('_'))

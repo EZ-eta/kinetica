@@ -18,8 +18,8 @@ Features
 
 * Two thumbs, each read with its own cursor, so a word can pass between them in
   any order; one tap can stand for a double letter
-* English, Italian, Spanish, Polish, Czech, Dutch, German, French and Norwegian,
-  plus Russian, Ukrainian, Hebrew and Arabic as experimental: 46k to 50k words
+* English, Italian, Spanish, Polish, Czech, Dutch, German, French, Norwegian
+  and Romanian, plus Russian, Ukrainian, Hebrew and Arabic as experimental: 46k to 50k words
   per language with real corpus frequencies. Accented words are drawn on their
   base keys and restored on commit
 * Several languages at once: mix two in the suggestions, or let the keyboard

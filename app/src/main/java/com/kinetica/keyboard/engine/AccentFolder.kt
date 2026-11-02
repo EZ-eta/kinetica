@@ -16,7 +16,7 @@ object AccentFolder {
     private val DIGRAPHS = mapOf('ß' to "ss", 'œ' to "oe")
 
     private val FOLD = HashMap<Char, Char>().apply {
-        "àáâäãåąæ".forEach { put(it, 'a') }
+        "àáâäãåąæă".forEach { put(it, 'a') }
         "èéêëęě".forEach { put(it, 'e') }
         "ìíîï".forEach { put(it, 'i') }
         "òóôöõø".forEach { put(it, 'o') }
@@ -28,7 +28,10 @@ object AccentFolder {
         put('ł', 'l')
         put('ř', 'r')
         put('ś', 's'); put('š', 's')
+        // Romanian writes ș/ț with a comma below; the cedilla forms are the legacy spellings.
+        put('ș', 's'); put('ş', 's')
         put('ť', 't')
+        put('ț', 't'); put('ţ', 't')
         put('ž', 'z'); put('ź', 'z'); put('ż', 'z')
         // Russian writes ё on е's key and most text writes е for it.
         put('ё', 'е')

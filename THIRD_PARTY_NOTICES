@@ -8,9 +8,9 @@ application code is licensed under the GNU General Public License v3.0
 1. Word frequency lists
    (en_wordlist.txt, it_wordlist.txt, es_wordlist.txt, pl_wordlist.txt,
    cs_wordlist.txt, nl_wordlist.txt, de_wordlist.txt, fr_wordlist.txt,
-   no_wordlist.txt, ru_wordlist.txt, he_wordlist.txt, ar_wordlist.txt,
-   uk_wordlist.txt, and en_gb_variants.txt, which is derived from
-   en_wordlist.txt by orthographic rule and adds no new data)
+   no_wordlist.txt, ro_wordlist.txt, ru_wordlist.txt, he_wordlist.txt,
+   ar_wordlist.txt, uk_wordlist.txt, and en_gb_variants.txt, which is
+   derived from en_wordlist.txt by orthographic rule and adds no new data)
 
 Derived from hermitdave/FrequencyWords (OpenSubtitles 2018 frequency lists):
 https://github.com/hermitdave/FrequencyWords
@@ -41,8 +41,8 @@ THE SOFTWARE.
 2. Bigram tables
    (en_bigrams.txt, it_bigrams.txt, es_bigrams.txt, pl_bigrams.txt,
    cs_bigrams.txt, nl_bigrams.txt, de_bigrams.txt, fr_bigrams.txt,
-   no_bigrams.txt, ru_bigrams.txt, he_bigrams.txt, ar_bigrams.txt,
-   uk_bigrams.txt)
+   no_bigrams.txt, ro_bigrams.txt, ru_bigrams.txt, he_bigrams.txt,
+   ar_bigrams.txt, uk_bigrams.txt)
 
    German noun capitalization in de_wordlist.txt is also derived from this
    corpus: the display spellings come from the case Tatoeba preserves.

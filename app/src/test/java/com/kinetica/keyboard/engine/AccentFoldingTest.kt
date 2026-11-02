@@ -36,6 +36,13 @@ class AccentFoldingTest {
         assertEquals("for", AccentFolder.fold("før"))
         assertEquals("mate", AccentFolder.fold("måte"))
         assertEquals("stotte", AccentFolder.fold("støtte"))
+        // Romanian: the comma-below ș and ț fold like the other s/t-accents, and the
+        // legacy cedilla spellings (still what some keyboards emit) fold with them.
+        assertEquals("masina", AccentFolder.fold("mașină"))
+        assertEquals("tara", AccentFolder.fold("țară"))
+        assertEquals("si", AccentFolder.fold("şi"))
+        assertEquals("caini", AccentFolder.fold("câini"))
+        assertEquals("intrebare", AccentFolder.fold("întrebare"))
         val plain = "already plain"
         assertTrue(plain === AccentFolder.fold(plain))
     }

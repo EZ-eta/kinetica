@@ -164,8 +164,11 @@ class NonLatinDictionaryTest {
             assertTrue(lang in Prefs.ALL_LANGUAGES)
             assertFalse(lang in Prefs.DEFAULT_ENABLED_LANGUAGES)
         }
-        // Appended, never inserted: the nine before them keep their order.
-        assertEquals(listOf("en", "it", "es", "pl", "cs", "nl", "de", "fr", "no"), Prefs.ALL_LANGUAGES.take(9))
-        assertEquals(Prefs.ALL_LANGUAGES.take(9), Prefs.DEFAULT_ENABLED_LANGUAGES)
+        // Appended, never inserted: the ten before them keep their order.
+        assertEquals(
+            listOf("en", "it", "es", "pl", "cs", "nl", "de", "fr", "no", "ro"),
+            Prefs.ALL_LANGUAGES.take(10),
+        )
+        assertEquals(Prefs.ALL_LANGUAGES.take(10), Prefs.DEFAULT_ENABLED_LANGUAGES)
     }
 }

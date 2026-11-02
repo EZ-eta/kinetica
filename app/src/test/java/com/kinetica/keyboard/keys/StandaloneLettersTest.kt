@@ -51,6 +51,8 @@ class StandaloneLettersTest {
         assertEqualsSet("", "de")
         assertEqualsSet("ay", "fr")
         assertEqualsSet("aio", "no")
+        // Romanian: a (to / has), e (is, beside este), o (the feminine indefinite article).
+        assertEqualsSet("aeo", "ro")
         // The other scripts: Russian's prepositions and conjunctions; Hebrew and Arabic write
         // their one-letter words joined to the next, so a lone one is still being typed.
         for (c in "авикосуя") assertTrue("ru $c", StandaloneLetters.isWord(c, "ru"))

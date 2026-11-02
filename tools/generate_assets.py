@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate Kinetica dictionary assets.
 
-Produces, per language (--lang en|it|es|pl|cs|nl|de|fr|no|ru|he|ar|uk, default en):
+Produces, per language (--lang en|it|es|pl|cs|nl|de|fr|no|ro|ru|he|ar|uk, default en):
   app/src/main/assets/dictionaries/<lang>_wordlist.txt   (word TAB freq)
   app/src/main/assets/dictionaries/<lang>_bigrams.txt    (w1 TAB w2 TAB freq)
 
@@ -85,6 +85,12 @@ WORD_RE = {
     # Norwegian Bokmål: æ ø å are letters of the alphabet, not accents, and each
     # folds onto a-z. é appears in loans (idé).
     "no": re.compile(r"^[a-zæøåé]+(?:'[a-zæøåé]+)*$"),
+    # Romanian orthography: breve a, the two circumflexes, and the comma-below
+    # s and t. Legacy cedilla spellings (ş, ţ) are normalised to the
+    # comma-below forms first (normalise), so only those reach the trie. No
+    # native apostrophe use, but the shared shape keeps loan contractions
+    # loadable.
+    "ro": re.compile(r"^[a-zăâîșț]+(?:'[a-zăâîșț]+)*$"),
     # Russian: the 33 letters, ё included (it folds onto е at load). No apostrophe;
     # hyphenated forms (кто-то) are left out, as the Latin lists leave theirs.
     "ru": re.compile(r"^[а-яё]+$"),
@@ -115,6 +121,11 @@ def normalise(lang: str, word: str) -> str:
         return word.replace("\u05F3", "'").replace("\u2019", "'")
     if lang == "uk":
         return UKRAINIAN_APOSTROPHES_RE.sub("'", word).replace("\u0301", "")
+    if lang == "ro":
+        # Legacy cedilla spellings of the comma-below letters: older fonts and
+        # some keyboards still write ş/ţ, so OpenSubtitles mixes both. Count
+        # them as one word under the modern spelling.
+        return word.replace("ş", "ș").replace("ţ", "ț")
     return word
 TATOEBA_LANG_CODE = {
     "en": "eng", "it": "ita", "es": "spa", "pl": "pol", "cs": "ces",
@@ -122,6 +133,7 @@ TATOEBA_LANG_CODE = {
     # Bokmål, not Nynorsk. The corpus is thin at 18k sentences against 90k for
     # Czech, so Norwegian ships a bigram table roughly a tenth the usual size.
     "no": "nob",
+    "ro": "ron",
     "ru": "rus", "he": "heb", "ar": "ara", "uk": "ukr",
 }
 
@@ -343,7 +355,11 @@ def parse_unigrams(
     raw: str, word_re: re.Pattern[str], lang: str = "en"
 ) -> list[tuple[str, int]]:
     """FrequencyWords format: 'word count' per line, already sorted by count."""
-    rows: list[tuple[str, int]] = []
+    # normalise can merge two source spellings into one stored word (Romanian's
+    # cedilla and comma-below s/t), so count by word first: duplicate rows would
+    # reach the trie as the same key twice. sorted() is stable, so for a source
+    # without collisions this returns the file's own order, as before.
+    counts: dict[str, int] = {}
     for line in raw.splitlines():
         parts = line.strip().split()
         if len(parts) != 2:
@@ -353,10 +369,8 @@ def parse_unigrams(
             continue
         if len(word) > MAX_WORD_LEN or not word_re.match(word):
             continue
-        rows.append((word, int(count)))
-        if len(rows) >= MAX_WORDS:
-            break
-    return rows
+        counts[word] = counts.get(word, 0) + int(count)
+    return sorted(counts.items(), key=lambda kv: -kv[1])[:MAX_WORDS]
 
 
 def fallback_unigrams(dict_path: Path) -> list[tuple[str, int]]:
@@ -660,13 +674,13 @@ def check_ukrainian_controls(rows: list[tuple[str, int]]) -> list[str]:
 # the accented word's trie node they are offered, and can lead. Subtitle counts cannot
 # tell them from real pairs (`ze`/`że`, `e`/`è`), so written use decides: Tatoeba's
 # sentences for the language, counted by exact spelling. Folding mirrors AccentFolder.
-DIACRITIC_LANGS = ("it", "pl", "es", "cs", "fr", "de", "nl", "no")
+DIACRITIC_LANGS = ("it", "pl", "es", "cs", "fr", "de", "nl", "no", "ro")
 _FOLD = str.maketrans({
     ch: base
     for chars, base in (
-        ("àáâäãåąæ", "a"), ("èéêëęě", "e"), ("ìíîï", "i"), ("òóôöõø", "o"), ("ùúûüů", "u"),
+        ("àáâäãåąæă", "a"), ("èéêëęě", "e"), ("ìíîï", "i"), ("òóôöõø", "o"), ("ùúûüů", "u"),
         ("çćč", "c"), ("ď", "d"), ("ñńň", "n"), ("ýÿ", "y"), ("ł", "l"), ("ř", "r"),
-        ("śš", "s"), ("ť", "t"), ("žźż", "z"),
+        ("śšșş", "s"), ("ťțţ", "t"), ("žźż", "z"),
     )
     for ch in chars
 })
@@ -702,6 +716,12 @@ DIACRITIC_CONTROL_KEEP = {
     "de": ("schon", "musste", "wurde", "konnte", "dass", "spulen", "muhen"),
     "nl": ("een", "één", "ze"),
     "no": ("for", "vare", "bar", "sa", "do", "bade", "rad"),
+    # The articulated forms (casa = casa + the) are plain spellings that are
+    # words in their own right, as are par (I seem) beside păr (hair), var
+    # (lime) beside văr (cousin), tine (pe tine, you) beside ține (holds),
+    # pana (the feather) beside până (until) and pană (feather), sa (his/her)
+    # beside să, and asta (this, colloquial) beside ăsta.
+    "ro": ("casa", "fata", "masa", "seara", "par", "var", "tine", "pana", "sa", "asta"),
 }
 DIACRITIC_CONTROL_DROP = {
     "it": ("perche", "piu", "gia", "cosi", "puo", "cioe", "percio", "tornero"),
@@ -712,6 +732,7 @@ DIACRITIC_CONTROL_DROP = {
     "de": ("fur", "uber", "mussen", "konnen", "ausserdem"),
     "nl": ("ideeen", "italie"),
     "no": ("pa", "ma", "na", "fa", "ogsa", "forste"),
+    "ro": ("si", "in", "maine", "fara", "cand", "atat", "sti", "baiat", "masina", "asa"),
 }
 
 
@@ -1042,7 +1063,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--lang",
-        choices=("en", "it", "es", "pl", "cs", "nl", "de", "fr", "no", "ru", "he", "ar", "uk"),
+        choices=("en", "it", "es", "pl", "cs", "nl", "de", "fr", "no", "ro", "ru", "he", "ar", "uk"),
         default="en",
     )
     parser.add_argument(

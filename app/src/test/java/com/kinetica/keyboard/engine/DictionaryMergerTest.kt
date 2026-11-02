@@ -185,6 +185,23 @@ class DictionaryMergerTest {
     }
 
     @Test
+    fun romanianPatternAdmitsAccentedWords() {
+        val aosp = """
+             word=mașină,f=200
+             word=țară,f=180
+             word=câine,f=170
+             word=señal,f=150
+        """.trimIndent()
+        val result = DictionaryMerger.merge(primary, reader(aosp), "ro")
+        val words = result.rows.map { it.first }
+        assertTrue(words.contains("mașină"))
+        assertTrue(words.contains("țară"))
+        assertTrue(words.contains("câine"))
+        // Ñ is not Romanian orthography: filtered on import.
+        assertFalse(words.contains("señal"))
+    }
+
+    @Test
     fun readPrimaryParsesTabSeparatedRows() {
         val rows = DictionaryMerger.readPrimary(reader("the\t1000\nbroken line\nof\t500\n"))
         assertEquals(listOf("the" to 1000, "of" to 500), rows)

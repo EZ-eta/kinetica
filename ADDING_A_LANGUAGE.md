@@ -12,7 +12,7 @@ capitalized display form on a lowercase key (German nouns do). A Latin-script
 language is data plus registration, as below. Another script needs its own
 alphabet too; see "Another script" at the end.
 
-Thirteen languages ship: en, it, es, pl, cs, nl, de, fr, no, plus Russian,
+Fourteen languages ship: en, it, es, pl, cs, nl, de, fr, no, ro, plus Russian,
 Ukrainian, Hebrew and Arabic as experimental. Spanish is the smallest complete
 example; German is the one with extra machinery.
 

@@ -50,6 +50,8 @@ object StandaloneLetters {
      *  - `fr`: `a` (has) and `y` (there). `à` (to) folds onto `a`.
      *  - `no`: `i` (in), `å` (the infinitive marker, which folds onto `a`) and `o` (the
      *    dialectal `og`). No native-speaker report behind it, so it is the narrowest reading.
+     *  - `ro`: `a` (to / has), `e` (is, beside `este`) and `o` (the feminine indefinite
+     *    article). `îi`, `ți` and the other clitics are two letters or hyphen-joined.
      *  - `ru`: the one-letter prepositions and conjunctions а в и к о с у я.
      *  - `uk`: а в з і й о у я. Ukrainian writes і for "and" and з for "with".
      *  - `he`, `ar`: empty. Their one-letter words (Hebrew ו ה ב ל מ ש כ, Arabic و ب ل ف) are
@@ -64,6 +66,7 @@ object StandaloneLetters {
         "de" -> DE
         "fr" -> FR
         "no" -> NO
+        "ro" -> RO
         "ru" -> RU
         "uk" -> UK
         "he" -> HE
@@ -80,6 +83,7 @@ object StandaloneLetters {
     private val DE = emptySet<Char>()
     private val FR = setOf('a', 'y')
     private val NO = setOf('a', 'i', 'o')
+    private val RO = setOf('a', 'e', 'o')
     private val RU = setOf('а', 'в', 'и', 'к', 'о', 'с', 'у', 'я')
     private val UK = setOf('а', 'в', 'з', 'і', 'й', 'о', 'у', 'я')
     private val HE = emptySet<Char>()
