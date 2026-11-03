@@ -48,6 +48,11 @@
         android:imeSubtypeMode="keyboard"
         android:isAsciiCapable="true" />
     <subtype
+        android:label="@string/subtype_ro_ro"
+        android:imeSubtypeLocale="ro_RO"
+        android:imeSubtypeMode="keyboard"
+        android:isAsciiCapable="true" />
+    <subtype
         android:label="@string/subtype_ru_ru"
         android:imeSubtypeLocale="ru_RU"
         android:imeSubtypeMode="keyboard"

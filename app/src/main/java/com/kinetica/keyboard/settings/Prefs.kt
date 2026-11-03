@@ -760,7 +760,7 @@ object Prefs {
      * every existing user's decode.
      */
     val ALL_LANGUAGES =
-        listOf("en", "it", "es", "pl", "cs", "nl", "de", "fr", "no", "ru", "he", "ar", "uk")
+        listOf("en", "it", "es", "pl", "cs", "nl", "de", "fr", "no", "ro", "ru", "he", "ar", "uk")
 
     /**
      * Languages in another script, experimental: no capture from a native typist has checked

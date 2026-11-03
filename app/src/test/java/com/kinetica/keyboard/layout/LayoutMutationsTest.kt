@@ -240,7 +240,7 @@ class LayoutMutationsTest {
         // LayoutLoader cannot be used here.
         for (name in listOf(
             "qwerty", "qwerty_it", "qwerty_es", "qwerty_pl", "qwerty_cs",
-            "qwerty_nl", "qwerty_de", "qwerty_fr", "qwerty_no", "azerty_fr",
+            "qwerty_nl", "qwerty_de", "qwerty_fr", "qwerty_no", "qwerty_ro", "azerty_fr",
             "native_ru", "native_he", "native_ar",
         )) {
             val p = listOf(
@@ -378,6 +378,19 @@ class LayoutMutationsTest {
         val lines = assertExposes("qwerty_pl", POLISH_LETTERS)
         assertTrue(lines.any { it.contains("\"nativeAccents\": true") })
     }
+
+    @Test
+    fun romanianLayoutExposesEveryNativeLetter() {
+        val lines = assertExposes("qwerty_ro", ROMANIAN_LETTERS)
+        assertTrue(lines.any { it.contains("\"nativeAccents\": true") })
+    }
+
+    private val ROMANIAN_LETTERS = mapOf(
+        "a" to listOf("ă", "â"),
+        "i" to listOf("î"),
+        "s" to listOf("ș"),
+        "t" to listOf("ț"),
+    )
 
     @Test
     fun englishLayoutExposesEveryPolishLetter() {

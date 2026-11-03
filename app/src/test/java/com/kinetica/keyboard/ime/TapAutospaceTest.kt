@@ -78,6 +78,23 @@ class TapAutospaceTest {
     }
 
     @Test
+    fun romanianSingleLetterWordsAutospaceWithoutAdmittingDictionaryNoise() {
+        // The English fallback only spaces a/i, losing Romanian e/o.
+        // Dictionary membership cannot distinguish these words from initials.
+        for (letter in 'a'..'z') {
+            assertEquals(
+                "Romanian '$letter' autospace",
+                letter in "aeo",
+                fires(
+                    literal = letter.toString(),
+                    literalIsWord = true,
+                    literalIsStandaloneLetter = StandaloneLetters.isWord(letter, "ro"),
+                ),
+            )
+        }
+    }
+
+    @Test
     fun aSingleLetterAfterAnApostropheStillRefuses() {
         // The joined branch comes first: the `a` of `dell'anno` follows an apostrophe, so it
         // never reaches the one-letter rule. It was the only premature fire on captured prose.

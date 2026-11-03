@@ -80,6 +80,7 @@ class LeftOffAccentsTest {
         for ((lang, typed, word) in listOf(
             Triple("es", "tambien", "también"), Triple("fr", "etait", "était"),
             Triple("cs", "neni", "není"), Triple("de", "uber", "über"), Triple("no", "ogsa", "også"),
+            Triple("ro", "fara", "fără"),
         )) {
             val p = predictor(lang)
             assertFalse("$lang $typed is still a word", p.isWord(typed))

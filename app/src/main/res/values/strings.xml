@@ -16,6 +16,7 @@
     <string name="subtype_de_de" translatable="false">Deutsch</string>
     <string name="subtype_fr_fr" translatable="false">Français</string>
     <string name="subtype_nb_no" translatable="false">Norsk</string>
+    <string name="subtype_ro_ro" translatable="false">Română</string>
     <string name="subtype_ru_ru" translatable="false">Русский</string>
     <string name="subtype_uk_ua" translatable="false">Українська</string>
     <string name="subtype_he_il" translatable="false">עברית</string>
@@ -171,7 +172,7 @@
     <string name="pref_retype_button_dp_summary">Wider is easier to hit with a case on. Every dp comes out of the words</string>
     <string name="pref_british_spelling_title">British spelling</string>
     <string name="pref_british_spelling_summary">Rank colour, centre and organise above the American spellings. English only</string>
-    <string name="pref_enabled_languages_summary">Languages the language switch cycles through (order: English, Italiano, Español, Polski, Čeština, Nederlands, Deutsch, Français, Norsk, then the experimental Русский, עברית, العربية, Українська)</string>
+    <string name="pref_enabled_languages_summary">Languages the language switch cycles through (order: English, Italiano, Español, Polski, Čeština, Nederlands, Deutsch, Français, Norsk, Română, then the experimental Русский, עברית, العربية, Українська)</string>
     <string name="pref_peck_mode_title">Peck-type mode</string>
     <!-- TAP is the spacebar's own label and stays in English. -->
     <string name="pref_peck_mode_summary">No swiping, suggestions or autocorrect: every tap types exactly its letter. For slang and words the dictionary keeps changing. The spacebar shows TAP while it is on</string>

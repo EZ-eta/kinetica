@@ -328,6 +328,7 @@
         <item>Deutsch</item>
         <item>Français</item>
         <item>Norsk</item>
+        <item>Română</item>
         <item>Русский (experimental)</item>
         <item>Українська (experimental)</item>
         <item>עברית (experimental)</item>
@@ -343,6 +344,7 @@
         <item>de</item>
         <item>fr</item>
         <item>no</item>
+        <item>ro</item>
         <item>ru</item>
         <item>uk</item>
         <item>he</item>
@@ -359,6 +361,7 @@
         <item>de</item>
         <item>fr</item>
         <item>no</item>
+        <item>ro</item>
     </string-array>
 
 

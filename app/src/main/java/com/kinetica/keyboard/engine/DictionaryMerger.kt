@@ -24,6 +24,7 @@ object DictionaryMerger {
         "de" to Regex("^[a-zäöüß]+(?:'[a-zäöüß]+)*$"),
         "fr" to Regex("^[a-zàâäçéèêëîïôöùûüÿœæ]+(?:'[a-zàâäçéèêëîïôöùûüÿœæ]+)*$"),
         "no" to Regex("^[a-zæøåé]+(?:'[a-zæøåé]+)*$"),
+        "ro" to Regex("^[a-zăâîșț]+(?:'[a-zăâîșț]+)*$"),
         "ru" to Regex("^[а-яё]+$"),
         "he" to Regex("^[\u05D0-\u05EA]+(?:'[\u05D0-\u05EA]+)*$"),
         "ar" to Regex("^[\u0621-\u063A\u0641-\u064A\u0671]+$"),

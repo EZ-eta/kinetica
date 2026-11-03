@@ -21,6 +21,7 @@ object NativeLetters {
         "de" to "äöüß",
         "fr" to "àâçéèêëîïôœùûü",
         "no" to "æøåé",
+        "ro" to "ăâîșț",
     )
 
     /** The letters [lang] writes; empty for English and for a language on its own script. */

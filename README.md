@@ -160,8 +160,8 @@ channel can install and update over the other.
 
 ### Languages
 
-- English, Italian, Spanish, Polish, Czech, Dutch, German, French and Norwegian; Russian, Ukrainian,
-  Hebrew and Arabic are experimental, each with its own board. 46k to 50k words per language with
+- English, Italian, Spanish, Polish, Czech, Dutch, German, French, Norwegian and Romanian;
+  Russian, Ukrainian, Hebrew and Arabic are experimental, each with its own board. 46k to 50k words per language with
   real corpus frequencies, and up to 100k word pairs.
 - Switch with a chord without leaving the field; the active language shows on the spacebar.
 - Accented words are drawn on their base keys and come out with their accents. A spelling with the
@@ -331,7 +331,7 @@ MotionEvent
 
 Regenerate a language's dictionary with
 `python3 tools/generate_assets.py --lang <code>` (`--dry-run` to preview); the codes are
-en, it, es, pl, cs, nl, de, fr, no, ru, uk, he and ar.
+en, it, es, pl, cs, nl, de, fr, no, ro, ru, uk, he and ar.
 
 - Word frequencies: [hermitdave/FrequencyWords](https://github.com/hermitdave/FrequencyWords)
   (OpenSubtitles 2018), MIT. The 50k list per language; Ukrainian from the full list.
