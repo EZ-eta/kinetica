@@ -22,6 +22,9 @@ Typing SOMETHING:
 ## Video
 
 https://github.com/user-attachments/assets/7bfdabe4-c265-4b40-8db1-c9eb0d9b14d7
+## Themes
+<img width="3978" height="1630" alt="Themes" src="https://github.com/user-attachments/assets/2f3935ab-51e2-45b7-befe-e52cf2b9b96a" />
+
 
 ## Install
 
