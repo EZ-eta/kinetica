@@ -148,7 +148,7 @@
     <string name="pref_retype_button_dp_summary">Più è largo, più è facile da prendere con una cover. Lo spazio viene tolto alle parole</string>
     <string name="pref_british_spelling_title">Ortografia britannica</string>
     <string name="pref_british_spelling_summary">Mette colour, centre e organise prima delle grafie americane. Solo inglese</string>
-    <string name="pref_enabled_languages_summary">Le lingue tra cui passa il cambio lingua (ordine: English, Italiano, Español, Polski, Čeština, Nederlands, Deutsch, Français, Norsk, poi le sperimentali Русский, עברית, العربية, Українська)</string>
+    <string name="pref_enabled_languages_summary">Le lingue tra cui passa il cambio lingua (ordine: English, Italiano, Español, Polski, Čeština, Nederlands, Deutsch, Français, Norsk, Română, poi le sperimentali Русский, עברית, العربية, Українська)</string>
     <string name="pref_peck_mode_title">Modalità tasto per tasto</string>
     <string name="pref_peck_mode_summary">Niente swipe, suggerimenti o correzione automatica: ogni tocco scrive esattamente la sua lettera. Per il gergo e le parole che il dizionario continua a cambiare. Quando è attiva, la barra spaziatrice mostra TAP</string>
     <string name="pref_sync_system_language_title">Segui la lingua della tastiera di sistema</string>
