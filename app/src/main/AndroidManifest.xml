@@ -4,6 +4,14 @@
 
     <uses-permission android:name="android.permission.VIBRATE" />
 
+    <!-- The voice key looks for an installed voice keyboard. From Android 11 the input method list
+         may leave out apps this one does not declare it can see. A query, not a permission. -->
+    <queries>
+        <intent>
+            <action android:name="android.view.InputMethod" />
+        </intent>
+    </queries>
+
     <application
         android:label="@string/app_name"
         android:icon="@mipmap/ic_launcher"
@@ -28,11 +36,17 @@
         <activity
             android:name=".settings.SettingsActivity"
             android:label="@string/settings_title"
+            android:windowSoftInputMode="adjustResize|stateHidden"
             android:exported="true" />
 
         <activity
             android:name=".settings.ChordSettingsActivity"
             android:label="@string/chord_settings_title"
+            android:exported="false" />
+
+        <activity
+            android:name=".settings.EditPageActivity"
+            android:label="@string/edit_page_title"
             android:exported="false" />
 
         <activity

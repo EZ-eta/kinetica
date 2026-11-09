@@ -14,6 +14,9 @@ internal data class CaseVote(val vote: Int, val display: String?) {
     companion object {
         val NONE = CaseVote(0, null)
 
+        /** The user took the capital off by hand: down to the floor, not one step. */
+        val FORGET = CaseVote(KineticaConstants.CASE_VOTES_LOW - KineticaConstants.CASE_VOTES_HIGH, null)
+
         fun none(why: String): CaseVote = CaseVote(0, null).also { it.why = why }
     }
 }
@@ -24,7 +27,9 @@ internal data class CaseVote(val vote: Int, val display: String?) {
  * Only a choice against the keyboard counts. Committing what it proposed, [proposal], says
  * nothing, or a learned capital would vote for itself on every commit and could never be
  * talked out of. So: up, with the capital to store, for a capital the user wrote over a
- * lowercase proposal; down for a lowercase word written over the proposed [learned] capital.
+ * lowercase proposal; down for a lowercase word written while a [learned] capital exists,
+ * settled or not. Each use of the word is evidence of its case, so two stray capitals among a
+ * common word's lowercase uses never settle (`ma`, `la`).
  *
  * At a sentence start, or the start of a field, the first capital is the shift's; one past it
  * is the user's, so `FakeCompanyName` votes there too. [before] is the text before the word,
@@ -45,7 +50,7 @@ internal fun caseVote(
     if (startsNewSentence(before) && !hasInnerCapital(committed)) return CaseVote.none("sentence")
     val lower = committed.lowercase()
     if (committed == lower) {
-        return if (learned != null && proposal == learned) CaseVote(-1, null) else CaseVote.none("lower")
+        return if (learned != null) CaseVote(-1, null) else CaseVote.none("lower")
     }
     if (committed.count { it.isLetter() } > 1 && committed.none { it.isLowerCase() }) return CaseVote.none("caps")
     if (AutoCapitalization.forWord(lower, lang) == committed) return CaseVote.none("auto")
@@ -61,20 +66,21 @@ internal fun hasInnerCapital(word: String): Boolean =
 /**
  * A learned capital after [case], or null when nothing changes. A new spelling contests a
  * settled one instead of replacing it, one vote down per commit: one shift slip, `MArk`, must
- * not take the lead from `Mark`. An unsettled one is replaced.
+ * not take the lead from `Mark`. An unsettled one is replaced. A down vote is a step, so
+ * [CaseVote.FORGET] drops it to the floor and keeps the spelling.
  */
 internal fun nextCase(old: LearnedCase?, case: CaseVote): LearnedCase? {
     val low = KineticaConstants.CASE_VOTES_LOW
     val high = KineticaConstants.CASE_VOTES_HIGH
     return when {
         case.vote == 0 -> null
-        case.vote < 0 -> old?.copy(votes = (old.votes - 1).coerceIn(low, high))
+        case.vote < 0 -> old?.copy(votes = (old.votes + case.vote).coerceIn(low, high))
         case.display == null -> old?.copy(votes = (old.votes + 1).coerceIn(low, high))
         old == null -> LearnedCase(case.display, 1)
         old.display == case.display -> old.copy(votes = (old.votes + 1).coerceIn(low, high))
         settled(old) -> old.copy(votes = (old.votes - 1).coerceIn(low, high))
         else -> LearnedCase(case.display, 1)
-    }
+    }?.takeIf { it != old }
 }
 
 /** Whether a learned capital leads its word. */
@@ -87,10 +93,11 @@ internal fun leadChanged(old: LearnedCase?, new: LearnedCase?): Boolean =
 
 /**
  * The learned capital a tapped [word] takes, or null: written all lowercase, and its capital
- * settled. A word typed with its own capital, or a capital still unsettled, keeps the letters.
+ * settled. A word typed with its own capital, a capital still unsettled, or a word whose case
+ * the user set by hand ([chosen]) keeps the letters.
  */
-internal fun learnedCapital(word: String, learned: LearnedCase?): String? {
-    if (!settled(learned) || learned == null) return null
+internal fun learnedCapital(word: String, learned: LearnedCase?, chosen: Boolean = false): String? {
+    if (chosen || !settled(learned) || learned == null) return null
     if (word != word.lowercase() || learned.display.lowercase() != word || learned.display == word) return null
     return learned.display
 }

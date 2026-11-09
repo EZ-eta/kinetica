@@ -105,6 +105,7 @@ internal class WordEdits(private val ime: KineticaIME) {
      * timeout has cleared the other two.
      *
      * - No learning: [learnWord] lowercases, and a cosmetic edit must not earn a weight unit.
+     *   One exception: lowercase takes a learned capital off by hand, so it forgets it.
      * - No re-commit, which would clear the candidates and the correction strip.
      * - No abandon, so a re-cased word in progress stays writable.
      */
@@ -131,8 +132,6 @@ internal class WordEdits(private val ime: KineticaIME) {
         when {
             ime.wordState.tentativeLength > 0 -> {
                 val recased = want.applyTo(ime.wordState.tentativeWord)
-                if (recased == ime.wordState.tentativeWord) return
-                ime.replaceTentative(recased)
                 // Written as well as the text, or the next decode's displayWord re-applies
                 // the old wordShift over the top and the re-case silently undoes itself.
                 ime.wordState.wordShift = when (want) {
@@ -140,9 +139,16 @@ internal class WordEdits(private val ime: KineticaIME) {
                     WordCase.TITLE -> ShiftState.State.SHIFT
                     WordCase.UPPER -> ShiftState.State.CAPS_LOCK
                 }
+                // And held through the commit, which would put a learned capital back. Even
+                // when the letters already match: the tapped `ma` is lowercase until it commits.
+                ime.wordState.caseChosen = true
+                forgetsCapital(want, recased)
+                if (recased == ime.wordState.tentativeWord) return
+                ime.replaceTentative(recased)
             }
             committed != null && span >= 0 -> {
                 val recased = want.applyTo(committed)
+                forgetsCapital(want, recased)
                 if (recased == committed) return
                 // onCorrectionPicked's edit and none of its tail: whatever the editor holds
                 // after the word goes back untouched, so an automatic space or a
@@ -159,12 +165,21 @@ internal class WordEdits(private val ime: KineticaIME) {
                 )
                 if (run.isEmpty()) return
                 val recased = want.applyTo(run)
+                forgetsCapital(want, recased)
                 if (recased == run) return
                 ime.ich.replaceBeforeCursor(run.length, recased)
                 ime.expectAfter(run.length, recased.length, rewritesWord = true)
             }
         }
         ime.updateAutoShift()
+    }
+
+    /**
+     * Lowercase over a word says its learned capital is wrong (`Ma` for Italian `ma`, which a
+     * commit would otherwise put back every time). Title and capitals are one-off choices.
+     */
+    private fun forgetsCapital(want: WordCase, word: String) {
+        if (want == WordCase.LOWER) ime.learner.forgetCase(word)
     }
 
     /**
@@ -208,6 +223,7 @@ internal class WordEdits(private val ime: KineticaIME) {
         }
         if (word == null) return true
         val (head, tail) = want.applyAround(word.head, word.tail)
+        forgetsCapital(want, head + tail)
         if (head == word.head && tail == word.tail) return true
         ime.ich.replaceAroundCursor(word.head.length, word.tail.length, head, tail)
         ime.expectAfter(word.head.length, head.length, rewritesWord = true)

@@ -8,6 +8,7 @@ import com.kinetica.keyboard.ime.singleLetterDelayMs
 import com.kinetica.keyboard.keys.ActionRow
 import com.kinetica.keyboard.keys.DeleteSpan
 import com.kinetica.keyboard.keys.EdgeSwipeBindings
+import com.kinetica.keyboard.keys.EditPage
 import com.kinetica.keyboard.keys.SpacebarCursorController
 import com.kinetica.keyboard.layout.LandscapeArrangement
 import com.kinetica.keyboard.layout.LayoutMode
@@ -52,6 +53,8 @@ data class KeyboardConfig(
     /** Autospace an all-tap word whose letters spell a dictionary word. */
     val autospaceTappedWords: Boolean,
     val zenMode: Boolean,
+    /** The swipe trail stays until its word ends. */
+    val keepTrail: Boolean,
     val vibration: Boolean,
     val vibrationIntensity: Int,
     val trailBaseHue: Float,
@@ -68,6 +71,8 @@ data class KeyboardConfig(
     val keyAlphaPct: Int,
     /** This orientation's cut of the image, as stored; blank for the centre. */
     val backdropCrop: String,
+    /** The night look is drawn: the look rows were read from their night twins ([LookSets]). */
+    val nightLook: Boolean,
     val swipeLook: SwipeLook,
     val longPressMs: Long,
     val chordArmMs: Long,
@@ -98,6 +103,8 @@ data class KeyboardConfig(
     val retypeButton: Boolean,
     /** Width of that button in dp, clamped to BarMetrics' settable range. */
     val retypeButtonDp: Int,
+    /** A bar button brings the shortcut row back over the words; see [Prefs.SHORTCUTS_BUTTON]. */
+    val shortcutsButton: Boolean,
     /** Side inset around the key block, per side, in dp. */
     val sidePadDp: Int,
     /** How far the middle letter row spreads toward the edges, 0 to 100%. */
@@ -112,6 +119,8 @@ data class KeyboardConfig(
     val badgesWhileAdjusting: Boolean,
     /** Spacebar cursor slide moves whole words instead of single characters. */
     val spacebarWordSlide: Boolean,
+    /** A held shift swaps the space and backspace slide steps; see [Prefs.SHIFT_SWAPS_SLIDES]. */
+    val shiftSwapsSlides: Boolean,
     /** Left 30% of the spacebar ends the word without writing a space. */
     val spacelessSpace: Boolean,
     val doubleSpacePeriod: Boolean,
@@ -127,6 +136,12 @@ data class KeyboardConfig(
     val recentTextScale: Float,
     /** The bar's words at their own width with a small gap. */
     val barCompact: Boolean,
+    /** A bar word too wide for its place is cut in the middle, not at its end. */
+    val barMiddleCut: Boolean,
+    /** Bold on the word space writes; the typed letters second. */
+    val barSpaceBold: Boolean,
+    /** A mark on each bar word for what it is to the dictionaries. */
+    val barWordMarks: Boolean,
     /** Recent-word columns swap up for the word above. */
     val recentSwipeReversed: Boolean,
     /** Keys show their ?123 chords while it is held. */
@@ -143,12 +158,16 @@ data class KeyboardConfig(
     val enterHoldSends: Boolean,
     /** A new field opens on the letters page. */
     val lettersOnNewField: Boolean,
+    /** A space on a symbol page goes back to the letters (lettersAfterSpace). */
+    val lettersAfterSpace: Boolean,
     /** The comma key fits email and web-address fields. */
     val fieldKeys: Boolean,
     /** The keyboard's paste cleans the links it pastes; see [Prefs.CLEAN_LINKS_ON_PASTE]. */
     val cleanLinksOnPaste: Boolean,
     /** A number field opens on the number pad. */
     val numpadForNumbers: Boolean,
+    /** The date action's format. */
+    val dateStyle: DateStyle,
     /** Words per minute on the spacebar (TypingSpeed). */
     val typingSpeed: Boolean,
     /**
@@ -212,6 +231,10 @@ data class KeyboardConfig(
     val peckMode: Boolean,
     /** The symbol pages' edited rows, page 1's three then page 2's; null keeps a built-in row. */
     val symbolRowLines: List<String?> = emptyList(),
+    /** The user's long-press list per symbol-page key; a symbol absent keeps its built-in one. */
+    val symbolAlternates: Map<String, List<String>> = emptyMap(),
+    /** The editing page's keys. */
+    val editPage: EditPage = EditPage.DEFAULT,
 ) {
     /** Page [page]'s three rows, for SymbolRows.apply. */
     fun symbolRows(page: Int): List<String?> =
@@ -220,9 +243,12 @@ data class KeyboardConfig(
     companion object {
         /**
          * The snapshot for one orientation: in [landscape] the sizes in Prefs.LANDSCAPE_TWINS read
-         * landscape's copy, falling back to portrait's while it is not stored.
+         * landscape's copy, falling back to portrait's while it is not stored. With [systemNight]
+         * and the day and night looks on, the look rows are the night look's.
          */
-        fun from(prefs: SharedPreferences, landscape: Boolean = false): KeyboardConfig {
+        fun from(stored: SharedPreferences, landscape: Boolean = false, systemNight: Boolean = false): KeyboardConfig {
+            val nightLook = LookSets.nightDrawn(stored, systemNight)
+            val prefs = LookSets.view(stored, nightLook)
             fun sized(key: String): String {
                 val twin = Prefs.landscapeTwin(key)
                 return if (landscape && prefs.contains(twin)) twin else key
@@ -294,6 +320,7 @@ data class KeyboardConfig(
                 Prefs.DEFAULT_AUTOSPACE_TAPPED_WORDS,
             ),
             zenMode = prefs.getBoolean(Prefs.ZEN_MODE, Prefs.DEFAULT_ZEN),
+            keepTrail = prefs.getBoolean(Prefs.KEEP_TRAIL, Prefs.DEFAULT_KEEP_TRAIL),
             vibration = prefs.getBoolean(Prefs.VIBRATION, Prefs.DEFAULT_VIBRATION),
             vibrationIntensity = prefs.getInt(
                 Prefs.VIBRATION_INTENSITY, Prefs.DEFAULT_VIBRATION_INTENSITY,
@@ -315,6 +342,7 @@ data class KeyboardConfig(
             backdropCrop = prefs.getString(
                 if (landscape) Prefs.BACKDROP_CROP_LANDSCAPE else Prefs.BACKDROP_CROP, "",
             ) ?: "",
+            nightLook = nightLook,
             longPressMs = prefs.getInt(Prefs.LONG_PRESS_MS, Prefs.DEFAULT_LONG_PRESS_MS)
                 .coerceIn(Prefs.LONG_PRESS_MIN_MS, Prefs.LONG_PRESS_MAX_MS).toLong(),
             chordArmMs = prefs.getInt(Prefs.CHORD_ARM_MS, Prefs.DEFAULT_CHORD_ARM_MS)
@@ -364,6 +392,7 @@ data class KeyboardConfig(
             ),
             backspaceUndo = prefs.getBoolean(Prefs.BACKSPACE_UNDO, Prefs.DEFAULT_BACKSPACE_UNDO),
             retypeButton = prefs.getBoolean(Prefs.RETYPE_BUTTON, Prefs.DEFAULT_RETYPE_BUTTON),
+            shortcutsButton = prefs.getBoolean(Prefs.SHORTCUTS_BUTTON, Prefs.DEFAULT_SHORTCUTS_BUTTON),
             sidePadDp = prefs.getInt(sized(Prefs.SIDE_PAD_DP), Prefs.DEFAULT_SIDE_PAD_DP)
                 .coerceIn(0, LayoutTransforms.MAX_SIDE_PAD_DP),
             homeRowSpreadPct = prefs.getInt(sized(Prefs.HOME_ROW_SPREAD_PCT), Prefs.DEFAULT_HOME_ROW_SPREAD_PCT)
@@ -387,6 +416,8 @@ data class KeyboardConfig(
             spacebarWordSlide = prefs.getBoolean(
                 Prefs.SPACEBAR_WORD_SLIDE, Prefs.DEFAULT_SPACEBAR_WORD_SLIDE,
             ),
+            shiftSwapsSlides = prefs.getBoolean(Prefs.SHIFT_SWAPS_SLIDES, Prefs.DEFAULT_SHIFT_SWAPS_SLIDES),
+
             spacelessSpace = prefs.getBoolean(
                 Prefs.SPACELESS_SPACE, Prefs.DEFAULT_SPACELESS_SPACE,
             ),
@@ -398,6 +429,9 @@ data class KeyboardConfig(
                 prefs.getInt(sized(Prefs.RECENT_TEXT_PCT), BarMetrics.RECENT_PCT_DEFAULT),
             ),
             barCompact = prefs.getBoolean(Prefs.BAR_COMPACT, Prefs.DEFAULT_BAR_COMPACT),
+            barMiddleCut = prefs.getBoolean(Prefs.BAR_MIDDLE_CUT, Prefs.DEFAULT_BAR_MIDDLE_CUT),
+            barSpaceBold = prefs.getBoolean(Prefs.BAR_SPACE_BOLD, Prefs.DEFAULT_BAR_SPACE_BOLD),
+            barWordMarks = prefs.getBoolean(Prefs.BAR_WORD_MARKS, Prefs.DEFAULT_BAR_WORD_MARKS),
             chordLabels = prefs.getBoolean(Prefs.CHORD_LABELS, Prefs.DEFAULT_CHORD_LABELS),
             spaceChordWiggle = prefs.getBoolean(Prefs.SPACE_CHORD_WIGGLE, Prefs.DEFAULT_SPACE_CHORD_WIGGLE),
             triggerCase = TriggerCase.fromPref(prefs.getString(Prefs.TRIGGER_CASE, Prefs.DEFAULT_TRIGGER_CASE)),
@@ -410,9 +444,13 @@ data class KeyboardConfig(
             lettersOnNewField = prefs.getBoolean(
                 Prefs.LETTERS_ON_NEW_FIELD, Prefs.DEFAULT_LETTERS_ON_NEW_FIELD,
             ),
+            lettersAfterSpace = prefs.getBoolean(
+                Prefs.LETTERS_AFTER_SPACE, Prefs.DEFAULT_LETTERS_AFTER_SPACE,
+            ),
             fieldKeys = prefs.getBoolean(Prefs.FIELD_KEYS, Prefs.DEFAULT_FIELD_KEYS),
             cleanLinksOnPaste = prefs.getBoolean(Prefs.CLEAN_LINKS_ON_PASTE, Prefs.DEFAULT_CLEAN_LINKS_ON_PASTE),
             numpadForNumbers = prefs.getBoolean(Prefs.NUMPAD_FOR_NUMBERS, Prefs.DEFAULT_NUMPAD_FOR_NUMBERS),
+            dateStyle = DateStyle.fromPref(prefs.getString(Prefs.DATE_STYLE, Prefs.DEFAULT_DATE_STYLE)),
             typingSpeed = prefs.getBoolean(Prefs.TYPING_SPEED, Prefs.DEFAULT_TYPING_SPEED),
             languageMode = LanguageMode.fromPref(prefs.getString(Prefs.LANGUAGE_MODE, Prefs.DEFAULT_LANGUAGE_MODE)),
             editFromMenu = prefs.getBoolean(Prefs.EDIT_FROM_MENU, Prefs.DEFAULT_EDIT_FROM_MENU),
@@ -475,6 +513,8 @@ data class KeyboardConfig(
             symbolRowLines = (1..2).flatMap { page ->
                 (1..SymbolRows.ROWS).map { row -> prefs.getString(Prefs.symbolRowKey(page, row), null) }
             },
+            symbolAlternates = symbolAlternatesFrom(prefs.all),
+            editPage = EditPage.parse(prefs.getString(Prefs.EDIT_PAGE, null)),
         )
         }
 
@@ -553,6 +593,17 @@ data class KeyboardConfig(
             }
             return out
         }
+        /** Every symbol the user gave a list, from every stored setting; a blank one is none. */
+        fun symbolAlternatesFrom(all: Map<String, *>): Map<String, List<String>> {
+            val out = HashMap<String, List<String>>()
+            for ((key, value) in all) {
+                val symbol = Prefs.symbolOfAlternatesKey(key) ?: continue
+                val list = parseAlternates(value as? String, MAX_LETTER_ALTERNATES)
+                if (list.isNotEmpty()) out[symbol] = list
+            }
+            return out
+        }
+
         /** The letters a list can be written for: every letter of every alphabet, once. */
         val LIST_LETTERS: List<Char> = Alphabet.ALL.flatMap { it.letters.toList() }.distinct()
 

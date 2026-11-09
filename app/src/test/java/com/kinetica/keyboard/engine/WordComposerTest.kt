@@ -274,4 +274,17 @@ class WordComposerTest {
         assertEquals("the", cap.literal)
         assertEquals("the", cap.candidates.first().word)
     }
+
+    @Test
+    fun aReloadedWordIsSeededAndATypedOneIsNot() {
+        val reloaded = WordComposer(predictor, direct, direct, Capture())
+        // A reload writes its taps from one clock read, a millisecond apart.
+        "com".forEachIndexed { i, c -> reloaded.onToken(TestData.tap(c, g, 5000L + i)) }
+        assertTrue(reloaded.bufferSeeded)
+        val typed = WordComposer(predictor, direct, direct, Capture())
+        "com".forEachIndexed { i, c -> typed.onToken(TestData.tap(c, g, 5000L + 150L * i)) }
+        assertFalse(typed.bufferSeeded)
+        typed.commitWord("com")
+        assertFalse(typed.bufferSeeded)
+    }
 }

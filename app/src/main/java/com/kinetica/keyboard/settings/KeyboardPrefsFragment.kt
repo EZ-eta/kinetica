@@ -3,6 +3,7 @@ package com.kinetica.keyboard.settings
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ObjectAnimator
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
@@ -25,6 +26,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import java.io.IOException
 import org.json.JSONException
+import org.xmlpull.v1.XmlPullParser
+import org.xmlpull.v1.XmlPullParserException
 import androidx.preference.EditTextPreference
 import androidx.preference.ListPreference
 import androidx.preference.Preference
@@ -39,11 +42,14 @@ import androidx.recyclerview.widget.RecyclerView
 import com.kinetica.keyboard.R
 import com.kinetica.keyboard.engine.Alphabet
 import com.kinetica.keyboard.ime.AlphaLayouts
+import com.kinetica.keyboard.ime.DictationHandoff
+import com.kinetica.keyboard.ime.KeyboardViews
 import com.kinetica.keyboard.keys.ActionRow
 import com.kinetica.keyboard.layout.Key
 import com.kinetica.keyboard.layout.LandscapeArrangement
 import com.kinetica.keyboard.layout.LayoutLoader
 import com.kinetica.keyboard.layout.LayoutTransforms
+import com.kinetica.keyboard.layout.SymbolRows
 import com.kinetica.keyboard.ui.KeyboardTheme
 import com.kinetica.keyboard.ui.SizePreviewView
 
@@ -56,14 +62,28 @@ class KeyboardPrefsFragment : PreferenceFragmentCompat() {
             ColorPrefs.migrate(it)
             OrientationPrefs.migrate(it)
         }
-        setPreferencesFromResource(R.xml.keyboard_prefs, rootKey)
+        // The changed-settings screen inflates the tree to learn each row's default: rows ask the
+        // recorder for their value and write nothing.
+        if (rootKey == CHANGED_SCREEN) preferenceManager.preferenceDataStore = defaultsSeen
+        // The guided setup shows a few of these rows through the same wiring, from its own XML.
+        setPreferencesFromResource(arguments?.getInt(ARG_XML, 0)?.takeIf { it != 0 } ?: R.xml.keyboard_prefs, rootKey)
         if (rootKey == SettingsSynonyms.LONGPRESS_GROUP) addLetterRows()
+        if (rootKey == SettingsSynonyms.SYMBOL_PAGES_GROUP) addSymbolRows()
+        // A search hit, a tip or the keyboard asked for one row: the screen opens with its
+        // Advanced rows shown, or a row under them has no place in the list to scroll to.
+        if (arguments?.getString(ARG_REVEAL) != null) preferenceScreen?.initialExpandedChildrenCount = Int.MAX_VALUE
+        if (rootKey == null && arguments?.getInt(ARG_XML, 0)?.takeIf { it != 0 } == null) addSearchRow()
         dropIconSpace(preferenceScreen)
-        wireThemePreview()
-        wireBackdrop()
+        wireThemePreview(night = false)
+        wireThemePreview(night = true)
+        wireBackdrop(night = false)
+        wireBackdrop(night = true)
+        wireLookSets()
         wireSizePreview()
         wireSizeGroups()
+        wireLookGroups()
         wireSymbolRows()
+        wireDictation()
         showVersion()
     }
 
@@ -79,10 +99,21 @@ class KeyboardPrefsFragment : PreferenceFragmentCompat() {
         // A search result asks for its row before this fragment has a list to scroll, so
         // the request is held and spent here, once, whichever way it arrived.
         applyReveal()
-        refreshBackdropRow()
+        refreshBackdropRow(night = false)
+        refreshBackdropRow(night = true)
+        // The user comes back from the system's keyboard list here.
+        refreshDictationStatus()
+        // Not in onCreatePreferences: a screen returned to from the back stack skips it.
+        refreshHomeSummaries()
+        refreshChangedRows()
         if (sizePreview() != null) {
             preferenceManager.sharedPreferences?.registerOnSharedPreferenceChangeListener(sizeListener)
             refreshSizePreview()
+        }
+        // Written while away (the keyboard, another screen), then live while on screen.
+        preferenceManager.sharedPreferences?.let { prefs ->
+            preferenceScreen?.let { RowSync.applyAll(it, prefs) }
+            prefs.registerOnSharedPreferenceChangeListener(rowSync)
         }
     }
 
@@ -95,7 +126,13 @@ class KeyboardPrefsFragment : PreferenceFragmentCompat() {
 
     override fun onPause() {
         preferenceManager.sharedPreferences?.unregisterOnSharedPreferenceChangeListener(sizeListener)
+        preferenceManager.sharedPreferences?.unregisterOnSharedPreferenceChangeListener(rowSync)
         super.onPause()
+    }
+
+    /** A value written while this screen is open, by the keyboard above it or a dialog, shows in its row. */
+    private val rowSync = SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
+        if (key != null) findPreference<Preference>(key)?.let { RowSync.apply(it, prefs) }
     }
 
     // ------------------------------------------------------------------ size preview
@@ -124,8 +161,10 @@ class KeyboardPrefsFragment : PreferenceFragmentCompat() {
         // landscape its own arrangement, so split can be on in one and off in the other.
         val short = minOf(dm.widthPixels, dm.heightPixels).toFloat()
         val long = maxOf(dm.widthPixels, dm.heightPixels).toFloat()
+        // The look the keyboard draws now, night or day.
+        val night = LookSets.systemNight(resources.configuration.uiMode)
         fun spec(landscape: Boolean): SizePreviewView.Spec {
-            val config = KeyboardConfig.from(prefs, landscape)
+            val config = KeyboardConfig.from(prefs, landscape, night)
             val w = if (landscape) long else short
             val h = if (landscape) short else long
             val pct = if (landscape) config.heightPctLandscape else config.heightPct
@@ -187,14 +226,169 @@ class KeyboardPrefsFragment : PreferenceFragmentCompat() {
         header.setIcon(if (open) R.drawable.ic_group_open else R.drawable.ic_group_closed)
     }
 
+    /**
+     * The day and night looks' groups, as the orientations' above: the look shown now starts open;
+     * the night group is there only while the switch is on.
+     */
+    private fun wireLookGroups() {
+        val prefs = preferenceManager.sharedPreferences ?: return
+        val nightShown = LookSets.nightDrawn(prefs, LookSets.systemNight(resources.configuration.uiMode))
+        for ((headerKey, rowsKey) in LookGroups.GROUPS) {
+            val header = findPreference<Preference>(headerKey) ?: continue
+            val rows = findPreference<PreferenceCategory>(rowsKey) ?: continue
+            setGroupOpen(header, rows, LookGroups.startsOpen(rowsKey, nightShown))
+            header.setOnPreferenceClickListener {
+                setGroupOpen(header, rows, !rows.isVisible)
+                true
+            }
+        }
+        showLookSets(prefs.getBoolean(Prefs.LOOK_SETS, Prefs.DEFAULT_LOOK_SETS))
+    }
+
+    /** With one look its group is named for it and stays open; the night group goes. */
+    private fun showLookSets(on: Boolean) {
+        val day = findPreference<Preference>(LookGroups.DAY_HEADER) ?: return
+        day.setTitle(if (on) R.string.pref_look_day_title else R.string.pref_look_one_title)
+        day.setSummary(if (on) R.string.pref_look_day_summary else R.string.pref_look_one_summary)
+        findPreference<Preference>(LookGroups.NIGHT_HEADER)?.isVisible = on
+        if (on) return
+        findPreference<PreferenceCategory>(LookGroups.NIGHT_ROWS)?.isVisible = false
+        findPreference<PreferenceCategory>(LookGroups.DAY_ROWS)?.let { setGroupOpen(day, it, true) }
+    }
+
     /** A search result inside a closed group opens it first, or there is no row to scroll to. */
     private fun openGroupOf(key: String) {
         val parent = findPreference<Preference>(key)?.parent ?: return
-        for ((headerKey, rowsKey) in SizeGroups.GROUPS) {
+        for ((headerKey, rowsKey) in SizeGroups.GROUPS + LookGroups.GROUPS) {
             if (parent.key != rowsKey || parent.isVisible) continue
-            val header = findPreference<Preference>(headerKey) ?: continue
+            // The night group while the switch is off: no header to open it under.
+            val header = findPreference<Preference>(headerKey)?.takeIf { it.isVisible } ?: continue
             setGroupOpen(header, parent as? PreferenceCategory ?: continue, true)
         }
+    }
+
+    // ------------------------------------------------------------------ changed settings
+
+    /** Each row's default as it reported it, while the changed screen inflated the tree. */
+    private val defaultsSeen = DefaultsRecorder()
+
+    private val changedRows = ArrayList<Preference>()
+
+    /**
+     * One row per setting that differs from its default, read from the store each time the
+     * screen shows, so a reset or a change made elsewhere is already reflected. The rows the
+     * inflation built hold defaults, so only their titles and places are read.
+     */
+    private fun refreshChangedRows() {
+        if (preferenceScreen?.key != CHANGED_SCREEN) return
+        val ctx = context ?: return
+        val screen = preferenceScreen ?: return
+        val prefs = PreferenceManager.getDefaultSharedPreferences(ctx)
+        val changed = ChangedSettings.changed(wholeTree(), withXmlDefaults(ctx), prefs.all)
+        changedRows.forEach { screen.removePreference(it) }
+        changedRows.clear()
+        for ((i, entry) in changed.withIndex()) {
+            val row = Preference(ctx).apply {
+                order = i + 1
+                title = entry.title
+                summary = getString(R.string.pref_changed_in, entry.screenTitle)
+                isPersistent = false
+                isSingleLineTitle = false
+                isIconSpaceReserved = false
+                setOnPreferenceClickListener {
+                    offerReset(entry)
+                    true
+                }
+            }
+            screen.addPreference(row)
+            changedRows.add(row)
+        }
+        findPreference<Preference>(CHANGED_NOTE_KEY)?.setSummary(
+            if (changed.isEmpty()) R.string.pref_changed_none else R.string.pref_changed_note_summary,
+        )
+        val resettable = changed.filter { ChangedSettings.resettable(it.key) }
+        findPreference<Preference>(CHANGED_RESET_ALL_KEY)?.apply {
+            order = Int.MAX_VALUE - 1
+            isEnabled = resettable.isNotEmpty()
+            setOnPreferenceClickListener {
+                AlertDialog.Builder(ctx)
+                    .setTitle(R.string.pref_changed_reset_all_title)
+                    .setMessage(resources.getQuantityString(R.plurals.pref_changed_reset_all_message, resettable.size, resettable.size))
+                    .setPositiveButton(R.string.pref_changed_reset) { _, _ -> reset(resettable.map { it.key }) }
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show()
+                true
+            }
+        }
+    }
+
+    /** Open the setting where it lives, or put it back to its default. */
+    private fun offerReset(entry: SettingsIndex.Entry) {
+        val ctx = context ?: return
+        val dialog = AlertDialog.Builder(ctx)
+            .setTitle(entry.title)
+            .setNeutralButton(R.string.pref_changed_open) { _, _ ->
+                (activity as? SettingsActivity)?.revealSetting(entry.screenKey, entry.key)
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+        if (ChangedSettings.resettable(entry.key)) {
+            dialog.setPositiveButton(R.string.pref_changed_reset) { _, _ -> reset(listOf(entry.key)) }
+        } else {
+            dialog.setMessage(R.string.pref_changed_managed)
+        }
+        dialog.show()
+    }
+
+    /** Writes each key's default in one edit, or removes the key when its default is empty. */
+    private fun reset(keys: List<String>) {
+        val ctx = context ?: return
+        val defaults = withXmlDefaults(ctx)
+        val edit = PreferenceManager.getDefaultSharedPreferences(ctx).edit()
+        for (key in keys) {
+            when (val d = ChangedSettings.defaultOf(key, defaults)) {
+                is Boolean -> edit.putBoolean(key, d)
+                is Int -> edit.putInt(key, d)
+                is Long -> edit.putLong(key, d)
+                is Float -> edit.putFloat(key, d)
+                is String -> edit.putString(key, d)
+                is Set<*> -> edit.putStringSet(key, d.filterIsInstance<String>().toSet())
+                else -> edit.remove(key)
+            }
+        }
+        edit.apply()
+        refreshChangedRows()
+    }
+
+    /** The whole settings tree, reached from this screen's root: its rows, titles and screens. */
+    private fun wholeTree(): List<SettingsIndex.Entry> {
+        var top: PreferenceGroup = preferenceScreen ?: return emptyList()
+        while (true) top = top.parent ?: break
+        val out = ArrayList<SettingsIndex.Entry>()
+        collectEntries(top, null, getString(R.string.settings_title), out)
+        return out
+    }
+
+    /**
+     * The recorded defaults of the rows whose XML gives one. A row with none reports its class's
+     * fallback (false, 0, empty), which is not a default the keyboard reads.
+     */
+    private fun withXmlDefaults(ctx: Context): Map<String, Any?> {
+        val keys = HashSet<String>()
+        val parser = ctx.resources.getXml(R.xml.keyboard_prefs)
+        try {
+            while (parser.next() != XmlPullParser.END_DOCUMENT) {
+                if (parser.eventType != XmlPullParser.START_TAG) continue
+                val key = parser.getAttributeValue(ANDROID_NS, "key") ?: continue
+                if (parser.getAttributeValue(ANDROID_NS, "defaultValue") != null) keys.add(key)
+            }
+        } catch (e: XmlPullParserException) {
+            Log.w(TAG, "settings defaults", e)
+        } catch (e: IOException) {
+            Log.w(TAG, "settings defaults", e)
+        } finally {
+            parser.close()
+        }
+        return defaultsSeen.seen.filterKeys { it in keys }
     }
 
     // ------------------------------------------------------------------ symbol pages
@@ -214,6 +408,29 @@ class KeyboardPrefsFragment : PreferenceFragmentCompat() {
     }
 
     // ------------------------------------------------------------------ search
+
+    /**
+     * A search row on top of the home screen. The toolbar's magnifier alone went unnoticed:
+     * a row that says what it does is found. Built here without a key, so the index skips it and
+     * the tree's row count never sees it.
+     */
+    private fun addSearchRow() {
+        val ctx = context ?: return
+        preferenceScreen?.addPreference(
+            Preference(ctx).apply {
+                order = -1
+                title = getString(R.string.pref_home_search_title)
+                summary = getString(R.string.pref_home_search_summary)
+                setIcon(R.drawable.ic_settings_search)
+                isPersistent = false
+                isSingleLineTitle = false
+                setOnPreferenceClickListener {
+                    (activity as? SettingsActivity)?.openSearch()
+                    true
+                }
+            },
+        )
+    }
 
     /**
      * Every row of the whole tree, for [SettingsIndex].
@@ -241,6 +458,14 @@ class KeyboardPrefsFragment : PreferenceFragmentCompat() {
             val child = group.getPreference(i)
             val key = child.key ?: continue
             val title = child.title?.toString().orEmpty()
+            // The night look's rows and header count only while it is on; its rows are named by it.
+            if ((key == LookGroups.NIGHT_HEADER || key == LookGroups.NIGHT_ROWS) && !lookSetsOn()) continue
+            // A category is a header over rows, not a place to land: its rows are the results.
+            if (child is PreferenceCategory) {
+                val within = if (key == LookGroups.NIGHT_ROWS) getString(R.string.pref_look_night_title) else screenTitle
+                collectEntries(child, screenKey, within, out)
+                continue
+            }
             // The theme swatch is the only row with no title, and a result needs words.
             if (title.isNotEmpty()) {
                 out.add(
@@ -262,6 +487,9 @@ class KeyboardPrefsFragment : PreferenceFragmentCompat() {
             }
         }
     }
+
+    private fun lookSetsOn(): Boolean =
+        preferenceManager.sharedPreferences?.getBoolean(Prefs.LOOK_SETS, Prefs.DEFAULT_LOOK_SETS) == true
 
     /**
      * Scrolls to [key] and flashes it, or remembers to once there is a list.
@@ -408,11 +636,89 @@ class KeyboardPrefsFragment : PreferenceFragmentCompat() {
         own: List<String>,
         default: List<String>,
         note: String,
+    ): EditTextPreference = addListRow(
+        group, Prefs.letterAlternatesKey(c), c.uppercaseChar().toString(), own, default,
+        getString(R.string.pref_letter_alternates_default), note,
+    )
+
+    /**
+     * One symbol per row below the symbol pages' editors, the two pages as they are now,
+     * typed rows included; a symbol on both pages once. Each shows its built-in list and opens
+     * pre-filled with it. Built in code because the pages are the user's; a page that cannot be
+     * read leaves its rows out instead of taking the screen down.
+     */
+    private fun addSymbolRows() {
+        val screen = preferenceScreen ?: return
+        val ctx = context ?: return
+        val prefs = preferenceManager.sharedPreferences ?: return
+        val config = KeyboardConfig.from(prefs)
+        val note = getString(R.string.pref_symbol_alternates_note_summary) + ". " +
+            getString(R.string.pref_letter_alternates_names, ActionRow.listTokenNames())
+        findPreference<Preference>(SYMBOL_NOTE_KEY)?.summary = note
+        val shown = HashSet<String>()
+        val rows = ArrayList<EditTextPreference>()
+        for (page in 1..2) {
+            val name = if (page == 2) KeyboardViews.SYMBOLS2 else KeyboardViews.SYMBOLS
+            val built = try {
+                SymbolRows.apply(LayoutLoader.load(ctx.assets, "layouts/$name.json"), page, config.symbolRows(page))
+            } catch (e: IOException) {
+                Log.w(TAG, "symbol page $name", e)
+                continue
+            } catch (e: JSONException) {
+                Log.w(TAG, "symbol page $name", e)
+                continue
+            }
+            val group = PreferenceCategory(ctx).apply {
+                title = getString(if (page == 2) R.string.pref_symbol_alternates_page2_title else R.string.pref_symbol_alternates_page1_title)
+                isIconSpaceReserved = false
+            }
+            screen.addPreference(group)
+            for (symbol in SymbolRows.symbolsOf(built)) {
+                if (!shown.add(symbol)) continue
+                val own = built.keys.firstOrNull { it.output == symbol }?.alternates.orEmpty()
+                rows.add(
+                    addListRow(group, Prefs.symbolAlternatesKey(symbol), symbol, own, own,
+                        getString(R.string.pref_symbol_alternates_builtin_button), note),
+                )
+            }
+        }
+        // Last, below the lists; every list goes, those of symbols no longer on a page too.
+        val reset = findPreference<Preference>(SYMBOL_RESET_KEY) ?: return
+        screen.removePreference(reset)
+        screen.addPreference(reset)
+        reset.setOnPreferenceClickListener {
+            AlertDialog.Builder(ctx)
+                .setTitle(R.string.pref_letter_alternates_reset_title)
+                .setMessage(R.string.pref_symbol_alternates_reset_message)
+                .setPositiveButton(android.R.string.ok) { _, _ ->
+                    rows.forEach { it.text = null }
+                    val e = prefs.edit()
+                    for (k in prefs.all.keys) if (Prefs.symbolOfAlternatesKey(k) != null) e.remove(k)
+                    e.apply()
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+            true
+        }
+    }
+
+    /**
+     * One list's row: its built-in list as the summary and the starting text, and a button that
+     * fills in [default]. The built-in list typed back, or nothing, is stored as no list.
+     */
+    private fun addListRow(
+        group: PreferenceGroup,
+        key: String,
+        shownAs: String,
+        own: List<String>,
+        default: List<String>,
+        defaultLabel: String,
+        note: String,
     ): EditTextPreference {
         val ownText = own.joinToString(" ")
-        val letter = c.uppercaseChar().toString()
+        val letter = shownAs
         val row = EditTextPreference(group.context)
-        row.key = Prefs.letterAlternatesKey(c)
+        row.key = key
         row.title = letter
         row.isSingleLineTitle = false
         row.dialogTitle = getString(R.string.pref_letter_alternates_dialog_title, letter)
@@ -435,7 +741,7 @@ class KeyboardPrefsFragment : PreferenceFragmentCompat() {
             if (defaultText.isNotEmpty()) {
                 (edit.parent as? ViewGroup)?.addView(
                     Button(edit.context).apply {
-                        text = getString(R.string.pref_letter_alternates_default)
+                        text = defaultLabel
                         setOnClickListener {
                             edit.setText(defaultText)
                             edit.setSelection(defaultText.length)
@@ -479,18 +785,19 @@ class KeyboardPrefsFragment : PreferenceFragmentCompat() {
     }
 
     /**
-     * No preference on this screen has an icon, so none should reserve the icon gutter, which on
-     * a 21:9 phone squeezes the description column.
+     * The icon gutter only beside rows that have an icon: the home screen's. Elsewhere it would
+     * squeeze the description column on a 21:9 phone for nothing.
      *
      * Walked in code, not set per element in the XML: a new row would arrive without the
-     * attribute, and this also reaches the categories and the theme preview.
+     * attribute, and this also reaches the categories and the theme preview. A group whose rows
+     * have icons keeps the gutter itself, so its header lines up with their titles.
      */
     private fun dropIconSpace(group: PreferenceGroup) {
-        group.isIconSpaceReserved = false
+        val gutter = (0 until group.preferenceCount).any { group.getPreference(it).icon != null }
+        group.isIconSpaceReserved = gutter
         for (i in 0 until group.preferenceCount) {
             val child = group.getPreference(i)
-            child.isIconSpaceReserved = false
-            if (child is PreferenceGroup) dropIconSpace(child)
+            if (child is PreferenceGroup) dropIconSpace(child) else child.isIconSpaceReserved = gutter
         }
     }
 
@@ -504,7 +811,11 @@ class KeyboardPrefsFragment : PreferenceFragmentCompat() {
     private fun showVersion() {
         val pref = findPreference<Preference>(VERSION_KEY) ?: return
         val ctx = context ?: return
-        pref.summary = try {
+        pref.summary = versionText(ctx)
+    }
+
+    private fun versionText(ctx: Context): String =
+        try {
             val info = ctx.packageManager.getPackageInfo(ctx.packageName, 0)
             val code = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 info.longVersionCode
@@ -517,19 +828,72 @@ class KeyboardPrefsFragment : PreferenceFragmentCompat() {
             // Cannot happen for our own package; a blank row is better than a crash.
             ""
         }
+
+    /**
+     * The home rows say what is set, not only what is inside: the languages in use, the voice
+     * keyboard the voice key opens, the version. Home only: a subscreen and the setup have a key.
+     */
+    private fun refreshHomeSummaries() {
+        if (preferenceScreen?.key != null) return
+        val ctx = context ?: return
+        val prefs = preferenceManager.sharedPreferences ?: return
+        val config = KeyboardConfig.from(prefs)
+        val names = resources.getStringArray(R.array.language_entries)
+        val codes = resources.getStringArray(R.array.language_values)
+        val shown = (listOf(config.language) + config.enabledLanguages).distinct()
+            .mapNotNull { names.getOrNull(codes.indexOf(it)) }
+        if (shown.isNotEmpty()) findPreference<Preference>(LANGUAGES_KEY)?.summary = shown.joinToString(", ")
+        findPreference<Preference>(DictationHandoff.SCREEN)?.summary = DictationHandoff.find(ctx)?.let {
+            getString(R.string.pref_home_voice_found, it.info.loadLabel(ctx.packageManager))
+        } ?: getString(R.string.pref_home_voice_none)
+        findPreference<Preference>(HELP_KEY)?.summary = getString(R.string.pref_home_help_version, versionText(ctx))
+    }
+
+    /**
+     * The link opens in the browser, so the app keeps no network permission. With no browser the
+     * row shows the address instead.
+     */
+    private fun wireDictation() {
+        for ((key, url) in listOf(
+            DICTATION_GET_KEY to DictationHandoff.SUGGESTED_URL,
+            DICTATION_GET_FUTO_KEY to DictationHandoff.FUTO_URL,
+        )) {
+            findPreference<Preference>(key)?.setOnPreferenceClickListener { row ->
+                try {
+                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                } catch (e: ActivityNotFoundException) {
+                    row.summary = url
+                }
+                true
+            }
+        }
+    }
+
+    /** Names the voice keyboard the voice key opens, read from the phone each time. */
+    private fun refreshDictationStatus() {
+        val pref = findPreference<Preference>(DICTATION_STATUS_KEY) ?: return
+        val ctx = context ?: return
+        val found = DictationHandoff.find(ctx)
+        pref.summary = if (found == null) {
+            getString(R.string.pref_dictation_status_none)
+        } else {
+            getString(R.string.pref_dictation_status_found, found.info.loadLabel(ctx.packageManager))
+        }
     }
 
     /**
      * Keeps the palette swatch under the colour in step with the preferences that decide it. The change listeners take the new value from the callback: onPreferenceChange runs
      * before the value is persisted, so reading preferences here would show the previous palette.
+     * The night look's screen has the same rows under the night keys, and its own preview.
      */
-    private fun wireThemePreview() {
-        val preview = findPreference<ThemePreviewPreference>(PREVIEW_KEY) ?: return
-        val colour = findPreference<ColorHexPreference>(Prefs.THEME_COLOR_HEX)
-        val mode = findPreference<ListPreference>(Prefs.THEME_MODE)
-        val brightness = findPreference<ListPreference>(Prefs.THEME_BRIGHTNESS)
-        val borders = findPreference<TwoStatePreference>(Prefs.KEY_BORDERS)
-        val borderWidth = findPreference<SeekBarPreference>(Prefs.KEY_BORDER_WIDTH)
+    private fun wireThemePreview(night: Boolean) {
+        fun k(key: String) = if (night) Prefs.nightTwin(key) else key
+        val preview = findPreference<ThemePreviewPreference>(k(PREVIEW_KEY)) ?: return
+        val colour = findPreference<ColorHexPreference>(k(Prefs.THEME_COLOR_HEX))
+        val mode = findPreference<ListPreference>(k(Prefs.THEME_MODE))
+        val brightness = findPreference<ListPreference>(k(Prefs.THEME_BRIGHTNESS))
+        val borders = findPreference<TwoStatePreference>(k(Prefs.KEY_BORDERS))
+        val borderWidth = findPreference<SeekBarPreference>(k(Prefs.KEY_BORDER_WIDTH))
 
         fun refresh(
             newColour: String? = null,
@@ -541,14 +905,15 @@ class KeyboardPrefsFragment : PreferenceFragmentCompat() {
             val prefs = preferenceManager.sharedPreferences ?: return
             // KeyboardConfig owns the default, so going through it keeps the swatch correct on
             // first open, before a colour is typed.
-            val config = KeyboardConfig.from(prefs)
+            val config = KeyboardConfig.from(LookSets.view(prefs, night))
             val primary = HexColor.colorOr(newColour, config.themeColor)
             val resolvedMode = newMode ?: config.themeMode
             val bordersOn = newBorders ?: (borders?.isChecked ?: Prefs.DEFAULT_KEY_BORDERS)
-            val borderDp = if (bordersOn) {
-                newBorderWidth ?: borderWidth?.value ?: Prefs.DEFAULT_KEY_BORDER_WIDTH
-            } else {
-                0
+            // The setup's theme step has no border rows: the saved borders, not the default.
+            val borderDp = when {
+                borders == null -> config.keyBorderDp
+                bordersOn -> newBorderWidth ?: borderWidth?.value ?: Prefs.DEFAULT_KEY_BORDER_WIDTH
+                else -> 0
             }
             preview.show(
                 KeyboardTheme.resolve(
@@ -580,31 +945,46 @@ class KeyboardPrefsFragment : PreferenceFragmentCompat() {
             refresh(newBrightness = value as? String)
             true
         }
+        // A row that does nothing in the look as set is hidden, not greyed: the width without
+        // borders, the typed trail colour unless the trail is Custom.
+        val trail = findPreference<ListPreference>(k(Prefs.TRAIL_COLOR))
+        val trailHex = findPreference<Preference>(k(Prefs.TRAIL_COLOR_HEX))
         borders?.setOnPreferenceChangeListener { _, value ->
             refresh(newBorders = value as? Boolean)
+            borderWidth?.isVisible = value == true
             true
         }
         borderWidth?.setOnPreferenceChangeListener { _, value ->
             refresh(newBorderWidth = value as? Int)
             true
         }
+        trail?.setOnPreferenceChangeListener { _, value ->
+            trailHex?.isVisible = value == CUSTOM_TRAIL
+            true
+        }
+        borderWidth?.isVisible = borders?.isChecked == true
+        trailHex?.isVisible = trail?.value == CUSTOM_TRAIL
         refresh()
     }
 
     // ------------------------------------------------------------------ background image
 
+    /** Which look's image the open picker is for. */
+    private var pickingNight = false
+
     private val pickBackdrop =
         registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-            if (uri != null) importBackdrop(uri)
+            if (uri != null) importBackdrop(uri, pickingNight)
         }
 
     /** The image row picks a picture, or offers another or none once one is set. */
-    private fun wireBackdrop() {
-        val row = findPreference<Preference>(BACKDROP_ROW_KEY) ?: return
+    private fun wireBackdrop(night: Boolean) {
+        val row = findPreference<Preference>(if (night) BACKDROP_ROW_NIGHT_KEY else BACKDROP_ROW_KEY) ?: return
         row.setOnPreferenceClickListener {
             val ctx = requireContext()
             val prefs = preferenceManager.sharedPreferences
-            if (prefs != null && BackdropStore.isSet(ctx, prefs)) {
+            pickingNight = night
+            if (prefs != null && BackdropStore.isSet(ctx, prefs, night)) {
                 AlertDialog.Builder(ctx)
                     .setTitle(R.string.backdrop_title)
                     .setItems(
@@ -615,8 +995,10 @@ class KeyboardPrefsFragment : PreferenceFragmentCompat() {
                     ) { _, which ->
                         when (which) {
                             0 -> pickBackdrop.launch(arrayOf("image/*"))
-                            1 -> startActivity(Intent(ctx, BackdropCropActivity::class.java))
-                            else -> removeBackdrop()
+                            1 -> startActivity(
+                                Intent(ctx, BackdropCropActivity::class.java).putExtra(BackdropCropActivity.EXTRA_NIGHT, night),
+                            )
+                            else -> removeBackdrop(night)
                         }
                     }
                     .setNegativeButton(android.R.string.cancel, null)
@@ -626,25 +1008,26 @@ class KeyboardPrefsFragment : PreferenceFragmentCompat() {
             }
             true
         }
-        refreshBackdropRow()
+        refreshBackdropRow(night)
     }
 
     /** The row says whether an image is set; its two opacities only act while one is. */
-    private fun refreshBackdropRow() {
-        val row = findPreference<Preference>(BACKDROP_ROW_KEY) ?: return
+    private fun refreshBackdropRow(night: Boolean) {
+        fun k(key: String) = if (night) Prefs.nightTwin(key) else key
+        val row = findPreference<Preference>(if (night) BACKDROP_ROW_NIGHT_KEY else BACKDROP_ROW_KEY) ?: return
         val ctx = context ?: return
         val prefs = preferenceManager.sharedPreferences ?: return
-        val set = BackdropStore.isSet(ctx, prefs)
+        val set = BackdropStore.isSet(ctx, prefs, night)
         row.setSummary(if (set) R.string.backdrop_set else R.string.backdrop_none)
-        findPreference<Preference>(Prefs.BACKDROP_ALPHA)?.isEnabled = set
-        findPreference<Preference>(Prefs.KEY_ALPHA)?.isEnabled = set
+        findPreference<Preference>(k(Prefs.BACKDROP_ALPHA))?.isVisible = set
+        findPreference<Preference>(k(Prefs.KEY_ALPHA))?.isVisible = set
     }
 
     /**
      * Copies the picked image in off the main thread, then opens the crop screen on it; that
      * screen's Save makes it the image and writes the stamp the keyboard watches.
      */
-    private fun importBackdrop(uri: Uri) {
+    private fun importBackdrop(uri: Uri, night: Boolean) {
         val app = requireContext().applicationContext
         val dm = resources.displayMetrics
         val maxLong = maxOf(dm.widthPixels, dm.heightPixels)
@@ -670,44 +1053,93 @@ class KeyboardPrefsFragment : PreferenceFragmentCompat() {
                     // The settings closed while the copy ran: nothing to fit it in, so it goes.
                     host == null -> BackdropStore.dropPending(app)
                     else -> host.startActivity(
-                        Intent(host, BackdropCropActivity::class.java).putExtra(BackdropCropActivity.EXTRA_PENDING, true),
+                        Intent(host, BackdropCropActivity::class.java)
+                            .putExtra(BackdropCropActivity.EXTRA_PENDING, true)
+                            .putExtra(BackdropCropActivity.EXTRA_NIGHT, night),
                     )
                 }
-                refreshBackdropRow()
+                refreshBackdropRow(night)
             }
         }, "kinetica-backdrop-import").start()
     }
 
-    private fun removeBackdrop() {
+    private fun removeBackdrop(night: Boolean) {
+        fun k(key: String) = if (night) Prefs.nightTwin(key) else key
         val ctx = requireContext()
-        BackdropStore.remove(ctx)
+        BackdropStore.remove(ctx, night)
         preferenceManager.sharedPreferences?.edit()
-            ?.putString(Prefs.BACKDROP, "")
-            ?.remove(Prefs.BACKDROP_CROP)
-            ?.remove(Prefs.BACKDROP_CROP_LANDSCAPE)
+            ?.putString(k(Prefs.BACKDROP), "")
+            ?.remove(k(Prefs.BACKDROP_CROP))
+            ?.remove(k(Prefs.BACKDROP_CROP_LANDSCAPE))
             ?.apply()
-        refreshBackdropRow()
+        refreshBackdropRow(night)
+    }
+
+    /**
+     * The first time the day and night looks are turned on, the night look starts as a copy of
+     * the day look, image included, so turning it on changes nothing until it is edited.
+     */
+    private fun wireLookSets() {
+        findPreference<TwoStatePreference>(Prefs.LOOK_SETS)?.setOnPreferenceChangeListener { _, value ->
+            val prefs = preferenceManager.sharedPreferences
+            if (value == true && prefs != null && !prefs.getBoolean(Prefs.LOOK_NIGHT_SEEDED, false)) {
+                // The file first: the copied stamp then points at an image that is there.
+                BackdropStore.copyDayToNight(requireContext())
+                LookSets.seed(prefs)
+                // The rows follow the copies through rowSync; the image row is not a pref.
+                refreshBackdropRow(night = true)
+            }
+            showLookSets(value == true)
+            true
+        }
     }
 
     private var revealKey: String? = null
 
-    private companion object {
-        const val TAG = "KineticaPrefs"
-        const val RESET_LETTER_LISTS_KEY = "pref_letter_alternates_reset"
-        const val LETTER_NOTE_KEY = "pref_letter_alternates_note"
-        const val PREVIEW_KEY = "pref_theme_preview"
-        const val BACKDROP_ROW_KEY = "pref_backdrop_image"
-        const val LANDSCAPE_PREVIEW_KEY = "pref_size_preview_landscape"
-        val SIZE_PREVIEW_KEYS = listOf("pref_size_preview", LANDSCAPE_PREVIEW_KEY, "pref_bar_preview")
-        val SIZE_SLIDERS = listOf(
+    companion object {
+        /** The XML to inflate instead of the settings tree; the setup's [forSetup]. */
+        const val ARG_XML = "com.kinetica.keyboard.settings.XML"
+
+        /** The row a screen is opened for, set by [SettingsActivity.revealSetting]. */
+        const val ARG_REVEAL = "com.kinetica.keyboard.settings.REVEAL_ROW"
+
+        /** One step of the guided setup: [screenKey] of the setup XML, wired as the settings are. */
+        fun forSetup(screenKey: String): KeyboardPrefsFragment = KeyboardPrefsFragment().apply {
+            arguments = Bundle().apply {
+                putInt(ARG_XML, R.xml.setup_prefs)
+                putString(PreferenceFragmentCompat.ARG_PREFERENCE_ROOT, screenKey)
+            }
+        }
+
+        private const val TAG = "KineticaPrefs"
+        private const val RESET_LETTER_LISTS_KEY = "pref_letter_alternates_reset"
+        private const val LETTER_NOTE_KEY = "pref_letter_alternates_note"
+        private const val SYMBOL_NOTE_KEY = "pref_symbol_alternates_note"
+        private const val SYMBOL_RESET_KEY = "pref_symbol_alternates_reset"
+        private const val PREVIEW_KEY = "pref_theme_preview"
+        private const val BACKDROP_ROW_KEY = "pref_backdrop_image"
+        private const val BACKDROP_ROW_NIGHT_KEY = "pref_backdrop_image_night"
+        private const val CUSTOM_TRAIL = "custom"
+        private const val LANDSCAPE_PREVIEW_KEY = "pref_size_preview_landscape"
+        private val SIZE_PREVIEW_KEYS = listOf("pref_size_preview", LANDSCAPE_PREVIEW_KEY, "pref_bar_preview")
+        private val SIZE_SLIDERS = listOf(
             Prefs.KEYBOARD_HEIGHT_PCT, Prefs.KEYBOARD_HEIGHT_PCT_LANDSCAPE, Prefs.SUGGESTION_BAR_DP,
             Prefs.SIDE_PAD_DP, Prefs.BOTTOM_PAD_DP, Prefs.DRAG_HANDLE_DP, Prefs.LANDSCAPE_SPLIT_GAP_PCT,
             Prefs.HOME_ROW_SPREAD_PCT,
         ) + Prefs.LANDSCAPE_TWINS.map(Prefs::landscapeTwin)
-        const val VERSION_KEY = "pref_version"
+        private const val VERSION_KEY = "pref_version"
+        private const val CHANGED_SCREEN = "pref_group_changed"
+        private const val CHANGED_NOTE_KEY = "pref_changed_note"
+        private const val CHANGED_RESET_ALL_KEY = "pref_changed_reset_all"
+        private const val ANDROID_NS = "http://schemas.android.com/apk/res/android"
+        private const val LANGUAGES_KEY = "pref_group_languages"
+        private const val HELP_KEY = "pref_group_learn"
+        private const val DICTATION_STATUS_KEY = "pref_dictation_status"
+        private const val DICTATION_GET_KEY = "pref_dictation_get"
+        private const val DICTATION_GET_FUTO_KEY = "pref_dictation_get_futo"
         // Visible enough to find by eye, faint enough not to read as a selection, and long
         // enough to still be fading when the scroll settles.
-        const val FLASH_ALPHA = 90
-        const val FLASH_MS = 900L
+        private const val FLASH_ALPHA = 90
+        private const val FLASH_MS = 900L
     }
 }

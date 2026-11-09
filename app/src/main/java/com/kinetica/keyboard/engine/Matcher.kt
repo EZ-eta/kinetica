@@ -132,10 +132,12 @@ sealed class Matcher {
             for (idx in passes) if (idx >= minIdx) return idx
             return -1
         }
+
+        /** Every pass of the path near [code], in path order. */
+        internal fun passesOf(code: Int): IntArray = passIdx[code]
     }
 
     companion object {
-        private const val MAX_SEGMENT_LETTERS = 12
         // Average key-to-key hop in a word is roughly 1.5 kw on QWERTY; used
         // only as a soft letter-count ceiling, the length band does real work.
         private const val KW_PER_LETTER = 1.5f
@@ -224,9 +226,12 @@ sealed class Matcher {
                 t.arcLen
             }
             val minLetters = if (letterArcLen < KineticaConstants.MIN_SWIPE_ARC_KW) 1 else 2
+            // One stroke may spell a whole word. A cap of 12 never decoded a stroke of 13 letters
+            // or more; lifted to MAX_WORD_LEN it moved 2 of 9 455 corpus leads, both to the
+            // 13-letter word drawn. The arc bound and the length band still hold a short piece.
             val maxLetters = max(
                 minLetters,
-                min(MAX_SEGMENT_LETTERS, ceil(t.arcLen / KW_PER_LETTER).toInt() + 2),
+                min(KineticaConstants.MAX_WORD_LEN, ceil(t.arcLen / KW_PER_LETTER).toInt() + 2),
             )
             val sampleT = LongArray(n)
             DtwMatcher.resampleTimes(t.rawPath, sampleT)

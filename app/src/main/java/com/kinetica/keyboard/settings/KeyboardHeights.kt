@@ -83,6 +83,12 @@ object KeyboardHeights {
     fun letterPx(boardPx: Int, numberRow: Boolean): Int =
         if (numberRow) (boardPx / LayoutMutations.NUMBER_ROW_GROWTH).toInt() else boardPx
 
+    /** The emoji search panel's row of emoji, under a query row as tall as a one-row bar. */
+    const val EMOJI_SEARCH_ROW_DP = 52f
+
+    /** The emoji search panel in dp: the query on a bar's row, the emoji on their own. */
+    fun emojiSearchDp(settingDp: Int): Float = settingDp + EMOJI_SEARCH_ROW_DP
+
     /** The suggestion bar's height in dp: one row, or taller with recent words on. */
     fun barDp(settingDp: Int, recentWords: Boolean): Float =
         settingDp * if (recentWords) RECENT_BAR_TALL else 1f

@@ -1,5 +1,6 @@
 package com.kinetica.keyboard.ime
 
+import com.kinetica.keyboard.engine.KineticaConstants
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -107,5 +108,14 @@ class LearnOnCommitTest {
         // spelling is a different word and learns.
         assertFalse(learnsOnCommit("perché", "perché"))
         assertTrue(learnsOnCommit("perche", "perché"))
+    }
+
+    @Test
+    fun aLongWordIsLearnable() {
+        // Compounds run past the bundled lists' 20 letters; only the trie's cap refuses one.
+        assertTrue(learnable("supercalifragilistichespiralidoso"))
+        assertTrue(learnable("a".repeat(KineticaConstants.MAX_WORD_LEN)))
+        assertFalse(learnable("a".repeat(KineticaConstants.MAX_WORD_LEN + 1)))
+        assertFalse(learnable("e con"))
     }
 }

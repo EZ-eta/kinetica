@@ -47,6 +47,12 @@ Run `python3 tools/generate_assets.py --lang <lang>`. Output (into
 30–50k words, MAX_WORD_LEN 20) and `<lang>_bigrams.txt` (w1 TAB w2 TAB count,
 ≤100k pairs, endpoints filtered to the vocabulary).
 
+Emoji search words: add the code to `LANGS` in `tools/generate_emoji.py` and to
+`EmojiAssetFiles.LANGS` in the tests, then run `python3 tools/generate_emoji.py`.
+It writes `app/src/main/assets/emoji/kw_<lang>.tsv` from Unicode CLDR; the other
+files come out unchanged. Without it the language's emoji search finds English
+words only.
+
 ## 3. Author the layout
 
 `app/src/main/assets/layouts/qwerty_<lang>.json`: copy `qwerty_it.json`
@@ -98,9 +104,10 @@ per-language.
   `WORD_RES` table (mirrors the generator's `WORD_RE`); without it an AOSP
   import silently filters the language's accented words.
 - `keys/NativeLetters.kt`: for a language with accented letters, list the
-  letters it writes. With "Hide accented letters on long-press" on, they stay
-  on an English board while the language is enabled. `NativeLettersTest`
-  checks each letter against the bundled wordlist.
+  letters it writes. While the language is enabled, each one joins the
+  long-press menu of the key it folds to on every other board (`ß` on `s`),
+  and it stays there with "Hide accented letters on long-press" on.
+  `NativeLettersTest` checks each letter against the bundled wordlist.
 - `keys/StandaloneLetters.kt`: register the language's one-letter function
   words and test tapped-word autospace. Unregistered languages use the English
   set; dictionary membership cannot distinguish these words from initials.

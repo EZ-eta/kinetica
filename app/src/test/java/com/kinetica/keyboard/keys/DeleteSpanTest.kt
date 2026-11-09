@@ -310,4 +310,65 @@ class DeleteSpanTest {
         for (n in forward) assertTrue("$n ends a word", n == t.length || t[n].isWhitespace())
         for (n in back) assertTrue("$n starts a word", n == 0 || !t[n].isWhitespace())
     }
+    // ---- line breaks --------------------------------------------------------
+
+    @Test
+    fun aWordStepTakesOneLineBreakAtATime() {
+        // Reported: one step took a whole run of empty lines and the word before them.
+        val t = "word\n\n\n"
+        for (g in listOf(Granularity.WORDS, Granularity.PIECES)) {
+            assertEquals("$g", "\n", tailOf(t, DeleteSpan.staged(0, t, 1, g)))
+            assertEquals("$g", "\n\n\n", tailOf(t, DeleteSpan.staged(0, t, 3, g)))
+            assertEquals("$g", t, tailOf(t, DeleteSpan.staged(0, t, 4, g)))
+        }
+    }
+
+    @Test
+    fun theSpacesBesideALineBreakGoWithIt() {
+        // An indent after the break and a space left before it are one step with the break, so
+        // the next step is the word itself.
+        val indented = "word\n  "
+        assertEquals("\n  ", tailOf(indented, DeleteSpan.words(indented, 1)))
+        val spaced = "word \n"
+        assertEquals("\n", tailOf(spaced, DeleteSpan.words(spaced, 1)))
+        assertEquals("word \n", tailOf(spaced, DeleteSpan.words(spaced, 2)))
+        assertEquals("\n", tailOf(spaced, DeleteSpan.pieces(spaced, 1)))
+    }
+
+    @Test
+    fun aWindowsLineBreakIsOneStep() {
+        val t = "word\r\n\r\n"
+        assertEquals("\r\n", tailOf(t, DeleteSpan.words(t, 1)))
+        assertEquals("\r\n\r\n", tailOf(t, DeleteSpan.words(t, 2)))
+        assertEquals(t, tailOf(t, DeleteSpan.words(t, 3)))
+    }
+
+    @Test
+    fun aSelectionThenOneLineBreakPerStep() {
+        // The selection is the first unit; the breaks before it go one per step after it.
+        val before = "word\n\n"
+        assertEquals(3 + 1, DeleteSpan.staged(3, before, 2, Granularity.WORDS))
+        assertEquals(3 + 2, DeleteSpan.staged(3, before, 3, Granularity.WORDS))
+        assertEquals(3 + 6, DeleteSpan.staged(3, before, 4, Granularity.WORDS))
+    }
+
+    @Test
+    fun theSpacebarWordStepStopsAtEachLineBreakBothWays() {
+        // The spacebar's word step walks the same rule, so a line end is a stop either way.
+        val t = "one two\n\nthree"
+        val forward = ArrayList<Int>()
+        var i = 0
+        while (i < t.length) {
+            i += DeleteSpan.wordsForward(t.substring(i), 1)
+            forward.add(i)
+        }
+        val back = ArrayList<Int>()
+        var j = t.length
+        while (j > 0) {
+            j -= DeleteSpan.words(t.substring(0, j), 1)
+            back.add(j)
+        }
+        assertEquals(listOf(3, 7, 8, 9, 14), forward)
+        assertEquals(listOf(9, 8, 7, 4, 0), back)
+    }
 }

@@ -139,11 +139,10 @@ class NorwegianDictionaryTest {
         assertEquals("a", AccentFolder.fold("å"))
         assertEquals("a", AccentFolder.fold("æ"))
         assertEquals("o", AccentFolder.fold("ø"))
-        // Single-letter folds, so all three stay insertable from a long-press
-        // popup mid-word, unlike ß and œ.
-        assertEquals(0, AccentFolder.accentedLetterCode("å"))
-        assertEquals(0, AccentFolder.accentedLetterCode("æ"))
-        assertEquals(14, AccentFolder.accentedLetterCode("ø"))
+        // Single-letter folds: one tap each from a long-press popup mid-word.
+        assertEquals(listOf(0), AccentFolder.accentedLetterCodes("å")?.toList())
+        assertEquals(listOf(0), AccentFolder.accentedLetterCodes("æ")?.toList())
+        assertEquals(listOf(14), AccentFolder.accentedLetterCodes("ø")?.toList())
     }
 
     @Test

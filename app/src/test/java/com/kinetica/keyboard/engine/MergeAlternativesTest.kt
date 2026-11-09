@@ -53,6 +53,45 @@ class MergeAlternativesTest {
     }
 
     @Test
+    fun aDeferredTailIsTheTailASplitBuilds() {
+        // A search cuts a swipe at every candidate time but resumes few of the tails, so a cut
+        // builds its tail only when asked. Whenever it is asked, it must be the split's own tail.
+        var cuts = 0
+        var keptByContact = 0
+        for (word in listOf("however", "quindi", "something")) {
+            val swipe = TestData.sloppySwipe(word, g, 0, 600)
+            for (p in swipe.rawPath) {
+                val eager = MergeAlternatives.splitSwipe(swipe, p.t, dtw)
+                val lazy = MergeAlternatives.cutSwipe(swipe, p.t, dtw)
+                val eagerOwn = MergeAlternatives.splitAtOwnContact(swipe, p.t, dtw)
+                val lazyOwn = MergeAlternatives.cutAtOwnContact(swipe, p.t, dtw)
+                for ((split, cut) in listOf(eager to lazy, eagerOwn to lazyOwn)) {
+                    assertEquals("refused alike at t=${p.t} in $word", split == null, cut == null)
+                    if (split == null || cut == null) continue
+                    cuts++
+                    assertSamePiece(split.first, cut.head)
+                    assertEquals(split.second.tStart, cut.tailStart)
+                    assertSamePiece(split.second, cut.tail())
+                }
+                if (eagerOwn != null && eagerOwn.second.arcLen < KineticaConstants.MIN_SPLIT_HALF_ARC_KW) keptByContact++
+            }
+        }
+        assertTrue("cuts compared: $cuts", cuts > 50)
+        assertTrue("no tail kept by its contact alone", keptByContact > 0)
+    }
+
+    private fun assertSamePiece(a: SwipeToken, b: SwipeToken) {
+        assertEquals(a.rawPath, b.rawPath)
+        assertTrue(a.resampled.contentEquals(b.resampled))
+        assertEquals(a.keyContacts, b.keyContacts)
+        assertEquals(a.arcLen, b.arcLen, 0f)
+        assertEquals(a.tStart, b.tStart)
+        assertEquals(a.tEnd, b.tEnd)
+        assertEquals(a.softStart, b.softStart)
+        assertEquals(a.softEnd, b.softEnd)
+    }
+
+    @Test
     fun splitRejectsCutsNearTheEnds() {
         val swipe = TestData.swipe("helo", g, 0, 400)
         assertNull(MergeAlternatives.splitSwipe(swipe, swipe.rawPath[0].t, dtw))

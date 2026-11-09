@@ -183,12 +183,6 @@ class WordPredictor(
         return variants.any { it.display == w }
     }
 
-    /**
-     * Whether [word] is one of this lexicon's spellings as written. [isWord] reads a key with no
-     * display forms as holding every spelling that folds onto it, so English would claim Italian
-     * `è` through its `e` and the merge would drop it as shared. Here a key with no forms holds
-     * only its own unaccented spelling.
-     */
     /** Whether [word] is a spelling this lexicon holds case and all: `Haus`, not `haus`. */
     fun holdsExactSpelling(word: String): Boolean {
         val node = trie.nodeFor(AccentFolder.fold(word.lowercase()))
@@ -212,6 +206,12 @@ class WordPredictor(
     fun momentumScore(word: String): Float =
         if (isWordIgnoringCase(word) && word.lowercase() !in learnedOnly) frequencyByte(word).coerceAtLeast(0) / 255f else 0f
 
+    /**
+     * Whether [word] is one of this lexicon's spellings as written, case aside. [isWord] reads a key with no
+     * display forms as holding every spelling that folds onto it, so English would claim Italian
+     * `è` through its `e` and the merge would drop it as shared. Here a key with no forms holds
+     * only its own unaccented spelling.
+     */
     fun holdsSpelling(word: String): Boolean {
         val w = word.lowercase()
         val folded = AccentFolder.fold(w)
@@ -285,6 +285,9 @@ class WordPredictor(
         DecodeTrace.log { "decode in$langTag: " + tokens.sortedBy { it.tStart }.joinToString(" ") { traceToken(it) } + " ctx=$context" }
         val prevWord = context.lastOrNull()?.let { AccentFolder.fold(it.lowercase()) }
         val prevWordId = prevWord?.let { trie.nodeFor(it) } ?: -1
+        cutMemo.clear()
+        ownMemo.clear()
+        saturation = saturationOf(tokens)
 
         val heap = CandidateHeap(KineticaConstants.TOP_K)
         val seqs = MergeAlternatives.sequences(tokens, dtw)
@@ -394,6 +397,15 @@ class WordPredictor(
         val beamHeap = CandidateHeap(KineticaConstants.TOP_K)
         for (c in passes) beamHeap.offer(c)
         ThumbBeam(this, g, seqs.first(), patterns.first(), beamHeap, prevWordId, prevWord).run()
+        // A stray tap inside a long two-thumb word leaves the word no reading at all. When the lead
+        // fits poorly, one more run reads one tap as no letter, with its own width and attempts: inside
+        // the first run such readings took both from the word typed.
+        val lead = beamHeap.best()
+        if (seqs.first().size >= 3 && seqs.first().any { it is TapToken } &&
+            (lead == null || lead.dtwDistance > KineticaConstants.RESCUE_MIN_LEAD_D)
+        ) {
+            ThumbBeam(this, g, seqs.first(), patterns.first(), beamHeap, prevWordId, prevWord, dropsTap = true).run()
+        }
         return finish(mergeBeam(passes, beamHeap.sortedByScoreDesc()), startNs)
     }
 
@@ -438,7 +450,8 @@ class WordPredictor(
         //
         // `ck` reads UNCONTACTED_LETTER_KEEP once per never-touched letter, so 0.85 is one such
         // letter, 0.72 two, and 1.0 either a clean reading or a buffer with no contacts to judge
-        // by, which the trace's own `keys=` settles.
+        // by, which the trace's own `keys=` settles. It also carries shortReadingKeep: a value
+        // off those steps is a word shorter than its long stroke.
         DecodeTrace.log {
             "decode out$langTag: " + if (out.isEmpty()) "<empty>" else
                 out.take(5).joinToString(" ") {
@@ -462,6 +475,9 @@ class WordPredictor(
      */
     internal fun streamPassOnly(tokens: List<InputToken>): List<WordCandidate> {
         val g = geometry ?: return emptyList()
+        cutMemo.clear()
+        ownMemo.clear()
+        saturation = saturationOf(tokens)
         val heap = CandidateHeap(KineticaConstants.TOP_K)
         val primary = MergeAlternatives.sequences(tokens, dtw).firstOrNull() ?: return emptyList()
         val p = Matcher.buildPattern(primary, g) ?: return emptyList()
@@ -632,12 +648,36 @@ class WordPredictor(
         val cuts: Map<SwipeToken, LongArray>,
     )
 
-    /** One cut: the two Segments it makes, and the tail's token so it can be cut again. */
+    /**
+     * One cut: the head's Segment, and the tail's token (so it can be cut again) and Segment, built
+     * the first time a search resumes the tail. Most heads find no reading before it is due.
+     */
     private class Halves(
         val head: Matcher.Segment,
-        val tail: Matcher.Segment,
-        val tailToken: SwipeToken,
-    )
+        private val cut: MergeAlternatives.Cut,
+        private val g: KeyboardGeometry,
+    ) {
+        private var token: SwipeToken? = null
+        private var segment: Matcher.Segment? = null
+
+        val tailStart: Long get() = cut.tailStart
+        val tailToken: SwipeToken get() = token ?: cut.tail().also { token = it }
+        val tail: Matcher.Segment get() = segment ?: Matcher.buildSegment(tailToken, g).also { segment = it }
+    }
+
+    // One decode's halves, per (swipe, cut time), shared by its passes: the cut, stream and rescue
+    // passes cut the same swipes at the same times. Built per pass, they were 40% of the stream
+    // pass's samples on two-thumb long buffers. Cleared at every decode; decode thread only.
+    /** The score's saturation for the decode in progress, from its buffer's swiped arc. */
+    private var saturation = KineticaConstants.GEO_SATURATION_KW
+    private val cutMemo = HashMap<SwipeToken, HashMap<Long, Halves?>>()
+    private val ownMemo = HashMap<SwipeToken, HashMap<Long, Halves?>>()
+
+    private fun saturationOf(tokens: List<InputToken>): Float {
+        var arc = 0f
+        for (t in tokens) if (t is SwipeToken) arc += t.arcLen
+        return KineticaConstants.saturationFor(arc)
+    }
 
     /** How scoring one reading ended, for the calling pass's own counters. */
     internal enum class Scored { OFFERED, SCORE, IDEAL, DTW }
@@ -696,17 +736,29 @@ class WordPredictor(
             maxNumerator = best * bm
         }
 
+        // One uncut stroke read as a word far shorter than the stroke, charged through `ck`.
+        // Known before the DTW and at most 1, so it also tightens the budget below: a short word
+        // on a long stroke is dropped before its fit is computed, and leaves its candidate slot.
+        var shortKeep = 1f
+        if (pieceCount == 1 && pieceLetters == null) {
+            val arc = pieceSeg[0]!!.letterArcLen
+            if (arc >= KineticaConstants.SHORT_READING_ARC_KW) {
+                shortKeep = KineticaConstants.shortReadingKeep(dtw.idealLength(letters, pieceFrom[0], pieceTo[0], g), arc)
+            }
+        }
+        val keep = contactKeep * shortKeep
+
         // The normalizer counts the pieces this branch closed, which for a pattern
         // fixed up front is the same numSegs it always was.
         val totalSteps = pieceCount * KineticaConstants.RESAMPLE_N
         var budget = Float.POSITIVE_INFINITY
         val minScore = heap.minScoreIfFull()
         if (minScore > 0f) {
-            // Inverse of the score's geometric term. Past GEO_SATURATION_KW the term is flat, so
+            // Inverse of the score's geometric term. Past the saturation the term is flat, so
             // a node whose saturated score still clears the heap minimum has no distance bound
             // and the budget stays infinite: correctness first, latency is held by
             // MAX_EMIT_ATTEMPTS and measured by the *LatencyIsBounded goldens.
-            val dMax = KineticaConstants.maxDTotalForScore(maxNumerator, minScore) - tapPen
+            val dMax = KineticaConstants.maxDTotalForScore(maxNumerator * shortKeep, minScore, saturation) - tapPen
             if (dMax <= 0f) {
                 return Scored.SCORE
             }
@@ -734,7 +786,7 @@ class WordPredictor(
         val geo = if (unsaturated) {
             KineticaConstants.geometricTermUnsaturated(dTotal)
         } else {
-            KineticaConstants.geometricTerm(dTotal)
+            KineticaConstants.geometricTerm(dTotal, saturation)
         }
         // Both boosts are weighted by geoFit through the same rule and stored
         // as applied, so a captured row closes arithmetically. The abandon
@@ -743,11 +795,11 @@ class WordPredictor(
         if (word != null) {
             val pb = KineticaConstants.appliedBoost(personalBoost(word), geoFit)
             val pbm = KineticaConstants.appliedBoost(personalBigramBoost(prevWord, word), geoFit)
-            val score = fw * geo * bmApplied * pb * pbm * contactKeep
+            val score = fw * geo * bmApplied * pb * pbm * keep
             heap.offer(
                 WordCandidate(
                     word, score, dTotal, fw, bmApplied, node, source, language, pb,
-                    contactKeep, pbm,
+                    keep, pbm,
                 ),
             )
         } else {
@@ -759,11 +811,11 @@ class WordPredictor(
                 val pbV = KineticaConstants.appliedBoost(personalBoost(v.display), geoFit)
                 val pbmV =
                     KineticaConstants.appliedBoost(personalBigramBoost(prevWord, v.display), geoFit)
-                val score = fwV * geo * bmApplied * pbV * pbmV * contactKeep
+                val score = fwV * geo * bmApplied * pbV * pbmV * keep
                 heap.offer(
                     WordCandidate(
                         v.display, score, dTotal, fwV, bmApplied, node, source, language, pbV,
-                        contactKeep, pbmV,
+                        keep, pbmV,
                     ),
                 )
             }
@@ -805,22 +857,20 @@ class WordPredictor(
         private var editsLeft = if (edits) 1 else 0
         private val cutting = itemStart != null && srcOf != null && cuts != null
         private val streaming = plan != null
-        private val cutCache = HashMap<SwipeToken, HashMap<Long, Halves?>>()
         // Tails waiting to be resumed, one per cut this branch has open. A set, not one slot:
         // the reading the cut exists for is head, other thumb, tail on both swipes at once,
         // and with one slot only one swipe per buffer could be cut, which on the corpus
         // reaches nothing the generators do not already find.
-        private val pendingTail = arrayOfNulls<Matcher.Segment>(KineticaConstants.MAX_SEARCH_CUTS + 1)
+        private val pendingTail = arrayOfNulls<Halves>(KineticaConstants.MAX_SEARCH_CUTS + 1)
         private val pendingStart = LongArray(KineticaConstants.MAX_SEARCH_CUTS + 1)
 
         /**
-         * The tail's own token and the whole swipe it came from, per open cut.
+         * The whole swipe each open cut came from.
          *
          * A tail is a SwipeToken like any other and can be cut again, which makes a third cut
-         * reachable. The token is what gets split; the original keys the candidate cut times,
-         * which come from the other stream's events inside the whole gesture.
+         * reachable. The tail's token is what gets split; the original keys the candidate cut
+         * times, which come from the other stream's events inside the whole gesture.
          */
-        private val pendingToken = arrayOfNulls<SwipeToken>(KineticaConstants.MAX_SEARCH_CUTS + 1)
         private val pendingOrigin = arrayOfNulls<SwipeToken>(KineticaConstants.MAX_SEARCH_CUTS + 1)
         private var cutsOpen = 0
         private val letters = IntArray(KineticaConstants.MAX_WORD_LEN)
@@ -962,8 +1012,7 @@ class WordPredictor(
         // scored by emit, so nothing here scores anything.
 
         private val sCursor = IntArray(StreamId.values().size)
-        private val sParked = arrayOfNulls<Matcher.Segment>(StreamId.values().size)
-        private val sParkedToken = arrayOfNulls<SwipeToken>(StreamId.values().size)
+        private val sParked = arrayOfNulls<Halves>(StreamId.values().size)
         private val sParkedOrigin = arrayOfNulls<SwipeToken>(StreamId.values().size)
         private var sLastT = Long.MIN_VALUE
         private var sLastStream = -1
@@ -1010,7 +1059,7 @@ class WordPredictor(
         }
 
         private fun nextStart(s: Int): Long {
-            sParkedToken[s]?.let { return it.tStart }
+            sParked[s]?.let { return it.tailStart }
             val p = plan!!
             return if (sCursor[s] < p.tokens[s].size) p.tokens[s][sCursor[s]].tStart else Long.MAX_VALUE
         }
@@ -1025,14 +1074,11 @@ class WordPredictor(
             }
             val parked = sParked[s]
             if (parked != null) {
-                val token = sParkedToken[s]!!
                 val origin = sParkedOrigin[s]!!
                 sParked[s] = null
-                sParkedToken[s] = null
                 sParkedOrigin[s] = null
-                openPiece(s, node, depth, tapPen, contactKeep, parked, token, origin, floor)
+                openPiece(s, node, depth, tapPen, contactKeep, parked.tail, parked.tailToken, origin, floor)
                 sParked[s] = parked
-                sParkedToken[s] = token
                 sParkedOrigin[s] = origin
                 return
             }
@@ -1089,8 +1135,7 @@ class WordPredictor(
                     if (t <= token.tStart || t >= token.tEnd) continue
                     val halves = (if (i < ownStart) cutHalves(token, t) else ownHalves(token, t)) ?: continue
                     sCutsMade++
-                    sParked[s] = halves.tail
-                    sParkedToken[s] = halves.tailToken
+                    sParked[s] = halves
                     sParkedOrigin[s] = origin
                     val left = if (i >= ownStart && KineticaConstants.STREAM_SEARCH_OWN_CUT_CLOSES_ON_KEY) {
                         token.keyContacts.firstOrNull { it.tExit == t }
@@ -1110,7 +1155,6 @@ class WordPredictor(
                         contactKeep = contactKeep, seg = halves.head, nextTi = 0,
                     )
                     sParked[s] = null
-                    sParkedToken[s] = null
                     sParkedOrigin[s] = null
                     sCutsMade--
                 }
@@ -1138,15 +1182,12 @@ class WordPredictor(
             return other + own.toLongArray()
         }
 
-        private val ownCache = HashMap<SwipeToken, HashMap<Long, Halves?>>()
-
         /** Memoized like [cutHalves], for a cut exactly at one of the swipe's own key boundaries. */
         private fun ownHalves(src: SwipeToken, t: Long): Halves? {
-            val perSwipe = ownCache.getOrPut(src) { HashMap() }
+            val perSwipe = ownMemo.getOrPut(src) { HashMap() }
             if (perSwipe.containsKey(t)) return perSwipe[t]
-            val halves = MergeAlternatives.splitAtOwnContact(src, t, dtw)
-            val built = halves?.let {
-                Halves(Matcher.buildSegment(it.first, g), Matcher.buildSegment(it.second, g), it.second)
+            val built = MergeAlternatives.cutAtOwnContact(src, t, dtw)?.let {
+                Halves(Matcher.buildSegment(it.head, g), it, g)
             }
             perSwipe[t] = built
             return built
@@ -1263,25 +1304,23 @@ class WordPredictor(
             // thumb, tail.
             val due = earliestPending(ti)
             if (due >= 0) {
-                val tail = pendingTail[due]!!
+                val cut = pendingTail[due]!!
                 val start = pendingStart[due]
-                val token = pendingToken[due]
                 val origin = pendingOrigin[due]
                 pendingTail[due] = null
                 descend(
                     node, ti, depth,
                     segStartDepth = depth, lettersInSeg = 0, idealLen = 0f,
                     lastIdx = -KineticaConstants.MONOTONE_SLACK, prevLetter = -1, tapPen = tapPen,
-                    contactKeep = contactKeep, seg = tail, nextTi = ti,
+                    contactKeep = contactKeep, seg = cut.tail, nextTi = ti,
                 )
                 // And the tail may itself be cut, the only way to reach a third piece of one
                 // swipe. It closes back to ti like the tail it replaces.
-                if (token != null && origin != null) {
-                    offerCuts(node, ti, depth, tapPen, contactKeep, token, origin, nextTi = ti)
+                if (origin != null) {
+                    offerCuts(node, ti, depth, tapPen, contactKeep, cut.tailToken, origin, nextTi = ti)
                 }
-                pendingTail[due] = tail
+                pendingTail[due] = cut
                 pendingStart[due] = start
-                pendingToken[due] = token
                 pendingOrigin[due] = origin
                 return
             }
@@ -1353,9 +1392,8 @@ class WordPredictor(
                 if (t <= token.tStart || t >= token.tEnd) continue
                 val halves = cutHalves(token, t) ?: continue
                 cutsOpen++
-                pendingTail[slot] = halves.tail
+                pendingTail[slot] = halves
                 pendingStart[slot] = t
-                pendingToken[slot] = halves.tailToken
                 pendingOrigin[slot] = origin
                 descend(
                     node, ti, depth,
@@ -1364,7 +1402,6 @@ class WordPredictor(
                     contactKeep = contactKeep, seg = halves.head, nextTi = nextTi,
                 )
                 pendingTail[slot] = null
-                pendingToken[slot] = null
                 pendingOrigin[slot] = null
                 cutsOpen--
             }
@@ -1390,11 +1427,10 @@ class WordPredictor(
 
         /** Memoized per (swipe, cut time): building a Segment costs 26 keys x 32 samples. */
         private fun cutHalves(src: SwipeToken, t: Long): Halves? {
-            val perSwipe = cutCache.getOrPut(src) { HashMap() }
+            val perSwipe = cutMemo.getOrPut(src) { HashMap() }
             if (perSwipe.containsKey(t)) return perSwipe[t]
-            val halves = MergeAlternatives.splitSwipe(src, t, dtw)
-            val built = halves?.let {
-                Halves(Matcher.buildSegment(it.first, g), Matcher.buildSegment(it.second, g), it.second)
+            val built = MergeAlternatives.cutSwipe(src, t, dtw)?.let {
+                Halves(Matcher.buildSegment(it.head, g), it, g)
             }
             perSwipe[t] = built
             return built
@@ -2027,7 +2063,7 @@ internal fun commitMissLine(
  * 46's signature: every token a tap, timestamps a millisecond apart because they come from
  * one `uptimeMillis` call, not from real touches.
  */
-private fun isSeeded(tokens: List<InputToken>): Boolean {
+internal fun isSeeded(tokens: List<InputToken>): Boolean {
     if (tokens.size < 2 || tokens.any { it !is TapToken }) return false
     val t = tokens.map { it.tStart }.sorted()
     return t.last() - t.first() <= SEEDED_SPAN_MS * (t.size - 1)

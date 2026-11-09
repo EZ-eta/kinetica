@@ -16,6 +16,10 @@ internal class WordState {
     var tentativeLength = 0
     var tentativeWord = ""
     var wordShift = ShiftState.State.NONE
+
+    // Set when the user re-cased the word in hand: its case is theirs, and the commit must not
+    // put a learned capital back over it.
+    var caseChosen = false
     var lastCandidates: List<WordCandidate> = emptyList()
 
     // The candidate the merge cleared to lead, the only one that may autocorrect a tapped

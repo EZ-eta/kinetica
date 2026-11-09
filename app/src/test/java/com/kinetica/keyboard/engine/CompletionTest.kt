@@ -187,6 +187,22 @@ class CompletionTest {
     }
 
     @Test
+    fun withTheSwitchTheLiteralRidesSecondWhereverItWas() {
+        // On the first page whatever the list holds: after the lead, never duplicated.
+        assertEquals(listOf("the", "teh", "then", "ten"), suggestionZoneWords(listOf("the", "then", "ten"), "teh", literalSecond = true))
+        assertEquals(listOf("xqz"), suggestionZoneWords(emptyList(), "xqz", literalSecond = true))
+        // Already first or second: left where the decode put it.
+        assertEquals(listOf("teh", "the"), suggestionZoneWords(listOf("teh", "the"), "teh", literalSecond = true))
+        assertEquals(listOf("the", "teh", "ten"), suggestionZoneWords(listOf("the", "teh", "ten"), "teh", literalSecond = true))
+        // Further down: moved up, not repeated.
+        assertEquals(
+            listOf("the", "teh", "then", "ten", "tea"),
+            suggestionZoneWords(listOf("the", "then", "ten", "tea", "teh"), "teh", literalSecond = true),
+        )
+        assertEquals(listOf("the", "then"), suggestionZoneWords(listOf("the", "then"), "", literalSecond = true))
+    }
+
+    @Test
     fun lettersWithoutAccentsAreNotOfferedWhileAutocorrectIsOn() {
         // A spelling with the accents left off: `pojsc` is not offered beside `pójść`, unless
         // autocorrect is off.

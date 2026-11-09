@@ -24,6 +24,17 @@ object SpecialKeys {
         else -> null
     }
 
+    /**
+     * The combination [action] goes out as, in place of a context-menu call. A TextView answers
+     * Ctrl+Z with the undo the menu call reaches; WebView answers the key alone, its menu call
+     * covering only select all and the clipboard.
+     */
+    fun comboFor(action: EditorAction): KeyCombo? = when (action) {
+        EditorAction.UNDO -> KeyCombo(ctrl = true, shift = false, alt = false, key = "z")
+        EditorAction.REDO -> KeyCombo(ctrl = true, shift = true, alt = false, key = "z")
+        else -> null
+    }
+
     /** The key a special-key action names in a combination, for the one-shot Ctrl. */
     fun comboKeyFor(action: EditorAction): String? = when (action) {
         EditorAction.TAB -> "tab"

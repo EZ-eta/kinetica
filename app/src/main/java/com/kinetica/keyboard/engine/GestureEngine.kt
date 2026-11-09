@@ -2,6 +2,8 @@ package com.kinetica.keyboard.engine
 
 import com.kinetica.keyboard.engine.models.InputToken
 import com.kinetica.keyboard.engine.models.StreamId
+import com.kinetica.keyboard.engine.models.SwipeToken
+import java.util.Locale
 
 /**
  * Tracks up to two independent pointer streams and emits classified tokens.
@@ -43,17 +45,28 @@ class GestureEngine(private val listener: Listener) {
     private fun activeCount(): Int =
         (if (streams[0] != null) 1 else 0) + (if (streams[1] != null) 1 else 0)
 
+    /** The letter a touch at the view point means, or -1 ([KeyboardGeometry.letterNear]). */
+    fun letterNear(xPx: Float, yPx: Float): Int {
+        val g = geometry ?: return -1
+        return g.letterNear(xPx / g.keyWidthPx, yPx / g.keyWidthPx)
+    }
+
     /**
      * Returns false when this pointer is not the engine's to track (not on a
      * letter key, over the pointer budget, or unknown id); the caller routes
      * it to a special-key controller.
      */
-    fun onPointerDown(pointerId: Int, xPx: Float, yPx: Float, t: Long): Boolean {
+    fun onPointerDown(pointerId: Int, xPx: Float, yPx: Float, t: Long, snap: Boolean = false): Boolean {
         val g = geometry ?: return false
         if (pointerId !in 0 until MAX_POINTER_ID) return false
         if (activeCount() >= maxPointers) return false
-        val code = g.keyAt(xPx / g.keyWidthPx, yPx / g.keyWidthPx)
+        // [snap]: the view found no key of its own under the touch, so the nearest letter takes it.
+        // Never set over a key: a shift or a comma there is not a letter's.
+        val code = if (snap) letterNear(xPx, yPx) else g.keyAt(xPx / g.keyWidthPx, yPx / g.keyWidthPx)
         if (code == -1) return false
+        if (snap && g.keyAt(xPx / g.keyWidthPx, yPx / g.keyWidthPx) == -1) {
+            DecodeTrace.log { "  tap snapped key=${g.alphabet.charOf(code)} x=${xPx.toInt()} y=${yPx.toInt()}" }
+        }
 
         // The letter block's centre, not half the view: with side padding the keys do not span
         // the view.
@@ -100,9 +113,25 @@ class GestureEngine(private val listener: Listener) {
         val other = streams[1 - slotByPointer[pointerId]]
         if (g != null && other != null) DecodeTrace.log { nearLine("up", stream.streamId, xPx, yPx, other, g) }
         val token = stream.finish(t)
+        if (token is SwipeToken && g != null && DecodeTrace.enabled) tracePath(token, g)
         release(pointerId)
         listener.onTokenFinalized(token)
         if (activeCount() == 0) listener.onAllPointersUp()
+    }
+
+    // The decode trace says which keys a stroke crossed, not where it went. A replay drawn
+    // through key centres led with another word than the phone on 57% of long strokes, so a
+    // capture also carries the raw points and the board they were drawn on.
+    private var tracedGeometry: KeyboardGeometry? = null
+    private var tracedEpoch = -1
+
+    private fun tracePath(token: SwipeToken, g: KeyboardGeometry) {
+        if (g !== tracedGeometry || tracedEpoch != DecodeTrace.epoch) {
+            tracedGeometry = g
+            tracedEpoch = DecodeTrace.epoch
+            DecodeTrace.log { geometryLine(g, tapDispKw) }
+        }
+        DecodeTrace.log { pathLine(token) }
     }
 
     fun cancelPointer(pointerId: Int) {
@@ -167,7 +196,47 @@ class GestureEngine(private val listener: Listener) {
         }
     }
 
-    private companion object {
-        const val MAX_POINTER_ID = 64
+    internal companion object {
+        private const val MAX_POINTER_ID = 64
+
+        /**
+         * One swipe's raw points: kw to two decimals (a hundredth of a key, about a pixel), each
+         * time as the step from the previous point. Matched to its `decode in` swipe by stream
+         * and start time.
+         */
+        fun pathLine(token: SwipeToken): String {
+            val sb = StringBuilder(48 + token.rawPath.size * 12)
+            sb.append("path stream=").append(token.streamId).append(" t=").append(token.tStart)
+                .append("..").append(token.tEnd).append(" pts=")
+            var prev = token.tStart
+            for ((i, p) in token.rawPath.withIndex()) {
+                if (i > 0) sb.append(';')
+                sb.append(kw(p.x)).append(',').append(kw(p.y)).append(',').append(p.t - prev)
+                prev = p.t
+            }
+            return sb.toString()
+        }
+
+        /** The letter keys a capture was typed on, in kw, with the unit, midline and tap radius. */
+        fun geometryLine(g: KeyboardGeometry, tapDispKw: Float): String {
+            val sb = StringBuilder(48 + g.letterCount * 28)
+            sb.append("geometry kwpx=").append(kw(g.keyWidthPx))
+                .append(" mid=").append(kw(g.midlinePx / g.keyWidthPx))
+                .append(" tap=").append("%.3f".format(Locale.ROOT, tapDispKw))
+                .append(" keys=")
+            var first = true
+            for (code in 0 until g.letterCount) {
+                if (!g.hasKey(code)) continue
+                if (!first) sb.append(';')
+                first = false
+                val r = g.rectKw(code)
+                sb.append(g.alphabet.charOf(code)).append(':')
+                    .append(kw(r[0])).append(',').append(kw(r[1])).append(',')
+                    .append(kw(r[2])).append(',').append(kw(r[3]))
+            }
+            return sb.toString()
+        }
+
+        private fun kw(v: Float): String = "%.2f".format(Locale.ROOT, v)
     }
 }

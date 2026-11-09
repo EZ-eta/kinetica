@@ -33,6 +33,27 @@ class ActionRowTest {
     }
 
     @Test
+    fun theVoiceCellIsASoundWaveNotLetters() {
+        // The gate read `MIC` as text on the bar. A colour emoji would not theme, so a symbol
+        // from the fonts that already draw `⧉`.
+        val g = ActionRow.glyph(EditorAction.DICTATE)
+        assertEquals("∿", g)
+        assertTrue(g.none { it.isLetter() })
+        assertEquals("∿${ActionRow.ACTION_MARK}", ActionRow.glyphForToken(":dictate"))
+        assertEquals(EditorAction.DICTATE, ActionRow.actionForGlyph(ActionRow.glyphForToken(":dictate")!!))
+    }
+
+    @Test
+    fun theEmojiSearchCellIsASearchSignNotAnEmoji() {
+        // The magnifiers are colour emoji, which would not theme; `\u2315` is in Noto Sans Symbols.
+        val g = ActionRow.glyph(EditorAction.EMOJI_SEARCH)
+        assertEquals("\u2315", g)
+        assertEquals(EditorAction.EMOJI_SEARCH, ActionRow.actionForGlyph(g))
+        assertEquals(null, ActionRow.notice(EditorAction.EMOJI_SEARCH, state()))
+        assertFalse("off by default: the user puts it on the bar", EditorAction.EMOJI_SEARCH.name in ActionRow.DEFAULT)
+    }
+
+    @Test
     fun theDefaultsAreTheFourAtTheFront() {
         // New actions append, so turning one on does not move cells a user already knows.
         assertEquals(ActionRow.DEFAULT, ActionRow.ALL.take(4).map { it.name }.toSet())
@@ -210,6 +231,8 @@ class ActionRowTest {
             assertEquals(a.name, ActionRow.Notice.Sent(a), ActionRow.notice(a, state()))
         }
         assertEquals(null, ActionRow.notice(EditorAction.SETTINGS, state()))
+        // The voice keyboard takes the field, so there is no spacebar to say it on.
+        assertEquals(null, ActionRow.notice(EditorAction.DICTATE, state()))
     }
 
     @Test
@@ -230,12 +253,13 @@ class ActionRowTest {
             EditorAction.TOGGLE_TYPING_SPEED, EditorAction.TOGGLE_PECK_MODE,
             EditorAction.ARROW_UP, EditorAction.ARROW_DOWN, EditorAction.ARROW_LEFT, EditorAction.ARROW_RIGHT,
             EditorAction.CASE_LOWER, EditorAction.CASE_TITLE, EditorAction.CASE_UPPER,
+            EditorAction.DICTATE,
         )
         for (a in EditorAction.entries) {
             assertEquals(if (a in plainText) null else a, ActionRow.actionForGlyph(ActionRow.glyph(a)))
         }
         // `123`, `ALL` and the French quote `»` are text a list may hold, never an action.
-        for (t in listOf("123", "ALL", "»", "wpm", "→", "←", "TAP")) assertEquals(null, ActionRow.actionForGlyph(t))
+        for (t in listOf("123", "ALL", "»", "wpm", "→", "←", "TAP", "∿")) assertEquals(null, ActionRow.actionForGlyph(t))
         assertEquals(EditorAction.entries.size, EditorAction.entries.map { ActionRow.glyph(it) }.toSet().size)
         for (t in listOf("a", "é", "1", "?", "", "all")) assertEquals(null, ActionRow.actionForGlyph(t))
     }
@@ -248,6 +272,10 @@ class ActionRowTest {
         assertEquals(ActionRow.Notice.Toggle(EditorAction.TOGGLE_NEXT_WORD, false), ActionRow.notice(EditorAction.TOGGLE_NEXT_WORD, on))
         assertEquals(ActionRow.Notice.Toggle(EditorAction.TOGGLE_RECENT_WORDS, false), ActionRow.notice(EditorAction.TOGGLE_RECENT_WORDS, on))
         assertEquals(ActionRow.Notice.Toggle(EditorAction.TOGGLE_TIDY_SPACES, false), ActionRow.notice(EditorAction.TOGGLE_TIDY_SPACES, on))
+        // Select says where it leaves the moves; the editing page shows itself.
+        assertEquals(ActionRow.Notice.Toggle(EditorAction.SELECT_MODE, true), ActionRow.notice(EditorAction.SELECT_MODE, off))
+        assertEquals(ActionRow.Notice.Toggle(EditorAction.SELECT_MODE, false), ActionRow.notice(EditorAction.SELECT_MODE, off.copy(selecting = true)))
+        assertEquals(null, ActionRow.notice(EditorAction.EDIT_PAGE, off))
     }
 
     @Test

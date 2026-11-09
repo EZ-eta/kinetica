@@ -14,7 +14,8 @@ object ChordLabels {
     const val MAX_TEXT = 3
 
     fun of(expansion: String): String {
-        EditorAction.of(expansion)?.let { return ActionRow.glyph(it) }
+        // Marked when the symbol is also text (`ALL`, `→`), so the key draws the action's icon.
+        EditorAction.of(expansion)?.let { return ActionRow.glyphForToken(expansion) ?: ActionRow.glyph(it) }
         KeyCombo.parse(expansion)?.let { return combination(it) }
         if (expansion.length <= MAX_TEXT + 1) return expansion
         return expansion.take(MAX_TEXT) + "…"

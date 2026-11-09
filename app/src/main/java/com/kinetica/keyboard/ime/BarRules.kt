@@ -1,7 +1,9 @@
 package com.kinetica.keyboard.ime
 
+import com.kinetica.keyboard.engine.AccentFolder
 import com.kinetica.keyboard.engine.WordPredictor
 import com.kinetica.keyboard.engine.models.WordCandidate
+import com.kinetica.keyboard.ui.BarMark
 
 /**
  * Which dictionary each candidate came from, keyed the way `languageOf` looks a word up:
@@ -14,6 +16,13 @@ internal fun provenanceOf(candidates: List<WordCandidate>): Map<String, String> 
     for (c in candidates) if (c.language.isNotEmpty()) out.putIfAbsent(c.word.lowercase(), c.language)
     return out
 }
+
+/**
+ * Whether the word [written] in the editor is the [literal] its taps spell, up to folding: the
+ * bar's literal zone then offers it as written, `grüße` for the taps `grusse`.
+ */
+internal fun writtenAsTyped(written: String, literal: String): Boolean =
+    AccentFolder.fold(written.lowercase()) == literal
 
 /**
  * Whether a commit puts the correction strip up. [offersCorrections] is the field's own
@@ -56,9 +65,34 @@ internal fun literalZone(literal: String, autocorrects: Boolean, leavesAccentsOf
  * when it is not already among them, so an out-of-dictionary word commits verbatim with one
  * tap. Pure so the JVM suite can pin it; callers pass an empty literal for swipe buffers.
  */
-internal fun suggestionZoneWords(candidates: List<String>, literal: String): List<String> =
-    if (literal.isEmpty() || candidates.contains(literal)) candidates
-    else candidates + literal
+internal fun suggestionZoneWords(candidates: List<String>, literal: String, literalSecond: Boolean = false): List<String> {
+    if (literal.isEmpty()) return candidates
+    if (!literalSecond) return if (candidates.contains(literal)) candidates else candidates + literal
+    // Second, after the lead, so it is on the first page whatever the list holds.
+    if (candidates.indexOf(literal) in 0..1) return candidates
+    val rest = candidates - literal
+    return rest.take(1) + literal + rest.drop(1)
+}
+
+/**
+ * A bar word's mark: none for a bundled spelling ([inList], any resident list), `C` for one the
+ * user learned or added ([personal]), else `+` when committing it learns it and `?` when it does
+ * not (a field that keeps nothing, letters no word is made of, a blocked word).
+ */
+internal fun wordMark(inList: Boolean, personal: Boolean, learnable: Boolean, teachesNothing: Boolean, blocked: Boolean): BarMark =
+    when {
+        inList -> BarMark.NONE
+        personal -> BarMark.PERSONAL
+        learnable && !teachesNothing && !blocked -> BarMark.LEARN
+        else -> BarMark.UNKNOWN
+    }
+
+/**
+ * The bar word to draw bold: the one [spaceWord] matches, case aside (the commit capitalizes after
+ * it), or -1 when space writes a word the bar does not show, or nothing.
+ */
+internal fun boldIndex(words: List<String>, spaceWord: String?): Int =
+    if (spaceWord.isNullOrEmpty()) -1 else words.indexOfFirst { it.equals(spaceWord, ignoreCase = true) }
 
 /**
  * The word a next-word prediction follows, from the text before the cursor, or null.

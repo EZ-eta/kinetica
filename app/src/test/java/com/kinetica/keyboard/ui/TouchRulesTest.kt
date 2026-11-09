@@ -49,7 +49,18 @@ class TouchRulesTest {
 
     @Test
     fun aMenuWaitsForTheOtherThumbToLeave() {
-        assertFalse(TouchRules.holdOpensMenu(otherOnLetters = true))
-        assertTrue(TouchRules.holdOpensMenu(otherOnLetters = false))
+        assertFalse(TouchRules.holdOpensMenu(otherOnLetters = true, swipeBeside = false))
+        assertTrue(TouchRules.holdOpensMenu(otherOnLetters = false, swipeBeside = false))
+    }
+
+    /**
+     * Seven `@` typed mid-word over four captures: the left thumb landed on a word's `a` while the
+     * right was still swiping, the right lifted, and the left's timer fired with no thumb beside it.
+     * A hyphen held on `h` as the other thumb lifted off a tap still opens.
+     */
+    @Test
+    fun aHoldBesideASwipeOpensNothingAfterTheSwipeEnds() {
+        assertFalse(TouchRules.holdOpensMenu(otherOnLetters = false, swipeBeside = true))
+        assertFalse(TouchRules.holdOpensMenu(otherOnLetters = true, swipeBeside = true))
     }
 }

@@ -192,6 +192,20 @@ object LayoutTransforms {
         )
     }
 
+    /** The page every other page's arrangement leaves whole in split mode. */
+    const val NUMPAD = "numpad"
+
+    /** The editing page ([com.kinetica.keyboard.keys.EditPage.NAME]), whole in split mode too. */
+    const val EDIT_PAGE = "edit"
+
+    /**
+     * The arrangement page [layoutName] is drawn in. Split mode leaves the numpad whole: its digit
+     * columns centre on the middle, where the split's gap falls. Landscape draws it whole too. The
+     * editing page's D-pad sits in the middle as well.
+     */
+    fun modeFor(mode: LayoutMode, layoutName: String): LayoutMode =
+        if (mode == LayoutMode.SPLIT && (layoutName == NUMPAD || layoutName == EDIT_PAGE)) LayoutMode.FULL else mode
+
     fun apply(mode: LayoutMode, key: Key, viewW: Float, viewH: Float): RectF {
         val x0 = key.x
         val x1 = key.x + key.w

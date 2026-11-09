@@ -141,14 +141,21 @@ internal class LanguageSync(private val service: InputMethodService, private val
             .firstOrNull { subtypeLanguage(it) == language } ?: return
         if (subtype == inputMethodManager.currentInputMethodSubtype) {
             acceptSubtypeLanguage(language)
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            service.switchInputMethod(info.id, subtype)
+        } else {
+            switchTo(info.id, subtype)
+        }
+    }
+
+    /** Switch to [id] with [subtype]: this IME's own language, or a voice keyboard. */
+    fun switchTo(id: String, subtype: InputMethodSubtype) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            service.switchInputMethod(id, subtype)
         } else {
             // The service overload was added in API 28; the IME token supplies
             // the same authority through InputMethodManager on Android 8.
             val token = service.window.window?.attributes?.token ?: return
             @Suppress("DEPRECATION")
-            inputMethodManager.setInputMethodAndSubtype(token, info.id, subtype)
+            inputMethodManager.setInputMethodAndSubtype(token, id, subtype)
         }
     }
 }

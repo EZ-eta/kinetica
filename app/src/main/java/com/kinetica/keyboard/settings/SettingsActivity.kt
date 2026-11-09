@@ -2,12 +2,16 @@ package com.kinetica.keyboard.settings
 
 import android.content.Intent
 import android.os.Bundle
+import android.text.InputType
 import android.util.TypedValue
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.EditorInfo
+import android.widget.EditText
 import android.widget.FrameLayout
+import android.widget.LinearLayout
 import android.widget.ListView
 import android.widget.SimpleAdapter
 import android.widget.TextView
@@ -18,6 +22,8 @@ import androidx.fragment.app.FragmentManager
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceScreen
 import com.kinetica.keyboard.R
+import com.kinetica.keyboard.ime.DictationHandoff
+import com.kinetica.keyboard.ime.EditorState
 
 /**
  * Hosts the preference screen, its submenus and the search over them.
@@ -42,10 +48,11 @@ class SettingsActivity :
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        setContentView(screenWithTryField())
         if (savedInstanceState == null) {
             supportFragmentManager
                 .beginTransaction()
-                .replace(android.R.id.content, KeyboardPrefsFragment())
+                .replace(R.id.settings_body, KeyboardPrefsFragment())
                 .commit()
             // The keyboard can ask for one screen and one row: a letter's long-press list (#8).
             // The activity is exported, so only a screen this app has is opened.
@@ -78,6 +85,54 @@ class SettingsActivity :
         }
         finish()
         return true
+    }
+
+    // ---------------------------------------------------------------------- try field
+
+    /**
+     * The screens above a field to try the keyboard in: a change shows on the real keyboard
+     * while the settings stay in view, since the window resizes above it. The field asks that
+     * nothing be learned, so practice never reaches the personal words; like any such field, it
+     * fades a kept trail and leaves learned pairs off the bar.
+     *
+     * The root takes the first focus, so the keyboard never opens by itself; the container and
+     * the field have resource ids, so a rotation restores the screen and the text.
+     */
+    private fun screenWithTryField(): View {
+        val density = resources.displayMetrics.density
+        val pad = (12 * density).toInt()
+        val field = EditText(this).apply {
+            id = R.id.settings_try_field
+            setHint(R.string.settings_try_hint)
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or
+                InputType.TYPE_TEXT_FLAG_MULTI_LINE
+            imeOptions = EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING
+            // The settings key here hides the keyboard instead of starting the settings again.
+            privateImeOptions = EditorState.TRY_FIELD_OPTION
+            maxLines = 3
+            minHeight = (48 * density).toInt()
+        }
+        val divider = View(this).apply {
+            val tv = TypedValue()
+            theme.resolveAttribute(android.R.attr.listDivider, tv, true)
+            if (tv.resourceId != 0) setBackgroundResource(tv.resourceId)
+        }
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            isFocusableInTouchMode = true
+            addView(
+                FrameLayout(context).apply { id = R.id.settings_body },
+                LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f),
+            )
+            addView(divider, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, maxOf(1, density.toInt())))
+            addView(
+                field,
+                LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                    setMargins(pad, pad / 2, pad, pad / 2)
+                },
+            )
+            requestFocus()
+        }
     }
 
     // ---------------------------------------------------------------------- search
@@ -117,8 +172,13 @@ class SettingsActivity :
         return super.onPrepareOptionsMenu(menu)
     }
 
+    /** The home screen's search row opens the toolbar's field, the same search. */
+    fun openSearch() {
+        searchItem?.expandActionView()
+    }
+
     private fun topFragment(): KeyboardPrefsFragment? =
-        supportFragmentManager.findFragmentById(android.R.id.content) as? KeyboardPrefsFragment
+        supportFragmentManager.findFragmentById(R.id.settings_body) as? KeyboardPrefsFragment
 
     /**
      * The whole searchable tree: every inflated row, plus the settings on the chord and expansion
@@ -218,11 +278,13 @@ class SettingsActivity :
         val fragment = KeyboardPrefsFragment().apply {
             arguments = Bundle().apply {
                 putString(PreferenceFragmentCompat.ARG_PREFERENCE_ROOT, screenKey)
+                // Read before the list exists, so a row under Advanced is shown to scroll to.
+                if (revealKey != null) putString(KeyboardPrefsFragment.ARG_REVEAL, revealKey)
             }
         }
         supportFragmentManager
             .beginTransaction()
-            .replace(android.R.id.content, fragment)
+            .replace(R.id.settings_body, fragment)
             .addToBackStack(screenKey)
             .commit()
         if (revealKey != null) {
@@ -285,7 +347,7 @@ class SettingsActivity :
         const val EXTRA_REVEAL = "com.kinetica.keyboard.settings.REVEAL"
 
         /** Screens the keyboard may ask for by extra. */
-        val OPENABLE_SCREENS = setOf(SettingsSynonyms.LONGPRESS_GROUP)
+        val OPENABLE_SCREENS = setOf(SettingsSynonyms.LONGPRESS_GROUP, SettingsSynonyms.SYMBOL_PAGES_GROUP, DictationHandoff.SCREEN)
 
         /** A setting on a screen of its own, by key, title, summary and that screen's row key. */
         data class ExtraRow(val key: String, val title: Int, val summary: Int, val screen: String)

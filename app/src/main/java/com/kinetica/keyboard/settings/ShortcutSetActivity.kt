@@ -8,12 +8,14 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.core.view.setPadding
 import androidx.preference.PreferenceManager
 import com.kinetica.keyboard.R
 import com.kinetica.keyboard.keys.ActionRow
 import com.kinetica.keyboard.keys.EditorAction
 import com.kinetica.keyboard.keys.ShortcutSet
+import com.kinetica.keyboard.ui.GlyphIcons
 
 /**
  * One shortcut set, the bar's or the ?123 menu's: a checkbox per shortcut and up/down to
@@ -72,7 +74,18 @@ class ShortcutSetActivity : AppCompatActivity() {
             gravity = Gravity.CENTER_VERTICAL
             addView(
                 CheckBox(context).apply {
-                    text = getString(R.string.shortcut_row, ActionRow.glyph(action), getString(ActionLabels.labelRes(action)))
+                    val icon = GlyphIcons.resOf(action)?.let { ContextCompat.getDrawable(context, it)?.mutate() }
+                    if (icon == null) {
+                        text = getString(R.string.shortcut_row, ActionRow.glyph(action), getString(ActionLabels.labelRes(action)))
+                    } else {
+                        // The bar's icon beside the name, at the text's height and in its colour.
+                        text = getString(ActionLabels.labelRes(action))
+                        val side = (textSize * GlyphIcons.SIZE_OVER_TEXT).toInt()
+                        icon.setBounds(0, 0, side, side)
+                        icon.setTint(currentTextColor)
+                        setCompoundDrawablesRelative(icon, null, null, null)
+                        compoundDrawablePadding = (8 * resources.displayMetrics.density).toInt()
+                    }
                     isChecked = on
                     setOnClickListener { change { set.toggle(action) } }
                 },

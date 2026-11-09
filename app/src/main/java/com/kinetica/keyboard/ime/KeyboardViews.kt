@@ -20,6 +20,7 @@ import com.kinetica.keyboard.settings.KeyboardHeights
 import com.kinetica.keyboard.settings.Prefs
 import com.kinetica.keyboard.ui.BackdropCrop
 import com.kinetica.keyboard.ui.BackdropFit
+import com.kinetica.keyboard.ui.EmojiAssets
 import com.kinetica.keyboard.ui.EmojiPickerView
 import com.kinetica.keyboard.ui.EmojiRecents
 import com.kinetica.keyboard.ui.Hsv
@@ -55,18 +56,31 @@ internal class KeyboardViews(private val ime: KineticaIME) {
 
     val backdrop = BackdropLoader(ime, ime.mainHandler)
 
+    /** Read on the first pane or search, then kept: a view rebuild must not reload 1 900 glyphs. */
+    val emojiAssets: EmojiAssets by lazy { EmojiAssets(ime) }
+
     fun alphaLayout(): KeyboardLayout =
         AlphaLayouts.build(layoutFor(AlphaLayouts.name(ime.config, bundledLayouts)), ime.config, ime.editorState.fieldKind)
             .also { layoutFieldKind = ime.editorState.fieldKind }
 
-    /** Symbol page `symbols` or `symbols2` with the user's rows over the bundled ones. */
+    /**
+     * Symbol page `symbols` or `symbols2` with the user's rows over the bundled ones, and the
+     * user's long-press lists over theirs; an action written by name in a list runs, as in a
+     * letter's.
+     */
     fun symbolLayout(name: String): KeyboardLayout {
         val page = if (name == SYMBOLS2) 2 else 1
-        return SymbolRows.apply(layoutFor(name), page, ime.config.symbolRows(page))
+        val rows = SymbolRows.apply(layoutFor(name), page, ime.config.symbolRows(page))
+        val lists = ime.config.symbolAlternates.mapValues { (_, list) -> list.map(AlphaLayouts::cell) }
+        return SymbolRows.withLists(rows, lists)
     }
+
+    /** The editing page as the settings hold it. */
+    fun editPageLayout(): KeyboardLayout = ime.config.editPage.layout()
 
     fun openEmojiPicker() {
         val container = ime.containerView ?: return
+        ime.emojiSearch.close("emoji")
         ime.autospace.cancel()
         ime.commit.finalizePendingWord()
         // Built lazily and guarded: a throw from the picker's construction on this key path
@@ -74,9 +88,11 @@ internal class KeyboardViews(private val ime: KineticaIME) {
         val picker = ime.emojiPicker ?: try {
             EmojiPickerView(
                 ime,
+                emojiAssets,
                 onEmoji = { ime.learner.recordEmojiUse(it); ime.commitTracked(it) },
                 onBackspace = { ime.backspace.onKey() },
                 onClose = { closeEmojiPicker() },
+                onSearch = { ime.emojiSearch.open("pane") },
             ).also { ime.emojiPicker = it }
         } catch (e: RuntimeException) {
             Log.w(KineticaIME.TAG, "emoji picker unavailable", e)
@@ -89,7 +105,7 @@ internal class KeyboardViews(private val ime: KineticaIME) {
         // On open, not on every pick: the panel stays up while the user taps, and
         // re-ordering the first tab under a moving finger would shift the next cell.
         picker.recents = EmojiRecents.ordered(ime.learner.emojiUses.values)
-        container.showEmojiPicker(picker)
+        container.showEmojiPicker(picker, dpToPx(KeyboardHeights.emojiSearchDp(ime.config.suggestionBarDp)))
     }
 
     fun closeEmojiPicker() {
@@ -134,6 +150,9 @@ internal class KeyboardViews(private val ime: KineticaIME) {
         // gone in 250 ms. In peck mode swipes do nothing, so a trail would advertise a
         // gesture that has no effect.
         kv.trailsEnabled = !ime.editorState.privateMode && !ime.config.peckMode
+        // A kept trail spells the word until it ends, longer than the 250 ms that makes a trail
+        // harmless in a no-learning field, so there it fades as usual.
+        kv.keepTrail = ime.config.keepTrail && !ime.editorState.teachesNothing
         // Per field: the key names the action enter will run, and its hold offers a newline
         // whenever enter itself will not write one.
         kv.enterNewlineCell =
@@ -149,7 +168,7 @@ internal class KeyboardViews(private val ime: KineticaIME) {
         ime.suggestionBar?.theme = theme
         ime.containerView?.applyTheme(theme)
         ime.emojiPicker?.theme = theme
-        backdrop.refresh(ime.config.backdropStamp) { applyBackdrop() }
+        backdrop.refresh(ime.config.backdropStamp, ime.config.nightLook) { applyBackdrop() }
         applyBackdrop()
         applyNavigationBarColor(theme)
         applyCutoutMode()
@@ -177,6 +196,8 @@ internal class KeyboardViews(private val ime: KineticaIME) {
         kv.backspacePunctuationStops = ime.config.backspacePunctuationStops
         kv.spacebarStepDp = ime.config.spacebarStepDp
         kv.spacebarWordSlide = ime.config.spacebarWordSlide
+        kv.shiftSwapsSlides = ime.config.shiftSwapsSlides
+
         kv.spacelessSpace = ime.config.spacelessSpace
         kv.doubleSpacePeriod = ime.config.doubleSpacePeriod
         kv.editFromMenu = ime.config.editFromMenu
@@ -196,9 +217,12 @@ internal class KeyboardViews(private val ime: KineticaIME) {
         ime.suggestionBar?.textScale = ime.config.barTextScale
         ime.suggestionBar?.recentTextScale = ime.config.recentTextScale
         ime.suggestionBar?.compactWords = ime.config.barCompact
+        ime.suggestionBar?.middleCut = ime.config.barMiddleCut
         ime.suggestionBar?.recentSwipeReversed = ime.config.recentSwipeReversed
         ime.suggestionBar?.retypeButton = ime.config.retypeButton
         ime.suggestionBar?.retypeButtonDp = ime.config.retypeButtonDp
+        ime.suggestionBar?.shortcutsButton = ime.config.shortcutsButton
+
         // Resolved here, not in the views, so the language cell drops out below two enabled
         // languages on both surfaces alike.
         ime.commands.barActions = ActionRow.resolve(

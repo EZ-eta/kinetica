@@ -29,6 +29,7 @@ import com.kinetica.keyboard.layout.LayoutMode
 import com.kinetica.keyboard.layout.LayoutMutations
 import com.kinetica.keyboard.layout.LandscapeArrangement
 import com.kinetica.keyboard.layout.LayoutTransforms
+import com.kinetica.keyboard.layout.SymbolRows
 import com.kinetica.keyboard.engine.models.StreamId
 import com.kinetica.keyboard.keys.ActionRow
 import com.kinetica.keyboard.keys.BackspaceController
@@ -37,6 +38,9 @@ import com.kinetica.keyboard.keys.ChordTrigger
 import com.kinetica.keyboard.keys.EdgeSwipeBinding
 import com.kinetica.keyboard.keys.EdgeSwipeBindings
 import com.kinetica.keyboard.keys.EdgeSwipeDetector
+import com.kinetica.keyboard.keys.EditPage
+import com.kinetica.keyboard.keys.EditorAction
+import com.kinetica.keyboard.keys.HoldRepeat
 import com.kinetica.keyboard.keys.SpacebarCursorController
 import kotlin.math.abs
 import kotlin.math.hypot
@@ -99,6 +103,12 @@ class KeyboardView @JvmOverloads constructor(
         /** A letter's long-press menu was held still: open its list in settings (#8). */
         fun onEditAlternates(letter: Char) = Unit
 
+        /** Held on a symbol page's key past the edit delay: open that symbol's list. */
+        fun onEditSymbolAlternates(symbol: String) = Unit
+
+        /** Another board is on screen, by its layout's name. */
+        fun onBoardShown(name: String) = Unit
+
         /**
          * A cell of the ?123 hold menu was chosen, by its index into [modeMenuCells].
          * The bar's vocabulary, but its own list: the two surfaces hold separate sets.
@@ -141,6 +151,20 @@ class KeyboardView @JvmOverloads constructor(
 
     /** Extra trail gate: also cleared in private (password) fields. Covers the lit keys too. */
     var trailsEnabled = true
+
+    /** The trail stays whole until its word ends ([releaseTrail]) instead of fading behind the thumb. */
+    var keepTrail = false
+        set(value) {
+            if (field == value) return
+            field = value
+            trailRenderer.keeps = value
+            if (!value) releaseTrail()
+        }
+
+    /** The word the trail was drawn for has ended: what was kept fades from now. */
+    fun releaseTrail() {
+        if (trailRenderer.release(SystemClock.uptimeMillis())) ensureAnimating()
+    }
 
     /** The trail, the keys a swipe crosses lit, or both. */
     var swipeLook = SwipeLook.TRAIL
@@ -206,6 +230,16 @@ class KeyboardView @JvmOverloads constructor(
     var spacebarWordSlide: Boolean
         get() = spaceController.wordMode
         set(value) { spaceController.wordMode = value }
+
+    /**
+     * A held shift swaps the space and backspace slide steps (Prefs.SHIFT_SWAPS_SLIDES). Once a
+     * step ran under it, the shift is spent: no case menu, and its lift changes no case.
+     */
+    var shiftSwapsSlides = false
+        set(value) {
+            field = value
+            applySlideFlip()
+        }
 
     /** A second spacebar tap inside the double-tap window ends the sentence. */
     var doubleSpacePeriod: Boolean
@@ -293,6 +327,16 @@ class KeyboardView @JvmOverloads constructor(
             if (field == value) return
             field = value
             if (width > 0 && height > 0 && landscapeArrangement == LandscapeArrangement.SPLIT) rebuild()
+        }
+
+    /** The editing page's Select is on: its key is drawn pressed until it ends. */
+    var selectLit = false
+        set(value) {
+            if (field != value) {
+                field = value
+                renderStaticLayer()
+                invalidate()
+            }
         }
 
     /** Small dot on the spacebar while autospace is enabled. */
@@ -401,17 +445,30 @@ class KeyboardView @JvmOverloads constructor(
     private val keyOfCode = IntArray(Alphabet.MAX_SIZE) { -1 }
 
     private val spaceController = SpacebarCursorController(density) { dir, byWord ->
+        spendShift()
         listener?.onCursorMove(dir, byWord)
     }
     private val backspaceController = BackspaceController(
         density,
         Handler(Looper.getMainLooper()),
         onDeleteChar = { tap -> listener?.onDeleteChar(tap) },
-        onStageUnits = { units, granularity -> listener?.onStageDelete(units, granularity) },
+        onStageUnits = { units, granularity ->
+            if (units > 0) spendShift()
+            listener?.onStageDelete(units, granularity)
+        },
         onCommitStaged = { listener?.onCommitStagedDelete() },
     )
     private var spacePointer = -1
     private var backspacePointer = -1
+
+    // The shift held while shiftSwapsSlides is on, or -1.
+    private var shiftPointer = -1
+
+    // A held arrow, word move or Del sends its key again at backspace's pace (EditPage.repeats).
+    private var repeatPointer = -1
+    private var repeatKey: Key? = null
+    private var repeatLeft = false
+    private val keyRepeat = HoldRepeat(Handler(Looper.getMainLooper())) { repeatKey?.let { listener?.onKeyTap(it) } }
 
     private val bgPaint = Paint()
     private val keyPaint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -521,12 +578,21 @@ class KeyboardView @JvmOverloads constructor(
         val grid: PopupGrid? = null,
         val cellH: Float = 0f,
         val originY: Float = 0f,
-    )
+        /** True for the `?123` menu, every cell an action; false for a list, whose cells are text. */
+        val actionCells: Boolean = false,
+    ) {
+        /** The action a cell runs, so its icon is drawn: a list's `→` is text and stays a symbol. */
+        fun actionOf(cell: String): EditorAction? =
+            if (actionCells) GlyphIcons.actionOfSymbol(cell) else ActionRow.actionForGlyph(cell)
+    }
 
     private var popup: PopupState? = null
     private var popupPointer = -1
     private var pendingHoldPid = -1
     private var pendingHoldKeyIdx = -1
+    // Another thumb was drawing a swipe at some point of the pending hold. Read when the timer
+    // fires, by which time that thumb has usually lifted.
+    private var holdBesideSwipe = false
     private var popupWindow: PopupWindow? = null
     private var popupStrip: PopupStripView? = null
 
@@ -589,6 +655,7 @@ class KeyboardView @JvmOverloads constructor(
         spaceLabelsDue = spacePointer != -1 && !spaceHoldMoved
         refreshChordLabels()
     }
+    private val icons = GlyphIcons(context)
     private val chordFillPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val chordLabelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textAlign = Paint.Align.CENTER
@@ -644,6 +711,9 @@ class KeyboardView @JvmOverloads constructor(
             if (i !in keyInsets.indices) continue
             val inset = keyInsets[i]
             canvas.drawRoundRect(inset, cornerPx, cornerPx, chordFillPaint)
+            val size = inset.height() * 0.45f * GlyphIcons.SIZE_OVER_TEXT
+            val action = ActionRow.actionForGlyph(s)
+            if (icons.draw(canvas, action, inset.centerX(), inset.centerY(), size, chordLabelPaint.color)) continue
             chordLabelPaint.textSize = if (s.length > 1) inset.height() * 0.32f else inset.height() * 0.45f
             val baseline = inset.centerY() - (chordLabelPaint.descent() + chordLabelPaint.ascent()) / 2f
             canvas.drawText(s, inset.centerX(), baseline, chordLabelPaint)
@@ -654,6 +724,9 @@ class KeyboardView @JvmOverloads constructor(
     var editFromMenu = false
     private var editPid = -1
     private var editLetter = ' '
+
+    /** The symbol whose list the held menu opens, or null for a letter's. */
+    private var editSymbol: String? = null
     private var editX = 0f
     private var editY = 0f
     private val editRunnable = Runnable {
@@ -663,7 +736,8 @@ class KeyboardView @JvmOverloads constructor(
         dismissPopup()
         // The lift that follows must type nothing.
         routeByPointer[pid] = ROUTE_NONE
-        listener?.onEditAlternates(editLetter)
+        val symbol = editSymbol
+        if (symbol != null) listener?.onEditSymbolAlternates(symbol) else listener?.onEditAlternates(editLetter)
     }
 
     private fun cancelEditHold() {
@@ -731,7 +805,9 @@ class KeyboardView @JvmOverloads constructor(
 
     fun setKeyboardLayout(l: KeyboardLayout) {
         cancelActivePointers()
+        val before = layout?.name
         layout = l
+        if (l.name != before) listener?.onBoardShown(l.name)
         if (width > 0 && height > 0) {
             rebuild()
         }
@@ -829,8 +905,9 @@ class KeyboardView @JvmOverloads constructor(
         val w = width.toFloat()
         val h = height.toFloat()
         val sidePad = maxOf(LayoutTransforms.sidePadPx(sidePadDp, density, w), cutoutPadPx)
+        val mode = LayoutTransforms.modeFor(layoutMode, l.name)
         val arrangement = landscapeArrangement
-            ?.takeIf { it != LandscapeArrangement.STRETCH && layoutMode == LayoutMode.FULL }
+            ?.takeIf { it != LandscapeArrangement.STRETCH && mode == LayoutMode.FULL }
         val letter = l.keys.firstOrNull { it.isLetter }
         val minKeyPx = LayoutTransforms.LANDSCAPE_MIN_KEY_DP * density
         val blockPx = when {
@@ -844,7 +921,7 @@ class KeyboardView @JvmOverloads constructor(
             val rect = if (arrangement != null && blockPx > 0f) {
                 LayoutTransforms.applyLandscape(k, w, h, sidePad, arrangement, blockPx)
             } else {
-                LayoutTransforms.apply(layoutMode, k, w, h, sidePad)
+                LayoutTransforms.apply(mode, k, w, h, sidePad)
             }
             keyRects.add(rect)
             keyInsets.add(insetRect(rect))
@@ -916,7 +993,11 @@ class KeyboardView @JvmOverloads constructor(
         // Chromeless keys (apostrophe) paint no background, only the glyph, so they blend in
         // Nintype-style.
         if (!key.chromeless) {
-            val paint = if (key.type == KeyType.CHAR) keyPaint else specialKeyPaint
+            val paint = when {
+                selectLit && key.output == EditorAction.SELECT_MODE.output -> pressedPaint
+                key.type == KeyType.CHAR -> keyPaint
+                else -> specialKeyPaint
+            }
             c.drawRoundRect(inset, cornerPx, cornerPx, paint)
             drawBorder(c, inset)
         }
@@ -932,7 +1013,12 @@ class KeyboardView @JvmOverloads constructor(
             key.isLetter && uppercase -> key.label.uppercase()
             else -> key.label
         }
-        if (label.isNotEmpty()) {
+        // A key the settings turned into an action (paste, select all) shows that action's icon.
+        val keyAction = EditorAction.of(key.output)
+        val iconSize = inset.height() * 0.45f * GlyphIcons.SIZE_OVER_TEXT
+        if (label.isNotEmpty() &&
+            !icons.draw(c, keyAction, inset.centerX(), inset.centerY(), iconSize, labelPaint.color)
+        ) {
             labelPaint.textSize = if (label.length > 1) inset.height() * 0.32f else inset.height() * 0.45f
             val baseline = inset.centerY() - (labelPaint.descent() + labelPaint.ascent()) / 2f
             c.drawText(label, inset.centerX(), baseline, labelPaint)
@@ -1153,6 +1239,7 @@ class KeyboardView @JvmOverloads constructor(
         canvas.drawRoundRect(p.rect, cornerPx, cornerPx, popupBgPaint)
         labelPaint.textSize = p.rect.height() * 0.45f
         val baseline = p.rect.centerY() - (labelPaint.descent() + labelPaint.ascent()) / 2f
+        val size = labelPaint.textSize * GlyphIcons.SIZE_OVER_TEXT
         for (i in p.cells.indices) {
             val cx = p.rect.left + p.cellW * (i + 0.5f)
             if (i == p.selected) {
@@ -1163,7 +1250,9 @@ class KeyboardView @JvmOverloads constructor(
                     cornerPx, cornerPx, popupSelectedPaint,
                 )
             }
-            canvas.drawText(p.cells[i], cx, baseline, labelPaint)
+            if (!icons.draw(canvas, p.actionOf(p.cells[i]), cx, p.rect.centerY(), size, labelPaint.color)) {
+                canvas.drawText(p.cells[i], cx, baseline, labelPaint)
+            }
         }
     }
 
@@ -1186,7 +1275,10 @@ class KeyboardView @JvmOverloads constructor(
                 )
             }
             val baseline = t + p.cellH / 2f - (labelPaint.descent() + labelPaint.ascent()) / 2f
-            canvas.drawText(p.cells[i], l + p.cellW / 2f, baseline, labelPaint)
+            val size = labelPaint.textSize * GlyphIcons.SIZE_OVER_TEXT
+            if (!icons.draw(canvas, p.actionOf(p.cells[i]), l + p.cellW / 2f, t + p.cellH / 2f, size, labelPaint.color)) {
+                canvas.drawText(p.cells[i], l + p.cellW / 2f, baseline, labelPaint)
+            }
         }
     }
 
@@ -1222,7 +1314,11 @@ class KeyboardView @JvmOverloads constructor(
 
     private fun handleDown(pid: Int, x: Float, y: Float, t: Long) {
         val l = layout ?: return
-        val keyIdx = keyIndexAt(x, y)
+        // A touch on no key (the split gap, a row's open end) goes to the nearest letter; a key of
+        // the view's own always wins first.
+        val hit = keyIndexAt(x, y)
+        val snap = hit == -1 && engineActive
+        val keyIdx = if (snap) engine?.letterNear(x, y)?.let { keyOfCode.getOrElse(it) { -1 } } ?: -1 else hit
         downKeyByPointer[pid] = keyIdx
         downXByPointer[pid] = x
         downYByPointer[pid] = y
@@ -1264,7 +1360,7 @@ class KeyboardView @JvmOverloads constructor(
         routeByPointer[pid] = when {
             // The engine never takes a symbol or a digit, so those wait for their lift here.
             chord != null && key?.isLetter != true -> ROUTE_CHORD
-            engineActive && engine?.onPointerDown(pid, x, y, t) == true -> {
+            engineActive && engine?.onPointerDown(pid, x, y, t, snap) == true -> {
                 markOverlap(pid)
                 val stream = engine?.streamIdOf(pid)
                 if (stream != null && !zenMode && trailsEnabled && chord == null) {
@@ -1297,7 +1393,18 @@ class KeyboardView @JvmOverloads constructor(
                 backspaceController.onDown(x, backspaceHoldArmMs)
                 ROUTE_BACKSPACE
             }
+            key?.type == KeyType.CHAR && EditPage.repeats(key.output) && repeatPointer == -1 -> {
+                repeatPointer = pid
+                repeatKey = key
+                repeatLeft = false
+                keyRepeat.onDown(backspaceHoldArmMs)
+                ROUTE_REPEAT
+            }
             else -> ROUTE_SPECIAL
+        }
+        if (shiftSwapsSlides && key?.type == KeyType.SHIFT && routeByPointer[pid] == ROUTE_SPECIAL && shiftPointer == -1) {
+            shiftPointer = pid
+            applySlideFlip()
         }
         val holdCapable = key != null &&
             (key.type == KeyType.MODE_SYMBOLS || key.alternates.isNotEmpty())
@@ -1401,6 +1508,7 @@ class KeyboardView @JvmOverloads constructor(
     private fun scheduleHold(pid: Int, keyIdx: Int) {
         pendingHoldPid = pid
         pendingHoldKeyIdx = keyIdx
+        holdBesideSwipe = engine?.otherSwipeCommitted(pid) == true
         // A hold that sends is worse than a stray accent: the long-press setting goes down to
         // 25 ms, where an ordinary enter tap would open the popup on its pre-selected action.
         val sends = enterActionCell && layout?.keys?.getOrNull(keyIdx)?.type == KeyType.ENTER
@@ -1418,14 +1526,16 @@ class KeyboardView @JvmOverloads constructor(
     private fun onHoldTimerFired() {
         val pid = pendingHoldPid
         val keyIdx = pendingHoldKeyIdx
+        val beside = holdBesideSwipe
         cancelHold()
         if (pid == -1 || keyIdx == -1) return
         val l = layout ?: return
         if (keyIdx !in l.keys.indices) return
         val key = l.keys[keyIdx]
         val route = routeByPointer[pid]
-        if (route == ROUTE_ENGINE && !TouchRules.holdOpensMenu(engine?.otherTracking(pid) == true)) {
-            DecodeTrace.log { "  touch hold refused reason=other-thumb key=${key.output}" }
+        val other = engine?.otherTracking(pid) == true
+        if (route == ROUTE_ENGINE && !TouchRules.holdOpensMenu(otherOnLetters = other, swipeBeside = beside)) {
+            DecodeTrace.log { "  touch hold refused reason=${if (other) "other-thumb" else "swipe-beside"} key=${key.output}" }
             return
         }
         when {
@@ -1438,7 +1548,7 @@ class KeyboardView @JvmOverloads constructor(
                 val space = if (chordLabelsEnabled) l.keys.indexOfFirst { it.type == KeyType.SPACE } else -1
                 showPopup(
                     keyIdx, modeMenuCells.ifEmpty { listOf(GEAR_GLYPH) },
-                    selected = -1, requireInside = true, overIdx = space,
+                    selected = -1, requireInside = true, overIdx = space, actionCells = true,
                 )
             }
             key.type == KeyType.ENTER && key.alternates.isNotEmpty() && route == ROUTE_SPECIAL -> {
@@ -1487,11 +1597,14 @@ class KeyboardView @JvmOverloads constructor(
                 // Base char first, then the alternates; the first alternate is
                 // pre-selected so a plain lift commits it immediately.
                 val cells = listOf(base) + alts
-                // Any letter has a list to edit, in any script, and so does a numbers-row digit.
-                if ((key.isLetter || LayoutMutations.isNumberRowKey(key)) && editFromMenu) {
+                // Any letter has a list to edit, in any script, and so does a numbers-row digit
+                // and a symbol page's key.
+                val symbolList = SymbolRows.carriesList(layout?.name, key)
+                if ((key.isLetter || LayoutMutations.isNumberRowKey(key) || symbolList) && editFromMenu) {
                     cancelEditHold()
                     editPid = pid
                     editLetter = key.output[0]
+                    editSymbol = key.output.takeIf { symbolList }
                     editX = downXByPointer[pid]
                     editY = downYByPointer[pid]
                     holdHandler.postDelayed(editRunnable, EDIT_HOLD_MS)
@@ -1524,6 +1637,7 @@ class KeyboardView @JvmOverloads constructor(
         originX: Float = 0f,
         anchorRightCell: Boolean = false,
         overIdx: Int = -1,
+        actionCells: Boolean = false,
     ) {
         if (anchorIdx !in keyRects.indices || cells.isEmpty()) return
         val anchor = keyRects[anchorIdx]
@@ -1534,7 +1648,7 @@ class KeyboardView @JvmOverloads constructor(
             val left = popupLeft(over.left, cell * cells.size, width.toFloat(), margin)
             popup = PopupState(
                 cells, RectF(left, over.top, left + cell * cells.size, over.bottom), cell, selected,
-                requireInside, originX,
+                requireInside, originX, actionCells = actionCells,
             )
             invalidate()
             return
@@ -1562,7 +1676,7 @@ class KeyboardView @JvmOverloads constructor(
             showElevatedPopup(left, desiredTop, w, h)
         popup = PopupState(
             cells, RectF(left, top, left + w, top + h), cellW, selected,
-            requireInside, originX, elevated = elevated,
+            requireInside, originX, elevated = elevated, actionCells = actionCells,
         )
         popupStrip?.invalidate()
         invalidate()
@@ -1753,6 +1867,11 @@ class KeyboardView @JvmOverloads constructor(
                     }
                 }
                 ROUTE_BACKSPACE -> backspaceController.onMove(x)
+                // Off the key, the hold stops and the lift sends nothing, as a press slid away.
+                ROUTE_REPEAT -> if (!repeatLeft && keyRects.getOrNull(downKeyByPointer[pid])?.contains(x, y) == false) {
+                    repeatLeft = true
+                    keyRepeat.cancel()
+                }
                 ROUTE_SPECIAL -> maybeArmEnterPopup(pid, x, y)
                 ROUTE_MODE_HOLD, ROUTE_ALT_POPUP -> if (pid == popupPointer) {
                     // Choosing a cell is not holding still.
@@ -1765,6 +1884,7 @@ class KeyboardView @JvmOverloads constructor(
                 }
             }
         }
+        if (pendingHoldPid != -1 && engine?.otherSwipeCommitted(pendingHoldPid) == true) holdBesideSwipe = true
     }
 
     /**
@@ -1876,6 +1996,11 @@ class KeyboardView @JvmOverloads constructor(
                 }
                 backspacePointer = -1
             }
+            ROUTE_REPEAT -> {
+                if (!keyRepeat.onUp() && !repeatLeft) dispatchTap(pid, t)
+                repeatPointer = -1
+                repeatKey = null
+            }
             ROUTE_SPECIAL -> {
                 val modeSlide = detectModeSlide(key, dx, dy)
                 when {
@@ -1926,6 +2051,10 @@ class KeyboardView @JvmOverloads constructor(
             modeHoldMoved = false
             modeChordFired = false
             dropChordLabels(ChordTrigger.MODE)
+        }
+        if (pid == shiftPointer) {
+            shiftPointer = -1
+            applySlideFlip()
         }
         routeByPointer[pid] = ROUTE_NONE
         chordTriggerByPointer[pid] = null
@@ -2010,6 +2139,9 @@ class KeyboardView @JvmOverloads constructor(
     private fun cancelActivePointers() {
         engine?.cancelAll()
         backspaceController.cancel()
+        keyRepeat.cancel()
+        repeatPointer = -1
+        repeatKey = null
         cancelHold()
         dismissPopup()
         modeHoldPointer = -1
@@ -2024,6 +2156,8 @@ class KeyboardView @JvmOverloads constructor(
         spaceHoldMoved = false
         spaceChordFired = false
         backspacePointer = -1
+        shiftPointer = -1
+        applySlideFlip()
         java.util.Arrays.fill(routeByPointer, ROUTE_NONE)
         java.util.Arrays.fill(chordTriggerByPointer, null)
         java.util.Arrays.fill(downKeyByPointer, -1)
@@ -2034,7 +2168,27 @@ class KeyboardView @JvmOverloads constructor(
         invalidate()
     }
 
+    /** Both slides step the other way while the shift slot is held. */
+    private fun applySlideFlip() {
+        val flipped = shiftSwapsSlides && shiftPointer != -1
+        spaceController.flipped = flipped
+        backspaceController.flipped = flipped
+    }
+
+    /**
+     * A slide stepped while shift was held: the shift was a modifier, not a case key. Its case
+     * menu is cancelled or closed and its lift does nothing.
+     */
+    private fun spendShift() {
+        val pid = shiftPointer
+        if (pid == -1 || routeByPointer[pid] == ROUTE_NONE) return
+        if (pid == pendingHoldPid) cancelHold()
+        if (pid == popupPointer) dismissPopup()
+        routeByPointer[pid] = ROUTE_NONE
+    }
+
     private fun keyIndexAt(x: Float, y: Float): Int {
+
         for (i in keyRects.indices) {
             if (keyRects[i].contains(x, y)) return i
         }
@@ -2053,6 +2207,7 @@ class KeyboardView @JvmOverloads constructor(
         const val ROUTE_MODE_HOLD = 5
         const val ROUTE_ALT_POPUP = 6
         const val ROUTE_CHORD = 7
+        const val ROUTE_REPEAT = 8
         const val GEAR_GLYPH = "⚙"
 
         /** How long a letter's menu rests still before it opens for editing: well past a slow pick. */

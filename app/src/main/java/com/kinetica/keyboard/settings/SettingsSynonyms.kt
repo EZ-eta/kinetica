@@ -1,5 +1,7 @@
 package com.kinetica.keyboard.settings
 
+import com.kinetica.keyboard.ime.DictationHandoff
+
 /**
  * The words people use for a setting that the setting is not called.
  *
@@ -37,10 +39,17 @@ object SettingsSynonyms {
     /** The long-press screen; its per-letter rows are built in code and are not searchable. */
     const val LONGPRESS_GROUP = "pref_group_longpress"
 
+    /** The symbol pages' screen; its long-press rows, one per symbol, are built in code too. */
+    const val SYMBOL_PAGES_GROUP = "pref_group_symbol_pages"
+
     private val TERMS: Map<String, List<String>> = mapOf(
         EXPANSIONS_ROW to listOf(
             "expand", "expandify", "shortcut", "macro", "snippet", "abbreviation",
             "replace", "template", "autotext",
+        ),
+        Prefs.EDIT_PAGE to listOf(
+            "arrow", "arrows", "cursor", "d-pad", "dpad", "navigation", "select", "selection", "home", "end",
+            "frecce", "cursore", "selezione",
         ),
         // Look
         Prefs.THEME_MODE to listOf("dark", "light", "night", "colour", "color", "material"),
@@ -54,12 +63,19 @@ object SettingsSynonyms {
         "pref_backdrop_image" to listOf("wallpaper", "photo", "picture", "background", "image"),
         Prefs.BACKDROP_ALPHA to listOf("wallpaper", "photo", "picture", "transparency", "alpha", "fade"),
         Prefs.KEY_ALPHA to listOf("wallpaper", "transparency", "transparent", "alpha", "see through", "keys"),
+        Prefs.LOOK_SETS to listOf(
+            "night", "day", "dark mode", "dark theme", "evening", "automatic", "schedule", "two themes",
+            "notte", "giorno", "tema scuro",
+        ),
+        LookGroups.NIGHT_HEADER to listOf("night", "dark mode", "dark theme", "evening", "notte", "tema scuro"),
         Prefs.ZEN_MODE to listOf("minimal", "clean", "hide", "distraction", "plain"),
         Prefs.VIBRATION to listOf("haptic", "buzz", "feedback"),
         Prefs.VIBRATION_INTENSITY to listOf("haptic", "buzz", "strength"),
 
         // Size, keys and the bar
-        "pref_group_symbol_pages" to listOf("symbols", "numbers", "punctuation", "custom", "layout", "123"),
+        SYMBOL_PAGES_GROUP to listOf(
+            "symbols", "numbers", "punctuation", "custom", "layout", "123", "long press", "hold", "currency",
+        ),
         Prefs.KEYBOARD_HEIGHT_PCT to listOf("size", "tall", "short", "big", "small", "bigger"),
         Prefs.KEYBOARD_HEIGHT_PCT_LANDSCAPE to
             listOf("landscape", "rotate", "rotated", "sideways", "horizontal", "size", "tall"),
@@ -83,8 +99,10 @@ object SettingsSynonyms {
         Prefs.ENTER_HOLD_SENDS to listOf("enter", "return", "send", "hold", "newline", "chat", "action"),
         Prefs.FIELD_KEYS to listOf("email", "url", "address", "at", "@", "comma", "field", "web"),
         Prefs.CLEAN_LINKS_ON_PASTE to listOf("url", "link", "tracking", "privacy", "paste", "utm"),
+        Prefs.DATE_STYLE to listOf("date", "iso", "format", "today", "calendar", "yyyy-mm-dd", "shortcut"),
         Prefs.NUMPAD_FOR_NUMBERS to listOf("numpad", "number pad", "numbers", "phone", "digits", "field"),
         Prefs.LETTERS_ON_NEW_FIELD to listOf("symbols", "numbers", "numpad", "page", "field", "reset", "abc"),
+        Prefs.LETTERS_AFTER_SPACE to listOf("symbols", "space", "page", "abc", "letters", "back", "return"),
         Prefs.NO_SPACE_BEFORE to listOf("punctuation", "space", "autospace", "colon", "semicolon", "exclamation", "question"),
         Prefs.BAR_TEXT_PCT to listOf("font", "text size", "size", "bigger", "larger", "suggestions", "words"),
         Prefs.RECENT_TEXT_PCT to listOf("font", "text size", "size", "bigger", "larger", "recent", "history"),
@@ -95,6 +113,9 @@ object SettingsSynonyms {
         Prefs.SPACE_CHORD_WIGGLE to listOf("chord", "spacebar", "wiggle", "drift", "slop", "hold", "cursor"),
         Prefs.RECENT_SWIPE_REVERSED to listOf("scroll", "direction", "reverse", "invert", "natural", "recent", "wheel"),
         Prefs.BAR_COMPACT to listOf("spacing", "gap", "dense", "compact", "suggestions", "words", "closer"),
+        Prefs.BAR_MIDDLE_CUT to listOf("ellipsis", "truncate", "long words", "middle", "cut", "ending", "elide"),
+        Prefs.BAR_WORD_MARKS to listOf("mark", "icon", "plus", "unknown", "custom", "learned", "new word", "dictionary"),
+        Prefs.BAR_SPACE_BOLD to listOf("bold", "highlight", "space", "typed", "literal", "first page", "commit"),
         Prefs.AUTOSPACE_TIMER to listOf("autospace", "timer", "countdown", "progress", "delay", "wait"),
         Prefs.TIDY_SPACES to listOf("space", "spaces", "double space", "compress", "quote", "autospace"),
         Prefs.NUMBER_ROW to listOf("digits", "numbers", "number row", "numeric", "1234"),
@@ -150,6 +171,7 @@ object SettingsSynonyms {
         Prefs.RETYPE_AVOIDS_REJECTED to listOf("retype", "again", "reject"),
         Prefs.RETYPE_BUTTON to listOf("redo", "again", "undo", "try again"),
         Prefs.RETYPE_BUTTON_DP to listOf("redo", "again", "size", "width"),
+        Prefs.SHORTCUTS_BUTTON to listOf("actions", "shortcut", "button", "paste", "copy"),
         Prefs.PECK_MODE to listOf("literal", "no prediction", "raw", "typing"),
 
         // Gestures
@@ -160,15 +182,21 @@ object SettingsSynonyms {
         Prefs.BACKSPACE_UNDO to listOf("delete", "undo", "erase", "gesture", "swipe", "tap"),
         Prefs.SPACEBAR_WORD_SLIDE to listOf("cursor", "slide", "move", "arrow"),
         Prefs.SPACEBAR_STEP_DP to listOf("cursor", "slide", "speed", "sensitivity"),
+        Prefs.SHIFT_SWAPS_SLIDES to listOf("shift", "cursor", "delete", "word", "letter", "slide"),
+
 
         // Rows that open another screen
         "pref_chords" to listOf("shortcut", "expansion", "macro", "abbreviation", "language switch", "peck", "spacebar"),
         "pref_edge_swipes_screen" to listOf("shortcut", "edge", "border", "gesture"),
+        DictationHandoff.SCREEN to listOf("microphone", "mic", "dictation", "dictate", "speech", "speak", "talk", "whisper"),
         "pref_dictionary_screen" to listOf("words", "learned", "personal", "export", "import", "blocked"),
         "pref_backup_screen" to listOf("backup", "export", "import", "restore", "undo", "snapshot", "phone", "move"),
         "pref_licenses_screen" to listOf("legal", "attribution", "open source", "credits"),
         "pref_contribute_screen" to listOf("donate", "donation", "coffee", "ko-fi", "kofi", "tip", "support"),
-        "pref_group_learn" to listOf("help", "tutorial", "how to", "practice", "practise", "tips"),
+        "pref_group_learn" to listOf("help", "tutorial", "how to", "practice", "practise", "about", "info", "licence"),
+        "pref_group_tips" to listOf("tips", "tricks", "learn", "help", "how to"),
+        "pref_group_changed" to listOf("reset", "default", "restore", "undo", "factory", "modified"),
+        "pref_group_look" to listOf("theme", "appearance", "colour", "color", "dark", "light", "style"),
         "pref_group_bar" to listOf("topbar", "toolbar", "candidates", "strip", "bar"),
 
         // The two that have no row of their own

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A swipe with its end: shortcuts and gestures. Drawn for this project, the stroke of ic_group_open. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M4,17 C7,9 10,9 12,13 C14,17 17,17 20,9"
+        android:strokeColor="?android:attr/textColorSecondary"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M16.5,9.5 L20,9 L20.8,12.5"
+        android:strokeColor="?android:attr/textColorSecondary"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

@@ -105,8 +105,8 @@ class DualSimultaneousSwipeTest {
      * variant can close it. Cuts land on the leg joints: 31 samples over
      * 900 ms puts sample 10 at 300 ms and sample 20 at 600 ms.
      *
-     * Not "wander": its 'r' sits at FUZZY_TAP_RADIUS_KW from the tapped 'e', so
-     * the fuzzy-anchor pass reaches it without any multi-cut. 'd' is 1.58 kw
+     * Not "wander": its 'r' sits 1 kw from the tapped 'e', inside FUZZY_TAP_RADIUS_KW,
+     * so the fuzzy-anchor pass reaches it without any multi-cut. 'd' is 1.58 kw
      * from 'e', outside that radius.
      */
     private fun wanted(overshoot: Float = 0f) = listOf(

@@ -85,12 +85,12 @@ class OrientationSizesTest {
 
     @Test
     fun everyLandscapeSizeSitsInTheLandscapeGroupWithItsPreview() {
-        val rows = category(read("src/main/res/xml/keyboard_prefs.xml"), SizeGroups.LANDSCAPE_ROWS)
+        val rows = PrefsXml.category(read("src/main/res/xml/keyboard_prefs.xml"), SizeGroups.LANDSCAPE_ROWS)
         for (k in Prefs.LANDSCAPE_TWINS.map(Prefs::landscapeTwin) + Prefs.KEYBOARD_HEIGHT_PCT_LANDSCAPE) {
             assertTrue("$k is not in the landscape group", "android:key=\"$k\"" in rows)
         }
         assertTrue("android:key=\"pref_size_preview_landscape\"" in rows)
-        val portrait = category(read("src/main/res/xml/keyboard_prefs.xml"), SizeGroups.PORTRAIT_ROWS)
+        val portrait = PrefsXml.category(read("src/main/res/xml/keyboard_prefs.xml"), SizeGroups.PORTRAIT_ROWS)
         assertTrue("android:key=\"pref_size_preview\"" in portrait)
         assertFalse("landscape in the portrait group", "_landscape\"" in portrait)
     }
@@ -125,12 +125,6 @@ class OrientationSizesTest {
         assertFalse(SizeGroups.startsOpen(SizeGroups.LANDSCAPE_ROWS, landscape = false))
         assertTrue(SizeGroups.startsOpen(SizeGroups.LANDSCAPE_ROWS, landscape = true))
         assertFalse(SizeGroups.startsOpen(SizeGroups.PORTRAIT_ROWS, landscape = true))
-    }
-
-    private fun category(xml: String, key: String): String {
-        val start = xml.indexOf("<PreferenceCategory android:key=\"$key\"")
-        assertTrue("no category $key", start >= 0)
-        return xml.substring(start, xml.indexOf("</PreferenceCategory>", start))
     }
 
     private fun attr(xml: String, key: String, name: String): String? {

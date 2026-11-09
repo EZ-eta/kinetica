@@ -167,27 +167,47 @@ class InputContainerView(
         }
     }
 
-    /** Swaps the keyboard for the emoji picker at the keyboard's height. */
-    fun showEmojiPicker(picker: View) {
+    /**
+     * Swaps the bar and the keyboard for the emoji picker, the keyboard's height plus [topPx] or
+     * the bar's, the taller. The bar has nothing to offer over the grid, and at the search panel's
+     * height the window keeps its size between the two.
+     */
+    fun showEmojiPicker(picker: View, topPx: Int) {
+        val h = keyboardView.layoutParams.height + maxOf(topPx, suggestionBar.layoutParams.height)
         if (picker.parent == null) {
-            addView(
-                picker,
-                indexOfChild(keyboardView),
-                LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    keyboardView.layoutParams.height,
-                ),
-            )
+            addView(picker, indexOfChild(keyboardView), LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, h))
         } else {
-            picker.layoutParams.height = keyboardView.layoutParams.height
+            picker.layoutParams.height = h
         }
         picker.visibility = VISIBLE
+        suggestionBar.visibility = GONE
         keyboardView.visibility = GONE
     }
 
     fun hideEmojiPicker(picker: View?) {
+        // Only the picker's own swap is undone: under the search panel the bar stays hidden.
+        if (picker?.visibility == VISIBLE) suggestionBar.visibility = VISIBLE
         picker?.visibility = GONE
         keyboardView.visibility = VISIBLE
+    }
+
+    /**
+     * Swaps the bar for the emoji search panel, [heightPx] tall. The keyboard stays and types the
+     * query; a search field inside the emoji pane had to close the pane to be typed into.
+     */
+    fun showEmojiSearch(panel: View, heightPx: Int) {
+        if (panel.parent == null) {
+            addView(panel, indexOfChild(suggestionBar), LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, heightPx))
+        } else {
+            panel.layoutParams.height = heightPx
+        }
+        panel.visibility = VISIBLE
+        suggestionBar.visibility = GONE
+    }
+
+    fun hideEmojiSearch(panel: View?) {
+        panel?.visibility = GONE
+        suggestionBar.visibility = VISIBLE
     }
 
     @SuppressLint("ClickableViewAccessibility")

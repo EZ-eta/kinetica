@@ -34,6 +34,73 @@ object TraceReplay {
     private val ARC = Regex("""arc=([0-9.]+)""")
     private val DWELL = Regex("""(\d+)-(\d+)/[0-9.]+kw/\d+n""")
 
+    private val PATH = Regex("""^path stream=(LEFT|RIGHT) t=(\d+)\.\.(\d+) pts=(\S+)$""")
+    private val BOARD = Regex("""^geometry kwpx=([0-9.]+) mid=([0-9.]+) tap=([0-9.]+) keys=(\S+)$""")
+
+    /** A capture's board: the keys its strokes were drawn on, and the tap radius it used. */
+    class Board(val g: KeyboardGeometry, val tapDispKw: Float)
+
+    /** One stroke's raw points as the capture traced them, in kw. */
+    class TracedPath(val stream: StreamId, val tStart: Long, val tEnd: Long, val points: List<PathPoint>)
+
+    /** The board of a `geometry` line, or null for any other line. */
+    fun board(line: String): Board? {
+        val m = BOARD.find(line) ?: return null
+        val kwPx = m.groupValues[1].toFloat()
+        val rects = ArrayList<FloatArray>()
+        val codes = ArrayList<Int>()
+        for (k in m.groupValues[4].split(';')) {
+            val (ch, r) = k.split(':')
+            val v = r.split(',').map { it.toFloat() * kwPx }
+            rects.add(floatArrayOf(v[0], v[1], v[2], v[3]))
+            codes.add(Alphabet.LATIN.codeOf(ch[0]))
+        }
+        val g = KeyboardGeometry.fromPx(kwPx, m.groupValues[2].toFloat() * kwPx, rects, codes.toIntArray())
+        return Board(g, m.groupValues[3].toFloat())
+    }
+
+    /** The stroke of a `path` line, or null for any other line. */
+    fun path(line: String): TracedPath? {
+        val m = PATH.find(line) ?: return null
+        val t0 = m.groupValues[2].toLong()
+        var t = t0
+        val pts = m.groupValues[4].split(';').map { p ->
+            val (x, y, dt) = p.split(',')
+            t += dt.toLong()
+            PathPoint(x.toFloat(), y.toFloat(), t)
+        }
+        return TracedPath(StreamId.valueOf(m.groupValues[1]), t0, m.groupValues[3].toLong(), pts)
+    }
+
+    /** The strokes of a field of `path` lines joined by ` | `, as a row carries them; `-` is none. */
+    fun paths(field: String): List<TracedPath> = field.split(" | ").mapNotNull { path(it) }
+
+    /**
+     * The stroke rebuilt as the phone built it: its raw points fed through a [GestureStream] on
+     * the capture's board. Null when the points no longer make a swipe.
+     */
+    fun rebuild(p: TracedPath, board: Board): SwipeToken? {
+        val g = board.g
+        val k = g.keyWidthPx
+        val first = p.points.first()
+        val code = g.keyAt(first.x, first.y).let { if (it >= 0) it else g.nearestKey(first.x, first.y) }
+        val s = GestureStream(p.stream, 0, g, board.tapDispKw, first.x * k, first.y * k, first.t, code) {}
+        for (i in 1 until p.points.size) s.addPoint(p.points[i].x * k, p.points[i].y * k, p.points[i].t)
+        return s.finish(p.tEnd) as? SwipeToken
+    }
+
+    /**
+     * The buffer on the capture's own board, each swipe with a traced path rebuilt from its raw
+     * points; a swipe without one keeps the polyline.
+     */
+    fun tokens(line: String, board: Board, paths: List<TracedPath>): List<InputToken> {
+        val byStart = paths.associateBy { it.stream to it.tStart }
+        return tokens(line, board.g).map { t ->
+            if (t !is SwipeToken) return@map t
+            byStart[t.streamId to t.tStart]?.let { rebuild(it, board) } ?: t
+        }
+    }
+
     fun tokens(line: String, g: KeyboardGeometry): List<InputToken> {
         val out = ArrayList<InputToken>(4)
         for (m in TAP.findAll(line)) {

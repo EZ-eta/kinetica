@@ -133,4 +133,11 @@ class KeyboardHeightsTest {
         assertEquals(44f, KeyboardHeights.barDp(44, recentWords = false), 0f)
         assertEquals(66f, KeyboardHeights.barDp(44, recentWords = true), 0f)
     }
+
+    @Test
+    fun theEmojiSearchPanelIsABarRowAndAnEmojiRow() {
+        // Taller than the bar, as asked, and from the one-row setting: recent words do not grow it.
+        assertEquals(44f + KeyboardHeights.EMOJI_SEARCH_ROW_DP, KeyboardHeights.emojiSearchDp(44), 0f)
+        assertTrue(KeyboardHeights.emojiSearchDp(44) > KeyboardHeights.barDp(44, recentWords = true))
+    }
 }

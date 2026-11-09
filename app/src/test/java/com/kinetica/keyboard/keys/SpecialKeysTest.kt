@@ -16,6 +16,16 @@ class SpecialKeysTest {
     )
 
     @Test
+    fun undoAndRedoGoOutAsTheKeysAHardwareKeyboardSends() {
+        // The menu call is a silent no-op in an editor with no menu undo, and WebView never answers it.
+        assertEquals("combo:ctrl+z", SpecialKeys.comboFor(EditorAction.UNDO)?.encode())
+        assertEquals("combo:ctrl+shift+z", SpecialKeys.comboFor(EditorAction.REDO)?.encode())
+        for (a in EditorAction.entries.filter { it != EditorAction.UNDO && it != EditorAction.REDO }) {
+            assertNull(a.name, SpecialKeys.comboFor(a))
+        }
+    }
+
+    @Test
     fun eachSpecialKeySendsItsOwnKeyCode() {
         assertEquals(KeyEvent.KEYCODE_TAB, SpecialKeys.keyCodeFor(EditorAction.TAB))
         assertEquals(KeyEvent.KEYCODE_ESCAPE, SpecialKeys.keyCodeFor(EditorAction.ESCAPE))

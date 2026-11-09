@@ -189,6 +189,8 @@ object Prefs {
      */
     const val AUTOSPACE_TAPPED_WORDS = "pref_autospace_tapped_words"
     const val ZEN_MODE = "pref_zen_mode"
+    /** The swipe trail stays until its word ends instead of fading behind the thumb. */
+    const val KEEP_TRAIL = "pref_keep_trail"
     const val VIBRATION = "pref_vibration"
     const val VIBRATION_INTENSITY = "pref_vibration_intensity"
     const val TRAIL_COLOR = "pref_trail_color"
@@ -204,7 +206,7 @@ object Prefs {
     /**
      * When the background image was picked, as millis; empty for none. The image is a file in
      * app storage ([BackdropStore]); a new value tells the keyboard to read it again. Not backed
-     * up, since the file is not.
+     * up as a pref: the image travels as its own record ([Backup.Backdrop]), when ticked.
      */
     const val BACKDROP = "pref_backdrop"
     /** The background image's opacity over the theme background, 0-100. */
@@ -215,6 +217,20 @@ object Prefs {
     const val BACKDROP_CROP = "pref_backdrop_crop"
     /** The image's cut for landscape. */
     const val BACKDROP_CROP_LANDSCAPE = "pref_backdrop_crop_landscape"
+
+    /** Two looks, day and night; the night one is drawn while the phone is in its dark theme. */
+    const val LOOK_SETS = "pref_look_sets"
+
+    /** Set once the night look has been started as a copy of the day look ([LookSets.seed]). */
+    const val LOOK_NIGHT_SEEDED = "pref_look_night_seeded"
+
+
+    /**
+     * The guided setup's open step, by name, and whether it was finished or skipped. Not backed
+     * up: setup belongs to the install, and a restored finish would skip it on a new phone.
+     */
+    const val SETUP_STEP = "pref_setup_step"
+    const val SETUP_DONE = "pref_setup_done"
     const val LANGUAGE = "pref_language"
     /** Last language agreed with Android; detects Settings edits while the IME is inactive. */
     const val SYNCED_LANGUAGE = "pref_synced_language"
@@ -284,6 +300,25 @@ object Prefs {
      */
     fun symbolRowKey(page: Int, row: Int): String = "pref_symbols_${page}_row_$row"
 
+    /**
+     * One string per symbol-page key: its long-press list, space-separated, absent for the
+     * built-in one. Keyed by the symbol's code points in hex (`$` is `pref_alt_sym_24`), since a
+     * symbol may be any character, a quote or a slash among them.
+     */
+    fun symbolAlternatesKey(symbol: String): String =
+        SYMBOL_ALTERNATES_PREFIX + symbol.codePoints().toArray().joinToString("_") { Integer.toHexString(it) }
+
+    /** The symbol a [symbolAlternatesKey] names, or null for any other key. */
+    fun symbolOfAlternatesKey(key: String): String? {
+        if (!key.startsWith(SYMBOL_ALTERNATES_PREFIX)) return null
+        val points = key.removePrefix(SYMBOL_ALTERNATES_PREFIX).split('_').map { hex ->
+            hex.toIntOrNull(16)?.takeIf { Character.isValidCodePoint(it) } ?: return null
+        }
+        return String(points.toIntArray(), 0, points.size)
+    }
+
+    private const val SYMBOL_ALTERNATES_PREFIX = "pref_alt_sym_"
+
     /** Comma-key role: keep | remove | char | text | paste | select_all. */
     const val COMMA_MODE = "pref_comma_mode"
 
@@ -300,6 +335,15 @@ object Prefs {
 
     /** Set once a saved [EDGE_SWIPES] has been given shift's re-case swipes where free. */
     const val SHIFT_CASE_SEEDED = "pref_shift_case_seeded"
+
+    /** Set once a saved [EDGE_SWIPES] has been given the editing page's slide where free. */
+    const val EDIT_PAGE_SEEDED = "pref_edit_page_seeded"
+
+    /** Set once a saved [EDGE_SWIPES] has had the editing page's slide moved from down to up. */
+    const val EDIT_PAGE_UP_SEEDED = "pref_edit_page_up_seeded"
+
+    /** The editing page's keys (EditPage); absent is the D-pad. Written only when it differs. */
+    const val EDIT_PAGE = "pref_edit_page"
 
     /**
      * Implicit directional alternate swipes: a top-row letter's up-swipe inserts its digit, a
@@ -345,6 +389,12 @@ object Prefs {
     const val RETYPE_BUTTON = "pref_retype_button"
 
     /**
+     * A button at the bar's left edge that brings the shortcut row back over the words, until the
+     * next key. Without it the row shows only on an empty bar, which is mostly a new field.
+     */
+    const val SHORTCUTS_BUTTON = "pref_shortcuts_button"
+
+    /**
      * Travel, in dp, that moves the spacebar's cursor slide by one step. Lower is faster.
      *
      * Floored at the 8dp that arms cursor mode, since a shorter step would fire on the sample that
@@ -366,6 +416,13 @@ object Prefs {
      * by default, since characters are the finer edit. Composes with [SPACEBAR_STEP_DP].
      */
     const val SPACEBAR_WORD_SLIDE = "pref_spacebar_word_slide"
+
+    /**
+     * While shift is held, the space and backspace slides step the other way: letters for words,
+     * words for letters. Coarse and fine in one slide. Off by default: a held shift opens the case
+     * menu.
+     */
+    const val SHIFT_SWAPS_SLIDES = "pref_shift_swaps_slides"
 
     /**
      * Left 30% of the spacebar ends the word and writes no space.
@@ -411,6 +468,15 @@ object Prefs {
     /** The bar's words sit at their own width with a small gap, instead of in equal zones. */
     const val BAR_COMPACT = "pref_bar_compact"
 
+    /** A bar word too wide for its place keeps its start and its end, cut in the middle. */
+    const val BAR_MIDDLE_CUT = "pref_bar_middle_cut"
+
+    /** Bold marks the word space will write, and the typed letters sit second on the bar. */
+    const val BAR_SPACE_BOLD = "pref_bar_space_bold"
+
+    /** Each bar word carries a mark: `+` learned at commit, `?` unknown, `C` personal. */
+    const val BAR_WORD_MARKS = "pref_bar_word_marks"
+
     /** The suggestion bar shows the autospace wait as a shrinking band. */
     const val AUTOSPACE_TIMER = "pref_autospace_timer"
     const val ENTER_ACTION = "pref_enter_action"
@@ -433,8 +499,14 @@ object Prefs {
     /** A field that takes only numbers opens on the number pad. */
     const val NUMPAD_FOR_NUMBERS = "pref_numpad_for_numbers"
 
+    /** How the date action writes the date: the phone's format or ISO (DateStyle). */
+    const val DATE_STYLE = "pref_date_style"
+
     /** A new field opens on the letters, whatever page the last one was left on. */
     const val LETTERS_ON_NEW_FIELD = "pref_letters_on_new_field"
+
+    /** A space typed on a symbol page goes back to the letters. */
+    const val LETTERS_AFTER_SPACE = "pref_letters_after_space"
     const val TYPING_SPEED = "pref_typing_speed"
 
     /**
@@ -512,7 +584,7 @@ object Prefs {
      */
     const val BRITISH_SPELLING = "pref_british_spelling"
 
-    /** Width of the retype button in dp; only read when [RETYPE_BUTTON] is on. */
+    /** Width of the retype button in dp; the shortcuts button ([SHORTCUTS_BUTTON]) takes the same. */
     const val RETYPE_BUTTON_DP = "pref_retype_button_dp"
 
     /**
@@ -560,6 +632,23 @@ object Prefs {
 
     /** The custom theme's colour, `#RRGGBB`; every surface is derived from it. */
     const val THEME_COLOR_HEX = "pref_theme_color_hex"
+
+    /**
+     * What a look holds, each under its key plus [NIGHT_SUFFIX] for the night look. Zen and the
+     * kept trail are how the keyboard behaves, not how it looks, so they stay one setting.
+     */
+    val NIGHT_TWINS: List<String> = listOf(
+        THEME_MODE, THEME_BRIGHTNESS, THEME_COLOR_HEX,
+        BACKDROP, BACKDROP_CROP, BACKDROP_CROP_LANDSCAPE, BACKDROP_ALPHA, KEY_ALPHA,
+        SWIPE_LOOK, TRAIL_COLOR, TRAIL_COLOR_HEX, KEY_BORDERS, KEY_BORDER_WIDTH,
+    )
+    const val NIGHT_SUFFIX = "_night"
+
+    fun nightTwin(key: String): String = key + NIGHT_SUFFIX
+
+    /** The day key of a night twin, or [key] itself. */
+    fun dayKey(key: String): String =
+        key.removeSuffix(NIGHT_SUFFIX).takeIf { key.endsWith(NIGHT_SUFFIX) && it in NIGHT_TWINS } ?: key
 
     const val DEFAULT_HEIGHT_PCT = 35
 
@@ -617,6 +706,7 @@ object Prefs {
     const val DEFAULT_WORD_ENDS_ON_SPACE = false
     const val DEFAULT_AUTOSPACE_TAPPED_WORDS = false
     const val DEFAULT_ZEN = false
+    const val DEFAULT_KEEP_TRAIL = false
     const val DEFAULT_VIBRATION = true
     const val DEFAULT_VIBRATION_INTENSITY = 2
     const val DEFAULT_TRAIL_COLOR = "rainbow"
@@ -626,6 +716,8 @@ object Prefs {
     // Off: an upgrade draws the keys as before.
     const val DEFAULT_KEY_BORDERS = false
     const val DEFAULT_KEY_BORDER_WIDTH = 1
+    // Off: one look, as before.
+    const val DEFAULT_LOOK_SETS = false
     const val DEFAULT_LANGUAGE = "en"
     const val DEFAULT_KEY_ARRANGEMENT = "qwerty"
     const val DEFAULT_ARRANGEMENT_AUTO_APPLIED = false
@@ -654,11 +746,14 @@ object Prefs {
     const val DEFAULT_BACKSPACE_PUNCTUATION_STOPS = false
     const val DEFAULT_BACKSPACE_UNDO = false
     const val DEFAULT_RETYPE_BUTTON = false
+    const val DEFAULT_SHORTCUTS_BUTTON = false
     const val DEFAULT_SPACEBAR_STEP_DP = 20
     const val DEFAULT_REINFORCE_STEP_DP = 24
     // A cleaner bar: the rank shows only on the word being slid.
     const val DEFAULT_BADGES_WHILE_ADJUSTING = true
     const val DEFAULT_SPACEBAR_WORD_SLIDE = false
+    const val DEFAULT_SHIFT_SWAPS_SLIDES = false
+
     const val DEFAULT_SPACELESS_SPACE = false
     const val DEFAULT_DOUBLE_SPACE_PERIOD = false
     const val DEFAULT_TIDY_SPACES = false
@@ -687,6 +782,15 @@ object Prefs {
     /** On: words a gap apart read as one line and fit more to a page; a word is still its own target. */
     const val DEFAULT_BAR_COMPACT = true
 
+    /** Off: every earlier version cut the end; the middle cut is chosen, not imposed. */
+    const val DEFAULT_BAR_MIDDLE_CUT = false
+
+    /** Off: the typed letters stay last, so a sloppy typist's first page holds the decodes. */
+    const val DEFAULT_BAR_SPACE_BOLD = false
+
+    /** Off: the bar's words stay plain unless asked; the tier badge already marks the personal ones. */
+    const val DEFAULT_BAR_WORD_MARKS = false
+
     /** On: a pause that ends a word is easier to time when the wait can be seen. */
     const val DEFAULT_AUTOSPACE_TIMER = true
 
@@ -700,11 +804,17 @@ object Prefs {
     const val DEFAULT_FIELD_KEYS = true
     const val DEFAULT_CLEAN_LINKS_ON_PASTE = false
 
+    /** The phone's format: what the date action wrote before the choice existed. */
+    const val DEFAULT_DATE_STYLE = "system"
+
     /** Off: some type a word into a number field and expand it to the number. */
     const val DEFAULT_NUMPAD_FOR_NUMBERS = false
 
     /** On: what other keyboards do, and a symbols page carried into a search box is a surprise. */
     const val DEFAULT_LETTERS_ON_NEW_FIELD = true
+
+    /** Off: a run of symbols with spaces between them stays on its page, as it always has. */
+    const val DEFAULT_LETTERS_AFTER_SPACE = false
 
     /** Off: a number on the spacebar is shown only to those who ask for it. */
     const val DEFAULT_TYPING_SPEED = false
@@ -735,7 +845,7 @@ object Prefs {
 
     /** The default of a typed-colour key. */
     fun colorHexDefault(key: String?): String =
-        if (key == TRAIL_COLOR_HEX) DEFAULT_TRAIL_COLOR_HEX else DEFAULT_THEME_COLOR_HEX
+        if (key != null && dayKey(key) == TRAIL_COLOR_HEX) DEFAULT_TRAIL_COLOR_HEX else DEFAULT_THEME_COLOR_HEX
     const val DEFAULT_THEME_BRIGHTNESS = "dark"
     const val DEFAULT_SYNC_SYSTEM_LANGUAGE = true
     const val DEFAULT_BRITISH_SPELLING = false

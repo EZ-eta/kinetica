@@ -10,12 +10,14 @@ import kotlin.math.max
  *        bit  6     isWord
  *        bits 7-14  freqByte (log-quantized unigram frequency, word nodes only)
  *        bits 15-22 maxDescendantFreq (max freqByte in this subtree, incl. self)
- *        bits 23-27 maxWordLen (the longest word at or below, in letters)
+ *        bits 23-28 maxWordLen (the longest word at or below, in letters)
  *  int1: bits 0-23  first child node id
  *        bits 24-29 child count (0-63)
  *
  * Six bits for the letter and the count, not five: Cyrillic has 32 letters and Arabic 33, and
  * a root with 32 children wraps a five-bit count to zero. Latin decodes are unchanged.
+ * The longest word takes six bits too, up to 63 letters: five would wrap a 32-letter word to 0
+ * and prune it.
  *
  * Children of a node are contiguous and sorted by letter (guaranteed by BFS id
  * assignment at build time), so child lookup is a short linear scan over
@@ -41,7 +43,7 @@ class Trie private constructor(
      * The longest word at or below [node], in letters from the root, so a search can skip a
      * subtree too short for the input it still has to spell.
      */
-    fun maxWordLen(node: Int): Int = nodes[node * 2] ushr 23 and 0x1F
+    fun maxWordLen(node: Int): Int = nodes[node * 2] ushr 23 and 0x3F
     fun firstChild(node: Int): Int = nodes[node * 2 + 1] and 0xFFFFFF
     fun childCount(node: Int): Int = nodes[node * 2 + 1] shr 24 and 0x3F
 
@@ -274,7 +276,7 @@ class Trie private constructor(
                     (isWord shl 6) or
                     ((freq and 0xFF) shl 7) or
                     ((maxDesc[tmp] and 0xFF) shl 15) or
-                    ((maxLen[tmp] and 0x1F) shl 23)
+                    ((maxLen[tmp] and 0x3F) shl 23)
                 packed[id * 2 + 1] = (firstId and 0xFFFFFF) or ((count and 0x3F) shl 24)
             }
             // A childless node takes the next id to be handed out, so first-child ids never

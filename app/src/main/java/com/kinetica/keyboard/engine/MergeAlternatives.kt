@@ -791,11 +791,43 @@ object MergeAlternatives {
      */
     fun splitSwipe(s: SwipeToken, tCut: Long, resampler: DtwMatcher): Pair<SwipeToken, SwipeToken>? {
         val path = s.rawPath
+        val cut = v1Cut(path, tCut) ?: return null
+        return buildHalves(s, cut, v1Resume(path, cut), resampler, softEnd = true)
+    }
+
+    /**
+     * A cut whose tail is sliced only when [tail] is first asked for. A search resumes few of the
+     * tails it cuts, since most heads find no reading first, and a slice costs a resample.
+     */
+    class Cut internal constructor(
+        val head: SwipeToken,
+        private val src: SwipeToken,
+        private val from: Int,
+        private val resampler: DtwMatcher,
+    ) {
+        /** The tail's [SwipeToken.tStart], known before it is built. */
+        val tailStart: Long get() = src.rawPath[from].t
+
+        fun tail(): SwipeToken = slice(src, from, src.rawPath.size - 1, resampler, softStart = true, softEnd = false)
+    }
+
+    /** [splitSwipe] with its tail left to [Cut.tail]: the same head, the same refusals. */
+    fun cutSwipe(s: SwipeToken, tCut: Long, resampler: DtwMatcher): Cut? {
+        val path = s.rawPath
+        val cut = v1Cut(path, tCut) ?: return null
+        val resume = v1Resume(path, cut)
+        if (arcLen(path.subList(0, cut + 1)) < KineticaConstants.MIN_SPLIT_HALF_ARC_KW) return null
+        if (path.size - resume < 2) return null
+        return Cut(slice(s, 0, cut, resampler, softStart = false, softEnd = true), s, resume, resampler)
+    }
+
+    /** The V1 cut index for [tCut], or null when the path is too short or the cut at its start. */
+    private fun v1Cut(path: List<PathPoint>, tCut: Long): Int? {
         if (path.size < 4) return null
         val nearest = nearestIndex(path, tCut)
         if (nearest < 1) return null
-        val cut = nearest.coerceIn(1, path.size - 3)
-        return buildHalves(s, cut, v1Resume(path, cut), resampler, softEnd = true)
+        // Clamped so a second half of at least two samples survives, as in splitVariants.
+        return nearest.coerceIn(1, path.size - 3)
     }
 
     /**
@@ -805,6 +837,17 @@ object MergeAlternatives {
      */
     fun splitAtOwnContact(s: SwipeToken, t: Long, resampler: DtwMatcher): Pair<SwipeToken, SwipeToken>? =
         splitAtContact(s, t, resampler)?.let { it.first to it.second }
+
+    /** [splitAtOwnContact] with its tail left to [Cut.tail]: the same head, the same refusals. */
+    fun cutAtOwnContact(s: SwipeToken, t: Long, resampler: DtwMatcher): Cut? {
+        val path = s.rawPath
+        if (path.size < 4) return null
+        val cut = nearestIndex(path, t).coerceIn(1, path.size - 3)
+        val head = sliceOrNull(s, 0, cut, resampler, softStart = false, softEnd = true, keepIfContacted = true)
+            ?: return null
+        if (!keeps(s, cut + 1, path.size - 1, keepIfContacted = true)) return null
+        return Cut(head, s, cut + 1, resampler)
+    }
 
     /** Raw-path index of the sample nearest [t]. */
     private fun nearestIndex(path: List<PathPoint>, t: Long): Int {
@@ -882,16 +925,23 @@ object MergeAlternatives {
         softStart: Boolean,
         softEnd: Boolean,
         keepIfContacted: Boolean = false,
-    ): SwipeToken? {
-        if (to - from < 1) return null
-        val piece = slice(s, from, to, resampler, softStart, softEnd)
-        if (piece.arcLen >= KineticaConstants.MIN_SPLIT_HALF_ARC_KW) return piece
+    ): SwipeToken? =
+        if (keeps(s, from, to, keepIfContacted)) slice(s, from, to, resampler, softStart, softEnd) else null
+
+    /** Whether [sliceOrNull] keeps the run [from]..[to], asked before anything is resampled. */
+    private fun keeps(s: SwipeToken, from: Int, to: Int, keepIfContacted: Boolean): Boolean {
+        if (to - from < 1) return false
+        val path = s.rawPath
+        if (arcLen(path.subList(from, to + 1)) >= KineticaConstants.MIN_SPLIT_HALF_ARC_KW) return true
         // The arc minimum asks whether the piece travelled far enough to be a gesture, the only
         // evidence a two-half split has. A piece cut at the other thumb's contact times has
         // better: it covers a key the finger was on, or it does not. One letter drawn while the
         // other thumb writes the next travels barely half a key, so the arc minimum would rule
         // out the alternation this cut exists to express.
-        return if (keepIfContacted && piece.keyContacts.isNotEmpty()) piece else null
+        if (!keepIfContacted) return false
+        val tFrom = path[from].t
+        val tTo = path[to].t
+        return s.keyContacts.any { it.tExit >= tFrom && it.tEnter <= tTo }
     }
 
     /**

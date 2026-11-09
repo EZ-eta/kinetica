@@ -2,12 +2,12 @@ package com.kinetica.keyboard.ime
 
 import android.util.Log
 import com.kinetica.keyboard.data.KineticaDb
-import com.kinetica.keyboard.engine.AccentFolder
 import com.kinetica.keyboard.engine.DecodeTrace
 import com.kinetica.keyboard.engine.KineticaConstants
 import com.kinetica.keyboard.engine.WordPredictor
 import com.kinetica.keyboard.keys.AutoCapitalization
 import com.kinetica.keyboard.ui.BarAdjust
+import com.kinetica.keyboard.ui.BarMark
 import com.kinetica.keyboard.ui.SuggestionBarView
 
 /**
@@ -248,7 +248,7 @@ internal class BarContents(private val ime: KineticaIME) {
         val typed = when {
             ime.composer?.hasSwipeToken() == true -> ""
             ime.wordState.tentativeLength > 0 &&
-                AccentFolder.fold(ime.wordState.tentativeWord.lowercase()) == ime.wordState.lastLiteral -> ime.wordState.tentativeWord
+                writtenAsTyped(ime.wordState.tentativeWord, ime.wordState.lastLiteral) -> ime.wordState.tentativeWord
             else -> ime.displayWord(ime.wordState.lastLiteral)
         }
         val literal = literalZone(
@@ -258,11 +258,39 @@ internal class BarContents(private val ime: KineticaIME) {
             blocked = typed.lowercase() in ime.residents.blockedSpellings,
         )
         val decoded = ime.wordState.lastCandidates.map { ime.displayWord(it.word) }
-        ime.suggestionBar?.setSuggestions(
-            suggestionZoneWords(notBlocked(midWordWords(decoded, ime.wordState.midWordHistory, ime.wordState.midWordOffer), ime.residents.blockedSpellings), literal)
-                .map { barSuggestion(it) },
+        val spaceBold = ime.config.barSpaceBold
+        val words = suggestionZoneWords(
+            notBlocked(midWordWords(decoded, ime.wordState.midWordHistory, ime.wordState.midWordOffer), ime.residents.blockedSpellings),
+            literal,
+            literalSecond = spaceBold,
         )
+        val bold = if (spaceBold) boldIndex(words, spaceWord()) else 0
+        ime.suggestionBar?.setSuggestions(words.map { barSuggestion(it) }, bold)
         updateBarWordPending()
+    }
+
+    /**
+     * What a space would write now, or null for nothing: [CommitPath.finalizePendingWord]'s choice,
+     * read before it. A swipe's lead is not on screen yet when the bar is filled.
+     */
+    private fun spaceWord(): String? {
+        val ws = ime.wordState
+        if (ws.midWordOffer != null || ime.composer?.hasPendingWord != true) return null
+        val p = ime.residents.predictor
+        val threshold = ime.config.autocorrectConfidence
+        return spaceCommitWord(
+            tentative = ws.tentativeWord,
+            swipeLead = ws.lastTentative?.let { ime.displayWord(it.word) },
+            hasSwipe = ime.composer?.hasSwipeToken() == true,
+            literal = ws.lastLiteral,
+            privateMode = ime.editorState.privateMode,
+            addressField = ime.editorState.addressField,
+            selection = ime.selectionLength(),
+            asWritten = keepsAsWritten(ws.reloadedWord, ws.tentativeWord),
+        ) {
+            if (p == null || threshold == null) null
+            else p.tapAutocorrect(ws.lastLiteral, ws.lastTentative, threshold)?.let { ime.displayWord(it.word) }
+        }
     }
 
     fun barSuggestion(display: String): SuggestionBarView.Suggestion {
@@ -271,6 +299,24 @@ internal class BarContents(private val ime: KineticaIME) {
             display,
             tier = KineticaConstants.personalTier(count),
             count = count,
+            mark = if (ime.config.barWordMarks) markOf(display) else BarMark.NONE,
+        )
+    }
+
+    /** [display]'s mark, read across every resident list; none before any list is loaded. */
+    private fun markOf(display: String): BarMark {
+        val langs = ime.residentLanguages()
+        val lexicons = langs.mapNotNull { ime.predictorFor(it) }
+        if (lexicons.isEmpty()) return BarMark.NONE
+        val w = display.lowercase()
+        return wordMark(
+            inList = lexicons.any { it.holdsListSpelling(display) },
+            // A learned-only spelling is in the trie but not the list; a count below the merge floor
+            // is in the counts only.
+            personal = langs.any { (ime.countsFor(it)[w] ?: 0) > 0 } || lexicons.any { it.holdsSpelling(display) },
+            learnable = learnable(w),
+            teachesNothing = ime.editorState.teachesNothing,
+            blocked = w in ime.residents.blockedSpellings,
         )
     }
 

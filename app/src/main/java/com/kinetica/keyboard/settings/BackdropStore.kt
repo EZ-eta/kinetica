@@ -24,22 +24,25 @@ import java.io.IOException
  *
  * A pick lands in a pending file; the crop screen's Save makes it the image, its Cancel drops it,
  * so the image in use never changes before its cuts are chosen.
+ *
+ * The night look has an image of its own, in its own file; `night` picks it throughout.
  */
 object BackdropStore {
 
     private const val FILE = "keyboard_backdrop.jpg"
+    private const val NIGHT_FILE = "keyboard_backdrop_night.jpg"
     private const val PENDING = "keyboard_backdrop_pending.jpg"
 
     /** JPEG at 90: a photo stays sharp under translucent keys at a fraction of PNG's size. */
     private const val QUALITY = 90
 
-    fun file(context: Context): File = File(context.filesDir, FILE)
+    fun file(context: Context, night: Boolean = false): File = File(context.filesDir, if (night) NIGHT_FILE else FILE)
 
     fun pendingFile(context: Context): File = File(context.filesDir, PENDING)
 
     /** Whether an image is set and its file is there; a restored stamp without one is not. */
-    fun isSet(context: Context, prefs: SharedPreferences): Boolean =
-        !prefs.getString(Prefs.BACKDROP, "").isNullOrEmpty() && file(context).exists()
+    fun isSet(context: Context, prefs: SharedPreferences, night: Boolean = false): Boolean =
+        !LookSets.view(prefs, night).getString(Prefs.BACKDROP, "").isNullOrEmpty() && file(context, night).exists()
 
     /**
      * Copies [uri] into the pending file, at most [maxLong] px on its long edge. Slow: off the
@@ -94,11 +97,11 @@ object BackdropStore {
     }
 
     /** The pending image becomes the one in use; false when there is none or it cannot move. */
-    fun commitPending(context: Context): Boolean {
+    fun commitPending(context: Context, night: Boolean = false): Boolean {
         val pending = pendingFile(context)
         if (!pending.exists()) return false
         return try {
-            replace(pending, file(context))
+            replace(pending, file(context, night))
             true
         } catch (e: IOException) {
             false
@@ -118,8 +121,53 @@ object BackdropStore {
         }
     }
 
-    fun remove(context: Context) {
-        file(context).delete()
+    /** The image in use as stored, for a backup; null when there is none or it cannot be read. */
+    fun bytes(context: Context, night: Boolean = false): ByteArray? = try {
+        file(context, night).takeIf { it.exists() }?.readBytes()
+    } catch (e: IOException) {
+        null
+    }
+
+    /**
+     * A backed-up image becomes the one in use. Checked as an image first, so a damaged record
+     * never replaces a good one. Slow: off the main thread.
+     */
+    @Throws(IOException::class)
+    fun restore(context: Context, jpeg: ByteArray, night: Boolean = false) {
+        // A bounds-only decode always returns null; the size is in the options.
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeByteArray(jpeg, 0, jpeg.size, bounds)
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) throw IOException("not an image")
+        val tmp = File(context.filesDir, "${file(context, night).name}.restore")
+        try {
+            tmp.writeBytes(jpeg)
+        } catch (e: IOException) {
+            tmp.delete()
+            throw e
+        }
+        replace(tmp, file(context, night))
+    }
+
+    /**
+     * The day image copied as the night one, when the night look starts as a copy of the day.
+     * False when there is none or it cannot be copied: the night look then starts without one.
+     */
+    fun copyDayToNight(context: Context): Boolean {
+        val day = file(context)
+        if (!day.exists()) return false
+        val tmp = File(context.filesDir, "$NIGHT_FILE.copy")
+        return try {
+            day.copyTo(tmp, overwrite = true)
+            replace(tmp, file(context, night = true))
+            true
+        } catch (e: IOException) {
+            tmp.delete()
+            false
+        }
+    }
+
+    fun remove(context: Context, night: Boolean = false) {
+        file(context, night).delete()
         dropPending(context)
     }
 
@@ -127,8 +175,8 @@ object BackdropStore {
      * The image for drawing, or null when there is none or it cannot be read. RGB_565: a JPEG has
      * no alpha, and it halves a screen-sized bitmap's memory in the keyboard's process.
      */
-    fun load(context: Context): Bitmap? {
-        val f = file(context)
+    fun load(context: Context, night: Boolean = false): Bitmap? {
+        val f = file(context, night)
         if (!f.exists()) return null
         return try {
             BitmapFactory.decodeFile(f.path, BitmapFactory.Options().apply { inPreferredConfig = Bitmap.Config.RGB_565 })

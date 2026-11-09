@@ -1,6 +1,7 @@
 package com.kinetica.keyboard.ime
 
 import com.kinetica.keyboard.engine.DictionaryLoader.LearnedCase
+import com.kinetica.keyboard.engine.KineticaConstants
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -117,6 +118,73 @@ class LearnedCapitalsTest {
         assertTrue(leadChanged(LearnedCase("Dennis", 2), LearnedCase("Dennis", 1)))
         assertFalse(leadChanged(LearnedCase("Dennis", 2), LearnedCase("Dennis", 3)))
         assertFalse(leadChanged(null, LearnedCase("Dennis", 1)))
+    }
+
+    @Test
+    fun aLowercaseCommitCountsAgainstAnUnsettledCapital() {
+        // Not proposed, since it has not settled: the lowercase is still a use of the word.
+        assertEquals(CaseVote(-1, null), vote("ma", "ma", before = "nulla, ", learned = "Ma", lang = "it"))
+        assertEquals(LearnedCase("Ma", 0), nextCase(LearnedCase("Ma", 1), CaseVote(-1, null)))
+        // A sentence start still says nothing either way.
+        assertEquals(CaseVote.NONE, vote("ma", "ma", before = "Ok. ", learned = "Ma", lang = "it"))
+    }
+
+    @Test
+    fun strayCapitalsAmongLowercaseUseNeverSettle() {
+        // A common word: a stray capital now and then (a shift kept by a fragment), `ma` in between.
+        var case: LearnedCase? = null
+        fun commit(word: String) {
+            val v = vote(word, "ma", before = "quel ", learned = case?.display, lang = "it")
+            case = nextCase(case, v) ?: case
+        }
+        commit("Ma")
+        commit("ma")
+        commit("ma")
+        commit("Ma")
+        assertFalse(settled(case))
+        assertNull(learnedCapital("ma", case))
+        // A name written with its capital twice, nothing lowercase between, still settles.
+        case = null
+        commit("Ma")
+        commit("Ma")
+        assertTrue(settled(case))
+    }
+
+    @Test
+    fun forgetDropsALearnedCapitalToTheFloor() {
+        val floor = LearnedCase("Ma", KineticaConstants.CASE_VOTES_LOW)
+        assertEquals(floor, nextCase(LearnedCase("Ma", KineticaConstants.CASE_VOTES_HIGH), CaseVote.FORGET))
+        assertEquals(floor, nextCase(LearnedCase("Ma", 2), CaseVote.FORGET))
+        // Already there, or nothing learned: nothing to write.
+        assertNull(nextCase(floor, CaseVote.FORGET))
+        assertNull(nextCase(null, CaseVote.FORGET))
+    }
+
+    @Test
+    fun aVoteThatChangesNothingIsNoChange() {
+        val top = LearnedCase("Dennis", KineticaConstants.CASE_VOTES_HIGH)
+        assertNull(nextCase(top, CaseVote(1, "Dennis")))
+        assertNull(nextCase(LearnedCase("Ma", KineticaConstants.CASE_VOTES_LOW), CaseVote(-1, null)))
+    }
+
+    @Test
+    fun aRecasedWordKeepsItsCase() {
+        assertNull(learnedCapital("ma", LearnedCase("Ma", 3), chosen = true))
+        assertEquals("Ma", learnedCapital("ma", LearnedCase("Ma", 3), chosen = false))
+    }
+
+    @Test
+    fun maStaysLowercaseAfterShiftDown() {
+        // Italian `ma` with a settled `Ma`: shift-down on it, then `ma` tapped again.
+        val forgotten = nextCase(LearnedCase("Ma", 2), CaseVote.FORGET)
+        assertFalse(settled(forgotten))
+        assertNull(learnedCapital("ma", forgotten))
+        // Coming back takes more capital commits than lowercase ones, from the floor.
+        var case = forgotten
+        repeat(KineticaConstants.LEARNED_CAPITAL_MIN_VOTES - KineticaConstants.CASE_VOTES_LOW - 1) {
+            case = nextCase(case, CaseVote(1, "Ma"))
+        }
+        assertFalse(settled(case))
     }
 
     @Test

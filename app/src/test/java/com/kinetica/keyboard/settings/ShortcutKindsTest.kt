@@ -16,6 +16,16 @@ import org.junit.Test
 class ShortcutKindsTest {
 
     @Test
+    fun anEditingPageKeyOffersNoEmojiAndNotThePageItself() {
+        val kinds = ShortcutKinds.editPage
+        assertEquals(listOf(ShortcutKind.Text, ShortcutKind.CtrlKey), kinds.take(2))
+        assertFalse(ShortcutKind.Emoji in kinds)
+        assertFalse(ShortcutKind.Action(EditorAction.EDIT_PAGE) in kinds)
+        assertTrue(ShortcutKind.Action(EditorAction.SELECT_MODE) in kinds)
+        assertTrue(ShortcutKind.Action(EditorAction.ARROW_LEFT) in kinds)
+    }
+
+    @Test
     fun everyKindReadsBackFromWhatItStores() {
         for (kinds in listOf(ShortcutKinds.chords, ShortcutKinds.edgeSwipes, ShortcutKinds.expansions)) {
             for (kind in kinds) {

@@ -202,4 +202,30 @@ class EditorStateTest {
         assertFalse(stateFor(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI or caps).capSentences)
         assertTrue(stateFor(InputType.TYPE_CLASS_TEXT or caps).capSentences)
     }
+
+    private fun stateForField(options: String?, fieldPackage: String?, own: String?): EditorState =
+        EditorState.from(
+            EditorInfo().also {
+                it.inputType = InputType.TYPE_CLASS_TEXT
+                it.privateImeOptions = options
+                it.packageName = fieldPackage
+            },
+            own,
+        )
+
+    @Test
+    fun theSettingsTryFieldIsKnownByItsOptionAndTheKeyboardsOwnPackage() {
+        val own = "com.kinetica.keyboard"
+        val dev = "$own.dev"
+        assertTrue(stateForField(EditorState.TRY_FIELD_OPTION, own, own).ownTryField)
+        // The DEV build compares its own runtime package, suffix included.
+        assertTrue(stateForField("other.flag,${EditorState.TRY_FIELD_OPTION}", dev, dev).ownTryField)
+        // Another app cannot claim it, nor can the release keyboard read the DEV settings' field.
+        assertFalse(stateForField(EditorState.TRY_FIELD_OPTION, "org.other.app", own).ownTryField)
+        assertFalse(stateForField(EditorState.TRY_FIELD_OPTION, dev, own).ownTryField)
+        // The package alone is not the field: the Tutor and the dialogs still open settings.
+        assertFalse(stateForField(null, own, own).ownTryField)
+        assertFalse(stateForField(EditorState.ONE_TOKEN_OPTION, own, own).ownTryField)
+        assertFalse(stateForField(EditorState.TRY_FIELD_OPTION, own, null).ownTryField)
+    }
 }

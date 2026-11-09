@@ -20,6 +20,7 @@ import com.kinetica.keyboard.ime.AlphaLayouts
 import com.kinetica.keyboard.layout.Key
 import com.kinetica.keyboard.layout.LayoutLoader
 import com.kinetica.keyboard.settings.KeyboardConfig
+import com.kinetica.keyboard.settings.LookSets
 import com.kinetica.keyboard.ui.GhostPath
 import com.kinetica.keyboard.ui.KeyboardTheme
 import com.kinetica.keyboard.ui.TutorPathView
@@ -47,6 +48,7 @@ class TutorActivity : AppCompatActivity() {
         val config = KeyboardConfig.from(
             PreferenceManager.getDefaultSharedPreferences(this),
             resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE,
+            LookSets.systemNight(resources.configuration.uiMode),
         )
         letters = try {
             val bundled = (assets.list("layouts") ?: emptyArray()).map { it.removeSuffix(".json") }.toSet()

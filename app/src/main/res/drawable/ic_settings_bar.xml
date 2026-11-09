@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A strip of three words: the suggestion bar. Drawn for this project, the stroke of ic_group_open. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M4,8 L20,8 Q21,8 21,9 L21,15 Q21,16 20,16 L4,16 Q3,16 3,15 L3,9 Q3,8 4,8 Z"
+        android:strokeColor="?android:attr/textColorSecondary"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M9,8 L9,16 M15,8 L15,16"
+        android:strokeColor="?android:attr/textColorSecondary"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

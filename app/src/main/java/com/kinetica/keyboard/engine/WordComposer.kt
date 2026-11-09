@@ -139,6 +139,9 @@ class WordComposer(
     val lastTokenEnd: Long get() = tokens.maxOfOrNull { it.tEnd } ?: -1L
     val tokenCount: Int get() = tokens.size
 
+    /** Whether the word in hand was reloaded from the editor rather than typed ([isSeeded]). Main thread. */
+    val bufferSeeded: Boolean get() = isSeeded(tokens)
+
     fun hasSwipeToken(): Boolean = tokens.any { it !is TapToken }
 
     /**
@@ -641,10 +644,22 @@ class WordComposer(
 /**
  * A list the rescue pass alone produced goes to the bar and not the editor. Of 46
  * labelled buffers it rescued from nothing, 10 led with the word, so a tap is cheaper than a
- * retype on the other 36.
+ * retype on the other 36. A lead that fits well and stands clear commits ([rescueCommits]).
  */
 internal fun rescueHeld(m: WordComposer.Merged): WordComposer.Merged {
-    if (m.tentative == null || m.candidates.any { it.source != WordCandidate.Source.RESCUE }) return m
+    val lead = m.tentative
+    if (lead == null || m.candidates.any { it.source != WordCandidate.Source.RESCUE }) return m
+    if (rescueCommits(lead, m.candidates)) {
+        DecodeTrace.log { "rescue commit n=${m.candidates.size} first=${lead.word} d=${lead.dtwDistance}" }
+        return m
+    }
     DecodeTrace.log { "rescue pick-only n=${m.candidates.size} first=${m.candidates.first().word}" }
     return m.copy(tentative = null, reason = "rescue-only")
+}
+
+/** A rescue lead that fits within RESCUE_COMMIT_D and leads alone or RESCUE_COMMIT_CLEAR times the next word. */
+internal fun rescueCommits(lead: WordCandidate, list: List<WordCandidate>): Boolean {
+    if (lead.dtwDistance > KineticaConstants.RESCUE_COMMIT_D) return false
+    val next = list.firstOrNull { it.word != lead.word } ?: return true
+    return KineticaConstants.RESCUE_COMMIT_CLEAR > 0f && lead.score >= KineticaConstants.RESCUE_COMMIT_CLEAR * next.score
 }

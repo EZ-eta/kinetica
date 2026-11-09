@@ -104,6 +104,50 @@ class SymbolRowsTest {
         assertFalse(moved.id == dollar.id)
     }
 
+    /** A list the user wrote for a symbol (#47) replaces the built-in one, wherever the symbol sits. */
+    @Test
+    fun aUserListReplacesTheBuiltInOneOnBuiltInAndTypedKeys() {
+        val typed = SymbolRows.apply(page("symbols"), 1, listOf(null, null, "! ?"))
+        val withLists = SymbolRows.withLists(typed, mapOf("$" to listOf("₿", "€"), "!" to listOf("¡")))
+        val dollar = withLists.keys.single { it.output == "$" }
+        assertEquals(listOf("₿", "€"), dollar.alternates)
+        assertNull("the list's first entry is the plain long press", dollar.hint)
+        assertEquals(listOf("¡"), withLists.keys.single { it.output == "!" }.alternates)
+    }
+
+    @Test
+    fun aSymbolWithNoListKeepsItsBuiltInOne() {
+        val base = page("symbols")
+        val withLists = SymbolRows.withLists(base, mapOf("¤" to listOf("¢")))
+        assertEquals(base.keys.single { it.output == "$" }.alternates, withLists.keys.single { it.output == "$" }.alternates)
+    }
+
+    @Test
+    fun theBottomRowKeepsItsOwnLists() {
+        val base = page("symbols")
+        val comma = base.keys.single { it.id == "comma" }
+        val withLists = SymbolRows.withLists(base, mapOf(comma.output to listOf("¤")))
+        assertEquals(comma.alternates, withLists.keys.single { it.id == "comma" }.alternates)
+        assertFalse(SymbolRows.carriesList("symbols", comma))
+    }
+
+    @Test
+    fun theSettingsListEverySymbolOfThePageOnce() {
+        val symbols = SymbolRows.symbolsOf(SymbolRows.apply(page("symbols"), 1, listOf(null, null, "! ! ?")))
+        assertEquals(symbols.toString(), symbols.size, symbols.toSet().size)
+        assertTrue(symbols.toString(), "1" in symbols && "$" in symbols && "?" in symbols)
+        assertFalse("the bottom row has lists of its own", "," in symbols)
+    }
+
+    @Test
+    fun onlyASymbolPagesUpperKeysCarryAList() {
+        val dollar = page("symbols").keys.single { it.output == "$" }
+        assertTrue(SymbolRows.carriesList("symbols", dollar))
+        assertTrue(SymbolRows.carriesList("symbols2", dollar))
+        assertFalse(SymbolRows.carriesList("qwerty", dollar))
+        assertFalse(SymbolRows.carriesList(null, dollar))
+    }
+
     @Test
     fun everyKeyIdStaysUnique() {
         val edited = SymbolRows.apply(page("symbols"), 1, listOf("! ! !", "1 2", "# #"))

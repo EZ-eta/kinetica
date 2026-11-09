@@ -58,6 +58,9 @@ class SuggestionBarView @JvmOverloads constructor(
         /** The reserved right-edge button: throw the current word away and start again. */
         fun onRetype()
 
+        /** The left-edge button brought the shortcut row up or took it down (haptic hook). */
+        fun onShortcutsButton()
+
         /**
          * A shortcut in the action row was tapped, by its index into what the bar was given.
          * Not the glyph: two actions could draw the same symbol, and the bar does not know what
@@ -91,9 +94,10 @@ class SuggestionBarView @JvmOverloads constructor(
     /**
      * One candidate zone. [tier] is the personal-weight badge level 0..7: 0 draws nothing, 1 a
      * center dot, 2..7 add hexagon-corner dots. [count] is the raw personal count behind the
-     * tier, which the badge preview needs during a weight-adjust slide.
+     * tier, which the badge preview needs during a weight-adjust slide. [mark] is drawn left of
+     * the word.
      */
-    data class Suggestion(val word: String, val tier: Int, val count: Int = 0)
+    data class Suggestion(val word: String, val tier: Int, val count: Int = 0, val mark: BarMark = BarMark.NONE)
 
     var listener: Listener? = null
 
@@ -141,6 +145,32 @@ class SuggestionBarView @JvmOverloads constructor(
             field = clamped
             invalidate()
         }
+
+    /**
+     * A button at the left edge, sized as the retype one, that brings the shortcut row back over
+     * the words until the next key ([BarShortcuts]). Off by default, because it costs the words
+     * some width.
+     */
+    var shortcutsButton = false
+        set(value) {
+            if (field == value) return
+            field = value
+            if (!value) shortcutsForced = false
+            invalidate()
+        }
+
+    // The row brought up by the button, over whatever the bar shows; see endShortcuts.
+    private var shortcutsForced = false
+        set(value) {
+            if (field == value) return
+            field = value
+            invalidate()
+        }
+
+    /** Typing resumed or the field changed: the words come back. */
+    fun endShortcuts() {
+        shortcutsForced = false
+    }
 
     /** Recent words, oldest first, left of the live zones; empty turns the columns off. */
     var recent: List<RecentColumn> = emptyList()
@@ -193,6 +223,15 @@ class SuggestionBarView @JvmOverloads constructor(
             }
         }
 
+    /** A word too wide for its place keeps its start and its end, cut in the middle. */
+    var middleCut = false
+        set(value) {
+            if (field != value) {
+                field = value
+                invalidate()
+            }
+        }
+
     // The measured zone widths behind pageSizes, cached under the same key.
     private var zoneWidthsCache: List<Float> = emptyList()
 
@@ -202,6 +241,8 @@ class SuggestionBarView @JvmOverloads constructor(
     // Leading zones that are the commit's corrections beside the next words: a tap swaps the word
     // written, as a strip pick does, and the rest are next-word picks. 0 to 3.
     private var besideZones = 0
+    // The composition word drawn bold: the first, or with the switch the one space writes.
+    private var boldAt = 0
     private var page = 0
     private var downZone = -1
     private var downX = 0f
@@ -232,6 +273,8 @@ class SuggestionBarView @JvmOverloads constructor(
         set(value) {
             if (field != value) {
                 field = value
+                // A word begun ends a forced row, whichever path began it (a reopened word too).
+                if (value) shortcutsForced = false
                 if (words.isEmpty() && actions.isNotEmpty()) invalidate()
             }
         }
@@ -300,6 +343,7 @@ class SuggestionBarView @JvmOverloads constructor(
     /** Signed weight delta for the current slide on [count]. */
     private fun adjustDelta(count: Int, steps: Int): Int = BarAdjust.delta(count, steps, reinforceIncrement)
 
+    private val icons = GlyphIcons(context)
     private val bgPaint = Paint()
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textAlign = Paint.Align.CENTER
@@ -315,7 +359,13 @@ class SuggestionBarView @JvmOverloads constructor(
     }
     private val dividerPaint = Paint()
     private val badgePaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val markPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textAlign = Paint.Align.RIGHT
+        typeface = Typeface.DEFAULT_BOLD
+    }
     private val timerPaint = Paint()
+    private val glyphPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+
 
     // The autospace countdown, in uptime milliseconds; a zero duration draws nothing.
     private var timerStart = 0L
@@ -371,13 +421,15 @@ class SuggestionBarView @JvmOverloads constructor(
         dividerPaint.color = theme.keyHint
         dividerPaint.alpha = 60
         badgePaint.color = theme.accent
+        markPaint.color = theme.accent
         timerPaint.color = theme.accent
         timerPaint.alpha = TIMER_ALPHA
     }
 
-    /** Composition mode: ranked candidates for the word in progress. */
-    fun setSuggestions(candidates: List<Suggestion>) {
+    /** Composition mode: ranked candidates for the word in progress, [bold] drawn bold (-1 none). */
+    fun setSuggestions(candidates: List<Suggestion>, bold: Int = 0) {
         words = candidates
+        boldAt = bold
         correctionMode = false
         selectedIndex = -1
         besideZones = 0
@@ -406,6 +458,7 @@ class SuggestionBarView @JvmOverloads constructor(
      */
     fun showCorrectionBeside(corrections: List<Suggestion>, next: List<Suggestion>) {
         words = corrections + next
+        boldAt = 0
         correctionMode = false
         selectedIndex = -1
         besideZones = corrections.size
@@ -448,7 +501,8 @@ class SuggestionBarView @JvmOverloads constructor(
         // Everything that changes wordsWidth is in the key, the retype button included, or
         // the partition would stay sized for the old width.
         val key = words.hashCode() * 31 * 31 + width * 31 + height +
-            (if (retypeButton) 7919 else 0) + retypeButtonDp + recent.size * 131 + (tallFactor * 100).toInt() +
+            (if (retypeButton) 7919 else 0) + (if (shortcutsButtonShown()) 7907 else 0) + retypeButtonDp +
+            recent.size * 131 + (tallFactor * 100).toInt() +
             (textScale * 1000).toInt() * 17 + (if (compactWords) 104729 else 0)
         if (key != zoneKey) {
             zoneKey = key
@@ -486,16 +540,30 @@ class SuggestionBarView @JvmOverloads constructor(
         val pad = TEXT_INSET_DP * density * orn
         val badge = 2f * (BADGE_GAP_DP + BADGE_REACH_DP) * density * orn
         return words.map {
-            primaryPaint.measureText(it.word) + pad + if (it.tier > 0) badge else 0f
+            primaryPaint.measureText(it.word) + pad + (if (it.tier > 0) badge else 0f) + markReach(it.mark, primaryPaint, orn)
         }
     }
 
     /**
-     * Whether the shortcut row is on screen. Correction mode counts as content: the strip is a
-     * live offer and the row must not cover it.
+     * The width a [mark] takes from its word's zone, counted on both sides because the text is
+     * centred, as the badge's is. Sets [markPaint]'s size from [paint], so the drawing reads it next.
      */
-    private fun actionsVisible(): Boolean =
-        actions.isNotEmpty() && words.isEmpty() && !correctionMode && !wordPending
+    private fun markReach(mark: BarMark, paint: Paint, orn: Float): Float {
+        val glyph = mark.glyph ?: return 0f
+        markPaint.textSize = paint.textSize * MARK_TEXT_FRACTION
+        return 2f * (MARK_GAP_DP * density * orn + markPaint.measureText(glyph))
+    }
+
+    /**
+     * Whether the shortcut row is on screen. Correction mode counts as content: the strip is a
+     * live offer and the row must not cover it, unless the button asked for the row.
+     */
+    private fun actionsVisible(): Boolean = BarShortcuts.rowShown(
+        actions.isNotEmpty(), words.isNotEmpty(), correctionMode, wordPending, shortcutsForced,
+    )
+
+    private fun shortcutsButtonShown(): Boolean =
+        BarShortcuts.buttonShown(shortcutsButton, actions.isNotEmpty(), words.isNotEmpty())
 
     /** Cells drawn: as many as a thumb-sized cell leaves room for. */
     private fun visibleActions(): List<String> {
@@ -534,7 +602,11 @@ class SuggestionBarView @JvmOverloads constructor(
                 timerDuration = 0L
             }
         }
+        // The recent columns sit right of the shortcuts button.
+        canvas.save()
+        canvas.translate(shortcutsWidth(), 0f)
         drawRecent(canvas, h)
+        canvas.restore()
         val vis = visible()
         // Ornaments scale with the bar so a thinned bar shrinks them instead of overlapping the
         // word; 1.0 at BarMetrics.REFERENCE_DP, the default 44dp look.
@@ -548,8 +620,20 @@ class SuggestionBarView @JvmOverloads constructor(
         // restarting.
         if (retypeButton) {
             val bw = retypeWidth()
-            canvas.drawText(RETYPE_GLYPH, w - bw / 2f, baseY, textPaint)
+            val size = textPaint.textSize * GlyphIcons.SIZE_OVER_TEXT
+            if (!icons.draw(canvas, GlyphIcons.actionOfSymbol(RETYPE_GLYPH), w - bw / 2f, h / 2f, size, textPaint.color)) {
+                canvas.drawText(RETYPE_GLYPH, w - bw / 2f, baseY, textPaint)
+            }
             canvas.drawRect(w - bw - 1f, h * 0.2f, w - bw + 1f, h * 0.8f, dividerPaint)
+        }
+        if (shortcutsButtonShown()) {
+            val bw = shortcutsWidth()
+            // In the accent while the row is up, so the second tap reads as taking it down.
+            drawShortcutsGlyph(
+                canvas, bw / 2f, h / 2f, textPaint.textSize * SHORTCUTS_GLYPH_OVER_TEXT,
+                if (shortcutsForced) theme.accent else textPaint.color,
+            )
+            canvas.drawRect(bw - 1f, h * 0.2f, bw + 1f, h * 0.8f, dividerPaint)
         }
         // Everything from here is laid out from the left edge of the live words.
         canvas.save()
@@ -563,14 +647,20 @@ class SuggestionBarView @JvmOverloads constructor(
         val acts = visibleActions()
         if (acts.isNotEmpty()) {
             val cellW = wordsWidth() / acts.size
+            val size = textPaint.textSize * GlyphIcons.SIZE_OVER_TEXT
             for (i in acts.indices) {
-                canvas.drawText(acts[i], cellW * (i + 0.5f), baseY, textPaint)
+                val cx = cellW * (i + 0.5f)
+                if (!icons.draw(canvas, GlyphIcons.actionOfSymbol(acts[i]), cx, h / 2f, size, textPaint.color)) {
+                    canvas.drawText(acts[i], cx, baseY, textPaint)
+                }
                 if (i > 0) {
                     canvas.drawRect(
                         cellW * i - 1f, h * 0.2f, cellW * i + 1f, h * 0.8f, dividerPaint,
                     )
                 }
             }
+            // Forced over words, the row owns the space: no word or page dot under it.
+            return
         }
         if (vis.isEmpty()) return
         val layout = pageLayout(vis)
@@ -581,9 +671,9 @@ class SuggestionBarView @JvmOverloads constructor(
             val left = layout.bounds[i]
             val zoneW = layout.bounds[i + 1] - left
             val cx = layout.centers[i]
-            // Bold goes to the overall top candidate, or the committed word, on whatever page it
-            // falls.
-            val emphasized = if (correctionMode) fullIdx == selectedIndex else fullIdx == besideZones
+            // Bold goes to the overall top candidate (with the switch, the word space writes, or
+            // none), or the committed word, on whatever page it falls.
+            val emphasized = if (correctionMode) fullIdx == selectedIndex else fullIdx == besideZones + boldAt
             if (correctionMode && fullIdx == selectedIndex) {
                 val pad = 4f * density * orn
                 // Compact zones run to the bar's edges; the chip hugs the word instead.
@@ -601,8 +691,13 @@ class SuggestionBarView @JvmOverloads constructor(
                 emphasized -> primaryPaint
                 else -> textPaint
             }
-            val shown = fit(s.word, paint, zoneW)
+            val shown = fit(s.word, paint, zoneW - markReach(s.mark, paint, orn))
             canvas.drawText(shown, cx, baseY, paint)
+            // Left of the word, its top on the word's: the badge holds the right.
+            s.mark.glyph?.let { glyph ->
+                val markX = cx - paint.measureText(shown) / 2f - MARK_GAP_DP * density * orn
+                canvas.drawText(glyph, markX, baseY + paint.ascent() - markPaint.ascent(), markPaint)
+            }
             // While a slide is armed on this zone, the badge previews the pending tier.
             val blockArmed = adjustArmed && i == adjustZone &&
                 BarAdjust.blockArmed(s.count, adjustSteps)
@@ -716,6 +811,25 @@ class SuggestionBarView @JvmOverloads constructor(
     }
 
     /**
+     * The shortcuts button: a 3 by 3 grid of squares, [size] px across, centred on ([cx], [cy]).
+     * A shape, as the block mark is: no font or drawable, and it themes with the text.
+     */
+    private fun drawShortcutsGlyph(canvas: Canvas, cx: Float, cy: Float, size: Float, color: Int) {
+        glyphPaint.color = color
+        val cell = size * GRID_CELL_FRACTION
+        val pitch = (size - cell) / 2f
+        val left = cx - size / 2f
+        val top = cy - size / 2f
+        for (r in 0 until 3) {
+            for (c in 0 until 3) {
+                val x = left + c * pitch
+                val y = top + r * pitch
+                canvas.drawRect(x, y, x + cell, y + cell, glyphPaint)
+            }
+        }
+    }
+
+    /**
      * Personal-weight badge riding a word's top-right: tier 1 is the center dot, tiers 2..7 fill
      * the six hexagon corners clockwise from the top.
      */
@@ -737,12 +851,7 @@ class SuggestionBarView @JvmOverloads constructor(
 
     private fun fit(word: String, paint: Paint, maxW: Float): String {
         val inset = TEXT_INSET_DP * density * BarMetrics.scale(rowHeight(), density)
-        if (paint.measureText(word) <= maxW - inset) return word
-        var s = word
-        while (s.length > 3 && paint.measureText("$s…") > maxW - inset) {
-            s = s.dropLast(1)
-        }
-        return "$s…"
+        return BarFit.fit(word, maxW - inset, middleCut) { paint.measureText(it) }
     }
 
     override fun onTouchEvent(ev: MotionEvent): Boolean {
@@ -756,7 +865,8 @@ class SuggestionBarView @JvmOverloads constructor(
                 resetAdjust()
                 // Anywhere on the words, in either direction, once there is a page to go to.
                 // Not from the retype button or a recent column, which are not word zones.
-                pageSwipeCandidate = pageCount() > 1 && downZone != ZONE_RETYPE && downZone != ZONE_RECENT
+                pageSwipeCandidate = pageCount() > 1 && downZone != ZONE_RETYPE && downZone != ZONE_RECENT &&
+                    downZone != ZONE_SHORTCUTS && !actionsVisible()
                 pageSwipeConsumed = false
                 recentDownCell = if (downZone == ZONE_RECENT) recentCellAt(ev.x, ev.y) else -1
                 if (downZone == ZONE_RECENT) downWord = recentCellSuggestion(recentDownCell)?.word
@@ -892,6 +1002,14 @@ class SuggestionBarView @JvmOverloads constructor(
                     recycleTracker()
                     return true
                 }
+                if (zone == ZONE_SHORTCUTS && downZone == ZONE_SHORTCUTS) {
+                    shortcutsForced = !shortcutsForced
+                    listener?.onShortcutsButton()
+                    performClick()
+                    downZone = -1
+                    recycleTracker()
+                    return true
+                }
                 if (zone == ZONE_RETYPE && downZone == ZONE_RETYPE) {
                     listener?.onRetype()
                     performClick()
@@ -972,12 +1090,16 @@ class SuggestionBarView @JvmOverloads constructor(
 
     private fun recentColumnWidth(): Float = width * RECENT_COLUMN_FRACTION
 
-    /** Where the live words start: right of the recent-word columns. */
-    private fun wordsLeft(): Float = recent.size * recentColumnWidth()
+    /** Width the shortcuts button takes off the left edge, or 0 when it is not shown; as [retypeWidth]. */
+    private fun shortcutsWidth(): Float =
+        if (shortcutsButtonShown()) (retypeButtonDp * density).coerceAtMost(width / 4f) else 0f
+
+    /** Where the live words start: right of the shortcuts button and the recent-word columns. */
+    private fun wordsLeft(): Float = shortcutsWidth() + recent.size * recentColumnWidth()
 
     /** Column times [RECENT_ROWS] plus row, for a touch inside the recent-word columns. */
     private fun recentCellAt(x: Float, y: Float): Int {
-        val col = (x / recentColumnWidth()).toInt().coerceIn(0, (recent.size - 1).coerceAtLeast(0))
+        val col = ((x - shortcutsWidth()) / recentColumnWidth()).toInt().coerceIn(0, (recent.size - 1).coerceAtLeast(0))
         val row = (y / (height.toFloat() / RECENT_ROWS)).toInt().coerceIn(0, RECENT_ROWS - 1)
         return col * RECENT_ROWS + row
     }
@@ -988,6 +1110,7 @@ class SuggestionBarView @JvmOverloads constructor(
         // The button is not a word zone: it is outside the paging arithmetic, so MAX_ZONES,
         // visible and pageCount ignore it.
         if (retypeButton && xRaw >= width - retypeWidth()) return ZONE_RETYPE
+        if (xRaw < shortcutsWidth()) return ZONE_SHORTCUTS
         if (recent.isNotEmpty() && xRaw < wordsLeft()) return ZONE_RECENT
         val x = xRaw - wordsLeft()
         val acts = visibleActions()
@@ -1015,6 +1138,10 @@ class SuggestionBarView @JvmOverloads constructor(
         // reserves and the position the drawing uses cannot drift apart.
         private const val BADGE_GAP_DP = 6f
         private const val BADGE_REACH_DP = 4.4f
+
+        // A word's mark, left of it: small enough to read as a note on the word, not a letter.
+        private const val MARK_GAP_DP = 3f
+        private const val MARK_TEXT_FRACTION = 0.5f
         const val FLICK_VELOCITY_DP_S = 800f
         // Fixed, not the key long-press setting, which goes down to 25 ms and would let a slow
         // bar tap bump a word's weight. 450 ms spares a deliberate tap and still feels like the
@@ -1033,6 +1160,13 @@ class SuggestionBarView @JvmOverloads constructor(
 
         // The recent-word columns: negative too, so no word gesture starts there.
         const val ZONE_RECENT = -3
+
+        // The shortcuts button, at the left edge: negative, like the retype button.
+        const val ZONE_SHORTCUTS = -4
+
+        // The shortcuts grid: about a letter's height, each square a quarter of it.
+        const val SHORTCUTS_GLYPH_OVER_TEXT = 0.8f
+        const val GRID_CELL_FRACTION = 0.24f
 
         /** Rows in a recent-word column: the candidate above, the word, the next below. */
         const val RECENT_ROWS = 3

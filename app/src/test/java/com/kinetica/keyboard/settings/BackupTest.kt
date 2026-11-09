@@ -1,6 +1,9 @@
 package com.kinetica.keyboard.settings
 
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -312,4 +315,56 @@ class BackupTest {
         assertEquals(listOf(Backup.Expand("ok", 0, "good")), ok.data.expansions)
     }
 
+    /** Bytes standing in for a JPEG: every byte value, so base64's padding and `+`/`/` are hit. */
+    private val image = ByteArray(1_001) { it.toByte() }
+
+    @Test
+    fun theBackgroundImageAndItsCutsSurviveTheRoundTrip() {
+        val d = sample().copy(backdrop = Backup.Backdrop(image, "0.1,0.2,0.9,0.8", ""))
+        val back = roundTrip(d).backdrop
+        assertNotNull(back)
+        assertArrayEquals(image, back!!.jpeg)
+        assertEquals("0.1,0.2,0.9,0.8", back.crop)
+        // A landscape cut never chosen stays empty, not shifted into the image field.
+        assertEquals("", back.cropLandscape)
+    }
+
+    @Test
+    fun theImageIsOneLineAfterEverythingElse() {
+        val lines = viaFile(sample().copy(backdrop = Backup.Backdrop(image, "", ""))).toList()
+        assertEquals(1, lines.count { it.startsWith("backdrop\t") })
+        assertTrue(lines.last().startsWith("backdrop\t"))
+    }
+
+    @Test
+    fun noImageWithoutTheTick() {
+        assertNull(roundTrip(sample()).backdrop)
+        assertTrue(viaFile(sample()).none { it.startsWith("backdrop") })
+    }
+
+    @Test
+    fun aDamagedImageIsSkippedAndCountedAndTheRestRestores() {
+        val lines = viaFile(sample()).toList() + "backdrop\t\t\tnot*base64"
+        val res = Backup.decode(lines.asSequence()) as Backup.Result.Ok
+        assertNull(res.data.backdrop)
+        assertEquals(1, res.skipped)
+        assertEquals(sample().words, res.data.words)
+    }
+
+    @Test
+    fun theNightLooksImageIsARecordOfItsOwn() {
+        val night = ByteArray(77) { (it * 3).toByte() }
+        val d = sample().copy(
+            backdrop = Backup.Backdrop(image, "0.1,0.2,0.9,0.8", ""),
+            backdropNight = Backup.Backdrop(night, "", "0.0,0.1,1.0,0.9"),
+        )
+        val lines = viaFile(d).toList()
+        assertEquals(1, lines.count { it.startsWith("backdrop_night\t") })
+        val back = roundTrip(d)
+        assertArrayEquals(image, back.backdrop!!.jpeg)
+        assertArrayEquals(night, back.backdropNight!!.jpeg)
+        assertEquals("0.0,0.1,1.0,0.9", back.backdropNight!!.cropLandscape)
+        // The day image alone: no night record, and none read back.
+        assertNull(roundTrip(d.copy(backdropNight = null)).backdropNight)
+    }
 }

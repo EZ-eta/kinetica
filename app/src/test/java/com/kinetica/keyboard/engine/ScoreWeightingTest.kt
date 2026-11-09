@@ -276,38 +276,68 @@ class ScoreWeightingTest {
         // WordPredictor.emit derives its DTW budget by inverting the geometric
         // term (maxDTotalForScore). If the two disagree the prune silently drops
         // candidates that would have won, and only on some dictionaries. Assert
-        // the round trip directly.
-        for (num in listOf(0.3f, 0.5f, 0.9f, 1.4f, 2.8f)) {
-            for (minScore in listOf(0.05f, 0.2f, 0.4f, 0.7f, 1.2f)) {
-                val dMax = KineticaConstants.maxDTotalForScore(num, minScore)
-                if (dMax == Float.POSITIVE_INFINITY) {
-                    // Claim: even a fully saturated fit clears the bar.
-                    assertTrue(
-                        "infinite budget claimed but saturated score $num loses to $minScore",
-                        num * KineticaConstants.geometricTerm(KineticaConstants.GEO_SATURATION_KW) >= minScore,
+        // the round trip directly, at both caps a decode can score with.
+        for (cap in listOf(KineticaConstants.GEO_SATURATION_KW, KineticaConstants.GEO_SATURATION_LONG_KW)) {
+            for (num in listOf(0.3f, 0.5f, 0.9f, 1.4f, 2.8f)) {
+                for (minScore in listOf(0.05f, 0.2f, 0.4f, 0.7f, 1.2f)) {
+                    val dMax = KineticaConstants.maxDTotalForScore(num, minScore, cap)
+                    if (dMax == Float.POSITIVE_INFINITY) {
+                        // Claim: even a fully saturated fit clears the bar.
+                        assertTrue(
+                            "infinite budget claimed but saturated score $num loses to $minScore at cap $cap",
+                            num * KineticaConstants.geometricTerm(cap, cap) >= minScore,
+                        )
+                        continue
+                    }
+                    if (dMax <= 0f) {
+                        assertTrue(
+                            "zero budget claimed but a perfect fit would have won",
+                            num * KineticaConstants.geometricTerm(0f, cap) <= minScore,
+                        )
+                        continue
+                    }
+                    // At the bound the scores agree; just inside it the candidate wins.
+                    assertEquals(
+                        "bound is not the inverse at num=$num minScore=$minScore cap=$cap",
+                        minScore.toDouble(),
+                        (num * KineticaConstants.geometricTerm(dMax, cap)).toDouble(),
+                        1e-4,
                     )
-                    continue
-                }
-                if (dMax <= 0f) {
                     assertTrue(
-                        "zero budget claimed but a perfect fit would have won",
-                        num * KineticaConstants.geometricTerm(0f) <= minScore,
+                        "a candidate just inside the bound must beat the heap minimum",
+                        num * KineticaConstants.geometricTerm(dMax * 0.98f, cap) > minScore,
                     )
-                    continue
                 }
-                // At the bound the scores agree; just inside it the candidate wins.
-                assertEquals(
-                    "bound is not the inverse at num=$num minScore=$minScore",
-                    minScore.toDouble(),
-                    (num * KineticaConstants.geometricTerm(dMax)).toDouble(),
-                    1e-4,
-                )
-                assertTrue(
-                    "a candidate just inside the bound must beat the heap minimum",
-                    num * KineticaConstants.geometricTerm(dMax * 0.98f) > minScore,
-                )
             }
         }
+    }
+
+    @Test
+    fun onlyALongStrokeCountsItsFitPastHalfAKey() {
+        // A cap on every buffer turned near-ties between short words to the better fit by a
+        // hundredth of a key (`davvero` 0.51 against `favore` 0.49); a long stroke's rivals sit
+        // a key apart. A buffer of taps alone has no arc and keeps the short cap.
+        assertEquals(KineticaConstants.GEO_SATURATION_KW, KineticaConstants.saturationFor(0f), 0f)
+        assertEquals(
+            KineticaConstants.GEO_SATURATION_KW,
+            KineticaConstants.saturationFor(KineticaConstants.LONG_STROKE_KW - 0.01f),
+            0f,
+        )
+        assertEquals(
+            KineticaConstants.GEO_SATURATION_LONG_KW,
+            KineticaConstants.saturationFor(KineticaConstants.LONG_STROKE_KW),
+            0f,
+        )
+        assertTrue(
+            "the long cap must widen the short one",
+            KineticaConstants.GEO_SATURATION_LONG_KW > KineticaConstants.GEO_SATURATION_KW,
+        )
+        // Past each cap two fits score alike; between the caps only the long stroke tells them apart.
+        assertEquals(KineticaConstants.geometricTerm(0.6f), KineticaConstants.geometricTerm(1.04f), 0f)
+        assertTrue(
+            KineticaConstants.geometricTerm(0.6f, KineticaConstants.GEO_SATURATION_LONG_KW) >
+                KineticaConstants.geometricTerm(1.04f, KineticaConstants.GEO_SATURATION_LONG_KW),
+        )
     }
 
     @Test

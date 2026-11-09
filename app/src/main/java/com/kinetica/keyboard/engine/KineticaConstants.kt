@@ -70,7 +70,11 @@ object KineticaConstants {
     // Lowering PASS_SPLIT_PROMINENCE_KW instead breaks
     // PassRunSplitTest.preciseShortReversalKeepsOnePassPerVisit at every value from 0.5 down.
     const val MONOTONE_SLACK = 18
-    const val MAX_WORD_LEN = 24
+    // The longest word learned, decoded or held in a trie, in letters. German compounds in
+    // ordinary writing run into the high 30s. At 40, 203 learned words of 16 to 40 letters all lead
+    // from taps and from pieces of up to 12 letters; at 24 none past 24 did. The trie's field holds
+    // 63. The asset generator and DictionaryMerger keep their own 20.
+    const val MAX_WORD_LEN = 40
     // Candidate budget per Search pass, counting words that reach the heap. It feeds the
     // root-fairness slicing in WordPredictor.descend: the nearest-start subtree gets half and the
     // other admissible starts share the rest, so a deep word behind a frequent sibling (`cuñado`
@@ -95,8 +99,30 @@ object KineticaConstants {
     const val LEN_BAND_HI = 1.5f
     const val LEN_BAND_MARGIN_KW = 1.0f
 
+    /**
+     * A long one-piece stroke read as a word whose ideal path covers only part of it: the band's
+     * lower edge as a charge. Below SHORT_READING_RATIO of the arc the reading keeps
+     * (ratio / SHORT_READING_RATIO) ^ SHORT_READING_POWER; under SHORT_READING_ARC_KW nothing is
+     * charged, since a short word drawn short sits under the ratio as often as not.
+     * Words of 10+ letters in one stroke, replayed: first try 6 to 22 of 43 rebuilt through key
+     * centres, 8 to 14 of 18 drawn from their own points, no row lost; 206 of 12 396 corpus
+     * leads move, none to a shorter word. Targets drawn over 18 kw keep at least 0.87.
+     */
+    const val SHORT_READING_ARC_KW = 18f
+    const val SHORT_READING_RATIO = 0.9f
+    const val SHORT_READING_POWER = 2f
+
+    /** Score factor for a reading of ideal length [idealKw] over a piece of [arcKw]. */
+    fun shortReadingKeep(idealKw: Float, arcKw: Float): Float {
+        if (arcKw < SHORT_READING_ARC_KW) return 1f
+        val r = idealKw / arcKw / SHORT_READING_RATIO
+        return if (r >= 1f) 1f else Math.pow(r.toDouble(), SHORT_READING_POWER.toDouble()).toFloat()
+    }
+
     // Fuzzy tap fallback (adjacent-key typos) and transposition alternatives.
-    const val FUZZY_TAP_RADIUS_KW = 1.0f
+    // Radius: a tap on the next key lands past 1 kw on the phone's board; three traced
+    // two-thumb rows need 1.01-1.03 and move no corpus lead. 1.25 loses a traced row.
+    const val FUZZY_TAP_RADIUS_KW = 1.1f
     const val FUZZY_TAP_LAMBDA = 0.15f
     const val TRANSPOSE_PENALTY = 0.15f
 
@@ -124,13 +150,17 @@ object KineticaConstants {
     // any length.
     const val COMPLETION_MAX_EXTRA = 8
     // Additive dTotal per completed letter. Any positive value keeps a typed word ahead of its own
-    // extensions; 0.25 is above a worst-case fuzzy substitution (FUZZY_TAP_LAMBDA * 1.0 kw = 0.15),
+    // extensions; 0.25 is above a worst-case fuzzy substitution (FUZZY_TAP_LAMBDA * 1.1 kw = 0.165),
     // so an adjacent-key correction of similar frequency outranks a completion of the same length
     // and only much more frequent words complete past it.
     const val COMPLETION_PENALTY_PER_LETTER = 0.25f
 
-    // Dual-stream merge ambiguity generators.
-    const val ORDER_AMBIG_MS = 120L
+    // Dual-stream merge ambiguity generators. Two thumbs starting closer than this are read in
+    // either order. Two-letter words typed a thumb each start 78-110 ms apart; at 100 those
+    // 100 ms or more apart keep their time order: scripted rows +4 -0 (`who`, `di`, `ma` x2),
+    // 45 of 12 396 corpus leads move, 14 to the word kept, 1 away. At 90 and below a 93 ms
+    // `ne` (a tap, then a press that drifted) reads `me`; 120 left `who` as `how`.
+    const val ORDER_AMBIG_MS = 100L
     const val SPLIT_MARGIN_MS = 80L
     const val MIN_SPLIT_HALF_ARC_KW = 0.5f
     // Head trim for the second half of a split swipe, two roles:
@@ -203,10 +233,75 @@ object KineticaConstants {
     const val HANDOVER_ALLOWANCE_MS = 200L
 
     /**
+     * The beam's hand-over past HANDOVER_ALLOWANCE_MS: charged instead of refused, up to this. A
+     * thumb tapping beside a long stroke lands its letter well before the stroke reaches the one
+     * before it. Traced two-thumb long words, first try: 39 of 69 refused, 43 at 400, 46 at 800,
+     * flat past it. The stream pass keeps 200: 300 there loses rows.
+     */
+    const val HANDOVER_CHARGE_MAX_MS = 800L
+
+    /**
+     * Beam priority, in kw, per 100 ms a hand-over steps back past the allowance. 2.0 and 3.0
+     * lose two traced gains; a flat charge for any step past it loses `improvvisamente`. Under
+     * HANDOVER_KEEP_FLOOR, 1.0 held two traced `improvvisamente` behind the width at an early tap
+     * though each outscored its lead: 0.9 reads them (+2 -0); 0.85 reads a third but drops a
+     * corpus target from the list, 0.5 loses a corpus row. A reading pays at most
+     * HANDOVER_CHARGE_CAP_KW in all.
+     */
+    const val HANDOVER_CHARGE_KW = 0.9f
+
+    /**
+     * Score factor per 100 ms a hand-over steps back past the allowance. Without it `who` reads
+     * `how`, its tap 300 ms early; 0.8 loses a hand row, 0.5 four traced gains.
+     */
+    const val HANDOVER_CHARGE_KEEP = 0.6f
+
+    /**
+     * The least a reading's hand-overs keep of its score, together, however far back they step.
+     * In a long two-thumb word a tap often lands 400-800 ms before the other thumb's stroke reaches
+     * the letter before it, and the keep per 100 ms left such words 0.01-0.1 of their score. Traced
+     * rows 547 to 575 (+28 -0), polyline 451 to 471 (+20 -0), corpus 432 to 433, hand rows and prose
+     * kept words unchanged but one more kept; 0.6 on one hand-over loses a kept `praticamente`.
+     */
+    const val HANDOVER_KEEP_FLOOR = 0.5f
+
+    /**
+     * The most a reading's hand-overs add to its beam priority, together. Past HANDOVER_KEEP_FLOOR a far
+     * step no longer costs score, but its charge still cut a reading that outscored its lead 2 to 1
+     * (`improvvisamente`, a tap 768 ms back). Traced rows +3 -0, polyline +1 -0, corpus and hand rows
+     * unchanged; 2.0 drops a corpus target from its list, 2.75 and up add no traced row.
+     */
+    const val HANDOVER_CHARGE_CAP_KW = 2.5f
+
+    /** Hundreds of ms a hand-over steps back past HANDOVER_ALLOWANCE_MS, 0 inside it. */
+    fun handoverExcess(backMs: Long): Float =
+        if (backMs <= HANDOVER_ALLOWANCE_MS) 0f else (backMs - HANDOVER_ALLOWANCE_MS) / 100f
+
+    /** Score factor for a hand-over stepping back [backMs]: 1 inside the allowance. */
+    fun handoverKeep(backMs: Long): Float {
+        val x = handoverExcess(backMs)
+        return if (x == 0f) 1f else Math.pow(HANDOVER_CHARGE_KEEP.toDouble(), x.toDouble()).toFloat()
+    }
+
+    /**
      * The rescue pass runs when the lead's distance is over this, or nothing was
      * found. At 0.5 it cost 10 labelled leads; 1.0 cost none. Infinite turns it off.
+     * The beam's dropped-tap run opens on the same lead ([DROPPED_TAP_COST_KW]).
      */
     const val RESCUE_MIN_LEAD_D = 1.0f
+
+    /**
+     * A list only the rescue pass found commits its lead when it fits within this. On the phone,
+     * four right words sat pick-only at 0.48-0.63 and one wrong at 0.56; the corpus commits
+     * nothing up to 0.8, and past 0.94 about as many wrong words as right.
+     */
+    const val RESCUE_COMMIT_D = 0.65f
+
+    /**
+     * And the lead is alone, or scores this many times the next word. 1.5 commits `minute` for
+     * `minutes` at d 0.27; the phone's `improvvisamente` led its rival 2.5 to 1.
+     */
+    const val RESCUE_COMMIT_CLEAR = 2f
 
     /**
      * Score factor per gate the rescue relaxes. A factor, not a distance: past GEO_SATURATION_KW
@@ -243,11 +338,31 @@ object KineticaConstants {
     /** Score factor per broken gate on a finished beam reading, as the rescue's. */
     const val BEAM_GATE_KEEP = 0.6f
 
+    /**
+     * Beam priority, in kw, for a tap read as no letter: a stray tap inside a long two-thumb word, read
+     * in a run of its own when the lead fits worse than RESCUE_MIN_LEAD_D. Traced rows +11 -0, polyline
+     * +8 -0, corpus +1 -0; prose kept words +3, rejected -3, fixed +1. Inside the one beam it lost rows
+     * at every charge; on its own run 1.0 kw (keep 0.5) loses a polyline and a corpus row, 3.0 kw (keep
+     * 0.1) gives up a traced row; a lead over 0.6 adds two traced rows and fires more often.
+     */
+    const val DROPPED_TAP_COST_KW = 2.0f
+
+    /** Score factor on a reading that drops a tap, so it leads only a word the strokes fit far better. */
+    const val DROPPED_TAP_KEEP = 0.25f
+
     /** New words the beam may add to the passes' list; the rest of the list keeps its order. */
     const val BEAM_MAX_NEW = 2
 
     /** Whether a beam reading is judged by the geometric term without its floor. */
     const val BEAM_UNSATURATED = true
+
+    /**
+     * Whether a beam letter whose earliest pass is too far back for the hand-over takes the next
+     * pass of its key that is in time. A long stroke passes a key early and again later; the
+     * earliest alone left 34 of 73 traced two-thumb long words with no reading at all. Traced rows
+     * +8 -0, scripted +22 -0, corpus and hand unchanged; one polyline replay of a traced miss lost.
+     */
+    const val BEAM_PASS_IN_TIME = true
 
     /** Scoring attempts for the rescue pass, each one a DTW. 200 moves no labelled row; the slowest phone decode spent 800. */
     const val RESCUE_MAX_ATTEMPTS = 200
@@ -400,10 +515,33 @@ object KineticaConstants {
     // 3.75 / 0.50 sits inside a regression-free plateau (0.45-0.60 x 2.5-4.0) and fixes 13 of 42
     // measured contests; steeper values gain only on reconstructed paths. 0.50 kw is still inside
     // the intended key.
-    // GEO_SATURATION_KW also bounds WordComposer.merge rule 2b and the boostWeight fade, so all
-    // three move together.
+    // GEO_SATURATION_KW also bounds WordComposer.merge rule 2b and the boostWeight fade. A long
+    // stroke moves the score's cap alone (GEO_SATURATION_LONG_KW): on the probes both others
+    // left every row where it was.
     const val GEO_EXPONENT = 3.75f
     const val GEO_SATURATION_KW = 0.5f
+
+    /**
+     * On a buffer whose strokes add up to LONG_STROKE_KW or more, the fit counts up to this
+     * before frequency decides: there a frequent word past half a key beat a better-fitting long
+     * one (`particularly` 0.42 against `prosperity` 1.04). Traced rows 404 to 420 of 597,
+     * labelled corpus 428 to 432, hand rows and kept words unchanged at 0.8. With
+     * HANDOVER_KEEP_FLOOR in, 0.9 adds two traced rows (`significantly`) and loses none; past 1.0
+     * prose kept words fall.
+     */
+    const val GEO_SATURATION_LONG_KW = 0.9f
+
+    /**
+     * A buffer's swiped arc, both thumbs summed, from which [GEO_SATURATION_LONG_KW] applies.
+     * One cap for every reading of a buffer: a cap by the word's own length lowered a long
+     * word's floor below its short rivals (`probabilmente` read `ospedale`). 22 sits inside a
+     * range of 21-26 kw that loses no row; at 18 a sloppy `understanding` reads `undertaking`.
+     */
+    const val LONG_STROKE_KW = 22f
+
+    /** The score's saturation for a buffer whose swipes add up to [arcKw]. */
+    fun saturationFor(arcKw: Float): Float =
+        if (arcKw >= LONG_STROKE_KW) GEO_SATURATION_LONG_KW else GEO_SATURATION_KW
 
     /**
      * A swiped word the active language cannot spell at all may still commit from the other
@@ -444,9 +582,9 @@ object KineticaConstants {
      */
     fun geometricTermUnsaturated(dTotal: Float): Float = 1f / pow1p(dTotal)
 
-    /** Geometric factor of the score; 1.0 at a perfect fit, floored past saturation. */
-    fun geometricTerm(dTotal: Float): Float {
-        val d = if (dTotal < GEO_SATURATION_KW) dTotal else GEO_SATURATION_KW
+    /** Geometric factor of the score; 1.0 at a perfect fit, floored past saturation at [cap]. */
+    fun geometricTerm(dTotal: Float, cap: Float = GEO_SATURATION_KW): Float {
+        val d = if (dTotal < cap) dTotal else cap
         return 1f / pow1p(d)
     }
 
@@ -459,12 +597,12 @@ object KineticaConstants {
      * one too loose only costs latency. WordPredictor is the sole caller and ScoreWeightingTest
      * checks the round trip.
      */
-    fun maxDTotalForScore(numerator: Float, minScore: Float): Float {
+    fun maxDTotalForScore(numerator: Float, minScore: Float, cap: Float = GEO_SATURATION_KW): Float {
         if (minScore <= 0f) return Float.POSITIVE_INFINITY
         val ratio = numerator / minScore
         if (ratio <= 1f) return 0f
         val d = Math.pow(ratio.toDouble(), 1.0 / GEO_EXPONENT).toFloat() - 1f
-        return if (d >= GEO_SATURATION_KW) Float.POSITIVE_INFINITY else d
+        return if (d >= cap) Float.POSITIVE_INFINITY else d
     }
 
     /** [geometricTerm] past saturation: the share of a perfect fit's score a

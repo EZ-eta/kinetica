@@ -41,6 +41,37 @@ class BackupRunTest {
     }
 
     @Test
+    fun theImageRidesOnlyWhenTickedAndTheUndoKeepsIt() {
+        // The run touches files and Room: the rules are read off the source.
+        val run = read("BackupRun.kt")
+        val screen = read("BackupSettingsActivity.kt")
+        assertTrue(screen.contains("BackupRun.collect(this, withPhrases, withImage)"))
+        assertTrue(screen.contains("includeImage = false"))
+        assertTrue("the undo would lose the image an import replaced", run.contains("collect(app, withPhrases = true, withImage = true)"))
+        assertTrue(run.contains("withImage && BackdropStore.isSet(context, p, night)"))
+        // Both looks' images, under the one tick.
+        assertTrue(run.contains("image(night = false), image(night = true)"))
+    }
+
+    @Test
+    fun aRestoredImageGetsANewStampAndOnlyThen() {
+        val run = read("BackupRun.kt")
+        // One stamp per look, written only for an image that was written.
+        val at = run.indexOf("if (b == null) continue")
+        assertTrue("the stamp is not tied to a written image", at >= 0)
+        assertTrue(run.substring(at, run.indexOf("e.commit()", at)).contains("putString(k(Prefs.BACKDROP),"))
+        assertEquals(1, Regex("""putString\(k?\(?Prefs\.BACKDROP\)?,""").findAll(run).count())
+        assertTrue(run.contains("listOf(image to false, imageNight to true)"))
+    }
+
+    @Test
+    fun theSetupProgressStaysOnTheDevice() {
+        // A restored finish would skip the setup on a phone where the keyboard is not set up.
+        assertFalse(Backup.carried(Prefs.SETUP_STEP))
+        assertFalse(Backup.carried(Prefs.SETUP_DONE))
+    }
+
+    @Test
     fun oneRunAtATime() {
         val p = BackupProgress()
         assertFalse(p.running)

@@ -28,8 +28,26 @@ data class KeyCombo(val ctrl: Boolean, val shift: Boolean, val alt: Boolean, val
         return m
     }
 
+    /** One event of a key press: [down] or up, [keyCode], with [metaState] held. */
+    data class Stroke(val down: Boolean, val keyCode: Int, val metaState: Int)
+
     companion object {
         const val PREFIX = "combo:"
+
+        /**
+         * The events for [keyCode] pressed with [metaState] held. Shift goes down as a key of its own
+         * first and up last: a TextView extends a selection only from a Shift its key listener saw go
+         * down, so a move carrying the meta alone moved the cursor. WebView reads the meta, which the
+         * key keeps.
+         */
+        fun strokes(keyCode: Int, metaState: Int): List<Stroke> {
+            val key = listOf(Stroke(true, keyCode, metaState), Stroke(false, keyCode, metaState))
+            if (metaState and KeyEvent.META_SHIFT_ON == 0) return key
+            return listOf(Stroke(true, KeyEvent.KEYCODE_SHIFT_LEFT, metaState)) + key +
+                Stroke(false, KeyEvent.KEYCODE_SHIFT_LEFT, metaState and SHIFT_META.inv())
+        }
+
+        private const val SHIFT_META = KeyEvent.META_SHIFT_ON or KeyEvent.META_SHIFT_LEFT_ON or KeyEvent.META_SHIFT_RIGHT_ON
 
         private const val LETTERS = "abcdefghijklmnopqrstuvwxyz"
         private const val DIGITS = "0123456789"

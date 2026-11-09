@@ -36,4 +36,11 @@ object EmojiRecents {
             .distinct()
             .take(limit)
             .toList()
+
+    /**
+     * The search strip before a letter is typed: [recents] first, then the catalog's order, so a
+     * fresh install or a build with no picks yet shows the common faces, not an empty row.
+     */
+    fun strip(recents: List<String>, catalog: List<String>, limit: Int = MAX): List<String> =
+        (recents.asSequence() + catalog.asSequence()).distinct().take(limit).toList()
 }

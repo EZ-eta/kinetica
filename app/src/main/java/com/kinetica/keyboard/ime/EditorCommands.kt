@@ -10,11 +10,14 @@ import com.kinetica.keyboard.engine.DecodeTrace
 import com.kinetica.keyboard.keys.ActionRow
 import com.kinetica.keyboard.keys.EditorAction
 import com.kinetica.keyboard.keys.KeyCombo
+import com.kinetica.keyboard.keys.SelectMode
 import com.kinetica.keyboard.keys.SpecialKeys
 import com.kinetica.keyboard.keys.WordCase
 import com.kinetica.keyboard.settings.ActionLabels
+import com.kinetica.keyboard.settings.DateStyle
 import com.kinetica.keyboard.settings.Prefs
 import com.kinetica.keyboard.settings.SettingsActivity
+import java.time.LocalDate
 
 /**
  * The commands a key, a chord, an edge swipe, an expansion or a shortcut row can run: editor actions
@@ -32,6 +35,17 @@ internal class EditorCommands(private val ime: KineticaIME) {
     // The one-shot Ctrl: set by CTRL_NEXT, spent by the next key.
     var ctrlPending = false
 
+    // Select on the editing page: moves extend the selection (SelectMode). Lit on its key.
+    var selecting = false
+        private set
+
+    fun setSelecting(on: Boolean) {
+        if (selecting == on) return
+        selecting = on
+        ime.keyboardView?.selectLit = on
+        DecodeTrace.log { "  select=$on" }
+    }
+
     // Clears the spacebar's shortcut notice; the label has no timer of its own. See
     // showSpacebarNotice.
     private val spacebarNoticeRunnable = Runnable { ime.keyboardView?.spacebarNotice = null }
@@ -46,6 +60,14 @@ internal class EditorCommands(private val ime: KineticaIME) {
      * is what it aims at.
      */
     fun performIfAction(text: String): Boolean {
+        // Under Select a move holds Shift, so the selection grows from the cursor.
+        if (selecting) {
+            val shifted = SelectMode.withShift(text)
+            if (shifted != text) KeyCombo.parse(shifted)?.let {
+                sendKeyCombo(it)
+                return true
+            }
+        }
         // A key combination is a target too, wherever an action name is.
         KeyCombo.parse(text)?.let {
             sendKeyCombo(it)
@@ -53,20 +75,27 @@ internal class EditorCommands(private val ime: KineticaIME) {
         }
         val action = EditorAction.of(text)
         if (action == null) return EditorAction.isUnknownAction(text)
-        // Undo and redo are context-menu commands, so the app does the work and the keyboard
-        // keeps no history. performContextMenuAction reports delivery, not effect, so an editor
-        // without an undo stack is a silent no-op, the same contract as paste.
+        // Undo and redo are the app's, as Ctrl+Z and Ctrl+Shift+Z: the keyboard keeps no history.
+        // The key only, never the menu call as well, or an editor answering both undoes twice.
+        SpecialKeys.comboFor(action)?.let { combo ->
+            sendKeyCombo(combo)
+            ime.selectionLedger.expectAny(SystemClock.uptimeMillis())
+            ime.forgetCommitMarks()
+            return true
+        }
+        // performContextMenuAction reports delivery, not effect: an editor without the command is a
+        // silent no-op.
         val menuId = when (action) {
             EditorAction.PASTE -> android.R.id.paste
             EditorAction.COPY -> android.R.id.copy
             EditorAction.CUT -> android.R.id.cut
             EditorAction.SELECT_ALL -> android.R.id.selectAll
-            EditorAction.UNDO -> android.R.id.undo
-            EditorAction.REDO -> android.R.id.redo
+            EditorAction.UNDO, EditorAction.REDO,
             EditorAction.RETYPE, EditorAction.EXPANDIFY, EditorAction.SETTINGS,
             EditorAction.NEXT_LANGUAGE, EditorAction.TOGGLE_AUTOSPACE,
             EditorAction.ONE_HANDED, EditorAction.DATE, EditorAction.TIME,
             EditorAction.ENTER, EditorAction.COPY_LINE, EditorAction.CLEAN_LINKS,
+            EditorAction.CUT_LINE_AFTER, EditorAction.CUT_LINE_BEFORE,
             EditorAction.TOGGLE_NEXT_WORD, EditorAction.TOGGLE_RECENT_WORDS, EditorAction.TOGGLE_NUMBER_ROW,
             EditorAction.TOGGLE_TIDY_SPACES, EditorAction.TOGGLE_TYPING_SPEED,
             EditorAction.TOGGLE_PECK_MODE,
@@ -75,17 +104,22 @@ internal class EditorCommands(private val ime: KineticaIME) {
             EditorAction.ARROW_RIGHT, EditorAction.PAGE_UP, EditorAction.PAGE_DOWN,
             EditorAction.BACKSPACE, EditorAction.CTRL_NEXT,
             EditorAction.CASE_LOWER, EditorAction.CASE_TITLE, EditorAction.CASE_UPPER,
+            EditorAction.DICTATE, EditorAction.EMOJI_SEARCH, EditorAction.EDIT_PAGE, EditorAction.SELECT_MODE,
             -> null
         }
         if (menuId == null) {
             performLocalAction(action)
             return true
         }
-        if (action == EditorAction.PASTE && pasteCleaned()) return true
+        if (action == EditorAction.PASTE && pasteCleaned()) {
+            setSelecting(false)
+            return true
+        }
         ime.commit.finalizePendingWord()
         ime.ich.performContextMenuAction(menuId)
         ime.selectionLedger.expectAny(SystemClock.uptimeMillis())
         ime.forgetCommitMarks()
+        if (SelectMode.clearsAfter(action)) setSelecting(false)
         return true
     }
 
@@ -108,6 +142,8 @@ internal class EditorCommands(private val ime: KineticaIME) {
             EditorAction.TIME -> insertNow(date = false)
             EditorAction.ENTER -> ime.onEnter()
             EditorAction.COPY_LINE -> copyLine()
+            EditorAction.CUT_LINE_AFTER -> cutLine(newlineAfter = true)
+            EditorAction.CUT_LINE_BEFORE -> cutLine(newlineAfter = false)
             EditorAction.CLEAN_LINKS -> cleanLinks()
             EditorAction.TOGGLE_NEXT_WORD -> togglePref(Prefs.NEXT_WORD, !ime.config.nextWord)
             EditorAction.TOGGLE_RECENT_WORDS -> togglePref(Prefs.RECENT_WORDS, !ime.config.recentWords)
@@ -128,7 +164,11 @@ internal class EditorCommands(private val ime: KineticaIME) {
             EditorAction.CASE_LOWER -> ime.edits.recaseWordInHand(WordCase.LOWER)
             EditorAction.CASE_TITLE -> ime.edits.recaseWordInHand(WordCase.TITLE)
             EditorAction.CASE_UPPER -> ime.edits.recaseWordInHand(WordCase.UPPER)
-            // Every context-menu action is handled by the caller.
+            EditorAction.DICTATE -> startDictation()
+            EditorAction.EMOJI_SEARCH -> ime.emojiSearch.toggle("action")
+            EditorAction.EDIT_PAGE -> ime.toggleEditPage()
+            EditorAction.SELECT_MODE -> setSelecting(!selecting)
+            // The context-menu actions, undo and redo are handled by the caller.
             else -> Unit
         }
     }
@@ -174,16 +214,17 @@ internal class EditorCommands(private val ime: KineticaIME) {
 
     /**
      * Today's date or the time, in the format the phone is set to, so a 24-hour phone
-     * gets 24-hour time without a setting of our own.
+     * gets 24-hour time without a setting of our own. The date may be ISO instead, which
+     * sorts as text and reads the same in every country.
      */
     private fun insertNow(date: Boolean) {
         ime.autospace.cancel()
         ime.commit.finalizePendingWord()
         val now = java.util.Date()
-        val text = if (date) {
-            android.text.format.DateFormat.getDateFormat(ime).format(now)
-        } else {
-            android.text.format.DateFormat.getTimeFormat(ime).format(now)
+        val text = when {
+            date && ime.config.dateStyle == DateStyle.ISO -> DateStyle.iso(LocalDate.now())
+            date -> android.text.format.DateFormat.getDateFormat(ime).format(now)
+            else -> android.text.format.DateFormat.getTimeFormat(ime).format(now)
         }
         ime.commitTracked(text)
         ime.updateAutoShift()
@@ -210,6 +251,61 @@ internal class EditorCommands(private val ime: KineticaIME) {
         }
         ime.getSystemService(ClipboardManager::class.java)
             ?.setPrimaryClip(ClipData.newPlainText(ime.getString(R.string.clip_label_line), line))
+    }
+
+    /**
+     * The line the cursor is on and one newline, onto the clipboard and out of the text
+     * ([lineCut]). Placed from the editor's own selection in this call, so no remembered offset
+     * places it; refused where a line copy is, and in a private field.
+     *
+     * The span is selected, then written over with nothing, as the backspace on a selection
+     * does: a WebView editor (Notesnook) dropped a surrounding delete across the line break and
+     * left the span selected. Deleted only when the editor holds exactly the cut text.
+     */
+    private fun cutLine(newlineAfter: Boolean) {
+        ime.autospace.cancel()
+        ime.commit.finalizePendingWord()
+        if (ime.editorState.privateMode) return
+        val live = ime.ich.liveSelection() ?: return
+        val before = ime.ich.textBeforeCursor(COPY_LINE_READ_CHARS) ?: return
+        val after = ime.ich.textAfterCursor(COPY_LINE_READ_CHARS) ?: return
+        val selected = if (live.second > live.first) ime.ich.selectedText() ?: return else ""
+        // A selection the editor cannot hand over whole would be cut as something else.
+        val cut = if (selected.length == live.second - live.first) {
+            lineCut(before, selected, after, COPY_LINE_READ_CHARS, newlineAfter)
+        } else {
+            null
+        }
+        DecodeTrace.log { "  cut line after=$newlineAfter len=${cut?.text?.length ?: "refused"}" }
+        if (cut == null) {
+            ime.views.vibrateForKeyPress()
+            return
+        }
+        // A WebView editor snaps a span ending inside a paragraph break back one: the second
+        // newline is taken on a retry, only once the first span came back changed.
+        val taken = sequenceOf(cut) + listOfNotNull(widenedAcrossBreak(before, selected, after, cut))
+        val span = taken.firstOrNull { c ->
+            ime.ich.setSelection(live.first - c.back, live.second + c.ahead)
+            ime.expectAt(live.first - c.back, live.second + c.ahead)
+            ime.ich.selectedText()?.toString() == c.text
+        }
+        if (span == null) {
+            DecodeTrace.log { "  cut line stale len=${cut.text.length}" }
+            ime.ich.setSelection(live.first, live.second)
+            ime.expectAt(live.first, live.second)
+            ime.views.vibrateForKeyPress()
+            return
+        }
+        if (span !== cut) DecodeTrace.log { "  cut line widened len=${span.text.length}" }
+        val start = live.first - span.back
+        val end = live.second + span.ahead
+        ime.getSystemService(ClipboardManager::class.java)
+            ?.setPrimaryClip(ClipData.newPlainText(ime.getString(R.string.clip_label_line), cut.text))
+        ime.ich.deleteLiveSelection()
+        ime.commitHistory.onEdit(end, span.text.length, 0)
+        ime.expectAt(start)
+        ime.forgetCommitMarks()
+        ime.updateAutoShift()
     }
 
     /**
@@ -284,6 +380,9 @@ internal class EditorCommands(private val ime: KineticaIME) {
         ime.autospace.cancel()
         ime.commit.finalizePendingWord()
         ime.requestHideSelf(0)
+        // In the try field the settings are already open behind the keyboard: starting them again
+        // clears the screen in use back to the top. A named screen still goes there.
+        if (screen == null && ime.editorState.ownTryField) return
         ime.startActivity(
             Intent(ime, SettingsActivity::class.java).apply {
                 // A service context has no activity task to attach to.
@@ -292,6 +391,29 @@ internal class EditorCommands(private val ime: KineticaIME) {
                 if (reveal != null) putExtra(SettingsActivity.EXTRA_REVEAL, reveal)
             },
         )
+    }
+
+    /**
+     * The voice key: the field goes to the voice keyboard the user installed, which hands it back
+     * when done. With none turned on, or a switch the system refuses, the screen naming one opens.
+     */
+    private fun startDictation() {
+        ime.autospace.cancel()
+        ime.commit.finalizePendingWord()
+        val found = DictationHandoff.find(ime)
+        if (found != null) {
+            try {
+                ime.languageSync.switchTo(found.info.id, found.subtype)
+                DecodeTrace.log { "  dictation handoff to=${found.info.packageName}" }
+                return
+            } catch (e: RuntimeException) {
+                // Disabled between the lookup and the switch.
+                DecodeTrace.log { "  dictation refused ${e.javaClass.simpleName}" }
+            }
+        } else {
+            DecodeTrace.log { "  dictation none" }
+        }
+        openSettings(DictationHandoff.SCREEN)
     }
 
     /** A shortcut chosen from the suggestion bar's row, by its index into [barActions]. */
@@ -327,6 +449,7 @@ internal class EditorCommands(private val ime: KineticaIME) {
             typingSpeed = ime.config.typingSpeed,
             peckMode = ime.config.peckMode,
             ctrlPending = ctrlPending,
+            selecting = selecting,
         )
     }
 

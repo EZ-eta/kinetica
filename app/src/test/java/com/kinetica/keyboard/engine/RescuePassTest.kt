@@ -117,4 +117,21 @@ class RescuePassTest {
         val m = WordComposer.Merged(mixed, mixed.first(), 0, "single")
         assertSame(m, rescueHeld(m))
     }
+
+    /**
+     * A rescue lead that fits within RESCUE_COMMIT_D commits when it is alone or scores twice the
+     * next word: the phone's `indipendentemente` (d 0.48, alone) and `improvvisamente` (0.63, 2.5
+     * to 1). `minute` over `minutes` (1.6 to 1) and `inchiodata` (d 1.38) stay pick-only.
+     */
+    @Test
+    fun aRescueLeadThatFitsAndStandsClearCommits() {
+        fun c(word: String, score: Float, d: Float) =
+            WordCandidate(word, score, d, 0.5f, 1f, 0, WordCandidate.Source.RESCUE, "it")
+        fun lead(vararg list: WordCandidate) =
+            rescueHeld(WordComposer.Merged(list.toList(), list.first(), 0, "equal")).tentative?.word
+        assertEquals("indipendentemente", lead(c("indipendentemente", 0.065f, 0.48f)))
+        assertEquals("improvvisamente", lead(c("improvvisamente", 0.072f, 0.63f), c("ironicamente", 0.029f, 0.95f)))
+        assertNull(lead(c("minute", 0.1f, 0.27f), c("minutes", 0.0625f, 0.4f)))
+        assertNull(lead(c("inchiodata", 0.023f, 1.38f)))
+    }
 }

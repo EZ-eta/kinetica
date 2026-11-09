@@ -1,5 +1,7 @@
 package com.kinetica.keyboard.engine
 
+import java.text.Normalizer
+
 /**
  * Maps accented letters onto the trie alphabet's base letters. Gesture geometry knows only base
  * keys (an Italian user swipes the same path for "perche" and "perché"), so accented words are
@@ -9,11 +11,10 @@ package com.kinetica.keyboard.engine
 object AccentFolder {
 
     /**
-     * Letters that fold to two letters. Kept apart from [FOLD] because a two-letter fold is not a
-     * key, so [accentedLetterCode] never returns one and a long-press popup cannot insert one
-     * mid-word.
+     * Letters that fold to two letters, so a word holding one is reached by swiping both keys and
+     * a popup's `ß` goes into the word as two taps on `s`.
      */
-    private val DIGRAPHS = mapOf('ß' to "ss", 'œ' to "oe")
+    private val DIGRAPHS = mapOf('ß' to "ss", 'œ' to "oe", 'ĳ' to "ij", 'þ' to "th")
 
     private val FOLD = HashMap<Char, Char>().apply {
         "àáâäãåąæă".forEach { put(it, 'a') }
@@ -40,6 +41,19 @@ object AccentFolder {
         put('\u02BC', '\'')
         // Arabic: the alef-hamza forms and wasla sit on alef's key.
         "أإآٱ".forEach { put(it, 'ا') }
+        // The schwa of inclusive Italian (`carə`, plural `tuttɜ`) stands where the e was.
+        put('ə', 'e'); put('ɜ', 'e')
+        // Letters with a stroke or no dot have no decomposition to read the base letter from.
+        put('đ', 'd'); put('ð', 'd'); put('ħ', 'h'); put('ı', 'i'); put('ŀ', 'l'); put('ŧ', 't')
+        // Every other lowercase Latin letter with a mark folds to the letter Unicode builds it
+        // from (`ē`, `ő`, `ğ`, `ŵ`), so a popup letter or a learned word never misses its key.
+        // Latin blocks only: Cyrillic `й` decomposes to `и`, a key of its own.
+        val latin = ('\u00C0'..'\u024F') + ('\u1E00'..'\u1EFF')
+        for (c in latin) {
+            if (!c.isLowerCase() || containsKey(c) || c in DIGRAPHS) continue
+            val base = Normalizer.normalize(c.toString(), Normalizer.Form.NFD)[0]
+            if (base != c && base in 'a'..'z') put(c, base)
+        }
     }
 
     /**
@@ -53,20 +67,20 @@ object AccentFolder {
     }
 
     /**
-     * Letter code of [text] when it is a single accented letter of this alphabet, else -1.
+     * Letter codes of [text] when it is a single accented letter of this alphabet, else null:
+     * one code for `ó`, two for `ß` (s s) and `œ` (o e).
      *
      * An accented letter from a long-press popup continues the word; a digit, symbol or emoji
-     * from the same popup ends it. Only one character folding to one different letter qualifies,
-     * so the popup's base cell ("o" under "ó") still commits and then inserts, and "ß" and "œ"
-     * never match.
+     * from the same popup ends it. Only one character folding to letters other than itself
+     * qualifies, so the popup's base cell ("o" under "ó") still commits and then inserts.
      *
      * Pure so the composing decision is JVM-testable, unlike the buffer code in KineticaIME.
      */
-    fun accentedLetterCode(text: String, alphabet: Alphabet = Alphabet.LATIN): Int {
-        if (text.length != 1) return -1
+    fun accentedLetterCodes(text: String, alphabet: Alphabet = Alphabet.LATIN): IntArray? {
+        if (text.length != 1) return null
         val lower = text[0].lowercaseChar()
-        val folded = FOLD[lower] ?: return -1
-        return alphabet.codeOf(folded)
+        val folded = DIGRAPHS[lower] ?: FOLD[lower]?.toString() ?: return null
+        return alphabet.encode(folded)
     }
 
     /**

@@ -1,8 +1,6 @@
 package com.kinetica.keyboard.ui
 
 import android.content.Context
-import android.graphics.Paint
-import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
 import android.widget.HorizontalScrollView
@@ -10,32 +8,23 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import com.kinetica.keyboard.R
-import java.io.IOException
-import org.json.JSONObject
 
 /**
- * Basic emoji picker: category tabs over a scrollable grid, loaded from the
- * bundled assets/emoji_data.json (no network, ever). Swapped in place of the
- * KeyboardView by InputContainerView while open.
+ * Basic emoji picker: category tabs over a scrollable grid, from the bundled set in
+ * [EmojiAssets] (no network, ever). Swapped in place of the KeyboardView by InputContainerView
+ * while open.
  */
 class EmojiPickerView(
     context: Context,
+    private val assets: EmojiAssets,
     private val onEmoji: (String) -> Unit,
     private val onBackspace: () -> Unit,
     private val onClose: () -> Unit,
+    private val onSearch: () -> Unit,
 ) : LinearLayout(context) {
 
-    /**
-     * One emoji with the metadata the asset carries. The tabs do not read [name] and
-     * [keywords]; they are kept for a searchable panel.
-     */
-    private class Emoji(val ch: String, val name: String, val keywords: List<String>)
-
-    private class Category(val name: String, val icon: String, val emoji: List<Emoji>)
-
-    private val categories: List<Category>
+    private val categories: List<EmojiCatalog.Group>
     private val gridScroll = ScrollView(context)
-    private val grid = LinearLayout(context).apply { orientation = VERTICAL }
     private val density = resources.displayMetrics.density
     private val tabs = LinearLayout(context).apply { orientation = HORIZONTAL }
     private val tabViews = ArrayList<TextView>()
@@ -43,20 +32,18 @@ class EmojiPickerView(
     private var shownCategory = 0
 
     /**
-     * Whether this device's font can draw [ch]. The asset carries emoji up to Unicode 15 and
-     * the system font is fixed per OS version, so an undrawable emoji is left out, not shown
-     * as a tofu box. One Paint is reused because this runs once per entry at load.
+     * Each tab's grid, built on its first showing and kept: Flags and People hold hundreds of
+     * cells, too many to rebuild on every tab switch. Cleared when the colours change.
      *
-     * Must stay above the `init` block: initializers run in declaration order, and below it
-     * the Paint is still null when `init` calls [loadCategories], which kills the keyboard.
+     * Must stay above the `init` block: initializers run in declaration order, and below it the
+     * map is still null when `init` shows the first tab, which kills the keyboard.
      */
-    private val glyphPaint = Paint()
+    private val grids = HashMap<EmojiCatalog.Group, LinearLayout>()
 
-    private fun canDraw(ch: String): Boolean = glyphPaint.hasGlyph(ch)
-
-    /** The asset's own entries by character, so a recorded emoji keeps its name. */
-    private val byChar = HashMap<String, Emoji>()
-    private var recentEntries: List<Emoji> = emptyList()
+    /** The set's own entries by character, so a recorded emoji keeps its name. */
+    private val byChar = HashMap<String, EmojiCatalog.Entry>()
+    private var recentEntries: List<EmojiCatalog.Entry> = emptyList()
+    private var recentGroup: EmojiCatalog.Group? = null
 
     /**
      * The emoji this user picks most, best first, from [EmojiRecents].
@@ -71,8 +58,10 @@ class EmojiPickerView(
             field = value
             // Filtered like the asset is: a recent picked on another device, or before a
             // system update removed a font, must not come back as a tofu box.
-            recentEntries = value.filter { canDraw(it) }
-                .map { byChar[it] ?: Emoji(it, "", emptyList()) }
+            recentEntries = value.filter { assets.canDraw(it) }
+                .map { byChar[it] ?: EmojiCatalog.Entry(it, "", -1) }
+            recentGroup?.let { grids.remove(it) }
+            recentGroup = null
             rebuildTabs()
             showCategory(shownCategory.coerceIn(0, (panels().size - 1).coerceAtLeast(0)))
         }
@@ -91,8 +80,8 @@ class EmojiPickerView(
 
     init {
         orientation = VERTICAL
-        categories = loadCategories()
-        for (cat in categories) for (e in cat.emoji) byChar.putIfAbsent(e.ch, e)
+        categories = assets.catalog.groups
+        for (e in assets.catalog.entries) byChar.putIfAbsent(e.ch, e)
 
         rebuildTabs()
         addView(
@@ -103,7 +92,6 @@ class EmojiPickerView(
             LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT),
         )
 
-        gridScroll.addView(grid)
         addView(gridScroll, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
 
         val bottom = LinearLayout(context).apply { orientation = HORIZONTAL }
@@ -111,6 +99,10 @@ class EmojiPickerView(
         // came out light inside a dark keyboard. These are painted from the palette.
         bottom.addView(
             footerControl(context.getString(R.string.emoji_back_to_letters)) { onClose() },
+            LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f),
+        )
+        bottom.addView(
+            footerControl(context.getString(R.string.emoji_search)) { onSearch() },
             LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f),
         )
         bottom.addView(
@@ -127,12 +119,13 @@ class EmojiPickerView(
      * What the tab strip addresses: the frequently-used panel when it has contents, then the
      * asset's categories. Recomputed, not stored, so the tab index and the list always agree.
      */
-    private fun panels(): List<Category> =
-        if (recentEntries.isEmpty()) {
-            categories
-        } else {
-            listOf(Category(context.getString(R.string.emoji_recent), RECENT_ICON, recentEntries)) + categories
-        }
+    private fun panels(): List<EmojiCatalog.Group> {
+        if (recentEntries.isEmpty()) return categories
+        val recent = recentGroup
+            ?: EmojiCatalog.Group(context.getString(R.string.emoji_recent), RECENT_ICON, recentEntries)
+                .also { recentGroup = it }
+        return listOf(recent) + categories
+    }
 
     private fun rebuildTabs() {
         tabs.removeAllViews()
@@ -173,66 +166,27 @@ class EmojiPickerView(
             f.setTextColor(theme.keyText)
             f.setBackgroundColor(theme.keySpecial)
         }
-        // The grid is rebuilt per category, so its cells take the colour there.
+        // The cells take the colour when a grid is built, so the kept ones are built again.
+        grids.clear()
         if (panels().isNotEmpty()) showCategory(shownCategory)
     }
 
     private fun dp(v: Int): Int =
         TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, v.toFloat(), resources.displayMetrics).toInt()
 
-    /**
-     * The shipped set, minus anything this device cannot draw.
-     *
-     * Never throws: an empty picker is an inconvenience, a dead IME leaves the user unable to
-     * type, and a malformed asset must not take the service down.
-     */
-    private fun loadCategories(): List<Category> = try {
-        parseCategories()
-    } catch (e: RuntimeException) {
-        Log.w(TAG, "emoji asset unusable", e)
-        emptyList()
-    } catch (e: IOException) {
-        Log.w(TAG, "emoji asset unreadable", e)
-        emptyList()
-    }
-
-    private fun parseCategories(): List<Category> {
-        val json = context.assets.open("emoji_data.json").bufferedReader().use { it.readText() }
-        val root = JSONObject(json).getJSONArray("categories")
-        val out = ArrayList<Category>(root.length())
-        for (i in 0 until root.length()) {
-            val c = root.getJSONObject(i)
-            val arr = c.getJSONArray("emoji")
-            val entries = ArrayList<Emoji>(arr.length())
-            for (j in 0 until arr.length()) {
-                val e = c.getJSONArray("emoji").getJSONObject(j)
-                val kwArr = e.optJSONArray("kw")
-                val kw = if (kwArr == null) {
-                    emptyList()
-                } else {
-                    List(kwArr.length()) { kwArr.getString(it) }
-                }
-                val ch = e.getString("ch")
-                if (canDraw(ch)) entries.add(Emoji(ch, e.optString("name", ""), kw))
-            }
-            // A category with nothing drawable is dropped, not left as an empty tab, and its
-            // icon must be drawable too or the tab itself is a tofu box.
-            val icon = c.getString("icon")
-            if (entries.isNotEmpty() && canDraw(icon)) {
-                out.add(Category(c.getString("name"), icon, entries))
-            }
-        }
-        return out
-    }
-
     private fun showCategory(index: Int) {
         val shown = panels().getOrNull(index) ?: return
         shownCategory = index
-        grid.removeAllViews()
+        gridScroll.removeAllViews()
+        gridScroll.addView(grids.getOrPut(shown) { buildGrid(shown) })
         gridScroll.scrollTo(0, 0)
+    }
+
+    private fun buildGrid(shown: EmojiCatalog.Group): LinearLayout {
+        val grid = LinearLayout(context).apply { orientation = VERTICAL }
         val perRow = COLUMNS
         var row: LinearLayout? = null
-        for ((i, entry) in shown.emoji.withIndex()) {
+        for ((i, entry) in shown.entries.withIndex()) {
             val ch = entry.ch
             if (i % perRow == 0) {
                 row = LinearLayout(context).apply { orientation = HORIZONTAL }
@@ -257,10 +211,10 @@ class EmojiPickerView(
                 last.addView(TextView(context), LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
             }
         }
+        return grid
     }
 
     private companion object {
-        const val TAG = "EmojiPickerView"
         const val COLUMNS = 8
 
         /** Marks the frequently-used tab. A star, not a clock: it is ordered by

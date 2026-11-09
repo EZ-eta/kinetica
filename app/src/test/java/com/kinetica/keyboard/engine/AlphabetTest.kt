@@ -112,7 +112,7 @@ class AlphabetTest {
         // Hebrew folds nothing: finals are keys of their own.
         assertEquals("שלום", AccentFolder.fold("שלום"))
         assertArrayEquals(Alphabet.HEBREW.encode("שלום"), Alphabet.HEBREW.encode(AccentFolder.fold("שלום")))
-        assertEquals(Alphabet.CYRILLIC.codeOf('е'), AccentFolder.accentedLetterCode("ё", Alphabet.CYRILLIC))
+        assertEquals(listOf(Alphabet.CYRILLIC.codeOf('е')), AccentFolder.accentedLetterCodes("ё", Alphabet.CYRILLIC)?.toList())
         assertNull(Alphabet.LATIN.encode("дом"))
     }
 }

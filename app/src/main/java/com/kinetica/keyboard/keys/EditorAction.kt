@@ -82,6 +82,13 @@ enum class EditorAction(val output: String) {
     COPY_LINE("${ACTION_PREFIX}copy_line"),
 
     /**
+     * Cut the line the cursor is on onto the clipboard, with the newline after it or the one
+     * before it, so the lines either side close up. Deleted around the editor's own selection.
+     */
+    CUT_LINE_AFTER("${ACTION_PREFIX}cut_line_after"),
+    CUT_LINE_BEFORE("${ACTION_PREFIX}cut_line_before"),
+
+    /**
      * Take the tracking parameters out of the links in the selection, or out of the link just
      * before the cursor (#26). Done by the keyboard, since the app has no such command.
      */
@@ -129,6 +136,21 @@ enum class EditorAction(val output: String) {
     CASE_LOWER("${ACTION_PREFIX}case_lower"),
     CASE_TITLE("${ACTION_PREFIX}case_title"),
     CASE_UPPER("${ACTION_PREFIX}case_upper"),
+
+    /**
+     * Hand the field to a voice keyboard the user installed, or open the screen that names one.
+     * Nothing is recorded here, so the keyboard needs no microphone or network permission.
+     */
+    DICTATE("${ACTION_PREFIX}dictate"),
+
+    /** The emoji search panel in the bar's place, or closed again if it is up. */
+    EMOJI_SEARCH("${ACTION_PREFIX}emoji_search"),
+
+    /** The editing page (EditPage), or back to the letters from it. */
+    EDIT_PAGE("${ACTION_PREFIX}edit_page"),
+
+    /** Moves extend the selection until turned off, or until a copy, cut or paste (SelectMode). */
+    SELECT_MODE("${ACTION_PREFIX}select_mode"),
     ;
 
     companion object {

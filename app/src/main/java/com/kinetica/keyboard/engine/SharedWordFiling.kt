@@ -23,9 +23,17 @@ class SharedWordFiling(private val margin: Int = KineticaConstants.SHARED_WORD_F
      * own learning put in another list. A word no list holds goes where the last word only one
      * list holds went, since provenance then is the active language, which says nothing about the
      * text: Italian words missing from its list were learned into English.
+     *
+     * [anchors] false files the word without letting it lead: a word reloaded from the editor and
+     * committed again, often autocorrected, says nothing of the language being written.
      */
-    fun languageFor(held: Map<String, Int>, provenance: String, residents: Collection<String> = emptyList()): String {
-        if (held.size == 1) lastSingle = held.keys.first()
+    fun languageFor(
+        held: Map<String, Int>,
+        provenance: String,
+        residents: Collection<String> = emptyList(),
+        anchors: Boolean = true,
+    ): String {
+        if (held.size == 1 && anchors) lastSingle = held.keys.first()
         if (residents.isNotEmpty() && held.size == 1) return held.keys.first()
         if (residents.isNotEmpty() && held.isEmpty()) return lastSingle?.takeIf { it in residents } ?: provenance
         if (held.size < 2) return provenance

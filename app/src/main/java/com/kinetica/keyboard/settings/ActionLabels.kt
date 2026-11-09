@@ -27,6 +27,8 @@ object ActionLabels {
         EditorAction.TIME -> R.string.action_time
         EditorAction.ENTER -> R.string.action_enter
         EditorAction.COPY_LINE -> R.string.action_copy_line
+        EditorAction.CUT_LINE_AFTER -> R.string.action_cut_line_after
+        EditorAction.CUT_LINE_BEFORE -> R.string.action_cut_line_before
         EditorAction.CLEAN_LINKS -> R.string.action_clean_links
         EditorAction.TOGGLE_NEXT_WORD -> R.string.action_toggle_next_word
         EditorAction.TOGGLE_RECENT_WORDS -> R.string.action_toggle_recent_words
@@ -50,6 +52,10 @@ object ActionLabels {
         EditorAction.CASE_LOWER -> R.string.action_case_lower
         EditorAction.CASE_TITLE -> R.string.action_case_title
         EditorAction.CASE_UPPER -> R.string.action_case_upper
+        EditorAction.DICTATE -> R.string.action_dictate
+        EditorAction.EMOJI_SEARCH -> R.string.action_emoji_search
+        EditorAction.EDIT_PAGE -> R.string.action_edit_page
+        EditorAction.SELECT_MODE -> R.string.action_select_mode
     }
 
     /** The setting a toggle flips, as the spacebar names it. Null for anything else. */
@@ -61,6 +67,7 @@ object ActionLabels {
         EditorAction.TOGGLE_TYPING_SPEED -> R.string.notice_name_typing_speed
         EditorAction.TOGGLE_PECK_MODE -> R.string.notice_name_peck_mode
         EditorAction.CTRL_NEXT -> R.string.notice_name_ctrl
+        EditorAction.SELECT_MODE -> R.string.notice_name_select
         else -> null
     }
 
@@ -82,6 +89,7 @@ object ActionLabels {
         EditorAction.TIME -> R.string.notice_time
         EditorAction.ENTER -> R.string.notice_enter
         EditorAction.COPY_LINE -> R.string.notice_copy_line
+        EditorAction.CUT_LINE_AFTER, EditorAction.CUT_LINE_BEFORE -> R.string.notice_cut_line
         EditorAction.CLEAN_LINKS -> R.string.notice_clean_links
         EditorAction.TAB -> R.string.notice_tab
         EditorAction.ESCAPE -> R.string.notice_escape
@@ -100,6 +108,7 @@ object ActionLabels {
         EditorAction.TOGGLE_NUMBER_ROW, EditorAction.TOGGLE_TIDY_SPACES,
         EditorAction.TOGGLE_TYPING_SPEED, EditorAction.TOGGLE_PECK_MODE, EditorAction.CTRL_NEXT,
         EditorAction.CASE_LOWER, EditorAction.CASE_TITLE, EditorAction.CASE_UPPER,
+        EditorAction.DICTATE, EditorAction.EMOJI_SEARCH, EditorAction.EDIT_PAGE, EditorAction.SELECT_MODE,
         -> null
     }
 }

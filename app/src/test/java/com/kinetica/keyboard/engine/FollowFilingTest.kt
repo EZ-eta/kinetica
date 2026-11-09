@@ -48,4 +48,14 @@ class FollowFilingTest {
         f.languageFor(mapOf("pl" to 170), "pl", listOf("pl", "en"))
         assertEquals("en", f.languageFor(emptyMap(), "en", residents))
     }
+
+    @Test
+    fun aReloadedOneListWordDoesNotLead() {
+        val f = SharedWordFiling()
+        f.languageFor(mapOf("it" to 170), "it", residents)
+        // `ecom` reloaded and autocorrected to `econ`, which only the English list holds (byte 80).
+        assertEquals("en", f.languageFor(mapOf("en" to 80), "en", residents, anchors = false))
+        // An unheld Italian word after it follows the Italian before it.
+        assertEquals("it", f.languageFor(emptyMap(), "en", residents))
+    }
 }

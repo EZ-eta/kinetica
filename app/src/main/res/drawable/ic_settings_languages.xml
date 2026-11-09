@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A globe: the languages you type. Drawn for this project, the stroke of ic_group_open. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M12,3 A9,9 0 1,1 11.99,3 Z"
+        android:strokeColor="?android:attr/textColorSecondary"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M12,3 C9,6 9,18 12,21 M12,3 C15,6 15,18 12,21"
+        android:strokeColor="?android:attr/textColorSecondary"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M3.5,9 L20.5,9 M3.5,15 L20.5,15"
+        android:strokeColor="?android:attr/textColorSecondary"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

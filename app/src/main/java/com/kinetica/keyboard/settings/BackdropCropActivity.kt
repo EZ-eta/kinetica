@@ -24,6 +24,7 @@ import com.kinetica.keyboard.ui.BackdropCropView
 class BackdropCropActivity : AppCompatActivity() {
 
     private var pending = false
+    private var night = false
     private var saved = false
     private lateinit var crop: BackdropCropView
     private val frames = arrayOfNulls<FloatArray>(2)
@@ -34,7 +35,8 @@ class BackdropCropActivity : AppCompatActivity() {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         setTitle(R.string.backdrop_crop_title)
         pending = intent.getBooleanExtra(EXTRA_PENDING, false)
-        val file = if (pending) BackdropStore.pendingFile(this) else BackdropStore.file(this)
+        night = intent.getBooleanExtra(EXTRA_NIGHT, false)
+        val file = if (pending) BackdropStore.pendingFile(this) else BackdropStore.file(this, night)
         val image = try {
             BitmapFactory.decodeFile(file.path)
         } catch (e: OutOfMemoryError) {
@@ -48,7 +50,7 @@ class BackdropCropActivity : AppCompatActivity() {
         val prefs = PreferenceManager.getDefaultSharedPreferences(this)
         for (i in listOf(PORTRAIT, LANDSCAPE)) {
             // A new image opens on its centre; an adjustment on the cut already chosen.
-            val stored = if (pending) null else BackdropCrop.parse(prefs.getString(CUT_KEYS[i], ""))
+            val stored = if (pending) null else BackdropCrop.parse(LookSets.view(prefs, night).getString(CUT_KEYS[i], ""))
             frames[i] = savedInstanceState?.getFloatArray(CUT_KEYS[i])
                 ?: BackdropCrop.opening(stored, image.width, image.height, keyboardAspect(i == LANDSCAPE))
         }
@@ -101,17 +103,17 @@ class BackdropCropActivity : AppCompatActivity() {
 
     private fun save(w: Int, h: Int) {
         frames[shown] = crop.frame
-        if (pending && !BackdropStore.commitPending(this)) {
+        if (pending && !BackdropStore.commitPending(this, night)) {
             Toast.makeText(this, R.string.backdrop_failed, Toast.LENGTH_LONG).show()
             finish()
             return
         }
         val e = PreferenceManager.getDefaultSharedPreferences(this).edit()
         for (i in listOf(PORTRAIT, LANDSCAPE)) {
-            e.putString(CUT_KEYS[i], BackdropCrop.format(BackdropCrop.fractionOf(frames[i]!!, w, h)))
+            e.putString(look(CUT_KEYS[i]), BackdropCrop.format(BackdropCrop.fractionOf(frames[i]!!, w, h)))
         }
         // A new file needs a new stamp for the keyboard to read it; a new cut alone does not.
-        if (pending) e.putString(Prefs.BACKDROP, System.currentTimeMillis().toString())
+        if (pending) e.putString(look(Prefs.BACKDROP), System.currentTimeMillis().toString())
         e.apply()
         saved = true
         finish()
@@ -137,6 +139,9 @@ class BackdropCropActivity : AppCompatActivity() {
         return w / (board + chrome).coerceAtLeast(1f)
     }
 
+    /** [key] in the look this screen edits. */
+    private fun look(key: String): String = if (night) Prefs.nightTwin(key) else key
+
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         if (!::crop.isInitialized) return
@@ -159,6 +164,9 @@ class BackdropCropActivity : AppCompatActivity() {
     companion object {
         /** True when the image to fit is a new pick, still in the pending file. */
         const val EXTRA_PENDING = "pending"
+
+        /** True when the image is the night look's. */
+        const val EXTRA_NIGHT = "night"
         private const val PORTRAIT = 0
         private const val LANDSCAPE = 1
         private const val PORTRAIT_ID = 1

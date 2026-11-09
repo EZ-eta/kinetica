@@ -16,6 +16,10 @@ interface UserWordDao {
     @Query("UPDATE user_words SET frequency = MAX(0, frequency + :amount), updatedAt = :now WHERE word = :word AND lang = :lang")
     fun addWeight(word: String, lang: String, amount: Int, now: Long)
 
+    /** [word]'s stored count in [lang], null without a row. */
+    @Query("SELECT frequency FROM user_words WHERE word = :word AND lang = :lang")
+    fun storedCount(word: String, lang: String): Int?
+
     /** Manual reinforcement and commit learning share this path. */
     @Transaction
     fun upsertAdd(word: String, lang: String, amount: Int, now: Long) {
@@ -30,8 +34,23 @@ interface UserWordDao {
     @Query("UPDATE user_words SET display = :display, caseVotes = :votes WHERE word = :word AND lang = :lang")
     fun setCase(word: String, lang: String, display: String?, votes: Int)
 
-    @Query("SELECT * FROM user_words WHERE lang = :lang ORDER BY frequency DESC LIMIT :limit")
+    /** The most used rows; at an equal count the newest first, so a word learned today is kept. */
+    @Query("SELECT * FROM user_words WHERE lang = :lang ORDER BY frequency DESC, updatedAt DESC LIMIT :limit")
     fun topN(lang: String, limit: Int): List<UserWord>
+
+    /** The rows with a learned capital, whatever their count: [topN] alone drops them past its limit. */
+    @Query(
+        "SELECT * FROM user_words WHERE lang = :lang AND display IS NOT NULL " +
+            "ORDER BY frequency DESC, updatedAt DESC LIMIT :limit",
+    )
+    fun withCapitals(lang: String, limit: Int): List<UserWord>
+
+    /** The rows counted [floor] times or more, which merge into the trie: [topN] alone drops them past its limit. */
+    @Query(
+        "SELECT * FROM user_words WHERE lang = :lang AND frequency >= :floor " +
+            "ORDER BY frequency DESC, updatedAt DESC LIMIT :limit",
+    )
+    fun mergeable(lang: String, floor: Int, limit: Int): List<UserWord>
 
     @Query("SELECT * FROM user_words WHERE lang = :lang AND frequency > 0 ORDER BY word")
     fun allForLanguage(lang: String): List<UserWord>

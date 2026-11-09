@@ -163,6 +163,40 @@ class EdgeSwipeBindingsTest {
     }
 
     @Test
+    fun aSlideUpOnTheModeKeyOpensTheEditingPageAndAFreeSavedSetGetsIt() {
+        assertEquals(EditorAction.EDIT_PAGE.output, EdgeSwipeBindings.DEFAULTS.outputFor("mode", Direction.UP))
+        assertNull(EdgeSwipeBindings.DEFAULTS.outputFor("mode", Direction.DOWN))
+        val other = EdgeSwipeBinding("enter", Direction.UP, "?")
+        val filled = EdgeSwipeBindings(EdgeSwipeBindings.withEditPage(listOf(other)))
+        assertEquals(EditorAction.EDIT_PAGE.output, filled.outputFor("mode", Direction.UP))
+        // The user's own slide up on ?123 stays theirs.
+        val mine = EdgeSwipeBinding("mode", Direction.UP, "x")
+        assertEquals(listOf(mine), EdgeSwipeBindings.withEditPage(listOf(mine)))
+        // Seeded twice, added once.
+        val twice = EdgeSwipeBindings.withEditPage(EdgeSwipeBindings.withEditPage(emptyList()))
+        assertEquals(1, twice.size)
+    }
+
+    @Test
+    fun aSetSeededWithTheSlideDownMovesItUpOnceWhereUpIsFree() {
+        // Down ran into the navigation bar: a set seeded with it gets the slide up instead.
+        val down = EdgeSwipeBinding("mode", Direction.DOWN, EditorAction.EDIT_PAGE.output)
+        val other = EdgeSwipeBinding("enter", Direction.UP, "?")
+        val moved = EdgeSwipeBindings(EdgeSwipeBindings.withEditPageUp(listOf(other, down)))
+        assertEquals(EditorAction.EDIT_PAGE.output, moved.outputFor("mode", Direction.UP))
+        assertNull(moved.outputFor("mode", Direction.DOWN))
+        assertEquals("?", moved.outputFor("enter", Direction.UP))
+        // Up already the user's: nothing moves.
+        val mine = EdgeSwipeBinding("mode", Direction.UP, "x")
+        assertEquals(listOf(down, mine), EdgeSwipeBindings.withEditPageUp(listOf(down, mine)))
+        // Down no longer opens the page: the user changed it, it stays.
+        val changed = EdgeSwipeBinding("mode", Direction.DOWN, "y")
+        assertEquals(listOf(changed), EdgeSwipeBindings.withEditPageUp(listOf(changed)))
+        // A set never seeded with down is left as it is.
+        assertEquals(listOf(other), EdgeSwipeBindings.withEditPageUp(listOf(other)))
+    }
+
+    @Test
     fun aSavedSetGetsShiftsSwipesOnlyWhereTheyAreFree() {
         // Saved before the defaults existed: shift up is the user's own, the rest is free.
         val mine = EdgeSwipeBinding("shift", Direction.UP, "!")

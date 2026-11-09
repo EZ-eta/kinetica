@@ -312,6 +312,15 @@
         <item>Mix enabled languages (experimental)</item>
         <item>Follow the language I type (experimental)</item>
     </string-array>
+    <!-- An ISO date keeps its hyphens: an en dash would not parse. -->
+    <string-array name="date_style_entries" tools:ignore="TypographyDashes">
+        <item>As the phone writes it</item>
+        <item>ISO, 2025-12-31</item>
+    </string-array>
+    <string-array name="date_style_values" translatable="false">
+        <item>system</item>
+        <item>iso</item>
+    </string-array>
     <string-array name="language_mode_values" translatable="false">
         <item>one</item>
         <item>mix</item>

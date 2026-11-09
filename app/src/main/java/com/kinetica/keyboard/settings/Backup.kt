@@ -1,5 +1,7 @@
 package com.kinetica.keyboard.settings
 
+import java.util.Base64
+
 /**
  * The whole of a user's keyboard, as lines of text.
  *
@@ -54,6 +56,12 @@ object Backup {
 
     data class Phrase(val lang: String, val prev: String, val next: String, val count: Int)
 
+    /**
+     * The background image as stored (JPEG) and its portrait and landscape cuts, as the prefs
+     * hold them. One record, base64 on one line: an older build skips it and restores the rest.
+     */
+    class Backdrop(val jpeg: ByteArray, val crop: String, val cropLandscape: String)
+
     data class Data(
         val prefs: List<Pref> = emptyList(),
         val words: List<Word> = emptyList(),
@@ -69,16 +77,25 @@ object Backup {
          */
         val importedBase: List<String> = emptyList(),
         val capitals: List<Capital> = emptyList(),
+        /** Null unless the user ticked the box; a restore without one keeps the image in use. */
+        val backdrop: Backdrop? = null,
+        /** The night look's image, the same way; a record of its own, so an older build skips it. */
+        val backdropNight: Backdrop? = null,
     )
 
-    /** True when [s] can survive a round trip: no separator, no newline. */
     /**
      * Whether a setting travels in a backup, out and back in. The background image's stamp and
-     * cuts do not: the image file stays on this device, and they alone would point at nothing.
+     * cuts do not: alone they would point at no file. The cuts ride in the image's own record
+     * ([Backdrop]), and a restore of it writes a new stamp. The night look's the same. Nor does
+     * the setup's progress, which belongs to the install.
      */
-    fun carried(key: String): Boolean =
-        key != Prefs.BACKDROP && key != Prefs.BACKDROP_CROP && key != Prefs.BACKDROP_CROP_LANDSCAPE
+    fun carried(key: String): Boolean = key !in NOT_CARRIED
 
+    private val IMAGE_KEYS = listOf(Prefs.BACKDROP, Prefs.BACKDROP_CROP, Prefs.BACKDROP_CROP_LANDSCAPE)
+
+    private val NOT_CARRIED = (IMAGE_KEYS + IMAGE_KEYS.map(Prefs::nightTwin) + Prefs.SETUP_STEP + Prefs.SETUP_DONE).toSet()
+
+    /** True when [s] can survive a round trip: no separator, no newline. */
     fun encodable(s: String): Boolean = s.none { it == '\t' || it == '\n' || it == '\r' }
 
     /**
@@ -160,6 +177,11 @@ object Backup {
                 yield("wcase\t${c.lang}\t${c.word}\t${c.display}\t${c.votes}")
             }
         }
+        for ((tag, b) in listOf("backdrop" to data.backdrop, "backdrop_night" to data.backdropNight)) {
+            if (b != null && encodable(b.crop) && encodable(b.cropLandscape) && b.jpeg.isNotEmpty()) {
+                yield("$tag\t${b.crop}\t${b.cropLandscape}\t${Base64.getEncoder().encodeToString(b.jpeg)}")
+            }
+        }
     }
 
     /** How many records [encode] would drop, so the export can say so. */
@@ -211,6 +233,8 @@ object Backup {
         val phrases = ArrayList<Phrase>()
         val base = ArrayList<String>()
         val capitals = ArrayList<Capital>()
+        var backdrop: Backdrop? = null
+        var backdropNight: Backdrop? = null
         var skipped = 0
         while (it.hasNext()) {
             val line = it.next()
@@ -233,11 +257,16 @@ object Backup {
                 "phrase" -> parsePhrase(f)?.also { p -> phrases.add(p) } != null
                 "basedict" -> if (f.size == 2 && f[1].isNotEmpty()) { base.add(f[1]); true } else false
                 "wcase" -> parseCapital(f)?.also { c -> capitals.add(c) } != null
+                "backdrop" -> parseBackdrop(f)?.also { b -> backdrop = b } != null
+                "backdrop_night" -> parseBackdrop(f)?.also { b -> backdropNight = b } != null
                 else -> false
             }
             if (!ok) skipped++
         }
-        return Result.Ok(Data(prefs, words, blocked, chords, expansions, phrases, base, capitals), skipped)
+        return Result.Ok(
+            Data(prefs, words, blocked, chords, expansions, phrases, base, capitals, backdrop, backdropNight),
+            skipped,
+        )
     }
 
     private fun parseExpand(f: List<String>): Expand? {
@@ -272,6 +301,16 @@ object Backup {
         if (f[3].lowercase() != f[2]) return null
         val votes = f[4].toIntOrNull() ?: return null
         return Capital(f[1], f[2], f[3], votes)
+    }
+
+    private fun parseBackdrop(f: List<String>): Backdrop? {
+        if (f.size != 4 || f[3].isEmpty()) return null
+        val jpeg = try {
+            Base64.getDecoder().decode(f[3])
+        } catch (e: IllegalArgumentException) {
+            return null
+        }
+        return if (jpeg.isEmpty()) null else Backdrop(jpeg, f[1], f[2])
     }
 
     private fun parsePhrase(f: List<String>): Phrase? {

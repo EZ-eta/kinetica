@@ -102,6 +102,13 @@ class SteppedSliderPreference @JvmOverloads constructor(
 
     private fun format(ms: Int): String = context.getString(R.string.slider_value_ms, ms)
 
+    /** The stored value, written elsewhere ([RowSync]); redraws the bar only when it moved. */
+    fun syncValue(stored: Int) {
+        if (stored == value) return
+        value = stored
+        notifyChanged()
+    }
+
     private companion object {
         // Only reached if a row declares no valid sliderSteps, which no shipped row does.
         // Present so onGetDefaultValue never has to read the step table (see its comment).

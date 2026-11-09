@@ -22,9 +22,26 @@ Typing SOMETHING:
 ## Video
 
 https://github.com/user-attachments/assets/7bfdabe4-c265-4b40-8db1-c9eb0d9b14d7
+
 ## Themes
+
 <img width="3978" height="1630" alt="Themes" src="https://github.com/user-attachments/assets/2f3935ab-51e2-45b7-befe-e52cf2b9b96a" />
 
+## New in 3.0
+
+- Two-thumb words are read right more often, long words most of all; words up to 40 letters, in
+  one stroke or two thumbs.
+- A setup on first open, and settings in two groups with search and a field to try the keyboard.
+- Day and night looks: the night one shows while the phone is in dark theme.
+- An editing page: arrows, selection, word moves, undo and redo, a slide up on `?123` away.
+- 1 906 emoji with search in 14 languages.
+- Voice input through a voice keyboard you install; Kinetica itself records nothing.
+- A new number pad, long-press lists on the symbol pages, cut line, an ISO date.
+- Long-press letters stay in the word (`Grüße`), and the letter menus follow your languages.
+- Optional: a shortcuts button on the bar, a held shift to swap the slide step, a space that
+  leaves the symbols.
+
+The full list is in the [3.0 release notes](https://github.com/EZ-eta/kinetica/releases/tag/v3.0.0).
 
 ## Install
 
@@ -40,8 +57,10 @@ Or take `kinetica-<version>.apk` from the
 adb install -r kinetica-*.apk
 ```
 
-Then open the Kinetica icon and follow the three steps. A debug build has a different signing key,
-so Android refuses to upgrade it: back up first (Settings > Backup), then uninstall it.
+Then open the Kinetica icon. A short setup turns the keyboard on and asks for your languages,
+height, automatic space and theme, then offers a two-thumb practice; Help and about runs it again.
+A debug build has a different signing key, so Android refuses to upgrade it: back up first
+(Settings > Backup), then uninstall it.
 
 Release APKs are signed with the project's key by the tagged
 [release workflow](.github/workflows/release.yml), so the build behind every APK is public.
@@ -57,30 +76,43 @@ channel can install and update over the other.
   its own cursor, so a word can go back and forth between them in any order.
 - A tap from one thumb inside the other's swipe can double a letter (`h-e-l-o` swipe + `l` tap is
   "hello"), and one tap can stand for a doubled letter (`ottima`, `tutti`).
+- Long words up to 40 letters, drawn in one stroke or shared between the thumbs, and learned as you
+  write them: German and Polish compounds included.
 - Swipe decoding written from scratch: banded dynamic time warping over resampled paths, an anchored
   trie search, frequency and word-pair context.
+- One stray tap inside a word is read as no letter when nothing else fits. A touch between keys or
+  in the split gap types the nearest letter.
 - A thumb left resting on the keys, a third finger while both thumbs draw, and a number-row digit
-  brushed mid-swipe type nothing.
-- Practise two thumbs (Settings > Learn Kinetica): five words drawn over the keyboard, thumb by
-  thumb, typed in a practice field.
+  brushed mid-swipe type nothing. A held letter opens no menu while the other thumb swipes beside it.
+- Practise two thumbs (Help and about): five words drawn over the keyboard, thumb by thumb, typed in
+  a practice field.
 
 ### Suggestions
 
 - Up to ten candidates; a page holds as many as fit, and the bar swipes sideways to the next one.
   Flick a word up to put it in at once.
-- Words sit side by side with a small gap (Typing > Suggestion bar > *Compact suggestions*, on),
-  in a text size of your choice.
+- Words sit side by side with a small gap (Suggestion bar > *Compact suggestions*, on), in a text
+  size of your choice.
 - After a commit the bar becomes a correction strip: tap another word and it replaces the one just
   written, taking its learned weight with it.
 - Next-word suggestions while nothing is being typed (Typing, on). After a word, one to three of its
   corrections stay on the left of the bar and the next words fill the rest (Typing, on).
 - Recent words: the last two words stay on the bar, each with the words it beat; tap one to swap it
   in (off by default). They have their own text size and a swipe direction to choose.
+- *Bold the word space writes* (Suggestion bar, off): only the word a space would write is bold, and
+  the letters you tapped come second.
+- *Mark new and personal words* (Suggestion bar, off): `+` learned when you write it, `?` unknown,
+  `C` your own; no mark for a dictionary word.
+- *Cut long words in the middle* (Suggestion bar, off): `organi…zione` keeps the start and the end,
+  where many words start alike.
 - A tapped word with one stray or one missing letter is offered on the bar, never changed for you.
 - Tap completions mid-word (`t-h` offers "the", "they"); the letters you typed are always the last
-  zone, so a word the dictionary lacks goes in with one tap.
+  zone (second with *Bold the word space writes*), so a word the dictionary lacks goes in with one
+  tap.
 - Tap autocorrect with three levels. It restores missing accents (`perche` -> `perché`,
   `pozno` -> `późno`), and backspace right after it puts back what you typed.
+- In a web address or email field, or beside a completion the app has selected, a word goes in
+  as typed.
 - A retype button (off by default) takes the word back, and the bar then offers what else the
   gesture could have been.
 
@@ -89,10 +121,15 @@ channel can install and update over the other.
 - Tap inside a word you wrote and the bar offers what it had when you wrote it, then the word's
   spelling neighbours; a pick replaces the whole word.
 - Backspace to the end of a word to keep working on it with taps or swipes.
-- Slide along the spacebar to move the cursor, by letter or by word.
+- Slide along the spacebar to move the cursor, by letter or by word, with a tick per step. Hold
+  shift with the other thumb to swap the step, on the spacebar and the backspace slide (Shortcuts
+  and gestures > Swipes and slides > *Hold shift to swap the slide step*, off).
+- An editing page, opened by a slide up on `?123`: Select, Select all, Copy, Paste, Cut, Tab, Home,
+  End, the arrows, word left and right, Page up and down, Undo, Redo and forward delete. Held keys
+  repeat. Any key can be changed, up to four rows (Keys > Editing page).
 - Slide left from backspace to mark words for deletion; slide back to keep them, lift to delete.
   The distance per word can be set, and the slide can stop at punctuation, so a link goes a piece
-  at a time (Shortcuts and gestures > Swipes and slides).
+  at a time (Shortcuts and gestures > Swipes and slides). A word step stops at each line break.
 - A tap on backspace can take back the last tap or swipe of the word in progress, or of the word
   just written with its automatic space (Typing, off).
 - Swipe shift up for `ABC`, right for `Abc`, down for `abc`, or hold it for the menu: on the word at
@@ -107,6 +144,8 @@ channel can install and update over the other.
   as a shortcut action or on the keyboard's own paste (Typing, off). The rest of the link stays as
   written.
 - A new field opens on the letters, wherever the last one was left (Typing, on).
+- *Letters after a space on symbols* (Typing, off): a space on a symbols page goes back to the
+  letters. The number pad stays.
 - Tidy spaces: never two spaces in a row and none before a closing quote (Typing > Spacing, off).
 - The marks that take back an automatic space are a list you can edit (Typing > Spacing > *No space
   before*), and a band on the bar shows the wait before the space lands.
@@ -123,19 +162,29 @@ channel can install and update over the other.
   have several targets, picked on the bar, and targets can chain. A capital in the trigger can be
   matched exactly, ignored, or carried into the text (`Andor` gives `And/or`), set on the Text
   expansions screen. A space inside a trigger is an error, with a button to remove it.
-- A chord, an edge swipe or an expansion can type text, run an action (paste, copy, undo, Tab, the
-  arrows, Home, End, Esc, forward delete, the date, clean links) or press Ctrl and a key (Ctrl+A,
-  Ctrl+Del).
+- A chord, an edge swipe or an expansion can type text, run an action (paste, copy, undo and redo,
+  Tab, the arrows, Home, End, Esc, forward delete, the date, clean links, copy or cut the line,
+  emoji search, voice input, the editing page) or press Ctrl and a key (Ctrl+A, Ctrl+Del). The date
+  is the phone's format or ISO, `2025-12-31` (Suggestion bar > *Date format for the date
+  shortcut*).
 - Shortcuts on the bar when there is nothing to suggest, and in the `?123` hold menu; both sets are
-  chosen and ordered in Typing > Suggestion bar. While the chords show, the menu sits on the
-  spacebar so it covers none of them.
+  chosen and ordered in Suggestion bar. While the chords show, the menu sits on the spacebar so it
+  covers none of them.
+- *Shortcuts button on the suggestion bar* (Suggestion bar, off): one tap brings the shortcuts back
+  over the words until the next key, another brings the words back.
 - Settings from the keyboard: hold `?123` and slide onto the gear.
+- Voice input: the `∿` action, on the bar, a chord or an edge swipe, hands the field to a voice
+  keyboard you install, such as Voxscribe or FUTO Voice Input (source-available, uses the network
+  for its models). Kinetica records nothing and asks for no microphone permission. With none turned
+  on it opens Settings > Voice input.
 
 ### Keys and layout
 
 - Long-press menus on every letter and punctuation key: a row or a 3x3, 4x3 or 5x3 grid. Each
   letter's list can be edited, filled from every enabled language with Default, or given a shortcut
   (`:paste`). Swipe up on the top row, or down on the bottom row, for the key's corner character.
+- The letter menus follow your languages: turn German on and `s` offers `ß`, turn it off and `ß`
+  leaves. A list you wrote keeps everything else as written.
 - Numbers row above the letters (Keys, off). The keyboard grows so the letters keep their size.
 - Middle row width (Size and layout): spreads `a s d f g h j k l` toward the edges, for hands used to
   a board without the half-key indent.
@@ -146,27 +195,40 @@ channel can install and update over the other.
   group of Size and layout.
 - Height by dragging the handle above the bar, side and bottom margins, a live size preview.
 - An optional apostrophe key right of `L`, for `don't` or `nell'immagine` without the symbols page.
-- Two symbol pages and a numpad; a configurable comma and period key; an emoji picker on the
-  comma's long-press, with a frequently used tab.
-- The symbol pages can be rewritten as text, a line per row (Keys > Symbol pages).
+- Two symbol pages and a number pad with `+ ±`, `* /`, `= ≠ ≈` and the currency signs on long
+  presses; a configurable comma and period key.
+- The symbol pages can be rewritten as text, a line per row, and every symbol key can have its own
+  long-press list (Keys > Symbol pages).
+- Emoji: 1 906 of them, Unicode 16 with sequences and flags. Search in 14 languages from the pane's
+  Search or the Emoji search shortcut: a panel takes the bar's place and the keys type the query;
+  what you pick joins Frequently used. Also on the comma's long-press (Keys, off).
 - Words per minute on the spacebar while you type (Keys, off).
+
+### Look
+
 - Themes: dark, light, Material You, or a palette from one colour you type as `#RRGGBB`. Zen
   mode turns animations off.
 - Key borders, on or off, in the theme's colour and a width of your choice.
 - A background image under the keyboard, fitted separately for portrait and landscape, with its
-  own opacity and the keys' (Look and feel).
+  own opacity and the keys' (Theme and look).
 - A swipe shows as a trail, as the keys it crosses lighting up, or both; in one colour, a colour
-  you type, the theme's colour, or rainbow (Look and feel).
+  you type, the theme's colour, or rainbow. The trail can stay until the word ends (Theme and look,
+  off).
+- Day and night looks (Theme and look, off): a second look, with its own theme, colours, image,
+  trail and borders, shows while the phone is in dark theme. Switching it on starts it as a copy
+  of the day look.
 
 ### Languages
 
 - English, Italian, Spanish, Polish, Czech, Dutch, German, French, Norwegian and Romanian;
-  Russian, Ukrainian, Hebrew and Arabic are experimental, each with its own board. 46k to 50k words per language with
-  real corpus frequencies, and up to 100k word pairs.
+  Russian, Ukrainian, Hebrew and Arabic are experimental, each with its own board. 46k to 50k words
+  per language with real corpus frequencies, and up to 100k word pairs.
 - Switch with a chord without leaving the field; the active language shows on the spacebar.
 - Accented words are drawn on their base keys and come out with their accents. A spelling with the
   accents left off is offered only where written text uses it: `pojsc` corrects to `pójść`, while
   `ze` and `że` both stay.
+- A letter from a long-press menu stays in the word: `ß` in `Grüße`, `ő`, `ğ`, `ē`. Italian `e`
+  also offers the schwa, `ə` and `ɜ`, learned like any other spelling.
 - Languages in suggestions (Languages): one at a time (the default); mix,
   the active language and the next enabled one in one list; or follow the language I type, up to
   three as equals, the one you are typing weighs most (experimental).
@@ -180,17 +242,26 @@ channel can install and update over the other.
   common one. Hold a suggestion and slide up or down to change its weight, one badge tier per step;
   slide past the lowest tier to block it.
 - A word you keep capitalizing yourself, a name or `GitHub`, comes out with its capital. Writing it
-  in lowercase over the capital takes it back. Long words you have taught it complete from their
-  first letters (`fakeco` offers `FakeCompanyName`); tapped as `Fake`, shift, `CompanyName`, it
-  stays one word past the automatic space.
+  in lowercase counts against the capital, and shift down on it forgets the capital. Long words you
+  have taught it complete from their first letters (`fakeco` offers `FakeCompanyName`); tapped as
+  `Fake`, shift, `CompanyName`, it stays one word past the automatic space.
 - Phrase learning (optional): which word you tend to type after which.
 - Dictionary: learned and blocked words per language, with search; import of an AOSP word list,
   merged on the phone.
-- Backup: every setting, learned word and shortcut in one text file, restored with progress, and
-  the last restore can be undone.
-- Settings in English and Italian, by the phone's language or Android 13's per-app language;
+- Backup: every setting, learned word and shortcut in one text file, the background image too if
+  you tick it, restored with progress; the last restore can be undone.
+
+### Settings
+
+- Two groups on the home screen, Everyday and More, each row with an icon, a summary and its
+  current value. A search row on top knows several words for each setting.
+- *Try the keyboard here*: a field on every settings screen, to see a change at once. It learns
+  nothing.
+- Changed settings (More): every setting that differs from its default, each with Open and Reset,
+  and Reset all, which leaves the languages alone.
+- In English and Italian, by the phone's language or Android 13's per-app language;
   [CONTRIBUTING.md](CONTRIBUTING.md) says how to add a translation.
-- Learn Kinetica in Settings: the two-thumb practice, then short tips from the basics up.
+- Learn Kinetica: short tips from the basics up.
 
 ## Worth a look in Settings
 
@@ -203,15 +274,26 @@ channel can install and update over the other.
 - **Automatic spaces after tapped words too.** Typing > Spacing > *Autospace tapped words too*. A
   word the dictionary holds gets its space after a pause, and the next letter takes it back if the
   word was not over. Three sliders set the delays.
-- **A shorter keyboard.** *Keyboard height* goes down to 10% of the screen, *Suggestion bar height*
-  shrinks the bar and its text, and *Resize handle height* at 0 removes the grip.
-- **Long-press without the accents.** *Hide accented letters on long-press* leaves digits, symbols
-  and the letters of your enabled languages, so Polish keeps `ą` on the English keys.
+- **A shorter keyboard.** *Keyboard height* (Size and layout) goes down to 10% of the screen,
+  *Suggestion bar height* shrinks the bar and its text, and *Resize handle height* at 0 removes the
+  grip.
+- **Long-press without the accents.** Keys > Long-press menus > *Hide accented letters on
+  long-press* leaves digits, symbols and the letters of your enabled languages, so Polish keeps `ą`
+  on the English keys.
 - **A much bigger dictionary.** Settings > Dictionary > *Import improved dictionary* takes an AOSP
   `wordlist.combined` and merges it with the bundled list, three to five times the words. Get the
   `main_<code>.combined` file for your language from
   [aosp-dictionaries](https://codeberg.org/Helium314/aosp-dictionaries) under `wordlists/`.
-- **Search the settings** with the icon at the top; it knows several words for each setting.
+- **Back to a default.** More > *Changed settings* lists what you moved, with a way back for each.
+
+## Help it grow
+
+- A new language is a word list, its word pairs and a registration:
+  [ADDING_A_LANGUAGE.md](ADDING_A_LANGUAGE.md). Romanian arrived this way.
+- The settings are in English and Italian; [CONTRIBUTING.md](CONTRIBUTING.md) says how to add a
+  third language.
+- A word it keeps getting wrong, or an app where something breaks: open an
+  [issue](https://github.com/EZ-eta/kinetica/issues) with the app's name and what you typed.
 
 ## Requirements
 
@@ -295,10 +377,10 @@ MotionEvent
 | `ime/` | `KineticaIME` (the InputMethodService), editor state, the selection and commit records |
 | `ui/` | `KeyboardView`, `SuggestionBarView`, `InputContainerView`, `EmojiPickerView`, theming, trails |
 | `layout/` | JSON layouts, mutations (numbers row, apostrophe key, middle row), layout-mode transforms |
-| `keys/` | Shift, spacebar and backspace controllers, edge swipes, editor actions, key combinations |
+| `keys/` | Shift, spacebar and backspace controllers, edge swipes, editor actions, key combinations, the editing page |
 | `settings/` | The settings screens, `Prefs`, `KeyboardConfig`, backup |
 | `data/` | Room: learned words per language, word pairs, blocked words, chords, expansions; imported word lists |
-| `onboarding/` | The enable flow and the two-thumb tutor |
+| `onboarding/` | The setup and the two-thumb tutor |
 
 ### Algorithm notes
 
@@ -311,18 +393,20 @@ MotionEvent
   end keys, the path's order, and an ideal-length band. A letter records every pass of the path near
   it, so a revisited letter (the second `e` of "however") still matches. DTW runs on complete words
   only.
-- **Two thumbs**: tokens are ordered by contact time, and a near-tie (120 ms) also tries the swapped
+- **Two thumbs**: tokens are ordered by contact time, and a near-tie (100 ms) also tries the swapped
   order. A further pass gives each thumb its own cursor and a short hand-back, and a best-first beam
-  reads both thumbs in one search; their readings join the same ranked list.
+  reads both thumbs in one search; a hand-over that waits long costs its reading, up to a cap. Their
+  readings join the same ranked list.
 - **Scoring**: `frequency_weight * geometric_term(d) * bigram_multiplier * personal_boost`, with
   `geometric_term(d) = 1 / (1 + min(d, 0.50))^3.75`. Inside half a key width the shape of the gesture
   is scored steeply; past it, a d=0.6 and a d=1.5 match both mean "not this shape", and frequency
-  decides. The context and personal multipliers fade with the candidate's fit, so a common or
-  heavily learned word cannot beat a clearly better match.
+  decides. A long buffer counts its fit further before it saturates. The context and personal
+  multipliers fade with the candidate's fit, so a common or heavily learned word cannot beat a
+  clearly better match.
 - **Accents**: the trie stores accent-folded keys per script; spellings that differ from their key
   ("senti", "sentì") carry their own frequencies and come out as separate candidates.
-- Decoding runs in single-digit milliseconds on the JVM against a 100 ms budget (see
-  `RealDictionaryTest`).
+- Decoding takes a few milliseconds on the JVM, about ten for the longest words, against a 100 ms
+  budget (see `RealDictionaryTest`).
 - **The backspace slide** shows the marked text in a chip above the key, not as a composing region in
   the editor: the text model is commit-only because composing spans behave differently from app to
   app. In password fields the chip shows bullets.
@@ -339,9 +423,11 @@ en, it, es, pl, cs, nl, de, fr, no, ro, ru, uk, he and ar.
   [CC BY 2.0 FR](https://creativecommons.org/licenses/by/2.0/fr/), attribution tatoeba.org. The same
   conversational register as the word lists. Tatoeba also decides which accent-less spellings stay
   and which German nouns are capitalized.
-- Emoji: a hand-curated `assets/emoji_data.json` (478 emoji with names and keywords, up to
-  Unicode 15). No ZWJ sequences, because a phone that cannot render one draws its
-  parts; an emoji the phone's font cannot draw is left out.
+- Emoji: every Unicode 16.0 emoji without a skin tone (1 906), from `emoji-test.txt`; search words
+  from [Unicode CLDR](https://cldr.unicode.org) 46, Unicode License v3. Built by
+  `tools/generate_emoji.py`. An emoji the phone's font cannot draw as one glyph is left out.
+- Action icons: [Material Symbols](https://github.com/google/material-design-icons) (Outlined),
+  Apache-2.0.
 
 ### Open keyboard dictionaries
 
@@ -371,8 +457,8 @@ other multiplier.
   middling one; the logarithm keeps any one word from taking over.
 - Badges show up to 7 dots; each tier doubles the count (1, 2, 4 ... 64), which matches the
   logarithm. A slide on the bar moves one tier per step.
-- Learned words merge into the trie at load, so a word the dictionary lacks becomes a full
-  candidate.
+- Learned words merge into the trie at load (every word written twice or more, up to 20 000 per
+  language), so a word the dictionary lacks becomes a full candidate.
 
 ## License
 
@@ -391,9 +477,10 @@ You should have received a copy of the GNU General Public License along with
 this program. If not, see <https://www.gnu.org/licenses/>.
 
 The full text is in [LICENSE](LICENSE); the SPDX identifier is `GPL-3.0-or-later`. The bundled
-dictionary data carries its own permissive licences (MIT for the FrequencyWords lists, CC BY 2.0 FR
-for the Tatoeba word pairs); the attributions are in [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES) and
-in the app under Settings > Open-source licenses.
+data and icons carry their own permissive licences (MIT for the FrequencyWords lists, CC BY 2.0 FR
+for the Tatoeba word pairs, Unicode License v3 for the emoji data, Apache-2.0 for the icons); the
+attributions are in [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES) and in the app under Help and about >
+Open-source licenses.
 
 ### Attribution requirements
 
@@ -406,10 +493,10 @@ file, so an unmodified build already complies):
 |---|---|---|
 | Word frequencies (`*_wordlist.txt`) | MIT (hermitdave/FrequencyWords) | Keep the MIT notice |
 | Word pairs (`*_bigrams.txt`) | CC BY 2.0 FR (Tatoeba) | Credit `tatoeba.org` |
+| Emoji set and search words (`emoji/`) | Unicode License v3 (Unicode, CLDR) | Keep the Unicode notice |
+| Action icons (`ic_action_*`) | Apache-2.0 (Material Symbols) | Keep the Apache-2.0 notice |
 | An AOSP dictionary you merge in | Apache-2.0 | Keep the Apache-2.0 notice |
 | The app | GPL-3.0 | Licence notice, source offer, state changes |
-
-The emoji metadata was written for this project and carries no third-party obligation.
 
 ### The name and the icon
 

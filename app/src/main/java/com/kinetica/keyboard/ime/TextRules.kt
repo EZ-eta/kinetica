@@ -76,6 +76,68 @@ internal fun lineAroundCursor(
     return head + selected + tail
 }
 
+/**
+ * What a line cut takes: [back] characters before the selection and [ahead] after it, the
+ * selection between them, which together read [text].
+ */
+internal data class LineCut(val back: Int, val ahead: Int, val text: String)
+
+/**
+ * The line the cursor is on and one newline, the one after it when [newlineAfter] and the one
+ * before it otherwise, so the lines either side close up. A missing newline is taken from the
+ * other side: the last line has none after it, the first none before. Null for nothing to cut,
+ * and wherever [lineAroundCursor] refuses: a line past the read, a selection across lines.
+ * CR LF goes whole.
+ */
+internal fun lineCut(
+    before: CharSequence,
+    selected: CharSequence,
+    after: CharSequence,
+    read: Int,
+    newlineAfter: Boolean,
+): LineCut? {
+    lineAroundCursor(before, selected, after, read) ?: return null
+    val start = before.lastIndexOf('\n')
+    val end = after.indexOf('\n')
+    // A CR before a newline belongs to it, not to the line.
+    val lineEnd = if (end > 0 && after[end - 1] == '\r') end - 1 else if (end < 0) after.length else end
+    val breakBefore = when {
+        start < 0 -> 0
+        start > 0 && before[start - 1] == '\r' -> 2
+        else -> 1
+    }
+    val breakAfter = if (end < 0) 0 else end + 1 - lineEnd
+    val takeAfter = breakAfter > 0 && (newlineAfter || breakBefore == 0)
+    val takeBefore = breakBefore > 0 && !takeAfter
+    val back = before.length - (start + 1) + if (takeBefore) breakBefore else 0
+    val ahead = lineEnd + if (takeAfter) breakAfter else 0
+    if (back + selected.length + ahead == 0) return null
+    val text = before.subSequence(before.length - back, before.length).toString() + selected +
+        after.subSequence(0, ahead)
+    return LineCut(back, ahead, text)
+}
+
+/**
+ * [cut] with one more newline on the side it took its newline from, or null when the next
+ * character there is not a newline.
+ *
+ * A WebView editor reads a paragraph break as two newlines, and the offset between them is no
+ * caret position: a span ending there comes back one short, the line without its break. The
+ * second newline ends the span at the next paragraph, so the lines either side close up.
+ */
+internal fun widenedAcrossBreak(before: CharSequence, selected: CharSequence, after: CharSequence, cut: LineCut): LineCut? {
+    var back = cut.back
+    var ahead = cut.ahead
+    when {
+        ahead > 0 && after[ahead - 1] == '\n' -> if (ahead < after.length && after[ahead] == '\n') ahead++ else return null
+        back > 0 && before[before.length - back] == '\n' ->
+            if (back < before.length && before[before.length - back - 1] == '\n') back++ else return null
+        else -> return null
+    }
+    val text = before.subSequence(before.length - back, before.length).toString() + selected + after.subSequence(0, ahead)
+    return LineCut(back, ahead, text)
+}
+
 /** True when a word character sits on both sides of the cursor. */
 internal fun cursorInsideWord(before: CharSequence, after: CharSequence): Boolean =
     before.isNotEmpty() && isWordChar(before[before.length - 1]) &&

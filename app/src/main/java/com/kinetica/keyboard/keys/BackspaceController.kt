@@ -10,7 +10,8 @@ import android.os.Handler
  *
  * A unit is a whole word by default, or a single character when [charMode] is set. Only the
  * threshold and the meaning of the count change; staging, retraction and lift are shared, so the
- * mode is a flag and not a second gesture.
+ * mode is a flag and not a second gesture. A held shift may swap it until the first unit
+ * ([BackspaceUnit]).
  */
 class BackspaceController(
     private val density: Float,
@@ -26,21 +27,27 @@ class BackspaceController(
     /** Pointer lifted with a staged span: delete that span. */
     private val onCommitStaged: () -> Unit,
 ) {
+    private val unit = BackspaceUnit()
+
     /**
      * Stage single characters instead of whole words. Pushed from
      * `KeyboardConfig` on every preference change, like the hold-arm delay.
      */
-    var charMode = false
+    var charMode: Boolean
+        get() = unit.charMode
+        set(value) { unit.charMode = value }
 
     /** A staged word stops at punctuation, so a link goes a piece at a time. Ignored in [charMode]. */
-    var stopsAtPunctuation = false
+    var stopsAtPunctuation: Boolean
+        get() = unit.stopsAtPunctuation
+        set(value) { unit.stopsAtPunctuation = value }
 
-    private val granularity: DeleteSpan.Granularity
-        get() = when {
-            charMode -> DeleteSpan.Granularity.CHARS
-            stopsAtPunctuation -> DeleteSpan.Granularity.PIECES
-            else -> DeleteSpan.Granularity.WORDS
-        }
+    /** A held shift swaps [charMode] until the first unit is staged. */
+    var flipped: Boolean
+        get() = unit.flipped
+        set(value) { unit.flipped = value }
+
+    private val granularity: DeleteSpan.Granularity get() = unit.granularity
 
     /** Travel per staged word, in dp; a character's step follows it (DeleteSpan.slideDpPerUnit). */
     var wordStepDp = DeleteSpan.WORD_STEP_DP.toFloat()
@@ -63,17 +70,19 @@ class BackspaceController(
         stagedUnits = 0
         everStaged = false
         repeating = false
+        unit.release()
         handler.postDelayed(repeatRunnable, holdArmMs)
     }
 
     fun onMove(x: Float) {
-        val threshold = DeleteSpan.slideDpPerUnit(charMode, wordStepDp) * density
+        val threshold = DeleteSpan.slideDpPerUnit(unit.chars, wordStepDp) * density
         val crossings = ((startX - x) / threshold).toInt().coerceAtLeast(0)
         if (crossings != stagedUnits) {
             if (crossings > 0) {
                 // Sliding cancels the hold-repeat: the two must not stack.
                 handler.removeCallbacks(repeatRunnable)
                 everStaged = true
+                unit.fix()
             }
             stagedUnits = crossings
             onStageUnits(crossings, granularity)
@@ -91,6 +100,7 @@ class BackspaceController(
         }
         stagedUnits = 0
         everStaged = false
+        unit.release()
     }
 
     fun cancel() {
@@ -98,9 +108,12 @@ class BackspaceController(
         if (everStaged) onStageUnits(0, granularity)
         stagedUnits = 0
         everStaged = false
+        unit.release()
     }
 
-    private companion object {
+
+    companion object {
+        /** The hold's step; the editing page's held keys repeat at the same pace (HoldRepeat). */
         const val REPEAT_MS = 50L
     }
 }

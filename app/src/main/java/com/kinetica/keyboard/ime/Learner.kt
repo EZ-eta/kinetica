@@ -87,7 +87,7 @@ internal class Learner(
     fun learnWord(word: String, amount: Int = 1, lang: String = languageOf(word)): Boolean {
         if (editorState().teachesNothing) return false
         val w = word.lowercase()
-        if (w.length > KineticaConstants.MAX_WORD_LEN || !WORD_RE.matches(w)) return false
+        if (!learnable(w)) return false
         // A blocked word is not learned back: its row would count up again behind the block.
         if (amount > 0 && w in residents.blockedSpellings) {
             DecodeTrace.log { "  learn refused word=$w blocked" }
@@ -101,21 +101,37 @@ internal class Learner(
             before = v ?: 0
             (before + amount).coerceAtLeast(0)
         } ?: 0
+        // A load in flight read its rows before this write: its install replaces the map above.
+        residents.noteLearn(lang, w, amount)
+        val mark = residents.learnMark()
         val now = System.currentTimeMillis()
         dbExecutor.execute {
+            var stored: Int? = null
             try {
-                KineticaDb.get(service).userWords().upsertAdd(w, lang, amount, now)
+                val dao = KineticaDb.get(service).userWords()
+                dao.upsertAdd(w, lang, amount, now)
+                // A live count apart from the stored one is a word the last load left out: the
+                // decodes before this commit read it with no boost, and the post below corrects it.
+                stored = dao.storedCount(w, lang)
+                if (DecodeTrace.enabled && stored != after) {
+                    DecodeTrace.log { "  learn count word=$w lang=$lang live=$after stored=$stored" }
+                }
             } catch (e: RuntimeException) {
                 Log.w(KineticaIME.TAG, "learn failed for $w", e)
             }
+            val gap = learnedCountGap(after, stored)
             // Queued behind the write above: the reload reads userWords itself, and out of
             // order it would miss the count this call is adding and drop the word again.
             mainHandler.post {
-                askUserDictReload(w, lang, before, after)
+                if (gap > 0 && residents.correctLearn(mark, lang, w, gap)) {
+                    val live = countsFor(lang).compute(w) { _, v -> (v ?: 0) + gap }
+                    DecodeTrace.log { "  learn count fixed word=$w lang=$lang live=$live" }
+                }
+                askUserDictReload(w, lang, before + gap, after + gap)
                 // A demoted learned word keeps its merged trie frequency (count x 1000) until the
                 // next load, so a slide down would barely move it: reload behind the write.
-                if (userDictDemoted(before, after)) {
-                    DecodeTrace.log { "  userdict stale word=$w count=$after lang=$lang src=demote" }
+                if (userDictDemoted(before + gap, after + gap)) {
+                    DecodeTrace.log { "  userdict stale word=$w count=${after + gap} lang=$lang src=demote" }
                     scheduleUserDictReload()
                 }
             }
@@ -148,6 +164,22 @@ internal class Learner(
             if (reload) mainHandler.post { scheduleUserDictReload() }
         }
         return true
+    }
+
+    /**
+     * Drops [word]'s learned capital to the floor in every resident language that holds one: the
+     * user took it off by hand. Every language, since the capital may be filed in `it` while the
+     * word on screen reads as `en`.
+     */
+    fun forgetCase(word: String) {
+        if (editorState().teachesNothing) return
+        val w = word.lowercase()
+        for (lang in residents.languages(config().language)) {
+            if (casesFor(lang)[w] == null) continue
+            // Logged before the vote's own line, which carries the votes it leaves.
+            DecodeTrace.log { "  learn capital forget word=$w lang=$lang" }
+            voteCase(w, lang, CaseVote.FORGET)
+        }
     }
 
     /** Puts [w]'s learned capital back to [before], as it stood before a vote now taken back. */
@@ -197,8 +229,11 @@ internal class Learner(
      */
     private fun askUserDictReload(word: String, lang: String, before: Int, after: Int) {
         val p = predictorFor(lang)
-        // No predictor yet means the first load has not finished; it will merge this word.
-        if (!userDictNeedsReload(before, after, p?.isWordIgnoringCase(word) ?: true)) return
+        // No predictor yet means the first load has not finished; it will merge this word. The
+        // spelling as written, case aside: `carə` folds onto `care`, which the trie holds, but
+        // only a load adds `carə` to its forms.
+        if (!userDictNeedsReload(before, after, p?.holdsSpelling(word) ?: true)) return
+
         DecodeTrace.log { "  userdict stale word=$word count=$after lang=$lang" }
         scheduleUserDictReload()
     }
@@ -260,8 +295,7 @@ internal class Learner(
         val prev = context?.getOrNull((context.size) - 2) ?: return null
         val w = word.lowercase()
         val p = prev.lowercase()
-        if (!WORD_RE.matches(w) || !WORD_RE.matches(p)) return null
-        if (w.length > KineticaConstants.MAX_WORD_LEN || p.length > KineticaConstants.MAX_WORD_LEN) return null
+        if (!learnable(w) || !learnable(p)) return null
         lastLearnedPair = p to w
         lastLearnedPairLang = lang
         pairsFor(lang).compute(pairKey(p, w)) { _, v -> (v ?: 0) + 1 }
@@ -284,8 +318,7 @@ internal class Learner(
         if (!config().learnPhrases || editorState().teachesNothing || delta == 0) return
         val w = word.lowercase()
         val p = prev.lowercase()
-        if (!WORD_RE.matches(w) || !WORD_RE.matches(p)) return
-        if (w.length > KineticaConstants.MAX_WORD_LEN || p.length > KineticaConstants.MAX_WORD_LEN) return
+        if (!learnable(w) || !learnable(p)) return
         val key = pairKey(p, w)
         if (delta < 0) {
             if ((pairsFor(lang)[key] ?: 0) <= 0) return
@@ -340,9 +373,10 @@ internal class Learner(
     fun unlearnWord(word: String, filed: String? = null) {
         if (editorState().teachesNothing) return
         val w = word.lowercase()
-        if (w.length > KineticaConstants.MAX_WORD_LEN || !WORD_RE.matches(w)) return
+        if (!learnable(w)) return
         val lang = filed ?: lastLearnedWordLang?.takeIf { w == lastLearnedWord } ?: languageOf(word)
         countsFor(lang).computeIfPresent(w) { _, v -> (v - 1).coerceAtLeast(0) }
+        residents.noteLearn(lang, w, -1)
         val now = System.currentTimeMillis()
         dbExecutor.execute {
             try {
@@ -366,8 +400,14 @@ internal class Learner(
         // cost one parse, and still has the word usable while the user is typing the
         // thing they added it for.
         const val USER_DICT_RELOAD_DELAY_MS = 1500L
-
-        // Any-letter (accented Italian included) with internal apostrophes.
-        val WORD_RE = Regex("^\\p{L}+(?:'\\p{L}+)*$")
     }
 }
+
+// Any-letter (accented Italian included) with internal apostrophes.
+private val WORD_RE = Regex("^\\p{L}+(?:'\\p{L}+)*$")
+
+/**
+ * Whether the lowercase [w] may be learned: letters with inner apostrophes, no longer than the
+ * trie holds. Pure because the learn path has no JVM reach.
+ */
+internal fun learnable(w: String): Boolean = w.length <= KineticaConstants.MAX_WORD_LEN && WORD_RE.matches(w)

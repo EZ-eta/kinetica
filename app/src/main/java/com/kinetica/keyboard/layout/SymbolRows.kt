@@ -104,6 +104,38 @@ object SymbolRows {
         return base.copy(keys = keys)
     }
 
+    /** The symbol pages' names, as their layouts are bundled. */
+    val PAGES = setOf("symbols", "symbols2")
+
+    /**
+     * [page] with the user's long-press [lists] over the keys of its three upper rows: a symbol
+     * with a list takes it in place of its built-in one, the hint dropped so the list's first entry
+     * is the plain long press, as a letter's list does. The bottom row keeps its own lists.
+     */
+    fun withLists(page: KeyboardLayout, lists: Map<String, List<String>>): KeyboardLayout {
+        if (lists.isEmpty()) return page
+        var changed = false
+        val keys = page.keys.map { k ->
+            val list = if (inUpperRows(k)) lists[k.output] else null
+            if (list.isNullOrEmpty() || (list == k.alternates && k.hint == null)) {
+                k
+            } else {
+                changed = true
+                k.copy(alternates = list, hint = null)
+            }
+        }
+        return if (changed) page.copy(keys = keys) else page
+    }
+
+    /** Every symbol of [page]'s three upper rows, row by row and left to right, each once. */
+    fun symbolsOf(page: KeyboardLayout): List<String> =
+        (0 until ROWS).flatMap { r -> rowKeys(page, r).map { it.output } }.distinct()
+
+    /** Whether [key] on the page named [pageName] is a symbol a list can be written for. */
+    fun carriesList(pageName: String?, key: Key): Boolean = pageName in PAGES && inUpperRows(key)
+
+    private fun inUpperRows(k: Key): Boolean = k.type == KeyType.CHAR && ROW_Y.any { abs(k.y - it) < 1e-3f }
+
     /** The character keys of row [row], left to right; the page key and backspace are not. */
     private fun rowKeys(base: KeyboardLayout, row: Int): List<Key> =
         base.keys.filter { it.type == KeyType.CHAR && abs(it.y - ROW_Y[row]) < 1e-3f }.sortedBy { it.x }

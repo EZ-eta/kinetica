@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The guided setup's step container; fixed so a rotation restores the step into it. -->
+    <item name="setup_body" type="id" />
+    <!-- The settings screen's container and its try field: fixed, so a rotation restores both. -->
+    <item name="settings_body" type="id" />
+    <item name="settings_try_field" type="id" />
+</resources>

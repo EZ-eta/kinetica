@@ -2,7 +2,9 @@ package com.kinetica.keyboard.engine
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeTrue
 import org.junit.Test
 import java.io.BufferedReader
 import java.io.StringReader
@@ -88,27 +90,127 @@ class AccentFoldingTest {
         assertEquals("perché", target?.word)
     }
 
+    private fun codes(text: String): List<Int>? = AccentFolder.accentedLetterCodes(text)?.toList()
+
+    private fun keys(word: String): List<Int> = word.map { it - 'a' }
+
     @Test
-    fun accentedLetterCodeAcceptsOnlyRealAccents() {
+    fun accentedLetterCodesAcceptOnlyRealAccents() {
         // What KineticaIME composes into the word instead of committing it: an accent, in
         // either case.
-        assertEquals('o' - 'a', AccentFolder.accentedLetterCode("ó"))
-        assertEquals('a' - 'a', AccentFolder.accentedLetterCode("à"))
-        assertEquals('n' - 'a', AccentFolder.accentedLetterCode("ñ"))
-        assertEquals('a' - 'a', AccentFolder.accentedLetterCode("Ą"))
-        assertEquals('e' - 'a', AccentFolder.accentedLetterCode("ę"))
-        assertEquals('c' - 'a', AccentFolder.accentedLetterCode("Ç"))
-        assertEquals('e' - 'a', AccentFolder.accentedLetterCode("É"))
-        assertEquals('r' - 'a', AccentFolder.accentedLetterCode("Ř"))
-        assertEquals('t' - 'a', AccentFolder.accentedLetterCode("ť"))
+        assertEquals(keys("o"), codes("ó"))
+        assertEquals(keys("a"), codes("à"))
+        assertEquals(keys("n"), codes("ñ"))
+        assertEquals(keys("a"), codes("Ą"))
+        assertEquals(keys("e"), codes("ę"))
+        assertEquals(keys("c"), codes("Ç"))
+        assertEquals(keys("e"), codes("É"))
+        assertEquals(keys("r"), codes("Ř"))
+        assertEquals(keys("t"), codes("ť"))
         // The popup's own base cell is a letter but not an accented one: it keeps the
         // commit-then-insert path.
-        assertEquals(-1, AccentFolder.accentedLetterCode("o"))
-        assertEquals(-1, AccentFolder.accentedLetterCode("O"))
+        assertNull(codes("o"))
+        assertNull(codes("O"))
         // Everything else a popup, an edge swipe or the enter strip can insert.
-        for (t in listOf("", "1", "?", ",", ";", "€", "ß", "ss", "óó", "😀")) {
-            assertEquals("'$t' must not compose", -1, AccentFolder.accentedLetterCode(t))
+        for (t in listOf("", "1", "?", ",", ";", "€", "ss", "óó", "😀")) {
+            assertNull("'$t' must not compose", codes(t))
         }
+    }
+
+    @Test
+    fun aTwoLetterFoldComposesAsTwoTaps() {
+        // `ß` from the popup is a letter of `Grüße`: two taps on s, the word kept open.
+        assertEquals(keys("ss"), codes("ß"))
+        assertEquals(keys("ss"), codes("ẞ"))
+        assertEquals(keys("oe"), codes("œ"))
+        assertEquals(keys("oe"), codes("Œ"))
+        assertEquals(keys("ij"), codes("ĳ"))
+        assertEquals(keys("th"), codes("þ"))
+    }
+
+    @Test
+    fun theItalianSchwaFoldsOntoE() {
+        // Inclusive Italian: `carə` singular, `tuttɜ` plural, each where the e or a stood.
+        assertEquals(keys("e"), codes("ə"))
+        assertEquals(keys("e"), codes("ɜ"))
+        assertEquals("care amice", AccentFolder.fold("carə amicə"))
+        assertEquals("tutte", AccentFolder.fold("tuttɜ"))
+        // A learned schwa word is reached by the e path and shown as written.
+        val d = dict("care" to 900, "carə" to 40)
+        val node = d.trie.nodeFor("care")
+        assertTrue(node != -1)
+        assertEquals(setOf("care", "carə"), d.forms[node]?.map { it.display }?.toSet())
+    }
+
+    @Test
+    fun aLearnedSchwaFormIsNotHeldUntilALoadMergesIt() {
+        // `carə` learned nine times in Italian and never offered by a swipe. The reload asked
+        // whether the trie held it; folded onto `care`, which has no forms, the answer was yes.
+        val bundled = dict("care" to 900)
+        val p0 = WordPredictor(bundled.trie, BigramTable.EMPTY, g, bundled.forms)
+        assertTrue("the old question", p0.isWordIgnoringCase("carə"))
+        assertFalse(p0.holdsSpelling("carə"))
+        assertTrue(p0.holdsSpelling("care"))
+        assertTrue("case aside", p0.holdsSpelling("Care"))
+        // After the load the form is held, and a swipe through c-a-r-e offers it.
+        val merged = dict("care" to 900, "carə" to 40)
+        val p1 = WordPredictor(merged.trie, BigramTable.EMPTY, g, merged.forms)
+        assertTrue(p1.holdsSpelling("carə"))
+        for (overshoot in listOf(0f, 0.25f, 0.45f)) {
+            val words = p1.decode(listOf(TestData.sloppySwipe("care", g, 0L, 400L, overshootKw = overshoot)), emptyList())
+                .map { it.word }
+            assertTrue("overshoot $overshoot: $words", "carə" in words)
+        }
+    }
+
+    @Test
+    fun everyMarkedLatinLetterReachesItsKey() {
+
+        // Decomposed letters no list ships yet: Latvian, Hungarian, Turkish, Esperanto, Welsh.
+        assertEquals("meness", AccentFolder.fold("mēness"))
+        assertEquals("kozott", AccentFolder.fold("között"))
+        assertEquals("tores", AccentFolder.fold("tőreś"))
+        assertEquals("dag", AccentFolder.fold("dağ"))
+        assertEquals("cxu ghi", AccentFolder.fold("ĉxu ĝĥi"))
+        assertEquals("dwr", AccentFolder.fold("dŵr"))
+        assertEquals("viet", AccentFolder.fold("việt"))
+        // No decomposition: a stroke, a missing dot, a middle dot.
+        assertEquals("dakika", AccentFolder.fold("dakıka"))
+        assertEquals("dobro", AccentFolder.fold("đobro"))
+        assertEquals("col.legi", AccentFolder.fold("coŀ.legi"))
+        for (c in "āēīōūőűğľĺŕėįųĉĝĥĵŝŭŵŷđðħıŀŧəɜ") {
+            assertEquals("$c has no key", 1, codes(c.toString())?.size)
+        }
+    }
+
+    @Test
+    fun theLatinFoldLeavesOtherScriptsAlone() {
+        // `й` decomposes to `и` but is a key of its own on both Cyrillic boards.
+        assertEquals("йод", AccentFolder.fold("йод"))
+        assertEquals("їжак", AccentFolder.fold("їжак"))
+        assertEquals("еж", AccentFolder.fold("ёж"))
+    }
+
+    @Test
+    fun everyPopupLetterOfALatinBoardComposes() {
+        // A popup letter with no fold ended the word: `ē` on English `e` committed what came
+        // before it. Read off the layout files: org.json is a stub on the JVM.
+        val dir = listOf("src/main/assets/layouts", "app/src/main/assets/layouts")
+            .map { java.io.File(it) }.firstOrNull { it.isDirectory }
+        assumeTrue("layouts not found", dir != null)
+        val cell = Regex("\"([^\"\\\\]+)\"")
+        val lists = Regex("\"output\": \"[a-z]\"[^}]*?\"alternates\": \\[([^\\]]*)\\]")
+        var seen = 0
+        for (f in dir!!.listFiles()!!.filter { it.name.endsWith(".json") && !it.name.startsWith("native_") }) {
+            for (m in lists.findAll(f.readText())) {
+                for (c in cell.findAll(m.groupValues[1]).map { it.groupValues[1] }) {
+                    if (c.length != 1 || !c[0].isLetter() || c[0] in 'a'..'z' || c[0] in 'A'..'Z') continue
+                    seen++
+                    assertTrue("${f.name}: $c ends the word", codes(c) != null)
+                }
+            }
+        }
+        assertTrue("no popup letters read", seen > 100)
     }
 
     @Test

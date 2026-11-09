@@ -83,6 +83,20 @@ class DtwMatcher {
         return true
     }
 
+    /** Length in kw of the path [idealPath] draws through the same letters. */
+    fun idealLength(letters: IntArray, from: Int, to: Int, geometry: KeyboardGeometry): Float {
+        var len = 0f
+        var prevCode = -1
+        for (i in from until to) {
+            val code = letters[i]
+            if (code == geometry.alphabet.apostrophe || !geometry.hasKey(code)) continue
+            if (code == prevCode) continue
+            if (prevCode >= 0) len += geometry.keyDist(prevCode, code)
+            prevCode = code
+        }
+        return len
+    }
+
     /** Resamples a polyline of [count] (x, y) pairs to N points into [out]. */
     fun resamplePoly(poly: FloatArray, count: Int, out: FloatArray) {
         if (count == 1) {

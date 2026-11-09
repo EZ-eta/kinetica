@@ -11,6 +11,7 @@ import com.kinetica.keyboard.R
 import com.kinetica.keyboard.data.DictionaryStore
 import com.kinetica.keyboard.data.KineticaDb
 import com.kinetica.keyboard.engine.KineticaConstants
+import com.kinetica.keyboard.ui.BackdropCrop
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.ExecutorService
@@ -73,9 +74,20 @@ object BackupRun {
                     writeSnapshot(app)
                 }
                 apply(app, result.data, replace)
+                // Only a backup that carries an image touches the one in use, look by look.
+                fun restored(b: Backup.Backdrop?, night: Boolean): Backup.Backdrop? = b?.let {
+                    try {
+                        BackdropStore.restore(app, it.jpeg, night)
+                        it
+                    } catch (e: IOException) {
+                        null
+                    }
+                }
+                val image = restored(result.data.backdrop, night = false)
+                val imageNight = restored(result.data.backdropNight, night = true)
                 val missing = result.data.importedBase.filter { DictionaryStore.readInfo(app, it) == null }
                 main.post {
-                    writePrefs(app, result.data)
+                    writePrefs(app, result.data, image, imageNight)
                     val msg = when {
                         source is Source.Snapshot -> app.getString(R.string.backup_restore_done)
                         missing.isEmpty() ->
@@ -151,7 +163,7 @@ object BackupRun {
      * makes the running keyboard re-read its tables, so they must see finished ones.
      */
     @SuppressLint("ApplySharedPref") // commit: the run is over once this returns
-    private fun writePrefs(app: Context, data: Backup.Data) {
+    private fun writePrefs(app: Context, data: Backup.Data, image: Backup.Backdrop?, imageNight: Backup.Backdrop?) {
         val p = PreferenceManager.getDefaultSharedPreferences(app)
         val e = p.edit()
         for (pref in data.prefs) {
@@ -164,6 +176,16 @@ object BackupRun {
                     pref.key,
                     pref.value.split(",").filter { it.isNotEmpty() }.toSet(),
                 )
+            }
+        }
+        for ((b, night) in listOf(image to false, imageNight to true)) {
+            if (b == null) continue
+            fun k(key: String) = if (night) Prefs.nightTwin(key) else key
+            // A new stamp makes the keyboard read the file again; a cut it cannot parse is
+            // dropped, and the keyboard then fits the whole image.
+            e.putString(k(Prefs.BACKDROP), System.currentTimeMillis().toString())
+            for ((key, cut) in listOf(Prefs.BACKDROP_CROP to b.crop, Prefs.BACKDROP_CROP_LANDSCAPE to b.cropLandscape)) {
+                if (BackdropCrop.parse(cut) != null) e.putString(k(key), cut) else e.remove(k(key))
             }
         }
         e.commit()
@@ -196,7 +218,8 @@ object BackupRun {
         val target = snapshotFile(app)
         val side = File(app.filesDir, "$SNAPSHOT_FILENAME.part")
         try {
-            val data = collect(app, withPhrases = true)
+            // The image too: the undo must bring back the one an import replaced.
+            val data = collect(app, withPhrases = true, withImage = true)
             side.bufferedWriter().use { w ->
                 for (line in Backup.encode(data)) {
                     w.write(line)
@@ -213,8 +236,8 @@ object BackupRun {
         }
     }
 
-    /** Everything worth carrying, read off the main thread. */
-    fun collect(context: Context, withPhrases: Boolean): Backup.Data {
+    /** Everything worth carrying, read off the main thread. The image only when asked for. */
+    fun collect(context: Context, withPhrases: Boolean, withImage: Boolean): Backup.Data {
         val p = PreferenceManager.getDefaultSharedPreferences(context)
         val prefRows = ArrayList<Backup.Pref>()
         for ((key, value) in p.all) {
@@ -259,7 +282,17 @@ object BackupRun {
         val expansions = db.expansions().all().map {
             Backup.Expand(it.trigger, it.position, it.target)
         }
-        return Backup.Data(prefRows, words, blocked, chords, expansions, phrases, base, capitals)
+        fun image(night: Boolean): Backup.Backdrop? = if (withImage && BackdropStore.isSet(context, p, night)) {
+            val look = LookSets.view(p, night)
+            BackdropStore.bytes(context, night)?.let {
+                Backup.Backdrop(it, look.getString(Prefs.BACKDROP_CROP, "") ?: "", look.getString(Prefs.BACKDROP_CROP_LANDSCAPE, "") ?: "")
+            }
+        } else {
+            null
+        }
+        return Backup.Data(
+            prefRows, words, blocked, chords, expansions, phrases, base, capitals, image(night = false), image(night = true),
+        )
     }
 
     /** The ceiling on an imported count, the same one a personal-dictionary import uses. */

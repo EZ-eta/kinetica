@@ -39,6 +39,8 @@ object ActionRow {
         EditorAction.TIME,
         EditorAction.ENTER,
         EditorAction.COPY_LINE,
+        EditorAction.CUT_LINE_AFTER,
+        EditorAction.CUT_LINE_BEFORE,
         EditorAction.CLEAN_LINKS,
         EditorAction.TOGGLE_NEXT_WORD,
         EditorAction.TOGGLE_RECENT_WORDS,
@@ -62,6 +64,10 @@ object ActionRow {
         EditorAction.CASE_LOWER,
         EditorAction.CASE_TITLE,
         EditorAction.CASE_UPPER,
+        EditorAction.DICTATE,
+        EditorAction.EMOJI_SEARCH,
+        EditorAction.EDIT_PAGE,
+        EditorAction.SELECT_MODE,
     )
 
     /** What the row offers out of the box. */
@@ -73,11 +79,9 @@ object ActionRow {
     )
 
     /**
-     * What a cell draws.
-     *
-     * Symbols, not icons, as for the retype button: they theme with the text, scale with the
-     * strip and need no drawable. `SELECT_ALL` has no standard symbol, so it keeps the short text
-     * label the comma key gives it.
+     * The symbol an action is known by: lists, backups and chord labels hold it, and it is drawn
+     * where the action has no icon (`ui/GlyphIcons`). `SELECT_ALL` has no standard symbol, so it
+     * keeps the short text label the comma key gives it.
      */
     fun glyph(action: EditorAction): String = when (action) {
         EditorAction.SETTINGS -> "⚙"          // gear, as the ?123 hold already shows
@@ -96,6 +100,9 @@ object ActionRow {
         EditorAction.TIME -> "◷"              // a clock face with one quarter marked
         EditorAction.ENTER -> "⏎"             // the return symbol
         EditorAction.COPY_LINE -> "≡"         // lines of text
+        // Scissors and the side whose newline goes with the line.
+        EditorAction.CUT_LINE_AFTER -> "✂↓"
+        EditorAction.CUT_LINE_BEFORE -> "✂↑"
         EditorAction.CLEAN_LINKS -> "⚯"       // a link with its chain broken
         EditorAction.TOGGLE_NEXT_WORD -> "⇢"  // the word that comes next
         EditorAction.TOGGLE_RECENT_WORDS -> "☰" // rows of words
@@ -120,6 +127,13 @@ object ActionRow {
         EditorAction.CASE_LOWER -> "abc"
         EditorAction.CASE_TITLE -> "Abc"
         EditorAction.CASE_UPPER -> "ABC"
+        // A sound wave: the only microphones are colour emoji, which would not theme.
+        EditorAction.DICTATE -> "∿"
+        // A search sign: the magnifiers are colour emoji, which would not theme.
+        EditorAction.EMOJI_SEARCH -> "\u2315"
+        // Four ways out of the middle, as the page's arrows go; a dotted box, the selection's.
+        EditorAction.EDIT_PAGE -> "\u2725"
+        EditorAction.SELECT_MODE -> "\u2B1A"
     }
 
     /**
@@ -153,6 +167,7 @@ object ActionRow {
         // Arrows are text a list may well hold (`→`), so in a list they type themselves.
         EditorAction.ARROW_UP, EditorAction.ARROW_DOWN, EditorAction.ARROW_LEFT, EditorAction.ARROW_RIGHT,
         EditorAction.CASE_LOWER, EditorAction.CASE_TITLE, EditorAction.CASE_UPPER,
+        EditorAction.DICTATE,
     )
 
     /**
@@ -267,9 +282,10 @@ object ActionRow {
      * call, so the notice and the effect cannot disagree.
      */
     fun notice(action: EditorAction, before: KeyboardState): Notice? = when (action) {
-        // Settings closes the keyboard; a re-case shows in the word itself.
-        EditorAction.SETTINGS, EditorAction.CASE_LOWER, EditorAction.CASE_TITLE,
-        EditorAction.CASE_UPPER,
+        // Settings and voice close the keyboard; a re-case shows in the word itself, the search
+        // panel in its own place.
+        EditorAction.SETTINGS, EditorAction.DICTATE, EditorAction.CASE_LOWER, EditorAction.CASE_TITLE,
+        EditorAction.CASE_UPPER, EditorAction.EMOJI_SEARCH, EditorAction.EDIT_PAGE,
         -> null
         EditorAction.TOGGLE_AUTOSPACE -> Notice.Autospace(!before.autospace)
         EditorAction.TOGGLE_NEXT_WORD -> Notice.Toggle(action, !before.nextWord)
@@ -279,6 +295,7 @@ object ActionRow {
         EditorAction.TOGGLE_TYPING_SPEED -> Notice.Toggle(action, !before.typingSpeed)
         EditorAction.TOGGLE_PECK_MODE -> Notice.Toggle(action, !before.peckMode)
         EditorAction.CTRL_NEXT -> Notice.Toggle(action, !before.ctrlPending)
+        EditorAction.SELECT_MODE -> Notice.Toggle(action, !before.selecting)
         EditorAction.NEXT_LANGUAGE ->
             nextLanguage(before.languages, before.language)?.let { Notice.Language(it) }
         EditorAction.ONE_HANDED ->
@@ -286,6 +303,7 @@ object ActionRow {
         EditorAction.UNDO, EditorAction.REDO, EditorAction.PASTE, EditorAction.COPY,
         EditorAction.CUT, EditorAction.SELECT_ALL, EditorAction.RETYPE, EditorAction.EXPANDIFY,
         EditorAction.DATE, EditorAction.TIME, EditorAction.ENTER, EditorAction.COPY_LINE,
+        EditorAction.CUT_LINE_AFTER, EditorAction.CUT_LINE_BEFORE,
         EditorAction.CLEAN_LINKS, EditorAction.TAB, EditorAction.ESCAPE, EditorAction.FORWARD_DELETE, EditorAction.HOME,
         EditorAction.END, EditorAction.ARROW_UP, EditorAction.ARROW_DOWN, EditorAction.ARROW_LEFT,
         EditorAction.ARROW_RIGHT, EditorAction.PAGE_UP, EditorAction.PAGE_DOWN,
@@ -307,6 +325,7 @@ object ActionRow {
         val typingSpeed: Boolean = false,
         val peckMode: Boolean = false,
         val ctrlPending: Boolean = false,
+        val selecting: Boolean = false,
     )
 
     /** What a [notice] says; the service turns it into text. */

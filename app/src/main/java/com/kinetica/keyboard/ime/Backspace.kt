@@ -83,6 +83,7 @@ internal class Backspace(private val ime: KineticaIME) {
             ime.commit.abandonWord()
         } else {
             ime.wordState.wordShift = state.wordShift
+            ime.wordState.caseChosen = false
             ime.wordState.swipeDecodeEmpty = state.decodeEmpty
             ime.wordState.seededWithoutTokens = true
             ime.wordState.lastCandidates = emptyList()

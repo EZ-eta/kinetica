@@ -35,6 +35,10 @@ object ShortcutKinds {
     val expansions: List<ShortcutKind> = listOf(ShortcutKind.Text, ShortcutKind.CtrlKey) +
         actions.filter { it.action !in EditorAction.NOT_EXPANSION_TARGETS }
 
+    /** An editing page key's: no emoji picker, and not the page's own action, which would only close it. */
+    val editPage: List<ShortcutKind> = listOf(ShortcutKind.Text, ShortcutKind.CtrlKey) +
+        actions.filter { it.action != EditorAction.EDIT_PAGE }
+
     /** Whether [kind] reads the editor's text field. */
     fun usesField(kind: ShortcutKind): Boolean = kind == ShortcutKind.Text || kind == ShortcutKind.CtrlKey
 

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A microphone: voice input. Drawn for this project, the stroke of ic_group_open. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M12,3 A3,3 0 0,1 15,6 L15,11 A3,3 0 0,1 9,11 L9,6 A3,3 0 0,1 12,3 Z"
+        android:strokeColor="?android:attr/textColorSecondary"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M6,11 A6,6 0 0,0 18,11"
+        android:strokeColor="?android:attr/textColorSecondary"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M12,17 L12,21 M9,21 L15,21"
+        android:strokeColor="?android:attr/textColorSecondary"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

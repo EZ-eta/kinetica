@@ -1,6 +1,7 @@
 package com.kinetica.keyboard.ime
 
 import com.kinetica.keyboard.keys.ActionRow
+import com.kinetica.keyboard.keys.LanguageAccents
 import com.kinetica.keyboard.keys.NativeLetters
 import com.kinetica.keyboard.layout.KeyboardLayout
 import com.kinetica.keyboard.layout.LayoutMutations
@@ -56,6 +57,10 @@ object AlphaLayouts {
         // every row and leaves none at y=0.25.
         if (config.homeRowSpreadPct > 0) l = LayoutMutations.withHomeRowSpread(l, config.homeRowSpreadPct / 100f)
         if (config.emojiKey) l = LayoutMutations.withEmojiOnComma(l)
+        // Every enabled language's letters on the key they fold to, the active one's first; before
+        // the plain-accents filter and the reorder, so both see them.
+        val languages = (listOf(config.language) + config.enabledLanguages).distinct()
+        l = LayoutMutations.withLanguageAccents(l, languages)
         // Before the reorder: with the accents gone number-priority has nothing to move, so
         // the two settings compose.
         if (config.plainLetterAlternates) {
@@ -66,7 +71,10 @@ object AlphaLayouts {
         if (config.numberRow) l = LayoutMutations.withNumberRowSymbols(l)
         // Last in the alternates chain, so a list the user wrote wins (#8). An action written
         // by name (`:paste`) becomes the symbol that runs it.
-        val lists = config.letterAlternates.mapValues { (_, list) -> list.map(::cell) }
+        // A list the user wrote keeps its own cells; its language letters follow the languages.
+        val lists = config.letterAlternates.mapValues { (c, list) ->
+            LanguageAccents.followed(list, c, languages, KeyboardConfig.MAX_LETTER_ALTERNATES).map(::cell)
+        }
         l = LayoutMutations.withLetterAlternates(l, lists)
         // After the emoji mutation, so a removal can relocate the emoji
         // alternate and a repurposed key keeps it in its popup.
@@ -99,7 +107,7 @@ object AlphaLayouts {
      * A list entry as its cell: an action written by name (`:paste`) or as a target
      * (`action:paste`) becomes the symbol that runs it, in every list a user writes.
      */
-    private fun cell(entry: String): String = ActionRow.glyphForToken(entry) ?: entry
+    internal fun cell(entry: String): String = ActionRow.glyphForToken(entry) ?: entry
 
     private const val KEEP_MODE = "keep"
 }

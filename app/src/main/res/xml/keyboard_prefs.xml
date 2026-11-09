@@ -1,222 +1,301 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Progressive disclosure: about a dozen rows here, the everyday settings one level
-     down, the expert ones a level below that. Nothing deeper. -->
+<!-- Progressive disclosure: twelve rows here in two groups, everyday first; on each screen
+     the everyday rows first and the rest under Advanced; expert screens one level further
+     down. Nothing deeper. -->
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
-    <PreferenceScreen
-        android:key="pref_group_languages"
-        android:title="@string/pref_group_languages_title"
-        app:singleLineTitle="false"
-        android:summary="@string/pref_group_languages_summary">
-        <ListPreference
-            android:key="pref_language"
-            android:title="@string/pref_language_title"
-            app:singleLineTitle="false"
-            android:entries="@array/language_entries"
-            android:entryValues="@array/language_values"
-            android:defaultValue="en"
-            app:useSimpleSummaryProvider="true" />
-        <MultiSelectListPreference
-            android:key="pref_enabled_languages"
-            android:title="@string/pref_enabled_languages_title"
-            app:singleLineTitle="false"
-            android:summary="@string/pref_enabled_languages_summary"
-            android:entries="@array/language_entries"
-            android:entryValues="@array/language_values"
-            android:defaultValue="@array/language_default_values" />
-        <ListPreference
-            android:key="pref_language_mode"
-            android:title="@string/pref_language_mode_title"
-            app:singleLineTitle="false"
-            android:summary="@string/pref_language_mode_summary"
-            android:entries="@array/language_mode_entries"
-            android:entryValues="@array/language_mode_values"
-            android:defaultValue="one" />
-        <SwitchPreferenceCompat
-            android:key="pref_sync_system_language"
-            android:title="@string/pref_sync_system_language_title"
-            app:singleLineTitle="false"
-            android:summary="@string/pref_sync_system_language_summary"
-            android:defaultValue="true" />
-        <SwitchPreferenceCompat
-            android:key="pref_british_spelling"
-            android:title="@string/pref_british_spelling_title"
-            app:singleLineTitle="false"
-            android:summary="@string/pref_british_spelling_summary"
-            android:defaultValue="false" />
-    </PreferenceScreen>
-
-    <PreferenceScreen
-        android:key="pref_group_typing"
-        android:title="@string/pref_group_typing_title"
-        app:singleLineTitle="false"
-        android:summary="@string/pref_group_typing_summary">
-        <ListPreference
-            android:key="pref_autocorrect_level"
-            android:title="@string/pref_autocorrect_title"
-            app:singleLineTitle="false"
-            android:entries="@array/autocorrect_entries"
-            android:entryValues="@array/autocorrect_values"
-            android:defaultValue="normal"
-            app:useSimpleSummaryProvider="true" />
-        <SwitchPreferenceCompat
-            android:key="pref_auto_capitalize"
-            android:title="@string/pref_auto_capitalize_title"
-            app:singleLineTitle="false"
-            android:summary="@string/pref_auto_capitalize_summary"
-            android:defaultValue="true" />
-        <SwitchPreferenceCompat
-            android:key="pref_next_word"
-            android:title="@string/pref_next_word_title"
-            app:singleLineTitle="false"
-            android:summary="@string/pref_next_word_summary"
-            android:defaultValue="true" />
-        <SwitchPreferenceCompat
-            android:key="pref_next_word_beside"
-            android:title="@string/pref_next_word_beside_title"
-            app:singleLineTitle="false"
-            android:summary="@string/pref_next_word_beside_summary"
-            android:dependency="pref_next_word"
-            android:defaultValue="true" />
-        <ListPreference
-            android:key="pref_next_word_beside_count"
-            android:title="@string/pref_next_word_beside_count_title"
-            app:singleLineTitle="false"
-            android:entries="@array/beside_count_entries"
-            android:entryValues="@array/beside_count_values"
-            android:dependency="pref_next_word_beside"
-            android:defaultValue="2"
-            app:useSimpleSummaryProvider="true" />
-        <SwitchPreferenceCompat
-            android:key="pref_enter_action"
-            android:title="@string/pref_enter_action_title"
-            app:singleLineTitle="false"
-            android:summary="@string/pref_enter_action_summary"
-            android:defaultValue="true" />
-        <SwitchPreferenceCompat
-            android:key="pref_backspace_undo"
-            android:title="@string/pref_backspace_undo_title"
-            app:singleLineTitle="false"
-            android:summary="@string/pref_backspace_undo_summary"
-            android:defaultValue="false" />
-        <SwitchPreferenceCompat
-            android:key="pref_enter_hold_sends"
-            android:title="@string/pref_enter_hold_sends_title"
-            app:singleLineTitle="false"
-            android:summary="@string/pref_enter_hold_sends_summary"
-            android:defaultValue="false" />
-        <SwitchPreferenceCompat
-            android:key="pref_field_keys"
-            android:title="@string/pref_field_keys_title"
-            app:singleLineTitle="false"
-            android:summary="@string/pref_field_keys_summary"
-            android:defaultValue="true" />
-        <SwitchPreferenceCompat
-            android:key="pref_clean_links_on_paste"
-            android:title="@string/pref_clean_links_on_paste_title"
-            app:singleLineTitle="false"
-            android:summary="@string/pref_clean_links_on_paste_summary"
-            android:defaultValue="false" />
-        <SwitchPreferenceCompat
-            android:key="pref_numpad_for_numbers"
-            android:title="@string/pref_numpad_for_numbers_title"
-            app:singleLineTitle="false"
-            android:summary="@string/pref_numpad_for_numbers_summary"
-            android:defaultValue="false" />
-        <SwitchPreferenceCompat
-            android:key="pref_letters_on_new_field"
-            android:title="@string/pref_letters_on_new_field_title"
-            app:singleLineTitle="false"
-            android:summary="@string/pref_letters_on_new_field_summary"
-            android:defaultValue="true" />
-        <SwitchPreferenceCompat
-            android:key="pref_peck_mode"
-            android:title="@string/pref_peck_mode_title"
-            app:singleLineTitle="false"
-            android:summary="@string/pref_peck_mode_summary"
-            android:defaultValue="false" />
+    <PreferenceCategory
+        android:key="pref_home_everyday"
+        android:title="@string/pref_home_everyday_title">
         <PreferenceScreen
-            android:key="pref_group_spacing"
-            android:title="@string/pref_group_spacing_title"
+            android:key="pref_group_languages"
+            android:icon="@drawable/ic_settings_languages"
+            android:title="@string/pref_group_languages_title"
             app:singleLineTitle="false"
-            android:summary="@string/pref_group_spacing_summary">
+            android:summary="@string/pref_group_languages_summary">
+            <ListPreference
+                android:key="pref_language"
+                android:title="@string/pref_language_title"
+                app:singleLineTitle="false"
+                android:entries="@array/language_entries"
+                android:entryValues="@array/language_values"
+                android:defaultValue="en"
+                app:useSimpleSummaryProvider="true" />
+            <ListPreference
+                android:key="pref_key_arrangement"
+                android:title="@string/pref_key_arrangement_title"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_key_arrangement_summary"
+                android:entries="@array/key_arrangement_entries"
+                android:entryValues="@array/key_arrangement_values"
+                android:defaultValue="qwerty" />
+            <MultiSelectListPreference
+                android:key="pref_enabled_languages"
+                android:title="@string/pref_enabled_languages_title"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_enabled_languages_summary"
+                android:entries="@array/language_entries"
+                android:entryValues="@array/language_values"
+                android:defaultValue="@array/language_default_values" />
+            <ListPreference
+                android:key="pref_language_mode"
+                android:title="@string/pref_language_mode_title"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_language_mode_summary"
+                android:entries="@array/language_mode_entries"
+                android:entryValues="@array/language_mode_values"
+                android:defaultValue="one" />
             <SwitchPreferenceCompat
-                android:key="pref_autospace"
-                android:title="@string/pref_autospace_title"
+                android:key="pref_sync_system_language"
+                android:title="@string/pref_sync_system_language_title"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_sync_system_language_summary"
+                android:defaultValue="true" />
+            <SwitchPreferenceCompat
+                android:key="pref_british_spelling"
+                android:title="@string/pref_british_spelling_title"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_british_spelling_summary"
+                android:defaultValue="false" />
+        </PreferenceScreen>
+
+        <PreferenceScreen
+            android:key="pref_group_typing"
+            app:initialExpandedChildrenCount="5"
+            android:icon="@drawable/ic_settings_typing"
+            android:title="@string/pref_group_typing_title"
+            app:singleLineTitle="false"
+            android:summary="@string/pref_group_typing_summary">
+            <ListPreference
+                android:key="pref_autocorrect_level"
+                android:title="@string/pref_autocorrect_title"
+                app:singleLineTitle="false"
+                android:entries="@array/autocorrect_entries"
+                android:entryValues="@array/autocorrect_values"
+                android:defaultValue="normal"
+                app:useSimpleSummaryProvider="true" />
+            <SwitchPreferenceCompat
+                android:key="pref_auto_capitalize"
+                android:title="@string/pref_auto_capitalize_title"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_auto_capitalize_summary"
+                android:defaultValue="true" />
+            <PreferenceScreen
+                android:key="pref_group_spacing"
+                android:title="@string/pref_group_spacing_title"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_group_spacing_summary">
+                <SwitchPreferenceCompat
+                    android:key="pref_autospace"
+                    android:title="@string/pref_autospace_title"
+                    app:singleLineTitle="false"
+                    android:defaultValue="true" />
+                <com.kinetica.keyboard.settings.SteppedSliderPreference
+                    android:key="pref_autospace_delay_ms"
+                    android:title="@string/pref_autospace_delay_title"
+                    android:summary="@string/pref_autospace_delay_summary"
+                    app:singleLineTitle="false"
+                    android:defaultValue="300"
+                    app:sliderSteps="@array/timing_steps_autospace"
+                    android:dependency="pref_autospace" />
+                <com.kinetica.keyboard.settings.SteppedSliderPreference
+                    android:key="pref_autospace_tap_delay_ms"
+                    android:title="@string/pref_autospace_tap_delay_title"
+                    android:summary="@string/pref_autospace_tap_delay_summary"
+                    app:singleLineTitle="false"
+                    android:defaultValue="300"
+                    app:sliderSteps="@array/timing_steps_autospace"
+                    android:dependency="pref_autospace" />
+                <com.kinetica.keyboard.settings.SteppedSliderPreference
+                    android:key="pref_autospace_retract_ms"
+                    android:title="@string/pref_autospace_retract_title"
+                    android:summary="@string/pref_autospace_retract_summary"
+                    app:singleLineTitle="false"
+                    android:defaultValue="600"
+                    app:sliderSteps="@array/timing_steps_retract"
+                    android:dependency="pref_autospace" />
+                <SwitchPreferenceCompat
+                    android:key="pref_autospace_timer"
+                    android:title="@string/pref_autospace_timer_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/pref_autospace_timer_summary"
+                    android:dependency="pref_autospace"
+                    android:defaultValue="true" />
+                <SwitchPreferenceCompat
+                    android:key="pref_autospace_tapped_words"
+                    android:title="@string/pref_autospace_tapped_words_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/pref_autospace_tapped_words_summary"
+                    android:dependency="pref_autospace"
+                    android:defaultValue="false" />
+                <SwitchPreferenceCompat
+                    android:key="pref_word_ends_on_space"
+                    android:title="@string/pref_word_ends_on_space_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/pref_word_ends_on_space_summary"
+                    android:defaultValue="false" />
+                <SwitchPreferenceCompat
+                    android:key="pref_double_space_period"
+                    android:title="@string/pref_double_space_period_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/pref_double_space_period_summary"
+                    android:defaultValue="false" />
+                <SwitchPreferenceCompat
+                    android:key="pref_tidy_spaces"
+                    android:title="@string/pref_tidy_spaces_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/pref_tidy_spaces_summary"
+                    android:defaultValue="false" />
+                <EditTextPreference
+                    android:key="pref_no_space_before"
+                    android:title="@string/pref_no_space_before_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/pref_no_space_before_summary"
+                    android:defaultValue="@string/pref_no_space_before_default" />
+                <SwitchPreferenceCompat
+                    android:key="pref_spaceless_space"
+                    android:title="@string/pref_spaceless_space_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/pref_spaceless_space_summary"
+                    android:defaultValue="false" />
+            </PreferenceScreen>
+            <SwitchPreferenceCompat
+                android:key="pref_next_word"
+                android:title="@string/pref_next_word_title"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_next_word_summary"
+                android:defaultValue="true" />
+            <PreferenceScreen
+                android:key="pref_group_learning"
+                android:title="@string/pref_group_learning_title"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_group_learning_summary">
+                <ListPreference
+                    android:key="pref_reinforce_increment"
+                    android:title="@string/pref_reinforce_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/pref_reinforce_summary"
+                    android:entries="@array/reinforce_entries"
+                    android:entryValues="@array/reinforce_values"
+                    android:defaultValue="medium" />
+                <SeekBarPreference
+                    android:key="pref_reinforce_step_dp"
+                    android:title="@string/pref_reinforce_step_title"
+                    android:summary="@string/pref_reinforce_step_summary"
+                    app:singleLineTitle="false"
+                    android:defaultValue="24"
+                    android:max="48"
+                    app:min="8"
+                    app:showSeekBarValue="true" />
+                <SwitchPreferenceCompat
+                    android:key="pref_learn_phrases"
+                    android:title="@string/pref_learn_phrases_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/pref_learn_phrases_summary"
+                    android:defaultValue="false" />
+                <SwitchPreferenceCompat
+                    android:key="pref_retype_avoids_rejected"
+                    android:title="@string/pref_retype_avoids_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/pref_retype_avoids_summary"
+                    android:defaultValue="false" />
+                <SwitchPreferenceCompat
+                    android:key="pref_delete_on_block"
+                    android:title="@string/pref_delete_on_block_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/pref_delete_on_block_summary"
+                    android:defaultValue="false" />
+            </PreferenceScreen>
+            <SwitchPreferenceCompat
+                android:key="pref_vibration"
+                android:title="@string/pref_vibration_title"
                 app:singleLineTitle="false"
                 android:defaultValue="true" />
-            <com.kinetica.keyboard.settings.SteppedSliderPreference
-                android:key="pref_autospace_delay_ms"
-                android:title="@string/pref_autospace_delay_title"
-                android:summary="@string/pref_autospace_delay_summary"
+            <SeekBarPreference
+                android:key="pref_vibration_intensity"
+                android:title="@string/pref_vibration_intensity_title"
                 app:singleLineTitle="false"
-                android:defaultValue="300"
-                app:sliderSteps="@array/timing_steps_autospace"
-                android:dependency="pref_autospace" />
-            <com.kinetica.keyboard.settings.SteppedSliderPreference
-                android:key="pref_autospace_tap_delay_ms"
-                android:title="@string/pref_autospace_tap_delay_title"
-                android:summary="@string/pref_autospace_tap_delay_summary"
-                app:singleLineTitle="false"
-                android:defaultValue="300"
-                app:sliderSteps="@array/timing_steps_autospace"
-                android:dependency="pref_autospace" />
-            <com.kinetica.keyboard.settings.SteppedSliderPreference
-                android:key="pref_autospace_retract_ms"
-                android:title="@string/pref_autospace_retract_title"
-                android:summary="@string/pref_autospace_retract_summary"
-                app:singleLineTitle="false"
-                android:defaultValue="600"
-                app:sliderSteps="@array/timing_steps_retract"
-                android:dependency="pref_autospace" />
+                android:defaultValue="2"
+                android:max="3"
+                app:min="1"
+                app:showSeekBarValue="true"
+                android:dependency="pref_vibration" />
             <SwitchPreferenceCompat
-                android:key="pref_autospace_timer"
-                android:title="@string/pref_autospace_timer_title"
+                android:key="pref_enter_action"
+                android:title="@string/pref_enter_action_title"
                 app:singleLineTitle="false"
-                android:summary="@string/pref_autospace_timer_summary"
-                android:dependency="pref_autospace"
+                android:summary="@string/pref_enter_action_summary"
                 android:defaultValue="true" />
             <SwitchPreferenceCompat
-                android:key="pref_autospace_tapped_words"
-                android:title="@string/pref_autospace_tapped_words_title"
+                android:key="pref_enter_hold_sends"
+                android:title="@string/pref_enter_hold_sends_title"
                 app:singleLineTitle="false"
-                android:summary="@string/pref_autospace_tapped_words_summary"
-                android:dependency="pref_autospace"
+                android:summary="@string/pref_enter_hold_sends_summary"
                 android:defaultValue="false" />
             <SwitchPreferenceCompat
-                android:key="pref_word_ends_on_space"
-                android:title="@string/pref_word_ends_on_space_title"
+                android:key="pref_backspace_undo"
+                android:title="@string/pref_backspace_undo_title"
                 app:singleLineTitle="false"
-                android:summary="@string/pref_word_ends_on_space_summary"
+                android:summary="@string/pref_backspace_undo_summary"
                 android:defaultValue="false" />
             <SwitchPreferenceCompat
-                android:key="pref_double_space_period"
-                android:title="@string/pref_double_space_period_title"
+                android:key="pref_next_word_beside"
+                android:title="@string/pref_next_word_beside_title"
                 app:singleLineTitle="false"
-                android:summary="@string/pref_double_space_period_summary"
+                android:summary="@string/pref_next_word_beside_summary"
+                android:dependency="pref_next_word"
+                android:defaultValue="true" />
+            <ListPreference
+                android:key="pref_next_word_beside_count"
+                android:title="@string/pref_next_word_beside_count_title"
+                app:singleLineTitle="false"
+                android:entries="@array/beside_count_entries"
+                android:entryValues="@array/beside_count_values"
+                android:dependency="pref_next_word_beside"
+                android:defaultValue="2"
+                app:useSimpleSummaryProvider="true" />
+            <SwitchPreferenceCompat
+                android:key="pref_field_keys"
+                android:title="@string/pref_field_keys_title"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_field_keys_summary"
+                android:defaultValue="true" />
+            <SwitchPreferenceCompat
+                android:key="pref_numpad_for_numbers"
+                android:title="@string/pref_numpad_for_numbers_title"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_numpad_for_numbers_summary"
                 android:defaultValue="false" />
             <SwitchPreferenceCompat
-                android:key="pref_tidy_spaces"
-                android:title="@string/pref_tidy_spaces_title"
+                android:key="pref_letters_on_new_field"
+                android:title="@string/pref_letters_on_new_field_title"
                 app:singleLineTitle="false"
-                android:summary="@string/pref_tidy_spaces_summary"
-                android:defaultValue="false" />
-            <EditTextPreference
-                android:key="pref_no_space_before"
-                android:title="@string/pref_no_space_before_title"
-                app:singleLineTitle="false"
-                android:summary="@string/pref_no_space_before_summary"
-                android:defaultValue="@string/pref_no_space_before_default" />
+                android:summary="@string/pref_letters_on_new_field_summary"
+                android:defaultValue="true" />
             <SwitchPreferenceCompat
-                android:key="pref_spaceless_space"
-                android:title="@string/pref_spaceless_space_title"
+                android:key="pref_letters_after_space"
+                android:title="@string/pref_letters_after_space_title"
                 app:singleLineTitle="false"
-                android:summary="@string/pref_spaceless_space_summary"
+                android:summary="@string/pref_letters_after_space_summary"
+                android:defaultValue="false" />
+            <SwitchPreferenceCompat
+                android:key="pref_clean_links_on_paste"
+                android:title="@string/pref_clean_links_on_paste_title"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_clean_links_on_paste_summary"
+                android:defaultValue="false" />
+            <SwitchPreferenceCompat
+                android:key="pref_peck_mode"
+                android:title="@string/pref_peck_mode_title"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_peck_mode_summary"
                 android:defaultValue="false" />
         </PreferenceScreen>
         <PreferenceScreen
             android:key="pref_group_bar"
+            app:initialExpandedChildrenCount="5"
+            android:icon="@drawable/ic_settings_bar"
             android:title="@string/pref_group_bar_title"
             app:singleLineTitle="false"
             android:summary="@string/pref_group_bar_summary">
@@ -245,16 +324,45 @@
                 app:seekBarIncrement="10"
                 app:showSeekBarValue="true" />
             <SwitchPreferenceCompat
+                android:key="pref_recent_words"
+                android:title="@string/pref_recent_words_title"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_recent_words_summary"
+                android:defaultValue="false" />
+            <Preference
+                android:key="pref_bar_actions"
+                android:title="@string/pref_bar_actions_title"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_bar_actions_summary">
+                <intent
+                    android:targetPackage="@string/app_pkg"
+                    android:targetClass="com.kinetica.keyboard.settings.ShortcutSetActivity">
+                    <extra android:name="set" android:value="bar" />
+                </intent>
+            </Preference>
+            <SwitchPreferenceCompat
                 android:key="pref_bar_compact"
                 android:title="@string/pref_bar_compact_title"
                 app:singleLineTitle="false"
                 android:summary="@string/pref_bar_compact_summary"
                 android:defaultValue="true" />
             <SwitchPreferenceCompat
-                android:key="pref_recent_words"
-                android:title="@string/pref_recent_words_title"
+                android:key="pref_bar_middle_cut"
+                android:title="@string/pref_bar_middle_cut_title"
                 app:singleLineTitle="false"
-                android:summary="@string/pref_recent_words_summary"
+                android:summary="@string/pref_bar_middle_cut_summary"
+                android:defaultValue="false" />
+            <SwitchPreferenceCompat
+                android:key="pref_bar_space_bold"
+                android:title="@string/pref_bar_space_bold_title"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_bar_space_bold_summary"
+                android:defaultValue="false" />
+            <SwitchPreferenceCompat
+                android:key="pref_bar_word_marks"
+                android:title="@string/pref_bar_word_marks_title"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_bar_word_marks_summary"
                 android:defaultValue="false" />
             <!-- app:min and android:max match BarMetrics.RECENT_PCT_MIN and RECENT_PCT_MAX. -->
             <SeekBarPreference
@@ -301,17 +409,12 @@
                 app:min="24"
                 app:showSeekBarValue="true"
                 android:dependency="pref_retype_button" />
-            <Preference
-                android:key="pref_bar_actions"
-                android:title="@string/pref_bar_actions_title"
+            <SwitchPreferenceCompat
+                android:key="pref_shortcuts_button"
+                android:title="@string/pref_shortcuts_button_title"
                 app:singleLineTitle="false"
-                android:summary="@string/pref_bar_actions_summary">
-                <intent
-                    android:targetPackage="@string/app_pkg"
-                    android:targetClass="com.kinetica.keyboard.settings.ShortcutSetActivity">
-                    <extra android:name="set" android:value="bar" />
-                </intent>
-            </Preference>
+                android:summary="@string/pref_shortcuts_button_summary"
+                android:defaultValue="false" />
             <Preference
                 android:key="pref_menu_actions"
                 android:title="@string/pref_menu_actions_title"
@@ -323,864 +426,1058 @@
                     <extra android:name="set" android:value="menu" />
                 </intent>
             </Preference>
+            <ListPreference
+                android:key="pref_date_style"
+                android:title="@string/pref_date_style_title"
+                app:singleLineTitle="false"
+                android:entries="@array/date_style_entries"
+                android:entryValues="@array/date_style_values"
+                android:defaultValue="system"
+                app:useSimpleSummaryProvider="true" />
         </PreferenceScreen>
+
         <PreferenceScreen
-            android:key="pref_group_learning"
-            android:title="@string/pref_group_learning_title"
+            android:key="pref_group_look"
+            android:icon="@drawable/ic_settings_look"
+            android:title="@string/pref_group_look_title"
             app:singleLineTitle="false"
-            android:summary="@string/pref_group_learning_summary">
-            <ListPreference
-                android:key="pref_reinforce_increment"
-                android:title="@string/pref_reinforce_title"
-                app:singleLineTitle="false"
-                android:summary="@string/pref_reinforce_summary"
-                android:entries="@array/reinforce_entries"
-                android:entryValues="@array/reinforce_values"
-                android:defaultValue="medium" />
-            <SeekBarPreference
-                android:key="pref_reinforce_step_dp"
-                android:title="@string/pref_reinforce_step_title"
-                android:summary="@string/pref_reinforce_step_summary"
-                app:singleLineTitle="false"
-                android:defaultValue="24"
-                android:max="48"
-                app:min="8"
-                app:showSeekBarValue="true" />
-            <SwitchPreferenceCompat
-                android:key="pref_learn_phrases"
-                android:title="@string/pref_learn_phrases_title"
-                app:singleLineTitle="false"
-                android:summary="@string/pref_learn_phrases_summary"
-                android:defaultValue="false" />
-            <SwitchPreferenceCompat
-                android:key="pref_retype_avoids_rejected"
-                android:title="@string/pref_retype_avoids_title"
-                app:singleLineTitle="false"
-                android:summary="@string/pref_retype_avoids_summary"
-                android:defaultValue="false" />
-            <SwitchPreferenceCompat
-                android:key="pref_delete_on_block"
-                android:title="@string/pref_delete_on_block_title"
-                app:singleLineTitle="false"
-                android:summary="@string/pref_delete_on_block_summary"
-                android:defaultValue="false" />
-        </PreferenceScreen>
-    </PreferenceScreen>
-
-    <PreferenceScreen
-        android:key="pref_group_look"
-        android:title="@string/pref_group_look_title"
-        app:singleLineTitle="false"
-        android:summary="@string/pref_group_look_summary">
-        <ListPreference
-            android:key="pref_theme_mode"
-            android:title="@string/pref_theme_mode_title"
-            app:singleLineTitle="false"
-            android:entries="@array/theme_mode_entries"
-            android:entryValues="@array/theme_mode_values"
-            android:defaultValue="default"
-            app:useSimpleSummaryProvider="true" />
-        <ListPreference
-            android:key="pref_theme_brightness"
-            android:title="@string/pref_theme_brightness_title"
-            app:singleLineTitle="false"
-            android:entries="@array/theme_brightness_entries"
-            android:entryValues="@array/theme_brightness_values"
-            android:defaultValue="dark"
-            app:useSimpleSummaryProvider="true" />
-        <com.kinetica.keyboard.settings.ColorHexPreference
-            android:key="pref_theme_color_hex"
-            android:title="@string/pref_theme_color_hex_title"
-            app:singleLineTitle="false" />
-        <com.kinetica.keyboard.settings.ThemePreviewPreference
-            android:key="pref_theme_preview"
-            android:persistent="false"
-            android:selectable="false" />
-        <SwitchPreferenceCompat
-            android:key="pref_key_borders"
-            android:title="@string/pref_key_borders_title"
-            app:singleLineTitle="false"
-            android:summary="@string/pref_key_borders_summary"
-            android:defaultValue="false" />
-        <SeekBarPreference
-            android:key="pref_key_border_width"
-            android:title="@string/pref_key_border_width_title"
-            app:singleLineTitle="false"
-            android:defaultValue="1"
-            android:max="4"
-            app:min="1"
-            app:showSeekBarValue="true"
-            app:updatesContinuously="true"
-            android:dependency="pref_key_borders" />
-        <Preference
-            android:key="pref_backdrop_image"
-            android:title="@string/backdrop_title"
-            app:singleLineTitle="false"
-            android:summary="@string/backdrop_none"
-            android:persistent="false" />
-        <!-- app:min and android:defaultValue match BackdropFit's opacity bounds. -->
-        <SeekBarPreference
-            android:key="pref_backdrop_alpha"
-            android:title="@string/pref_backdrop_alpha_title"
-            app:singleLineTitle="false"
-            android:defaultValue="100"
-            android:max="100"
-            app:min="0"
-            app:showSeekBarValue="true"
-            app:updatesContinuously="true" />
-        <SeekBarPreference
-            android:key="pref_key_alpha"
-            android:title="@string/pref_key_alpha_title"
-            app:singleLineTitle="false"
-            android:defaultValue="60"
-            android:max="100"
-            app:min="10"
-            app:showSeekBarValue="true"
-            app:updatesContinuously="true" />
-        <ListPreference
-            android:key="pref_swipe_look"
-            android:title="@string/pref_swipe_look_title"
-            app:singleLineTitle="false"
-            android:entries="@array/swipe_look_entries"
-            android:entryValues="@array/swipe_look_values"
-            android:defaultValue="trail"
-            app:useSimpleSummaryProvider="true" />
-        <ListPreference
-            android:key="pref_trail_color"
-            android:title="@string/pref_trail_color_title"
-            app:singleLineTitle="false"
-            android:entries="@array/trail_color_entries"
-            android:entryValues="@array/trail_color_values"
-            android:defaultValue="rainbow"
-            app:useSimpleSummaryProvider="true" />
-        <com.kinetica.keyboard.settings.ColorHexPreference
-            android:key="pref_trail_color_hex"
-            android:title="@string/pref_trail_color_hex_title"
-            app:singleLineTitle="false" />
-        <SwitchPreferenceCompat
-            android:key="pref_zen_mode"
-            android:title="@string/pref_zen_title"
-            app:singleLineTitle="false"
-            android:summary="@string/pref_zen_summary"
-            android:defaultValue="false" />
-        <SwitchPreferenceCompat
-            android:key="pref_vibration"
-            android:title="@string/pref_vibration_title"
-            app:singleLineTitle="false"
-            android:defaultValue="true" />
-        <SeekBarPreference
-            android:key="pref_vibration_intensity"
-            android:title="@string/pref_vibration_intensity_title"
-            app:singleLineTitle="false"
-            android:defaultValue="2"
-            android:max="3"
-            app:min="1"
-            app:showSeekBarValue="true"
-            android:dependency="pref_vibration" />
-    </PreferenceScreen>
-
-    <PreferenceScreen
-        android:key="pref_group_size"
-        android:title="@string/pref_group_size_title"
-        app:singleLineTitle="false"
-        android:summary="@string/pref_group_size_summary">
-        <!-- Each orientation's sizes under its own header; the fragment opens the group the
-             settings are held in and closes the other (SizeGroups). -->
-        <Preference
-            android:key="pref_size_portrait"
-            android:title="@string/pref_size_portrait_title"
-            app:singleLineTitle="false"
-            android:summary="@string/pref_size_portrait_summary"
-            android:persistent="false" />
-        <PreferenceCategory android:key="pref_size_portrait_rows">
-            <com.kinetica.keyboard.settings.SizePreviewPreference
-                android:key="pref_size_preview"
-                android:persistent="false"
-                android:selectable="false" />
-            <SeekBarPreference
-                android:key="pref_keyboard_height_pct"
-                android:title="@string/pref_height_title"
-                app:singleLineTitle="false"
-                android:defaultValue="35"
-                android:max="50"
-                app:min="10"
-                app:showSeekBarValue="true" />
-            <SeekBarPreference
-                android:key="pref_side_pad_dp"
-                android:title="@string/pref_side_pad_title"
-                app:singleLineTitle="false"
-                android:summary="@string/pref_side_pad_summary"
-                android:defaultValue="0"
-                android:max="48"
-                app:min="0"
-                app:showSeekBarValue="true" />
-            <SeekBarPreference
-                android:key="pref_home_row_spread"
-                android:title="@string/pref_home_row_spread_title"
-                app:singleLineTitle="false"
-                android:summary="@string/pref_home_row_spread_summary"
-                android:defaultValue="0"
-                android:max="100"
-                app:min="0"
-                app:showSeekBarValue="true" />
-            <SeekBarPreference
-                android:key="pref_bottom_pad_dp"
-                android:title="@string/pref_bottom_pad_title"
-                app:singleLineTitle="false"
-                android:summary="@string/pref_bottom_pad_summary"
-                android:defaultValue="0"
-                android:max="48"
-                app:min="0"
-                app:showSeekBarValue="true" />
-            <SeekBarPreference
-                android:key="pref_drag_handle_dp"
-                android:title="@string/pref_drag_handle_title"
-                app:singleLineTitle="false"
-                android:summary="@string/pref_drag_handle_summary"
-                android:defaultValue="20"
-                android:max="20"
-                app:min="0"
-                app:showSeekBarValue="true" />
-        </PreferenceCategory>
-        <Preference
-            android:key="pref_size_landscape"
-            android:title="@string/pref_size_landscape_title"
-            app:singleLineTitle="false"
-            android:summary="@string/pref_size_landscape_summary"
-            android:persistent="false" />
-        <PreferenceCategory android:key="pref_size_landscape_rows">
-            <com.kinetica.keyboard.settings.SizePreviewPreference
-                android:key="pref_size_preview_landscape"
-                android:persistent="false"
-                android:selectable="false" />
-            <SeekBarPreference
-                android:key="pref_keyboard_height_pct_landscape"
-                android:title="@string/pref_height_landscape_title"
-                app:singleLineTitle="false"
-                android:defaultValue="45"
-                android:max="50"
-                app:min="10"
-                app:showSeekBarValue="true" />
-            <ListPreference
-                android:key="pref_landscape_arrangement"
-                android:title="@string/pref_landscape_arrangement_title"
-                app:singleLineTitle="false"
-                android:entries="@array/landscape_arrangement_entries"
-                android:entryValues="@array/landscape_arrangement_values"
-                android:defaultValue="split"
-                app:useSimpleSummaryProvider="true" />
-            <SeekBarPreference
-                android:key="pref_landscape_split_gap_pct"
-                android:title="@string/pref_landscape_split_gap_title"
-                app:singleLineTitle="false"
-                android:summary="@string/pref_landscape_split_gap_summary"
-                android:defaultValue="30"
-                android:max="70"
-                app:min="0"
-                app:showSeekBarValue="true" />
-            <SwitchPreferenceCompat
-                android:key="pref_wide_arrangement"
-                android:title="@string/pref_wide_arrangement_title"
-                app:singleLineTitle="false"
-                android:summary="@string/pref_wide_arrangement_summary"
-                android:defaultValue="true" />
-            <SeekBarPreference
-                android:key="pref_side_pad_dp_landscape"
-                android:title="@string/pref_side_pad_landscape_title"
-                app:singleLineTitle="false"
-                android:summary="@string/pref_side_pad_summary"
-                android:defaultValue="0"
-                android:max="48"
-                app:min="0"
-                app:showSeekBarValue="true" />
-            <SeekBarPreference
-                android:key="pref_home_row_spread_landscape"
-                android:title="@string/pref_home_row_spread_landscape_title"
-                app:singleLineTitle="false"
-                android:summary="@string/pref_home_row_spread_summary"
-                android:defaultValue="0"
-                android:max="100"
-                app:min="0"
-                app:showSeekBarValue="true" />
-            <SeekBarPreference
-                android:key="pref_bottom_pad_dp_landscape"
-                android:title="@string/pref_bottom_pad_landscape_title"
-                app:singleLineTitle="false"
-                android:summary="@string/pref_bottom_pad_summary"
-                android:defaultValue="0"
-                android:max="48"
-                app:min="0"
-                app:showSeekBarValue="true" />
-            <SeekBarPreference
-                android:key="pref_drag_handle_dp_landscape"
-                android:title="@string/pref_drag_handle_landscape_title"
-                app:singleLineTitle="false"
-                android:summary="@string/pref_drag_handle_summary"
-                android:defaultValue="20"
-                android:max="20"
-                app:min="0"
-                app:showSeekBarValue="true" />
-            <SeekBarPreference
-                android:key="pref_suggestion_bar_dp_landscape"
-                android:title="@string/pref_suggestion_bar_landscape_title"
-                app:singleLineTitle="false"
-                android:summary="@string/pref_suggestion_bar_summary"
-                android:defaultValue="44"
-                android:max="72"
-                app:min="16"
-                app:showSeekBarValue="true" />
-            <!-- app:min and android:max match BarMetrics.TEXT_PCT_MIN and TEXT_PCT_MAX. -->
-            <SeekBarPreference
-                android:key="pref_bar_text_pct_landscape"
-                android:title="@string/pref_bar_text_pct_landscape_title"
-                app:singleLineTitle="false"
-                android:summary="@string/pref_bar_text_pct_summary"
-                android:defaultValue="150"
-                android:max="180"
-                app:min="60"
-                app:showSeekBarValue="true" />
-            <SeekBarPreference
-                android:key="pref_recent_text_pct_landscape"
-                android:title="@string/pref_recent_text_pct_landscape_title"
-                app:singleLineTitle="false"
-                android:summary="@string/pref_recent_text_pct_summary"
-                android:defaultValue="150"
-                android:max="170"
-                app:min="60"
-                app:showSeekBarValue="true" />
-        </PreferenceCategory>
-        <PreferenceCategory
-            android:key="pref_size_both"
-            android:title="@string/pref_size_both_title">
-            <ListPreference
-                android:key="pref_layout_mode"
-                android:title="@string/pref_layout_mode_title"
-                app:singleLineTitle="false"
-                android:entries="@array/layout_mode_entries"
-                android:entryValues="@array/layout_mode_values"
-                android:defaultValue="full"
-                app:useSimpleSummaryProvider="true" />
-            <ListPreference
-                android:key="pref_key_arrangement"
-                android:title="@string/pref_key_arrangement_title"
-                app:singleLineTitle="false"
-                android:summary="@string/pref_key_arrangement_summary"
-                android:entries="@array/key_arrangement_entries"
-                android:entryValues="@array/key_arrangement_values"
-                android:defaultValue="qwerty" />
-        </PreferenceCategory>
-    </PreferenceScreen>
-
-    <PreferenceScreen
-        android:key="pref_group_keys"
-        android:title="@string/pref_group_keys_title"
-        app:singleLineTitle="false"
-        android:summary="@string/pref_group_keys_summary">
-        <SwitchPreferenceCompat
-            android:key="pref_number_row"
-            android:title="@string/pref_number_row_title"
-            app:singleLineTitle="false"
-            android:summary="@string/pref_number_row_summary"
-            android:defaultValue="false" />
-        <SwitchPreferenceCompat
-            android:key="pref_apostrophe_key"
-            android:title="@string/pref_apostrophe_key_title"
-            app:singleLineTitle="false"
-            android:summary="@string/pref_apostrophe_key_summary"
-            android:defaultValue="false" />
-        <SwitchPreferenceCompat
-            android:key="pref_emoji_key"
-            android:title="@string/pref_emoji_key_title"
-            app:singleLineTitle="false"
-            android:summary="@string/pref_emoji_key_summary"
-            android:defaultValue="false" />
-        <ListPreference
-            android:key="pref_comma_mode"
-            android:title="@string/pref_comma_mode_title"
-            app:singleLineTitle="false"
-            android:summary="@string/pref_comma_mode_summary"
-            android:entries="@array/comma_mode_entries"
-            android:entryValues="@array/comma_mode_values"
-            android:defaultValue="keep" />
-        <EditTextPreference
-            android:key="pref_comma_custom"
-            android:title="@string/pref_comma_custom_title"
-            app:singleLineTitle="false"
-            android:summary="@string/pref_comma_custom_summary" />
-        <ListPreference
-            android:key="pref_period_mode"
-            android:title="@string/pref_period_mode_title"
-            app:singleLineTitle="false"
-            android:summary="@string/pref_period_mode_summary"
-            android:entries="@array/period_mode_entries"
-            android:entryValues="@array/comma_mode_values"
-            android:defaultValue="keep" />
-        <EditTextPreference
-            android:key="pref_period_custom"
-            android:title="@string/pref_period_custom_title"
-            app:singleLineTitle="false"
-            android:summary="@string/pref_period_custom_summary" />
-        <com.kinetica.keyboard.settings.SteppedSliderPreference
-            android:key="pref_long_press_ms"
-            android:title="@string/pref_long_press_title"
-            android:summary="@string/pref_long_press_summary"
-            app:singleLineTitle="false"
-            android:defaultValue="500"
-            app:sliderSteps="@array/timing_steps_long_press" />
-        <SwitchPreferenceCompat
-            android:key="pref_typing_speed"
-            android:title="@string/pref_typing_speed_title"
-            app:singleLineTitle="false"
-            android:summary="@string/pref_typing_speed_summary"
-            android:defaultValue="false" />
-        <PreferenceScreen
-            android:key="pref_group_longpress"
-            android:title="@string/pref_group_longpress_title"
-            app:singleLineTitle="false"
-            android:summary="@string/pref_group_longpress_summary">
-            <ListPreference
-                android:key="pref_popup_shape"
-                android:title="@string/pref_popup_shape_title"
-                app:singleLineTitle="false"
-                android:entries="@array/popup_shape_entries"
-                android:entryValues="@array/popup_shape_values"
-                android:defaultValue="row"
-                app:useSimpleSummaryProvider="true" />
-            <SwitchPreferenceCompat
-                android:key="pref_edit_from_menu"
-                android:title="@string/pref_edit_from_menu_title"
-                app:singleLineTitle="false"
-                android:summary="@string/pref_edit_from_menu_summary"
-                android:defaultValue="false" />
-            <SwitchPreferenceCompat
-                android:key="pref_plain_letter_alternates"
-                android:title="@string/pref_plain_letter_alternates_title"
-                app:singleLineTitle="false"
-                android:summary="@string/pref_plain_letter_alternates_summary"
-                android:defaultValue="false" />
-            <SwitchPreferenceCompat
-                android:key="pref_number_priority"
-                android:title="@string/pref_number_priority_title"
-                app:singleLineTitle="false"
-                android:summary="@string/pref_number_priority_summary"
-                android:defaultValue="true" />
-            <!-- One row per letter follows, added by KeyboardPrefsFragment. -->
+            android:summary="@string/pref_group_look_summary">
+            <PreferenceCategory
+                android:key="pref_look_both"
+                android:title="@string/pref_look_both_title">
+                <SwitchPreferenceCompat
+                    android:key="pref_look_sets"
+                    android:title="@string/pref_look_sets_title"
+                    app:singleLineTitle="false"
+                    android:summaryOff="@string/pref_look_sets_summary_off"
+                    android:summaryOn="@string/pref_look_sets_summary_on"
+                    android:defaultValue="false" />
+                <SwitchPreferenceCompat
+                    android:key="pref_keep_trail"
+                    android:title="@string/pref_keep_trail_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/pref_keep_trail_summary"
+                    android:defaultValue="false" />
+                <SwitchPreferenceCompat
+                    android:key="pref_zen_mode"
+                    android:title="@string/pref_zen_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/pref_zen_summary"
+                    android:defaultValue="false" />
+            </PreferenceCategory>
+            <!-- Each look under its own header; the fragment opens the look shown now and hides the
+                 night one while the switch is off (LookGroups). The night rows are the day rows
+                 under their night keys (Prefs.NIGHT_TWINS): keep the two in step. -->
             <Preference
-                android:key="pref_letter_alternates_note"
-                android:title="@string/pref_letter_alternates_note_title"
+                android:key="pref_look_day"
+                android:title="@string/pref_look_day_title"
                 app:singleLineTitle="false"
-                android:summary="@string/pref_letter_alternates_note_summary"
-                android:selectable="false" />
-        </PreferenceScreen>
-        <PreferenceScreen
-            android:key="pref_group_key_symbols"
-            android:title="@string/pref_group_key_symbols_title"
-            app:singleLineTitle="false"
-            android:summary="@string/pref_group_key_symbols_summary">
-            <EditTextPreference
-                android:key="pref_comma_alternates"
-                android:title="@string/pref_comma_alternates_title"
-                app:singleLineTitle="false"
-                android:summary="@string/pref_punctuation_alternates_summary" />
-            <EditTextPreference
-                android:key="pref_period_alternates"
-                android:title="@string/pref_period_alternates_title"
-                app:singleLineTitle="false"
-                android:summary="@string/pref_punctuation_alternates_summary" />
-            <EditTextPreference
-                android:key="pref_enter_alternates"
-                android:title="@string/pref_enter_alternates_title"
-                app:singleLineTitle="false"
-                android:summary="@string/pref_enter_alternates_summary"
-                android:defaultValue="@string/pref_enter_alternates_default" />
-        </PreferenceScreen>
-        <PreferenceScreen
-            android:key="pref_group_symbol_pages"
-            android:title="@string/pref_group_symbol_pages_title"
-            app:singleLineTitle="false"
-            android:summary="@string/pref_group_symbol_pages_summary">
-            <!-- Rows typed as text, edited in SymbolRowsDialog; one pref a row (Prefs.symbolRowKey). -->
+                android:summary="@string/pref_look_day_summary"
+                android:persistent="false" />
+            <PreferenceCategory android:key="pref_look_day_rows">
+                <com.kinetica.keyboard.settings.ThemePreviewPreference
+                    android:key="pref_theme_preview"
+                    android:persistent="false"
+                    android:selectable="false" />
+                <ListPreference
+                    android:key="pref_theme_brightness"
+                    android:title="@string/pref_theme_brightness_title"
+                    app:singleLineTitle="false"
+                    android:entries="@array/theme_brightness_entries"
+                    android:entryValues="@array/theme_brightness_values"
+                    android:defaultValue="dark"
+                    app:useSimpleSummaryProvider="true" />
+                <ListPreference
+                    android:key="pref_theme_mode"
+                    android:title="@string/pref_theme_mode_title"
+                    app:singleLineTitle="false"
+                    android:entries="@array/theme_mode_entries"
+                    android:entryValues="@array/theme_mode_values"
+                    android:defaultValue="default"
+                    app:useSimpleSummaryProvider="true" />
+                <com.kinetica.keyboard.settings.ColorHexPreference
+                    android:key="pref_theme_color_hex"
+                    android:title="@string/pref_theme_color_hex_title"
+                    app:singleLineTitle="false" />
+                <Preference
+                    android:key="pref_backdrop_image"
+                    android:title="@string/backdrop_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/backdrop_none"
+                    android:persistent="false" />
+                <!-- app:min and android:defaultValue match BackdropFit's opacity bounds. -->
+                <SeekBarPreference
+                    android:key="pref_backdrop_alpha"
+                    android:title="@string/pref_backdrop_alpha_title"
+                    app:singleLineTitle="false"
+                    android:defaultValue="100"
+                    android:max="100"
+                    app:min="0"
+                    app:showSeekBarValue="true"
+                    app:updatesContinuously="true" />
+                <SeekBarPreference
+                    android:key="pref_key_alpha"
+                    android:title="@string/pref_key_alpha_title"
+                    app:singleLineTitle="false"
+                    android:defaultValue="60"
+                    android:max="100"
+                    app:min="10"
+                    app:showSeekBarValue="true"
+                    app:updatesContinuously="true" />
+                <ListPreference
+                    android:key="pref_swipe_look"
+                    android:title="@string/pref_swipe_look_title"
+                    app:singleLineTitle="false"
+                    android:entries="@array/swipe_look_entries"
+                    android:entryValues="@array/swipe_look_values"
+                    android:defaultValue="trail"
+                    app:useSimpleSummaryProvider="true" />
+                <ListPreference
+                    android:key="pref_trail_color"
+                    android:title="@string/pref_trail_color_title"
+                    app:singleLineTitle="false"
+                    android:entries="@array/trail_color_entries"
+                    android:entryValues="@array/trail_color_values"
+                    android:defaultValue="rainbow"
+                    app:useSimpleSummaryProvider="true" />
+                <com.kinetica.keyboard.settings.ColorHexPreference
+                    android:key="pref_trail_color_hex"
+                    android:title="@string/pref_trail_color_hex_title"
+                    app:singleLineTitle="false" />
+                <SwitchPreferenceCompat
+                    android:key="pref_key_borders"
+                    android:title="@string/pref_key_borders_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/pref_key_borders_summary"
+                    android:defaultValue="false" />
+                <SeekBarPreference
+                    android:key="pref_key_border_width"
+                    android:title="@string/pref_key_border_width_title"
+                    app:singleLineTitle="false"
+                    android:defaultValue="1"
+                    android:max="4"
+                    app:min="1"
+                    app:showSeekBarValue="true"
+                    app:updatesContinuously="true"
+                    android:dependency="pref_key_borders" />
+            </PreferenceCategory>
             <Preference
-                android:key="pref_symbol_rows_1"
-                android:title="@string/pref_symbol_rows_1_title"
+                android:key="pref_look_night"
+                android:title="@string/pref_look_night_title"
                 app:singleLineTitle="false"
+                android:summary="@string/pref_look_night_summary"
+                android:persistent="false" />
+            <PreferenceCategory android:key="pref_look_night_rows">
+                <com.kinetica.keyboard.settings.ThemePreviewPreference
+                    android:key="pref_theme_preview_night"
+                    android:persistent="false"
+                    android:selectable="false" />
+                <ListPreference
+                    android:key="pref_theme_brightness_night"
+                    android:title="@string/pref_theme_brightness_title"
+                    app:singleLineTitle="false"
+                    android:entries="@array/theme_brightness_entries"
+                    android:entryValues="@array/theme_brightness_values"
+                    android:defaultValue="dark"
+                    app:useSimpleSummaryProvider="true" />
+                <ListPreference
+                    android:key="pref_theme_mode_night"
+                    android:title="@string/pref_theme_mode_title"
+                    app:singleLineTitle="false"
+                    android:entries="@array/theme_mode_entries"
+                    android:entryValues="@array/theme_mode_values"
+                    android:defaultValue="default"
+                    app:useSimpleSummaryProvider="true" />
+                <com.kinetica.keyboard.settings.ColorHexPreference
+                    android:key="pref_theme_color_hex_night"
+                    android:title="@string/pref_theme_color_hex_title"
+                    app:singleLineTitle="false" />
+                <Preference
+                    android:key="pref_backdrop_image_night"
+                    android:title="@string/backdrop_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/backdrop_none"
+                    android:persistent="false" />
+                <SeekBarPreference
+                    android:key="pref_backdrop_alpha_night"
+                    android:title="@string/pref_backdrop_alpha_title"
+                    app:singleLineTitle="false"
+                    android:defaultValue="100"
+                    android:max="100"
+                    app:min="0"
+                    app:showSeekBarValue="true"
+                    app:updatesContinuously="true" />
+                <SeekBarPreference
+                    android:key="pref_key_alpha_night"
+                    android:title="@string/pref_key_alpha_title"
+                    app:singleLineTitle="false"
+                    android:defaultValue="60"
+                    android:max="100"
+                    app:min="10"
+                    app:showSeekBarValue="true"
+                    app:updatesContinuously="true" />
+                <ListPreference
+                    android:key="pref_swipe_look_night"
+                    android:title="@string/pref_swipe_look_title"
+                    app:singleLineTitle="false"
+                    android:entries="@array/swipe_look_entries"
+                    android:entryValues="@array/swipe_look_values"
+                    android:defaultValue="trail"
+                    app:useSimpleSummaryProvider="true" />
+                <ListPreference
+                    android:key="pref_trail_color_night"
+                    android:title="@string/pref_trail_color_title"
+                    app:singleLineTitle="false"
+                    android:entries="@array/trail_color_entries"
+                    android:entryValues="@array/trail_color_values"
+                    android:defaultValue="rainbow"
+                    app:useSimpleSummaryProvider="true" />
+                <com.kinetica.keyboard.settings.ColorHexPreference
+                    android:key="pref_trail_color_hex_night"
+                    android:title="@string/pref_trail_color_hex_title"
+                    app:singleLineTitle="false" />
+                <SwitchPreferenceCompat
+                    android:key="pref_key_borders_night"
+                    android:title="@string/pref_key_borders_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/pref_key_borders_summary"
+                    android:defaultValue="false" />
+                <SeekBarPreference
+                    android:key="pref_key_border_width_night"
+                    android:title="@string/pref_key_border_width_title"
+                    app:singleLineTitle="false"
+                    android:defaultValue="1"
+                    android:max="4"
+                    app:min="1"
+                    app:showSeekBarValue="true"
+                    app:updatesContinuously="true"
+                    android:dependency="pref_key_borders_night" />
+            </PreferenceCategory>
+        </PreferenceScreen>
+
+        <PreferenceScreen
+            android:key="pref_group_size"
+            android:icon="@drawable/ic_settings_size"
+            android:title="@string/pref_group_size_title"
+            app:singleLineTitle="false"
+            android:summary="@string/pref_group_size_summary">
+            <PreferenceCategory
+                android:key="pref_size_both"
+                android:title="@string/pref_size_both_title">
+                <ListPreference
+                    android:key="pref_layout_mode"
+                    android:title="@string/pref_layout_mode_title"
+                    app:singleLineTitle="false"
+                    android:entries="@array/layout_mode_entries"
+                    android:entryValues="@array/layout_mode_values"
+                    android:defaultValue="full"
+                    app:useSimpleSummaryProvider="true" />
+            </PreferenceCategory>
+            <!-- Each orientation's sizes under its own header; the fragment opens the group the
+                 settings are held in and closes the other (SizeGroups). -->
+            <Preference
+                android:key="pref_size_portrait"
+                android:title="@string/pref_size_portrait_title"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_size_portrait_summary"
+                android:persistent="false" />
+            <PreferenceCategory android:key="pref_size_portrait_rows">
+                <com.kinetica.keyboard.settings.SizePreviewPreference
+                    android:key="pref_size_preview"
+                    android:persistent="false"
+                    android:selectable="false" />
+                <SeekBarPreference
+                    android:key="pref_keyboard_height_pct"
+                    android:title="@string/pref_height_title"
+                    app:singleLineTitle="false"
+                    android:defaultValue="35"
+                    android:max="50"
+                    app:min="10"
+                    app:showSeekBarValue="true" />
+                <SeekBarPreference
+                    android:key="pref_side_pad_dp"
+                    android:title="@string/pref_side_pad_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/pref_side_pad_summary"
+                    android:defaultValue="0"
+                    android:max="48"
+                    app:min="0"
+                    app:showSeekBarValue="true" />
+                <SeekBarPreference
+                    android:key="pref_home_row_spread"
+                    android:title="@string/pref_home_row_spread_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/pref_home_row_spread_summary"
+                    android:defaultValue="0"
+                    android:max="100"
+                    app:min="0"
+                    app:showSeekBarValue="true" />
+                <SeekBarPreference
+                    android:key="pref_bottom_pad_dp"
+                    android:title="@string/pref_bottom_pad_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/pref_bottom_pad_summary"
+                    android:defaultValue="0"
+                    android:max="48"
+                    app:min="0"
+                    app:showSeekBarValue="true" />
+                <SeekBarPreference
+                    android:key="pref_drag_handle_dp"
+                    android:title="@string/pref_drag_handle_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/pref_drag_handle_summary"
+                    android:defaultValue="20"
+                    android:max="20"
+                    app:min="0"
+                    app:showSeekBarValue="true" />
+            </PreferenceCategory>
+            <Preference
+                android:key="pref_size_landscape"
+                android:title="@string/pref_size_landscape_title"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_size_landscape_summary"
+                android:persistent="false" />
+            <PreferenceCategory android:key="pref_size_landscape_rows">
+                <com.kinetica.keyboard.settings.SizePreviewPreference
+                    android:key="pref_size_preview_landscape"
+                    android:persistent="false"
+                    android:selectable="false" />
+                <SeekBarPreference
+                    android:key="pref_keyboard_height_pct_landscape"
+                    android:title="@string/pref_height_landscape_title"
+                    app:singleLineTitle="false"
+                    android:defaultValue="45"
+                    android:max="50"
+                    app:min="10"
+                    app:showSeekBarValue="true" />
+                <ListPreference
+                    android:key="pref_landscape_arrangement"
+                    android:title="@string/pref_landscape_arrangement_title"
+                    app:singleLineTitle="false"
+                    android:entries="@array/landscape_arrangement_entries"
+                    android:entryValues="@array/landscape_arrangement_values"
+                    android:defaultValue="split"
+                    app:useSimpleSummaryProvider="true" />
+                <SeekBarPreference
+                    android:key="pref_landscape_split_gap_pct"
+                    android:title="@string/pref_landscape_split_gap_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/pref_landscape_split_gap_summary"
+                    android:defaultValue="30"
+                    android:max="70"
+                    app:min="0"
+                    app:showSeekBarValue="true" />
+                <SwitchPreferenceCompat
+                    android:key="pref_wide_arrangement"
+                    android:title="@string/pref_wide_arrangement_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/pref_wide_arrangement_summary"
+                    android:defaultValue="true" />
+                <SeekBarPreference
+                    android:key="pref_side_pad_dp_landscape"
+                    android:title="@string/pref_side_pad_landscape_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/pref_side_pad_summary"
+                    android:defaultValue="0"
+                    android:max="48"
+                    app:min="0"
+                    app:showSeekBarValue="true" />
+                <SeekBarPreference
+                    android:key="pref_home_row_spread_landscape"
+                    android:title="@string/pref_home_row_spread_landscape_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/pref_home_row_spread_summary"
+                    android:defaultValue="0"
+                    android:max="100"
+                    app:min="0"
+                    app:showSeekBarValue="true" />
+                <SeekBarPreference
+                    android:key="pref_bottom_pad_dp_landscape"
+                    android:title="@string/pref_bottom_pad_landscape_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/pref_bottom_pad_summary"
+                    android:defaultValue="0"
+                    android:max="48"
+                    app:min="0"
+                    app:showSeekBarValue="true" />
+                <SeekBarPreference
+                    android:key="pref_drag_handle_dp_landscape"
+                    android:title="@string/pref_drag_handle_landscape_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/pref_drag_handle_summary"
+                    android:defaultValue="20"
+                    android:max="20"
+                    app:min="0"
+                    app:showSeekBarValue="true" />
+                <SeekBarPreference
+                    android:key="pref_suggestion_bar_dp_landscape"
+                    android:title="@string/pref_suggestion_bar_landscape_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/pref_suggestion_bar_summary"
+                    android:defaultValue="44"
+                    android:max="72"
+                    app:min="16"
+                    app:showSeekBarValue="true" />
+                <!-- app:min and android:max match BarMetrics.TEXT_PCT_MIN and TEXT_PCT_MAX. -->
+                <SeekBarPreference
+                    android:key="pref_bar_text_pct_landscape"
+                    android:title="@string/pref_bar_text_pct_landscape_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/pref_bar_text_pct_summary"
+                    android:defaultValue="150"
+                    android:max="180"
+                    app:min="60"
+                    app:showSeekBarValue="true" />
+                <SeekBarPreference
+                    android:key="pref_recent_text_pct_landscape"
+                    android:title="@string/pref_recent_text_pct_landscape_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/pref_recent_text_pct_summary"
+                    android:defaultValue="150"
+                    android:max="170"
+                    app:min="60"
+                    app:showSeekBarValue="true" />
+            </PreferenceCategory>
+        </PreferenceScreen>
+        <!-- Rows wired in KeyboardPrefsFragment.wireDictation: the status reads the phone, the link
+             needs a browser. -->
+        <PreferenceScreen
+            android:key="pref_group_dictation"
+            android:icon="@drawable/ic_settings_voice"
+            android:title="@string/pref_group_dictation_title"
+            app:singleLineTitle="false"
+            android:summary="@string/pref_group_dictation_summary">
+            <Preference
+                android:key="pref_dictation_status"
+                android:title="@string/pref_dictation_status_title"
+                app:singleLineTitle="false"
+                android:selectable="false"
                 android:persistent="false" />
             <Preference
-                android:key="pref_symbol_rows_2"
-                android:title="@string/pref_symbol_rows_2_title"
+                android:key="pref_dictation_get"
+                android:title="@string/pref_dictation_get_title"
                 app:singleLineTitle="false"
+                android:summary="@string/pref_dictation_get_summary"
                 android:persistent="false" />
-        </PreferenceScreen>
-    </PreferenceScreen>
-
-    <PreferenceScreen
-        android:key="pref_group_gestures"
-        android:title="@string/pref_group_gestures_title"
-        app:singleLineTitle="false"
-        android:summary="@string/pref_group_gestures_summary">
-        <Preference
-            android:key="pref_chords"
-            android:title="@string/chord_settings_title"
-            app:singleLineTitle="false"
-            android:summary="@string/pref_chords_summary">
-            <intent
-                android:targetPackage="@string/app_pkg"
-                android:targetClass="com.kinetica.keyboard.settings.ChordSettingsActivity" />
-        </Preference>
-        <SwitchPreferenceCompat
-            android:key="pref_chord_labels"
-            android:title="@string/pref_chord_labels_title"
-            app:singleLineTitle="false"
-            android:summary="@string/pref_chord_labels_summary"
-            android:defaultValue="true" />
-        <SwitchPreferenceCompat
-            android:key="pref_space_chord_wiggle"
-            android:title="@string/pref_space_chord_wiggle_title"
-            app:singleLineTitle="false"
-            android:summary="@string/pref_space_chord_wiggle_summary"
-            android:defaultValue="true"
-            android:dependency="pref_chord_labels" />
-        <Preference
-            android:key="pref_edge_swipes_screen"
-            android:title="@string/edge_swipe_settings_title"
-            app:singleLineTitle="false"
-            android:summary="@string/pref_edge_swipes_summary">
-            <intent
-                android:targetPackage="@string/app_pkg"
-                android:targetClass="com.kinetica.keyboard.settings.EdgeSwipeSettingsActivity" />
-        </Preference>
-        <Preference
-            android:key="pref_expansions_screen"
-            android:title="@string/expansion_settings_title"
-            app:singleLineTitle="false"
-            android:summary="@string/pref_expansions_summary">
-            <intent
-                android:targetPackage="@string/app_pkg"
-                android:targetClass="com.kinetica.keyboard.settings.ExpansionSettingsActivity" />
-        </Preference>
-        <PreferenceScreen
-            android:key="pref_group_gestures_more"
-            android:title="@string/pref_group_gestures_more_title"
-            app:singleLineTitle="false"
-            android:summary="@string/pref_group_gestures_more_summary">
-            <SwitchPreferenceCompat
-                android:key="pref_alternate_swipes"
-                android:title="@string/pref_alternate_swipes_title"
+            <Preference
+                android:key="pref_dictation_get_futo"
+                android:title="@string/pref_dictation_get_futo_title"
                 app:singleLineTitle="false"
-                android:summary="@string/pref_alternate_swipes_summary"
+                android:summary="@string/pref_dictation_get_futo_summary"
+                android:persistent="false" />
+            <Preference
+                android:key="pref_dictation_ime_settings"
+                android:title="@string/pref_dictation_ime_settings_title"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_dictation_ime_settings_summary"
+                android:persistent="false">
+                <intent android:action="android.settings.INPUT_METHOD_SETTINGS" />
+            </Preference>
+            <Preference
+                android:key="pref_dictation_bar"
+                android:title="@string/pref_dictation_bar_title"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_dictation_bar_summary"
+                android:persistent="false">
+                <intent
+                    android:targetPackage="@string/app_pkg"
+                    android:targetClass="com.kinetica.keyboard.settings.ShortcutSetActivity">
+                    <extra android:name="set" android:value="bar" />
+                </intent>
+            </Preference>
+        </PreferenceScreen>
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:key="pref_home_more"
+        android:title="@string/pref_home_more_title">
+        <PreferenceScreen
+            android:key="pref_group_keys"
+            app:initialExpandedChildrenCount="5"
+            android:icon="@drawable/ic_settings_keys"
+            android:title="@string/pref_group_keys_title"
+            app:singleLineTitle="false"
+            android:summary="@string/pref_group_keys_summary">
+            <SwitchPreferenceCompat
+                android:key="pref_number_row"
+                android:title="@string/pref_number_row_title"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_number_row_summary"
+                android:defaultValue="false" />
+            <PreferenceScreen
+                android:key="pref_group_longpress"
+                android:title="@string/pref_group_longpress_title"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_group_longpress_summary">
+                <ListPreference
+                    android:key="pref_popup_shape"
+                    android:title="@string/pref_popup_shape_title"
+                    app:singleLineTitle="false"
+                    android:entries="@array/popup_shape_entries"
+                    android:entryValues="@array/popup_shape_values"
+                    android:defaultValue="row"
+                    app:useSimpleSummaryProvider="true" />
+                <SwitchPreferenceCompat
+                    android:key="pref_edit_from_menu"
+                    android:title="@string/pref_edit_from_menu_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/pref_edit_from_menu_summary"
+                    android:defaultValue="false" />
+                <SwitchPreferenceCompat
+                    android:key="pref_plain_letter_alternates"
+                    android:title="@string/pref_plain_letter_alternates_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/pref_plain_letter_alternates_summary"
+                    android:defaultValue="false" />
+                <SwitchPreferenceCompat
+                    android:key="pref_number_priority"
+                    android:title="@string/pref_number_priority_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/pref_number_priority_summary"
+                    android:defaultValue="true" />
+                <!-- One row per letter follows, added by KeyboardPrefsFragment. -->
+                <Preference
+                    android:key="pref_letter_alternates_note"
+                    android:title="@string/pref_letter_alternates_note_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/pref_letter_alternates_note_summary"
+                    android:selectable="false" />
+            </PreferenceScreen>
+            <ListPreference
+                android:key="pref_comma_mode"
+                android:title="@string/pref_comma_mode_title"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_comma_mode_summary"
+                android:entries="@array/comma_mode_entries"
+                android:entryValues="@array/comma_mode_values"
+                android:defaultValue="keep" />
+            <EditTextPreference
+                android:key="pref_comma_custom"
+                android:title="@string/pref_comma_custom_title"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_comma_custom_summary" />
+            <ListPreference
+                android:key="pref_period_mode"
+                android:title="@string/pref_period_mode_title"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_period_mode_summary"
+                android:entries="@array/period_mode_entries"
+                android:entryValues="@array/comma_mode_values"
+                android:defaultValue="keep" />
+            <EditTextPreference
+                android:key="pref_period_custom"
+                android:title="@string/pref_period_custom_title"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_period_custom_summary" />
+            <SwitchPreferenceCompat
+                android:key="pref_emoji_key"
+                android:title="@string/pref_emoji_key_title"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_emoji_key_summary"
+                android:defaultValue="false" />
+            <SwitchPreferenceCompat
+                android:key="pref_apostrophe_key"
+                android:title="@string/pref_apostrophe_key_title"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_apostrophe_key_summary"
+                android:defaultValue="false" />
+            <com.kinetica.keyboard.settings.SteppedSliderPreference
+                android:key="pref_long_press_ms"
+                android:title="@string/pref_long_press_title"
+                android:summary="@string/pref_long_press_summary"
+                app:singleLineTitle="false"
+                android:defaultValue="500"
+                app:sliderSteps="@array/timing_steps_long_press" />
+            <SwitchPreferenceCompat
+                android:key="pref_typing_speed"
+                android:title="@string/pref_typing_speed_title"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_typing_speed_summary"
+                android:defaultValue="false" />
+            <PreferenceScreen
+                android:key="pref_group_key_symbols"
+                android:title="@string/pref_group_key_symbols_title"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_group_key_symbols_summary">
+                <EditTextPreference
+                    android:key="pref_comma_alternates"
+                    android:title="@string/pref_comma_alternates_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/pref_punctuation_alternates_summary" />
+                <EditTextPreference
+                    android:key="pref_period_alternates"
+                    android:title="@string/pref_period_alternates_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/pref_punctuation_alternates_summary" />
+                <EditTextPreference
+                    android:key="pref_enter_alternates"
+                    android:title="@string/pref_enter_alternates_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/pref_enter_alternates_summary"
+                    android:defaultValue="@string/pref_enter_alternates_default" />
+            </PreferenceScreen>
+            <PreferenceScreen
+                android:key="pref_group_symbol_pages"
+                android:title="@string/pref_group_symbol_pages_title"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_group_symbol_pages_summary">
+                <!-- Rows typed as text, edited in SymbolRowsDialog; one pref a row (Prefs.symbolRowKey). -->
+                <Preference
+                    android:key="pref_symbol_rows_1"
+                    android:title="@string/pref_symbol_rows_1_title"
+                    app:singleLineTitle="false"
+                    android:persistent="false" />
+                <Preference
+                    android:key="pref_symbol_rows_2"
+                    android:title="@string/pref_symbol_rows_2_title"
+                    app:singleLineTitle="false"
+                    android:persistent="false" />
+                <!-- Below them, one long-press list per symbol, built in code (KeyboardPrefsFragment.addSymbolRows). -->
+                <Preference
+                    android:key="pref_symbol_alternates_note"
+                    android:selectable="false"
+                    android:persistent="false"
+                    app:singleLineTitle="false" />
+                <Preference
+                    android:key="pref_symbol_alternates_reset"
+                    android:title="@string/pref_letter_alternates_reset_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/pref_symbol_alternates_reset_summary"
+                    android:persistent="false" />
+            </PreferenceScreen>
+            <!-- Its key is the stored page (Prefs.EDIT_PAGE), so Changed settings lists an edited page. -->
+            <Preference
+                android:key="pref_edit_page"
+                android:title="@string/edit_page_title"
+                app:singleLineTitle="false"
+                android:summary="@string/edit_page_summary"
+                android:persistent="false">
+                <intent
+                    android:targetPackage="@string/app_pkg"
+                    android:targetClass="com.kinetica.keyboard.settings.EditPageActivity" />
+            </Preference>
+        </PreferenceScreen>
+
+        <PreferenceScreen
+            android:key="pref_group_gestures"
+            android:icon="@drawable/ic_settings_gestures"
+            android:title="@string/pref_group_gestures_title"
+            app:singleLineTitle="false"
+            android:summary="@string/pref_group_gestures_summary">
+            <Preference
+                android:key="pref_chords"
+                android:title="@string/chord_settings_title"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_chords_summary">
+                <intent
+                    android:targetPackage="@string/app_pkg"
+                    android:targetClass="com.kinetica.keyboard.settings.ChordSettingsActivity" />
+            </Preference>
+            <SwitchPreferenceCompat
+                android:key="pref_chord_labels"
+                android:title="@string/pref_chord_labels_title"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_chord_labels_summary"
                 android:defaultValue="true" />
             <SwitchPreferenceCompat
-                android:key="pref_backspace_char_slide"
-                android:title="@string/pref_backspace_char_slide_title"
+                android:key="pref_space_chord_wiggle"
+                android:title="@string/pref_space_chord_wiggle_title"
                 app:singleLineTitle="false"
-                android:summary="@string/pref_backspace_char_slide_summary"
-                android:defaultValue="false" />
-            <SwitchPreferenceCompat
-                android:key="pref_backspace_punctuation_stops"
-                android:title="@string/pref_backspace_punctuation_stops_title"
+                android:summary="@string/pref_space_chord_wiggle_summary"
+                android:defaultValue="true"
+                android:dependency="pref_chord_labels" />
+            <Preference
+                android:key="pref_edge_swipes_screen"
+                android:title="@string/edge_swipe_settings_title"
                 app:singleLineTitle="false"
-                android:summary="@string/pref_backspace_punctuation_stops_summary"
-                android:defaultValue="false" />
-            <SeekBarPreference
-                android:key="pref_backspace_step_dp"
-                android:title="@string/pref_backspace_step_title"
-                android:summary="@string/pref_backspace_step_summary"
+                android:summary="@string/pref_edge_swipes_summary">
+                <intent
+                    android:targetPackage="@string/app_pkg"
+                    android:targetClass="com.kinetica.keyboard.settings.EdgeSwipeSettingsActivity" />
+            </Preference>
+            <Preference
+                android:key="pref_expansions_screen"
+                android:title="@string/expansion_settings_title"
                 app:singleLineTitle="false"
-                android:defaultValue="40"
-                android:max="80"
-                app:min="20"
-                app:showSeekBarValue="true" />
-            <SwitchPreferenceCompat
-                android:key="pref_spacebar_word_slide"
-                android:title="@string/pref_spacebar_word_slide_title"
+                android:summary="@string/pref_expansions_summary">
+                <intent
+                    android:targetPackage="@string/app_pkg"
+                    android:targetClass="com.kinetica.keyboard.settings.ExpansionSettingsActivity" />
+            </Preference>
+            <PreferenceScreen
+                android:key="pref_group_gestures_more"
+                android:title="@string/pref_group_gestures_more_title"
                 app:singleLineTitle="false"
-                android:summary="@string/pref_spacebar_word_slide_summary"
-                android:defaultValue="false" />
-            <SeekBarPreference
-                android:key="pref_spacebar_step_dp"
-                android:title="@string/pref_spacebar_step_title"
-                android:summary="@string/pref_spacebar_step_summary"
-                app:singleLineTitle="false"
-                android:defaultValue="20"
-                android:max="60"
-                app:min="8"
-                app:showSeekBarValue="true" />
+                android:summary="@string/pref_group_gestures_more_summary">
+                <SwitchPreferenceCompat
+                    android:key="pref_alternate_swipes"
+                    android:title="@string/pref_alternate_swipes_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/pref_alternate_swipes_summary"
+                    android:defaultValue="true" />
+                <SwitchPreferenceCompat
+                    android:key="pref_backspace_char_slide"
+                    android:title="@string/pref_backspace_char_slide_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/pref_backspace_char_slide_summary"
+                    android:defaultValue="false" />
+                <SwitchPreferenceCompat
+                    android:key="pref_backspace_punctuation_stops"
+                    android:title="@string/pref_backspace_punctuation_stops_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/pref_backspace_punctuation_stops_summary"
+                    android:defaultValue="false" />
+                <SeekBarPreference
+                    android:key="pref_backspace_step_dp"
+                    android:title="@string/pref_backspace_step_title"
+                    android:summary="@string/pref_backspace_step_summary"
+                    app:singleLineTitle="false"
+                    android:defaultValue="40"
+                    android:max="80"
+                    app:min="20"
+                    app:showSeekBarValue="true" />
+                <SwitchPreferenceCompat
+                    android:key="pref_spacebar_word_slide"
+                    android:title="@string/pref_spacebar_word_slide_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/pref_spacebar_word_slide_summary"
+                    android:defaultValue="false" />
+                <SeekBarPreference
+                    android:key="pref_spacebar_step_dp"
+                    android:title="@string/pref_spacebar_step_title"
+                    android:summary="@string/pref_spacebar_step_summary"
+                    app:singleLineTitle="false"
+                    android:defaultValue="20"
+                    android:max="60"
+                    app:min="8"
+                    app:showSeekBarValue="true" />
+                <SwitchPreferenceCompat
+                    android:key="pref_shift_swaps_slides"
+                    android:title="@string/pref_shift_swaps_slides_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/pref_shift_swaps_slides_summary"
+                    android:defaultValue="false" />
+            </PreferenceScreen>
+
         </PreferenceScreen>
-    </PreferenceScreen>
 
-    <Preference
-        android:key="pref_dictionary_screen"
-        android:title="@string/dict_settings_title"
-        app:singleLineTitle="false"
-        android:summary="@string/pref_dictionary_summary">
-        <intent
-            android:targetPackage="@string/app_pkg"
-            android:targetClass="com.kinetica.keyboard.settings.DictionarySettingsActivity" />
-    </Preference>
-
-    <Preference
-        android:key="pref_backup_screen"
-        android:title="@string/backup_settings_title"
-        app:singleLineTitle="false"
-        android:summary="@string/pref_backup_summary">
-        <intent
-            android:targetPackage="@string/app_pkg"
-            android:targetClass="com.kinetica.keyboard.settings.BackupSettingsActivity" />
-    </Preference>
-
-    <PreferenceScreen
-        android:key="pref_group_learn"
-        android:title="@string/pref_group_learn_title"
-        app:singleLineTitle="false"
-        android:summary="@string/pref_group_learn_summary">
         <Preference
-            android:key="pref_tutor_screen"
-            android:title="@string/tutor_title"
+            android:key="pref_dictionary_screen"
+            android:icon="@drawable/ic_settings_dictionary"
+            android:title="@string/dict_settings_title"
             app:singleLineTitle="false"
-            android:summary="@string/tutor_summary">
+            android:summary="@string/pref_dictionary_summary">
             <intent
                 android:targetPackage="@string/app_pkg"
-                android:targetClass="com.kinetica.keyboard.onboarding.TutorActivity" />
+                android:targetClass="com.kinetica.keyboard.settings.DictionarySettingsActivity" />
         </Preference>
+
+        <Preference
+            android:key="pref_backup_screen"
+            android:icon="@drawable/ic_settings_backup"
+            android:title="@string/backup_settings_title"
+            app:singleLineTitle="false"
+            android:summary="@string/pref_backup_summary">
+            <intent
+                android:targetPackage="@string/app_pkg"
+                android:targetClass="com.kinetica.keyboard.settings.BackupSettingsActivity" />
+        </Preference>
+        <!-- Every setting moved from its default, each with a way back; the rows are built in
+             code (KeyboardPrefsFragment.refreshChangedRows). -->
+        <PreferenceScreen
+            android:key="pref_group_changed"
+            android:icon="@drawable/ic_settings_changed"
+            android:title="@string/pref_group_changed_title"
+            app:singleLineTitle="false"
+            android:summary="@string/pref_group_changed_summary">
+            <Preference
+                android:key="pref_changed_note"
+                app:singleLineTitle="false"
+                android:selectable="false"
+                android:persistent="false"
+                android:summary="@string/pref_changed_note_summary" />
+            <Preference
+                android:key="pref_changed_reset_all"
+                android:title="@string/pref_changed_reset_all_title"
+                app:singleLineTitle="false"
+                android:persistent="false"
+                android:summary="@string/pref_changed_reset_all_summary" />
+        </PreferenceScreen>
+
         <!-- Not settings: short tips, the basics first. A tip that names a setting
              opens it (LearnTips); the rest are not selectable. -->
-        <PreferenceCategory android:title="@string/learn_group_start">
-            <Preference
-                android:key="tip_two_thumbs"
-                android:title="@string/tip_two_thumbs_title"
-                app:singleLineTitle="false"
-                android:summary="@string/tip_two_thumbs_summary"
-                android:selectable="false"
-                android:persistent="false" />
-            <Preference
-                android:key="tip_correct"
-                android:title="@string/tip_correct_title"
-                app:singleLineTitle="false"
-                android:summary="@string/tip_correct_summary"
-                android:selectable="false"
-                android:persistent="false" />
-            <Preference
-                android:key="tip_more_words"
-                android:title="@string/tip_more_words_title"
-                app:singleLineTitle="false"
-                android:summary="@string/tip_more_words_summary"
-                android:selectable="false"
-                android:persistent="false" />
-            <Preference
-                android:key="tip_cursor"
-                android:title="@string/tip_cursor_title"
-                app:singleLineTitle="false"
-                android:summary="@string/tip_cursor_summary"
-                android:persistent="false" />
-            <Preference
-                android:key="tip_accents"
-                android:title="@string/tip_accents_title"
-                app:singleLineTitle="false"
-                android:summary="@string/tip_accents_summary"
-                android:persistent="false" />
-            <Preference
-                android:key="tip_delete_words"
-                android:title="@string/tip_delete_words_title"
-                app:singleLineTitle="false"
-                android:summary="@string/tip_delete_words_summary"
-                android:persistent="false" />
-            <Preference
-                android:key="tip_case"
-                android:title="@string/tip_case_title"
-                app:singleLineTitle="false"
-                android:summary="@string/tip_case_summary"
-                android:persistent="false" />
-            <Preference
-                android:key="tip_digits"
-                android:title="@string/tip_digits_title"
-                app:singleLineTitle="false"
-                android:summary="@string/tip_digits_summary"
-                android:persistent="false" />
-            <Preference
-                android:key="tip_settings_key"
-                android:title="@string/tip_settings_key_title"
-                app:singleLineTitle="false"
-                android:summary="@string/tip_settings_key_summary"
-                android:selectable="false"
-                android:persistent="false" />
-            <Preference
-                android:key="tip_resize"
-                android:title="@string/tip_resize_title"
-                app:singleLineTitle="false"
-                android:summary="@string/tip_resize_summary"
-                android:persistent="false" />
-        </PreferenceCategory>
-        <PreferenceCategory android:title="@string/learn_group_faster">
-            <Preference
-                android:key="tip_next_word"
-                android:title="@string/tip_next_word_title"
-                app:singleLineTitle="false"
-                android:summary="@string/tip_next_word_summary"
-                android:persistent="false" />
-            <Preference
-                android:key="tip_recent"
-                android:title="@string/tip_recent_title"
-                app:singleLineTitle="false"
-                android:summary="@string/tip_recent_summary"
-                android:persistent="false" />
-            <Preference
-                android:key="tip_retype"
-                android:title="@string/tip_retype_title"
-                app:singleLineTitle="false"
-                android:summary="@string/tip_retype_summary"
-                android:persistent="false" />
-            <Preference
-                android:key="tip_flick"
-                android:title="@string/tip_flick_title"
-                app:singleLineTitle="false"
-                android:summary="@string/tip_flick_summary"
-                android:selectable="false"
-                android:persistent="false" />
-            <Preference
-                android:key="tip_autospace"
-                android:title="@string/tip_autospace_title"
-                app:singleLineTitle="false"
-                android:summary="@string/tip_autospace_summary"
-                android:persistent="false" />
-            <Preference
-                android:key="tip_double_space"
-                android:title="@string/tip_double_space_title"
-                app:singleLineTitle="false"
-                android:summary="@string/tip_double_space_summary"
-                android:persistent="false" />
-            <Preference
-                android:key="tip_enter"
-                android:title="@string/tip_enter_title"
-                app:singleLineTitle="false"
-                android:summary="@string/tip_enter_summary"
-                android:persistent="false" />
-            <Preference
-                android:key="tip_languages"
-                android:title="@string/tip_languages_title"
-                app:singleLineTitle="false"
-                android:summary="@string/tip_languages_summary"
-                android:persistent="false" />
-            <Preference
-                android:key="tip_follow_language"
-                android:title="@string/tip_follow_language_title"
-                app:singleLineTitle="false"
-                android:summary="@string/tip_follow_language_summary"
-                android:persistent="false" />
-            <Preference
-                android:key="tip_peck"
-                android:title="@string/tip_peck_title"
-                app:singleLineTitle="false"
-                android:summary="@string/tip_peck_summary"
-                android:persistent="false" />
-        </PreferenceCategory>
-        <PreferenceCategory android:title="@string/learn_group_yours">
-            <Preference
-                android:key="tip_rank"
-                android:title="@string/tip_rank_title"
-                app:singleLineTitle="false"
-                android:summary="@string/tip_rank_summary"
-                android:persistent="false" />
-            <Preference
-                android:key="tip_chords"
-                android:title="@string/tip_chords_title"
-                app:singleLineTitle="false"
-                android:summary="@string/tip_chords_summary"
-                android:persistent="false" />
-            <Preference
-                android:key="tip_edge_swipes"
-                android:title="@string/tip_edge_swipes_title"
-                app:singleLineTitle="false"
-                android:summary="@string/tip_edge_swipes_summary"
-                android:persistent="false" />
-            <Preference
-                android:key="tip_expansions"
-                android:title="@string/tip_expansions_title"
-                app:singleLineTitle="false"
-                android:summary="@string/tip_expansions_summary"
-                android:persistent="false" />
-            <Preference
-                android:key="tip_letter_lists"
-                android:title="@string/tip_letter_lists_title"
-                app:singleLineTitle="false"
-                android:summary="@string/tip_letter_lists_summary"
-                android:persistent="false" />
-            <Preference
-                android:key="tip_shortcut_row"
-                android:title="@string/tip_shortcut_row_title"
-                app:singleLineTitle="false"
-                android:summary="@string/tip_shortcut_row_summary"
-                android:persistent="false" />
-            <Preference
-                android:key="tip_midword"
-                android:title="@string/tip_midword_title"
-                app:singleLineTitle="false"
-                android:summary="@string/tip_midword_summary"
-                android:selectable="false"
-                android:persistent="false" />
-            <Preference
-                android:key="tip_ctrl"
-                android:title="@string/tip_ctrl_title"
-                app:singleLineTitle="false"
-                android:summary="@string/tip_ctrl_summary"
-                android:persistent="false" />
-            <Preference
-                android:key="tip_backup"
-                android:title="@string/tip_backup_title"
-                app:singleLineTitle="false"
-                android:summary="@string/tip_backup_summary"
-                android:persistent="false" />
-            <Preference
-                android:key="tip_learned"
-                android:title="@string/tip_learned_title"
-                app:singleLineTitle="false"
-                android:summary="@string/tip_learned_summary"
-                android:persistent="false" />
-            <Preference
-                android:key="tip_bigger_dictionary"
-                android:title="@string/tip_bigger_dictionary_title"
-                app:singleLineTitle="false"
-                android:summary="@string/tip_bigger_dictionary_summary"
-                android:persistent="false" />
-            <Preference
-                android:key="tip_search"
-                android:title="@string/tip_search_title"
-                app:singleLineTitle="false"
-                android:summary="@string/tip_search_summary"
-                android:selectable="false"
-                android:persistent="false" />
-            <Preference
-                android:key="tip_layouts"
-                android:title="@string/tip_layouts_title"
-                app:singleLineTitle="false"
-                android:summary="@string/tip_layouts_summary"
-                android:persistent="false" />
-        </PreferenceCategory>
-    </PreferenceScreen>
+        <PreferenceScreen
+            android:key="pref_group_tips"
+            android:icon="@drawable/ic_settings_tips"
+            android:title="@string/pref_group_learn_title"
+            app:singleLineTitle="false"
+            android:summary="@string/pref_group_tips_summary">
+            <PreferenceCategory android:title="@string/learn_group_start">
+                <Preference
+                    android:key="tip_two_thumbs"
+                    android:title="@string/tip_two_thumbs_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/tip_two_thumbs_summary"
+                    android:selectable="false"
+                    android:persistent="false" />
+                <Preference
+                    android:key="tip_correct"
+                    android:title="@string/tip_correct_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/tip_correct_summary"
+                    android:selectable="false"
+                    android:persistent="false" />
+                <Preference
+                    android:key="tip_more_words"
+                    android:title="@string/tip_more_words_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/tip_more_words_summary"
+                    android:selectable="false"
+                    android:persistent="false" />
+                <Preference
+                    android:key="tip_cursor"
+                    android:title="@string/tip_cursor_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/tip_cursor_summary"
+                    android:persistent="false" />
+                <Preference
+                    android:key="tip_accents"
+                    android:title="@string/tip_accents_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/tip_accents_summary"
+                    android:persistent="false" />
+                <Preference
+                    android:key="tip_delete_words"
+                    android:title="@string/tip_delete_words_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/tip_delete_words_summary"
+                    android:persistent="false" />
+                <Preference
+                    android:key="tip_case"
+                    android:title="@string/tip_case_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/tip_case_summary"
+                    android:persistent="false" />
+                <Preference
+                    android:key="tip_digits"
+                    android:title="@string/tip_digits_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/tip_digits_summary"
+                    android:persistent="false" />
+                <Preference
+                    android:key="tip_settings_key"
+                    android:title="@string/tip_settings_key_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/tip_settings_key_summary"
+                    android:selectable="false"
+                    android:persistent="false" />
+                <Preference
+                    android:key="tip_resize"
+                    android:title="@string/tip_resize_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/tip_resize_summary"
+                    android:persistent="false" />
+            </PreferenceCategory>
+            <PreferenceCategory android:title="@string/learn_group_faster">
+                <Preference
+                    android:key="tip_next_word"
+                    android:title="@string/tip_next_word_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/tip_next_word_summary"
+                    android:persistent="false" />
+                <Preference
+                    android:key="tip_recent"
+                    android:title="@string/tip_recent_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/tip_recent_summary"
+                    android:persistent="false" />
+                <Preference
+                    android:key="tip_retype"
+                    android:title="@string/tip_retype_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/tip_retype_summary"
+                    android:persistent="false" />
+                <Preference
+                    android:key="tip_flick"
+                    android:title="@string/tip_flick_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/tip_flick_summary"
+                    android:selectable="false"
+                    android:persistent="false" />
+                <Preference
+                    android:key="tip_autospace"
+                    android:title="@string/tip_autospace_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/tip_autospace_summary"
+                    android:persistent="false" />
+                <Preference
+                    android:key="tip_double_space"
+                    android:title="@string/tip_double_space_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/tip_double_space_summary"
+                    android:persistent="false" />
+                <Preference
+                    android:key="tip_enter"
+                    android:title="@string/tip_enter_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/tip_enter_summary"
+                    android:persistent="false" />
+                <Preference
+                    android:key="tip_languages"
+                    android:title="@string/tip_languages_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/tip_languages_summary"
+                    android:persistent="false" />
+                <Preference
+                    android:key="tip_follow_language"
+                    android:title="@string/tip_follow_language_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/tip_follow_language_summary"
+                    android:persistent="false" />
+                <Preference
+                    android:key="tip_peck"
+                    android:title="@string/tip_peck_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/tip_peck_summary"
+                    android:persistent="false" />
+            </PreferenceCategory>
+            <PreferenceCategory android:title="@string/learn_group_yours">
+                <Preference
+                    android:key="tip_rank"
+                    android:title="@string/tip_rank_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/tip_rank_summary"
+                    android:persistent="false" />
+                <Preference
+                    android:key="tip_chords"
+                    android:title="@string/tip_chords_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/tip_chords_summary"
+                    android:persistent="false" />
+                <Preference
+                    android:key="tip_edge_swipes"
+                    android:title="@string/tip_edge_swipes_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/tip_edge_swipes_summary"
+                    android:persistent="false" />
+                <Preference
+                    android:key="tip_expansions"
+                    android:title="@string/tip_expansions_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/tip_expansions_summary"
+                    android:persistent="false" />
+                <Preference
+                    android:key="tip_letter_lists"
+                    android:title="@string/tip_letter_lists_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/tip_letter_lists_summary"
+                    android:persistent="false" />
+                <Preference
+                    android:key="tip_shortcut_row"
+                    android:title="@string/tip_shortcut_row_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/tip_shortcut_row_summary"
+                    android:persistent="false" />
+                <Preference
+                    android:key="tip_midword"
+                    android:title="@string/tip_midword_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/tip_midword_summary"
+                    android:selectable="false"
+                    android:persistent="false" />
+                <Preference
+                    android:key="tip_ctrl"
+                    android:title="@string/tip_ctrl_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/tip_ctrl_summary"
+                    android:persistent="false" />
+                <Preference
+                    android:key="tip_backup"
+                    android:title="@string/tip_backup_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/tip_backup_summary"
+                    android:persistent="false" />
+                <Preference
+                    android:key="tip_learned"
+                    android:title="@string/tip_learned_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/tip_learned_summary"
+                    android:persistent="false" />
+                <Preference
+                    android:key="tip_bigger_dictionary"
+                    android:title="@string/tip_bigger_dictionary_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/tip_bigger_dictionary_summary"
+                    android:persistent="false" />
+                <Preference
+                    android:key="tip_search"
+                    android:title="@string/tip_search_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/tip_search_summary"
+                    android:selectable="false"
+                    android:persistent="false" />
+                <Preference
+                    android:key="tip_layouts"
+                    android:title="@string/tip_layouts_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/tip_layouts_summary"
+                    android:persistent="false" />
+            </PreferenceCategory>
+        </PreferenceScreen>
 
-    <Preference
-        android:key="pref_contribute_screen"
-        android:title="@string/contribute_title"
-        app:singleLineTitle="false"
-        android:summary="@string/pref_contribute_summary">
-        <intent
-            android:targetPackage="@string/app_pkg"
-            android:targetClass="com.kinetica.keyboard.settings.ContributeActivity" />
-    </Preference>
+        <Preference
+            android:key="pref_contribute_screen"
+            android:icon="@drawable/ic_settings_contribute"
+            android:title="@string/contribute_title"
+            app:singleLineTitle="false"
+            android:summary="@string/pref_contribute_summary">
+            <intent
+                android:targetPackage="@string/app_pkg"
+                android:targetClass="com.kinetica.keyboard.settings.ContributeActivity" />
+        </Preference>
 
-    <Preference
-        android:key="pref_licenses_screen"
-        android:title="@string/licenses_title"
-        app:singleLineTitle="false"
-        android:summary="@string/pref_licenses_summary">
-        <intent
-            android:targetPackage="@string/app_pkg"
-            android:targetClass="com.kinetica.keyboard.settings.LicensesActivity" />
-    </Preference>
+        <PreferenceScreen
+            android:key="pref_group_learn"
+            android:icon="@drawable/ic_settings_help"
+            android:title="@string/pref_group_help_title"
+            app:singleLineTitle="false"
+            android:summary="@string/pref_group_help_summary">
+            <Preference
+                android:key="pref_tutor_screen"
+                android:title="@string/tutor_title"
+                app:singleLineTitle="false"
+                android:summary="@string/tutor_summary">
+                <intent
+                    android:targetPackage="@string/app_pkg"
+                    android:targetClass="com.kinetica.keyboard.onboarding.TutorActivity" />
+            </Preference>
+            <Preference
+                android:key="pref_setup_again"
+                android:title="@string/setup_again"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_setup_again_summary">
+                <intent
+                    android:targetPackage="@string/app_pkg"
+                    android:targetClass="com.kinetica.keyboard.onboarding.MainActivity">
+                    <extra android:name="com.kinetica.keyboard.onboarding.RESTART" android:value="true" />
+                </intent>
+            </Preference>
+            <Preference
+                android:key="pref_licenses_screen"
+                android:title="@string/licenses_title"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_licenses_summary">
+                <intent
+                    android:targetPackage="@string/app_pkg"
+                    android:targetClass="com.kinetica.keyboard.settings.LicensesActivity" />
+            </Preference>
+            <!-- Summary is filled at runtime from the installed package. -->
+            <Preference
+                android:key="pref_version"
+                android:title="@string/pref_version_title"
+                app:singleLineTitle="false"
+                android:selectable="false" />
+        </PreferenceScreen>
+    </PreferenceCategory>
 
-    <!-- Summary is filled at runtime from the installed package. -->
-    <Preference
-        android:key="pref_version"
-        android:title="@string/pref_version_title"
-        app:singleLineTitle="false"
-        android:selectable="false" />
 </PreferenceScreen>

@@ -794,7 +794,7 @@ class DictionarySettingsActivity : AppCompatActivity() {
                     // A capital from an export, or a word written with one.
                     val display = o.optString("display", "").ifEmpty { written.takeIf { it != word } }
                         ?.takeIf { it.lowercase() == word }
-                    if (word.isEmpty() || word.length > 24 || count < 1) continue
+                    if (word.isEmpty() || word.length > KineticaConstants.MAX_WORD_LEN || count < 1) continue
                     if (!WORD_RE.matches(word)) continue
                     // An import is deliberate: clamp up to the merge floor so every imported word
                     // decodes at once instead of waiting out the anti-accident gate

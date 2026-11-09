@@ -57,4 +57,20 @@ class EmojiRecentsTest {
         val plane = "✈️"
         assertEquals(listOf(plane), EmojiRecents.ordered(listOf(Use(plane, 1, 1L))))
     }
+
+    @Test
+    fun theEmptySearchStripIsNeverEmpty() {
+        // A fresh install, or the DEV build's own database: no picks yet.
+        val catalog = List(60) { "e$it" }
+        assertEquals(catalog.take(EmojiRecents.MAX), EmojiRecents.strip(emptyList(), catalog))
+    }
+
+    @Test
+    fun recentsLeadTheStripAndAreNotRepeated() {
+        val catalog = List(60) { "e$it" }
+        val strip = EmojiRecents.strip(listOf("🦄", "e3"), catalog)
+        assertEquals(listOf("🦄", "e3", "e0", "e1", "e2", "e4"), strip.take(6))
+        assertEquals(EmojiRecents.MAX, strip.size)
+        assertEquals(strip.size, strip.distinct().size)
+    }
 }

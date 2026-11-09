@@ -43,6 +43,7 @@ internal class WordReopen(private val ime: KineticaIME) {
         if (fragment.isEmpty() || fragment.length > KineticaConstants.MAX_WORD_LEN) return
         val taps = tapAnchors(fragment, g, beforeTime) ?: return
         ime.wordState.wordShift = shiftOf(fragment)
+        ime.wordState.caseChosen = false
         ime.wordState.tentativeLength = fragment.length
         ime.wordState.tentativeWord = fragment
         ime.wordState.reloadedWord = fragment
@@ -89,6 +90,7 @@ internal class WordReopen(private val ime: KineticaIME) {
         val whole = word.head + word.tail
         val taps = tapAnchors(whole, g, SystemClock.uptimeMillis()) ?: return true
         ime.wordState.wordShift = shiftOf(whole)
+        ime.wordState.caseChosen = false
         ime.wordState.midWordOffer = word
         // A word this keyboard wrote here offers what its bar had then.
         ime.wordState.midWordHistory = ime.commitHistory.at(ime.selStart - word.head.length, whole)

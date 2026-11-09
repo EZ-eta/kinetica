@@ -132,7 +132,8 @@ class FrenchDictionaryTest {
         // "sœur" and the tolerated "soeur" therefore share one node, and a
         // swipe through s-o-e-u-r reaches the ligature spelling.
         assertEquals("soeur", AccentFolder.fold("sœur"))
-        assertEquals(-1, AccentFolder.accentedLetterCode("œ"))
+        // From a popup mid-word it is two taps, o and e.
+        assertEquals(listOf('o' - 'a', 'e' - 'a'), AccentFolder.accentedLetterCodes("œ")?.toList())
         val dict = loadDict()
         val node = dict.trie.nodeFor("soeur")
         assertTrue("sœur node missing", node != -1)

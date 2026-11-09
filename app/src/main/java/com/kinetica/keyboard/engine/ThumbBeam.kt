@@ -25,6 +25,8 @@ internal class ThumbBeam(
     private val heap: CandidateHeap,
     private val prevWordId: Int,
     private val prevWord: String?,
+    /** A run that reads one tap as no letter and offers only such readings ([KineticaConstants.DROPPED_TAP_COST_KW]). */
+    private val dropsTap: Boolean = false,
 ) {
     private val trie = p.trie
     private val streams: Array<IntArray>
@@ -40,9 +42,83 @@ internal class ThumbBeam(
     internal var watchStage = ""
     internal var watchDetail = ""
 
-    private fun why(h: Hyp, child: Int, reason: String) {
+    /** Diagnostics only: the refusals of the target's prefix per letter (1-based), and a note on each. */
+    internal val watchAt = HashMap<Int, HashMap<String, Int>>()
+    internal val watchNotes = HashMap<Int, LinkedHashSet<String>>()
+
+    /**
+     * Diagnostics only: the search held to these prefix nodes, the target's, so every way its letters
+     * can be shared between the thumbs is read; with [width] and [maxAttempts] raised, a target this
+     * search cannot finish is one no width could reach.
+     */
+    internal var only: IntArray? = null
+    internal var width = KineticaConstants.BEAM_WIDTH
+    internal var maxAttempts = KineticaConstants.BEAM_MAX_ATTEMPTS
+
+    /** Diagnostics only: under [only], whether a letter held more states than [width]; the deepest letter reached. */
+    internal var capped = false
+    internal var reached = 0
+
+    /** Diagnostics only, with [watch] set: the last kept state's priority per letter, infinite where the width did not bind. */
+    internal val cutAt = FloatArray(KineticaConstants.MAX_WORD_LEN + 1) { Float.POSITIVE_INFINITY }
+    internal val cutSplit = arrayOfNulls<PrioritySplit>(KineticaConstants.MAX_WORD_LEN + 1)
+
+    /** Diagnostics only, under [only]: every finished reading of the target, its score and its letters' states. */
+    internal val readings = ArrayList<TargetReading>()
+
+    /**
+     * A state's priority split into what makes it: path distance, gate and hand-over charges, taps, frequency pull;
+     * [back] is how far its own letter stepped back across thumbs, in ms.
+     */
+    internal class PrioritySplit(
+        val priority: Float,
+        val dist: Float,
+        val gates: Float,
+        val hand: Float,
+        val tap: Float,
+        val freq: Float,
+        val back: Long = 0L,
+    ) {
+        override fun toString(): String =
+            "p=%.2f dist=%.2f gate=%.2f hand=%.2f tap=%.2f freq=%.2f".format(priority, dist, gates, hand, tap, freq)
+    }
+
+    /**
+     * One finished target reading: per letter its thumb, its gesture and its state's [PrioritySplit];
+     * the candidate it scored as and the gates it broke, so its keep can be split into its parts.
+     */
+    internal class TargetReading(
+        val score: Float,
+        val outcome: String,
+        val stream: IntArray,
+        val item: IntArray,
+        val split: Array<PrioritySplit>,
+        val cand: WordCandidate?,
+        val gates: Int,
+    )
+
+    private fun splitOf(h: Hyp): PrioritySplit {
+        val gate = h.gates * KineticaConstants.BEAM_GATE_COST
+        return PrioritySplit(h.priority, h.cost - gate - h.hand - h.tapPen, gate, h.hand, 2 * h.tapPen, h.priority - h.cost - h.tapPen, h.back)
+    }
+
+    private inline fun why(h: Hyp, child: Int, reason: String, note: () -> String = { "" }) {
         val w = watch ?: return
-        if (h.depth < w.size && w[h.depth] == child) watchWhy.merge(reason, 1, Int::plus)
+        if (h.depth < w.size && w[h.depth] == child) {
+            watchWhy.merge(reason, 1, Int::plus)
+            val letter = h.depth + 1
+            watchAt.getOrPut(letter) { HashMap() }.merge(reason, 1, Int::plus)
+            val notes = watchNotes.getOrPut(letter) { LinkedHashSet() }
+            if (notes.size < MAX_NOTES) notes.add("$reason ${note()}".trim())
+        }
+    }
+
+    /** Diagnostics: [code]'s nearest approach to piece [m]'s path from sample [from] on, in kw. */
+    private fun nearFrom(m: Matcher.Segment, code: Int, from: Int): Float {
+        var best = Float.POSITIVE_INFINITY
+        val r = m.resampled
+        for (k in maxOf(0, from) until r.size / 2) best = minOf(best, g.distToCenter(r[2 * k], r[2 * k + 1], code))
+        return best
     }
 
     init {
@@ -89,8 +165,17 @@ internal class ThumbBeam(
         val tapPen: Float,
         val keep: Float,
         val gates: Int,
+        /** The hand-over charges inside [cost], for the diagnostics' [PrioritySplit] only. */
+        val hand: Float,
         val priority: Float,
-    )
+        /** The product of the hand-overs' own keeps, outside [keep]: floored once, when scored. */
+        val handKeep: Float,
+        /** How far this letter stepped back behind the other thumb's last letter, in ms; diagnostics only. */
+        val back: Long,
+    ) {
+        /** Taps read as no letter so far: 0, or 1 in a run that drops one. */
+        var dropped = 0
+    }
 
     /** The part of a state that decides its future, for merging equal states. */
     private data class Key(
@@ -105,13 +190,13 @@ internal class ThumbBeam(
 
     private fun keyOf(h: Hyp) = Key(
         h.node, h.nx[0], h.nx[1], h.open[0], h.open[1], h.n[0], h.n[1],
-        h.last[0], h.last[1], h.lastCode[0], h.lastCode[1], h.lastStream,
+        h.last[0], h.last[1], h.lastCode[0], h.lastCode[1], h.lastStream + 4 * h.dropped,
     )
 
     fun run() {
         val root = Hyp(
             trie.root, 0, null, -1, -1, IntArray(2), intArrayOf(-1, -1), IntArray(2),
-            IntArray(2), intArrayOf(-1, -1), FloatArray(2), Long.MIN_VALUE, -1, 0f, 0f, 1f, 0, 0f,
+            IntArray(2), intArrayOf(-1, -1), FloatArray(2), Long.MIN_VALUE, -1, 0f, 0f, 1f, 0, 0f, 0f, 1f, 0L,
         )
         var frontier = listOf(root)
         val kids = ArrayList<Hyp>(256)
@@ -128,8 +213,16 @@ internal class ThumbBeam(
             }
             if (best.isEmpty()) break
             val sorted = best.values.sortedBy { it.priority }
-            frontier = if (sorted.size > KineticaConstants.BEAM_WIDTH) sorted.subList(0, KineticaConstants.BEAM_WIDTH) else sorted
+            frontier = if (sorted.size > width) sorted.subList(0, width) else sorted
             val w = watch
+            if (w != null) {
+                reached = depth + 1
+                if (sorted.size > width) {
+                    capped = true
+                    cutAt[depth + 1] = frontier.last().priority
+                    cutSplit[depth + 1] = splitOf(frontier.last())
+                }
+            }
             if (w != null && depth < w.size && watchStage.isEmpty()) {
                 val rank = sorted.indexOfFirst { it.node == w[depth] }
                 if (rank < 0) watchStage = "gen@${depth + 1}"
@@ -141,10 +234,10 @@ internal class ThumbBeam(
                 }
             }
             for (h in frontier) {
-                if (attempts >= KineticaConstants.BEAM_MAX_ATTEMPTS) break
+                if (attempts >= maxAttempts) break
                 maybeEmit(h)
             }
-            if (attempts >= KineticaConstants.BEAM_MAX_ATTEMPTS) break
+            if (attempts >= maxAttempts) break
         }
         DecodeTrace.log {
             "beam[width=${KineticaConstants.BEAM_WIDTH},tokens=${tokens.size}] expansions=$expansions " +
@@ -159,23 +252,28 @@ internal class ThumbBeam(
         // The shortest word this state can still finish as: every unopened item and the open
         // swipes' shortfall need letters. A subtree too short for them is not walked.
         val shortest = h.depth + stillNeeded(h)
+        val only = only
         for (i in 0 until count) {
             val child = first + i
+            if (only != null && (h.depth >= only.size || child != only[h.depth])) continue
             val code = trie.letter(child)
             if (code == trie.alphabet.apostrophe) {
                 if (h.depth > 0 && h.depth + 1 < KineticaConstants.MAX_WORD_LEN) {
-                    out.add(next(h, child, code, -1, h.cost, h.tapPen, h.keep, h.gates, h.lastT, h.lastStream) { })
+                    out.add(next(h, child, code, -1, h.cost, h.tapPen, h.keep, h.gates, h.hand, h.lastT, h.lastStream) { })
                 }
                 continue
             }
             if (!g.hasKey(code)) continue
             if (trie.maxWordLen(child) < shortest) {
-                why(h, child, "short")
+                why(h, child, "short") { "longest=${trie.maxWordLen(child)} need=$shortest" }
                 continue
             }
             for (s in 0..1) {
                 continueOpen(h, child, code, s, out)
                 openNext(h, child, code, s, out)
+                if (dropsTap && h.dropped == 0 && h.nx[s] + 1 < streams[s].size && items[streams[s][h.nx[s]]] is Matcher.Anchor) {
+                    openNext(h, child, code, s, out, past = 1)
+                }
             }
         }
     }
@@ -191,26 +289,69 @@ internal class ThumbBeam(
                 if (m is Matcher.Segment) need += maxOf(0, m.minLetters - h.n[s])
             }
         }
+        // A tap this run may still drop needs no letter.
+        if (dropsTap && h.dropped == 0 && need > 0) need--
         return need
     }
 
-    /** Hand-over rule: a letter on the other thumb may step back HANDOVER_ALLOWANCE_MS at most. */
-    private fun timeOk(h: Hyp, s: Int, t: Long): Boolean =
-        h.lastStream < 0 || h.lastStream == s || t >= h.lastT - KineticaConstants.HANDOVER_ALLOWANCE_MS
+    /** How far a letter on the other thumb steps back behind the last letter, in ms; 0 on the same thumb. */
+    private fun stepBack(h: Hyp, s: Int, t: Long): Long =
+        if (h.lastStream < 0 || h.lastStream == s) 0L else h.lastT - t
+
+    /**
+     * Hand-over rule: a letter on the other thumb may step back HANDOVER_CHARGE_MAX_MS at most,
+     * charged past HANDOVER_ALLOWANCE_MS ([chargeOf], [KineticaConstants.handoverKeep]); a
+     * reading's hand-overs keep HANDOVER_KEEP_FLOOR of its score at least, and add
+     * HANDOVER_CHARGE_CAP_KW to its priority at most, together.
+     */
+    private fun timeOk(h: Hyp, s: Int, t: Long): Boolean = stepBack(h, s, t) <= KineticaConstants.HANDOVER_CHARGE_MAX_MS
+
+    /**
+     * The earliest pass of [code] from [minIdx] on that the hand-over admits
+     * ([KineticaConstants.BEAM_PASS_IN_TIME]); the earliest at all when none does, so the time
+     * check refuses it as before.
+     */
+    private fun passInTime(h: Hyp, m: Matcher.Segment, code: Int, s: Int, minIdx: Int): Int {
+        val earliest = m.passAtOrAfter(code, minIdx)
+        if (earliest < 0 || !KineticaConstants.BEAM_PASS_IN_TIME || timeOk(h, s, m.letterTime(code, earliest))) return earliest
+        for (idx in m.passesOf(code)) if (idx > earliest && timeOk(h, s, m.letterTime(code, idx))) return idx
+        return earliest
+    }
+
+    private fun handoverCost(back: Long): Float = KineticaConstants.HANDOVER_CHARGE_KW * KineticaConstants.handoverExcess(back)
+
+    /** The charge for one more hand-over, the reading's total held at HANDOVER_CHARGE_CAP_KW. */
+    private fun chargeOf(h: Hyp, back: Long): Float =
+        minOf(handoverCost(back), maxOf(0f, KineticaConstants.HANDOVER_CHARGE_CAP_KW - h.hand))
 
     private fun continueOpen(h: Hyp, child: Int, code: Int, s: Int, out: MutableList<Hyp>) {
         val o = h.open[s]
         if (o < 0) return
         val m = items[o]
         if (m is Matcher.Segment) {
-            if (h.n[s] >= m.maxLetters) return why(h, child, "cont.max")
-            val pass = m.passAtOrAfter(code, h.last[s] - KineticaConstants.MONOTONE_SLACK)
-            if (pass < 0) return why(h, child, "cont.nopass")
+            if (h.n[s] >= m.maxLetters) return why(h, child, "cont.max") { "s$s it$o n=${h.n[s]}" }
+            val pass = passInTime(h, m, code, s, h.last[s] - KineticaConstants.MONOTONE_SLACK)
+            if (pass < 0) {
+                return why(h, child, "cont.nopass") {
+                    val from = h.last[s] - KineticaConstants.MONOTONE_SLACK
+                    "s$s it$o last=${h.last[s]} passes=${m.passesOf(code).joinToString(",")} " +
+                        "after=%.2f any=%.2f".format(nearFrom(m, code, from), nearFrom(m, code, 0))
+                }
+            }
             val t = m.letterTime(code, pass)
-            if (!timeOk(h, s, t)) return why(h, child, "cont.time")
-            val c = h.cost + passCost(m, code, pass)
+            if (!timeOk(h, s, t)) {
+                return why(h, child, "cont.time") {
+                    val from = h.last[s] - KineticaConstants.MONOTONE_SLACK
+                    "s$s it$o last=${h.last[s]} back=${stepBack(h, s, t)} passes=" +
+                        m.passesOf(code).joinToString(",") { "$it:${stepBack(h, s, m.letterTime(code, it))}${if (it < from) "x" else ""}" }
+                }
+            }
+            val back = stepBack(h, s, t)
+            val hc = chargeOf(h, back)
+            val c = h.cost + passCost(m, code, pass) + hc
             val keep = h.keep * contactKeep(m, code)
-            out.add(next(h, child, code, o, c, h.tapPen, keep, h.gates, t, s) { st ->
+            val hk = h.handKeep * KineticaConstants.handoverKeep(back)
+            out.add(next(h, child, code, o, c, h.tapPen, keep, h.gates, h.hand + hc, t, s, hk, back) { st ->
                 st.n[s] = h.n[s] + 1
                 st.last[s] = maxOf(h.last[s], pass)
                 st.lastCode[s] = code
@@ -220,49 +361,72 @@ internal class ThumbBeam(
             // One tap may stand for a doubled letter.
             if (h.n[s] != 1 || code != h.lastCode[s]) return
             out.add(
-                next(h, child, code, o, h.cost, h.tapPen + KineticaConstants.DOUBLE_TAP_PEN_KW, h.keep, h.gates, m.t, s) { st ->
+                next(h, child, code, o, h.cost, h.tapPen + KineticaConstants.DOUBLE_TAP_PEN_KW, h.keep, h.gates, h.hand, m.t, s) { st ->
                     st.n[s] = 2
                 },
             )
         }
     }
 
-    private fun openNext(h: Hyp, child: Int, code: Int, s: Int, out: MutableList<Hyp>) {
+    /** Opens the stream's next item with this letter; [past] 1 passes over a tap first, read as no letter. */
+    private fun openNext(h: Hyp, child: Int, code: Int, s: Int, out: MutableList<Hyp>, past: Int = 0) {
         val list = streams[s]
-        if (h.nx[s] >= list.size) return why(h, child, "open.none")
+        val at = h.nx[s] + past
+        val drop = if (past > 0) KineticaConstants.DROPPED_TAP_COST_KW else 0f
+        if (at >= list.size) return why(h, child, "open.none") { "s$s" }
         var closeGates = 0
         val o = h.open[s]
-        if (o >= 0) closeGates = closeGates(items[o], h.n[s], h.lastCode[s], h.ideal[s]) ?: return why(h, child, "open.close")
-        val nextItem = list[h.nx[s]]
+        if (o >= 0) {
+            closeGates = closeGates(items[o], h.n[s], h.lastCode[s], h.ideal[s]) ?: return why(h, child, "open.close") {
+                val open = items[o] as Matcher.Segment
+                "s$s it$o n=${h.n[s]} min=${open.minLetters} arc=%.2f".format(open.letterArcLen)
+            }
+        }
+        val nextItem = list[at]
         val m = items[nextItem]
         if (m is Matcher.Anchor) {
             val pen = if (code == m.code) {
                 0f
             } else {
                 val d = g.distToCenter(m.x, m.y, code)
-                if (d > KineticaConstants.FUZZY_TAP_RADIUS_KW) return why(h, child, "open.tapfar")
+                if (d > KineticaConstants.FUZZY_TAP_RADIUS_KW) {
+                    return why(h, child, "open.tapfar") { "s$s it$nextItem tap=${trie.alphabet.charOf(m.code)} d=%.2f".format(d) }
+                }
                 KineticaConstants.FUZZY_TAP_LAMBDA * d
             }
-            if (!timeOk(h, s, m.t)) return why(h, child, "open.taptime")
-            val c = h.cost + pen + closeGates * KineticaConstants.BEAM_GATE_COST
-            out.add(next(h, child, code, nextItem, c, h.tapPen + pen, h.keep, h.gates + closeGates, m.t, s) { st ->
-                st.nx[s] = h.nx[s] + 1
+            if (!timeOk(h, s, m.t)) return why(h, child, "open.taptime") { "s$s it$nextItem back=${stepBack(h, s, m.t)}" }
+            val back = stepBack(h, s, m.t)
+            val hc = chargeOf(h, back)
+            val c = h.cost + pen + closeGates * KineticaConstants.BEAM_GATE_COST + hc + drop
+            val hk = h.handKeep * KineticaConstants.handoverKeep(back)
+            out.add(next(h, child, code, nextItem, c, h.tapPen + pen, h.keep, h.gates + closeGates, h.hand + hc, m.t, s, hk, back) { st ->
+                st.dropped = h.dropped + past
+                st.nx[s] = at + 1
                 st.open[s] = nextItem
                 st.n[s] = 1
                 st.last[s] = 0
                 st.lastCode[s] = code
             })
         } else if (m is Matcher.Segment) {
-            val pass = m.passAtOrAfter(code, -KineticaConstants.MONOTONE_SLACK)
-            if (pass < 0) return why(h, child, "open.nopass")
+            val pass = passInTime(h, m, code, s, -KineticaConstants.MONOTONE_SLACK)
+            if (pass < 0) return why(h, child, "open.nopass") { "s$s it$nextItem any=%.2f".format(nearFrom(m, code, 0)) }
             val t = m.letterTime(code, pass)
-            if (!timeOk(h, s, t)) return why(h, child, "open.time")
+            if (!timeOk(h, s, t)) {
+                return why(h, child, "open.time") {
+                    "s$s it$nextItem back=${stepBack(h, s, t)} passes=" +
+                        m.passesOf(code).joinToString(",") { "$it:${stepBack(h, s, m.letterTime(code, it))}" }
+                }
+            }
             val startGate = if (m.softStart || m.isStart(code)) 0 else 1
             val gates = closeGates + startGate
-            val c = h.cost + passCost(m, code, pass) + gates * KineticaConstants.BEAM_GATE_COST
+            val back = stepBack(h, s, t)
+            val hc = chargeOf(h, back)
+            val c = h.cost + passCost(m, code, pass) + gates * KineticaConstants.BEAM_GATE_COST + hc + drop
             val keep = h.keep * contactKeep(m, code)
-            out.add(next(h, child, code, nextItem, c, h.tapPen, keep, h.gates + gates, t, s) { st ->
-                st.nx[s] = h.nx[s] + 1
+            val hk = h.handKeep * KineticaConstants.handoverKeep(back)
+            out.add(next(h, child, code, nextItem, c, h.tapPen, keep, h.gates + gates, h.hand + hc, t, s, hk, back) { st ->
+                st.dropped = h.dropped + past
+                st.nx[s] = at + 1
                 st.open[s] = nextItem
                 st.n[s] = 1
                 st.last[s] = pass
@@ -301,8 +465,11 @@ internal class ThumbBeam(
         tapPen: Float,
         keep: Float,
         gates: Int,
+        hand: Float,
         t: Long,
         stream: Int,
+        handKeep: Float = h.handKeep,
+        back: Long = 0L,
         edit: (Hyp) -> Unit,
     ): Hyp {
         // Cheap and common first: the letters' distances to the path, plus a pull toward the
@@ -312,8 +479,10 @@ internal class ThumbBeam(
         val priority = cost + tapPen - KineticaConstants.BEAM_FREQ_WEIGHT * ln(fwMax)
         val k = Hyp(
             child, h.depth + 1, h, code, item, h.nx.copyOf(), h.open.copyOf(), h.n.copyOf(),
-            h.last.copyOf(), h.lastCode.copyOf(), h.ideal.copyOf(), t, stream, cost, tapPen, keep, gates, priority,
+            h.last.copyOf(), h.lastCode.copyOf(), h.ideal.copyOf(), t, stream, cost, tapPen, keep, gates, hand, priority,
+            handKeep, back,
         )
+        k.dropped = h.dropped
         edit(k)
         return k
     }
@@ -322,19 +491,25 @@ internal class ThumbBeam(
         if (h.depth == 0 || !trie.isWord(h.node)) return
         val watched = watch?.let { h.node == it.last() } == true
         var gates = h.gates
+        // A run that drops a tap may drop a stream's last item, when it is a tap.
+        var droppable = if (dropsTap) 1 - h.dropped else 0
         for (s in 0..1) {
-            if (h.nx[s] < streams[s].size) {
-                if (watched) watchWhy.merge("emit.itemsLeft", 1, Int::plus)
+            if (droppable > 0 && h.nx[s] == streams[s].size - 1 && items[streams[s][h.nx[s]]] is Matcher.Anchor) {
+                droppable--
+            } else if (h.nx[s] < streams[s].size) {
+                if (watched) emitWhy(h, "emit.itemsLeft", "s$s left=${streams[s].size - h.nx[s]}")
                 return
             }
             val o = h.open[s]
             if (o >= 0) {
                 gates += closeGates(items[o], h.n[s], h.lastCode[s], h.ideal[s]) ?: run {
-                    if (watched) watchWhy.merge("emit.close", 1, Int::plus)
+                    if (watched) emitWhy(h, "emit.close", "s$s it$o n=${h.n[s]}")
                     return
                 }
             }
         }
+        // The first run offered every reading that reads each tap.
+        if (dropsTap && h.dropped == 0 && droppable > 0) return
         attempts++
         // Letters and the gesture each one came from, root first.
         val letters = IntArray(h.depth)
@@ -356,7 +531,7 @@ internal class ThumbBeam(
             var own = 0
             for (j in 0 until h.depth) if (owner[j] == item) own++
             if (own == 0) {
-                if (watched) watchWhy.merge("emit.emptyPiece", 1, Int::plus)
+                if (watched) emitWhy(h, "emit.emptyPiece", "it$item")
                 return
             }
             val arr = IntArray(own)
@@ -366,14 +541,22 @@ internal class ThumbBeam(
             pieceLetters[pi] = arr
             pieceTo[pi] = own
         }
-        var keep = h.keep
+        var keep = h.keep * maxOf(KineticaConstants.HANDOVER_KEEP_FLOOR, h.handKeep)
         repeat(gates) { keep *= KineticaConstants.BEAM_GATE_KEEP }
+        if (dropsTap) keep *= KineticaConstants.DROPPED_TAP_KEEP
         val source = if (tokens.size == 1) WordCandidate.Source.SWIPE else WordCandidate.Source.MERGED
+        // Under [only] each reading is scored alone, so its own score is known, then offered on.
+        val alone = if (only != null && watched) CandidateHeap(1) else null
         val outcome = p.scoreReading(
-            g, heap, prevWordId, prevWord, h.node, letters, h.depth,
+            g, alone ?: heap, prevWordId, prevWord, h.node, letters, h.depth,
             pieceCount, pieceSeg, pieceLetters, pieceFrom, pieceTo, h.tapPen, keep, source,
             unsaturated = KineticaConstants.BEAM_UNSATURATED,
         )
+        if (alone != null) {
+            val got = alone.best()
+            if (got != null) heap.offer(got)
+            readings.add(readingOf(h, got, gates, outcome.name))
+        }
         if (outcome == WordPredictor.Scored.OFFERED) offered++
         val w = watch
         if (w != null && h.node == w.last() && (watchStage.isEmpty() || watchStage.startsWith("emit"))) {
@@ -381,7 +564,32 @@ internal class ThumbBeam(
         }
     }
 
+    private fun emitWhy(h: Hyp, reason: String, note: String) {
+        watchWhy.merge(reason, 1, Int::plus)
+        watchAt.getOrPut(h.depth + 1) { HashMap() }.merge(reason, 1, Int::plus)
+        val notes = watchNotes.getOrPut(h.depth + 1) { LinkedHashSet() }
+        if (notes.size < MAX_NOTES) notes.add("$reason $note")
+    }
+
+    private fun readingOf(h: Hyp, got: WordCandidate?, gates: Int, outcome: String): TargetReading {
+        val stream = IntArray(h.depth)
+        val item = IntArray(h.depth)
+        val split = arrayOfNulls<PrioritySplit>(h.depth)
+        var x: Hyp? = h
+        while (x != null && x.depth > 0) {
+            stream[x.depth - 1] = x.lastStream
+            item[x.depth - 1] = x.item
+            split[x.depth - 1] = splitOf(x)
+            x = x.parent
+        }
+        @Suppress("UNCHECKED_CAST")
+        return TargetReading(got?.score ?: 0f, outcome, stream, item, split as Array<PrioritySplit>, got, gates)
+    }
+
     companion object {
+        /** Distinct refusal notes kept per letter, so a diagnosed row stays readable. */
+        private const val MAX_NOTES = 24
+
         /** Whether the beam reads a buffer: a swipe in it and a pattern item for every token. */
         fun applies(tokens: List<InputToken>, items: List<Matcher>?): Boolean =
             items != null && items.size == tokens.size && tokens.any { it is SwipeToken } &&

@@ -3,6 +3,7 @@ package com.kinetica.keyboard.layout
 import com.kinetica.keyboard.engine.Alphabet
 import com.kinetica.keyboard.keys.ActionRow
 import com.kinetica.keyboard.keys.EditorAction
+import com.kinetica.keyboard.keys.LanguageAccents
 
 /** Optional, settings-driven edits applied to a loaded layout. */
 object LayoutMutations {
@@ -410,6 +411,26 @@ object LayoutMutations {
             } else {
                 changed = true
                 k.copy(alternates = kept)
+            }
+        }
+        return if (changed) layout.copy(keys = keys) else layout
+    }
+
+    /**
+     * Each letter key offers the letters [languages] write that fold onto it ([LanguageAccents]):
+     * `ß` on an Italian board's `s` once German is enabled. Adds only; before the plain-accents
+     * filter, which keeps an enabled language's letters anyway.
+     */
+    fun withLanguageAccents(layout: KeyboardLayout, languages: List<String>): KeyboardLayout {
+        var changed = false
+        val keys = layout.keys.map { k ->
+            if (!k.isLetter) return@map k
+            val list = LanguageAccents.added(k.alternates, k.output[0], languages)
+            if (list === k.alternates) {
+                k
+            } else {
+                changed = true
+                k.copy(alternates = list)
             }
         }
         return if (changed) layout.copy(keys = keys) else layout

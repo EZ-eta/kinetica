@@ -53,8 +53,14 @@ internal class CommitPath(private val ime: KineticaIME) {
         val threshold = ime.config.autocorrectConfidence
         val asWritten = keepsAsWritten(ime.wordState.reloadedWord, ime.wordState.tentativeWord)
         if (asWritten) DecodeTrace.log { "  reloaded word kept as written" }
-        if (p != null && !comp.hasSwipeToken() && ime.wordState.lastLiteral.isNotEmpty() &&
-            !ime.editorState.privateMode && !asWritten
+        val selection = ime.selectionLength()
+        val rewrites = commitMayRewrite(ime.editorState.addressField, selection)
+        if (!rewrites) DecodeTrace.log { "  commit as written address=${ime.editorState.addressField} sel=$selection" }
+        if (p != null && !asWritten &&
+            tapCommitMayCorrect(
+                comp.hasSwipeToken(), ime.wordState.lastLiteral, ime.editorState.privateMode,
+                ime.editorState.addressField, selection,
+            )
         ) {
             val target = if (threshold != null) {
                 p.tapAutocorrect(ime.wordState.lastLiteral, ime.wordState.lastTentative, threshold)
@@ -70,7 +76,11 @@ internal class CommitPath(private val ime: KineticaIME) {
             } else if (threshold != null && !ime.editorState.addressField) {
                 // A learned capital, as autocorrect gives a German noun its own: the letters
                 // spell a word, so autocorrect leaves them, and the capital is the user's.
-                learnedCapital(finalWord, ime.casesFor(ime.languageOf(finalWord))[finalWord.lowercase()])?.let { capital ->
+                learnedCapital(
+                    finalWord,
+                    ime.casesFor(ime.languageOf(finalWord))[finalWord.lowercase()],
+                    chosen = ime.wordState.caseChosen,
+                )?.let { capital ->
                     val typed = ime.wordState.tentativeWord
                     ime.replaceTentative(capital)
                     finalWord = capital
@@ -83,8 +93,13 @@ internal class CommitPath(private val ime: KineticaIME) {
         // committed one at a time before there is a word to look at, so the
         // shift state is positional only, and autocorrect never rewrites a word
         // the dictionary already has. Applies to the tap path here and to
-        // decoded words through displayWord.
-        val cased = AutoCapitalization.forWord(finalWord, ime.config.language, ime.languageOf(finalWord))
+        // decoded words through displayWord. A word the user re-cased keeps its
+        // case, `i` too, and so does one in an address or beside a selection.
+        val cased = if (ime.wordState.caseChosen || !rewrites) {
+            finalWord
+        } else {
+            AutoCapitalization.forWord(finalWord, ime.config.language, ime.languageOf(finalWord))
+        }
         if (cased != finalWord) {
             ime.replaceTentative(cased)
             finalWord = cased
@@ -131,10 +146,13 @@ internal class CommitPath(private val ime: KineticaIME) {
             ime.ich.textBeforeCursor(word.length + KineticaIME.CAPS_LOOKBACK_CHARS)?.toString()
                 ?.takeIf { it.endsWith(word) }?.dropLast(word.length)
         }
+        // Read before the commit clears the buffer: a reloaded word does not lead Follow's filing.
+        val seeded = ime.composer?.bufferSeeded == true
         ime.composer?.commitWord(word.lowercase())
         ime.wordState.reopenedContext = null
         ime.wordState.tentativeLength = 0
         ime.wordState.tentativeWord = ""
+        ime.wordState.caseChosen = false
         ime.wordState.lastCandidates = emptyList()
         ime.wordState.lastTentative = null
         ime.wordState.keptBar = null
@@ -155,7 +173,7 @@ internal class CommitPath(private val ime: KineticaIME) {
             // A reopened commit committed again unchanged stays learned once: backspaced into and
             // retyped, the reload's letters are not the word, so learnsOnCommit alone counts it twice.
             if (!ime.wordState.swipeDecodeEmpty && learnsOnCommit(word, ime.wordState.reloadedWord) && !keepsReopened(reopened?.word, word)) {
-                val filed = ime.filedLanguage(word, lang)
+                val filed = ime.filedLanguage(word, lang, seeded)
                 val counted = ime.learner.learnWord(word, lang = filed)
                 val held = ime.predictorFor(filed)?.holdsExactSpelling(word) == true
                 val caseBefore = ime.casesFor(filed)[word.lowercase()]
@@ -212,6 +230,7 @@ internal class CommitPath(private val ime: KineticaIME) {
         ime.wordState.seededWithoutTokens = false
         ime.wordState.tentativeLength = 0
         ime.wordState.tentativeWord = ""
+        ime.wordState.caseChosen = false
         ime.wordState.lastCandidates = emptyList()
         ime.wordState.lastTentative = null
         ime.wordState.candidateLanguages = emptyMap()
@@ -245,6 +264,7 @@ internal class CommitPath(private val ime: KineticaIME) {
         ime.wordState.seededWithoutTokens = false
         ime.wordState.tentativeLength = 0
         ime.wordState.tentativeWord = ""
+        ime.wordState.caseChosen = false
         ime.wordState.lastTentative = null
         ime.wordState.lastLiteral = ""
         ime.wordState.swipeDecodeEmpty = false

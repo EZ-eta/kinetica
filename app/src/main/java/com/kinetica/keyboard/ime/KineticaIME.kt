@@ -13,7 +13,6 @@ import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodSubtype
 import androidx.preference.PreferenceManager
-import com.kinetica.keyboard.engine.AccentFolder
 import com.kinetica.keyboard.engine.DecodeTrace
 import com.kinetica.keyboard.engine.Alphabet
 import com.kinetica.keyboard.engine.DictionaryLoader
@@ -35,6 +34,7 @@ import com.kinetica.keyboard.keys.ChordKey
 import com.kinetica.keyboard.keys.ChordLabels
 import com.kinetica.keyboard.keys.ChordTrigger
 import com.kinetica.keyboard.keys.DeleteSpan
+import com.kinetica.keyboard.keys.EditPage
 import com.kinetica.keyboard.keys.EditorAction
 import com.kinetica.keyboard.keys.ShiftState
 import com.kinetica.keyboard.layout.Key
@@ -44,6 +44,7 @@ import com.kinetica.keyboard.settings.ColorPrefs
 import com.kinetica.keyboard.settings.EdgeSwipeDefaults
 import com.kinetica.keyboard.settings.KeyboardConfig
 import com.kinetica.keyboard.settings.LanguageMode
+import com.kinetica.keyboard.settings.LookSets
 import com.kinetica.keyboard.settings.OrientationPrefs
 import com.kinetica.keyboard.settings.Prefs
 import com.kinetica.keyboard.settings.SettingsSynonyms
@@ -93,7 +94,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     internal val ich = InputConnectionHelper { currentInputConnection }
     internal val engine = GestureEngine(this)
     internal val shift = ShiftState()
-    internal val residents = ResidentDictionaries(this, mainHandler)
+    internal val residents = ResidentDictionaries(this, mainHandler, dbExecutor)
     // The last commits by place, each with what it taught.
     internal val commitMarks = CommitMarks()
     internal val learner = Learner(
@@ -115,10 +116,11 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     internal val commands = EditorCommands(this)
     internal val backspace = Backspace(this)
     internal val views = KeyboardViews(this)
+    internal val emojiSearch = EmojiSearchMode(this)
     internal val edits = WordEdits(this)
     internal val commit = CommitPath(this)
     internal val reopen = WordReopen(this)
-    private val languageSync = LanguageSync(this) { config }
+    internal val languageSync = LanguageSync(this) { config }
 
     /** Which resident language is being typed, with no primary language. Main thread. */
     internal val momentum = LanguageMomentum()
@@ -134,7 +136,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         private set
 
     /** The letters of the board on screen: a tap's code is a code of this alphabet. */
-    private val boardAlphabet: Alphabet get() = currentGeometry?.alphabet ?: Alphabet.LATIN
+    internal val boardAlphabet: Alphabet get() = currentGeometry?.alphabet ?: Alphabet.LATIN
     private var prefListener: SharedPreferences.OnSharedPreferenceChangeListener? = null
 
     internal var editorState = EditorState.DEFAULT
@@ -228,6 +230,11 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
                 // Stored dictionary data changed, or the secondary-language
                 // predictor must be loaded or dropped: reload in place.
                 loadDictionaryAsync()
+                // The long-press lists follow the enabled languages (LanguageAccents).
+                if (config.enabledLanguages != previous.enabledLanguages && keyboardView?.showsLetters == true) {
+                    keyboardView?.setKeyboardLayout(views.alphaLayout())
+                }
+
             } else if (config.keyArrangement != previous.keyArrangement ||
                 config.homeRowSpreadPct != previous.homeRowSpreadPct ||
                 // The apostrophe key reshapes the home row too.
@@ -247,12 +254,14 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             ) {
                 views.closeEmojiPicker()
                 keyboardView?.setKeyboardLayout(views.alphaLayout())
-            } else if (config.symbolRowLines != previous.symbolRowLines) {
+            } else if (config.symbolRowLines != previous.symbolRowLines || config.symbolAlternates != previous.symbolAlternates) {
                 // An edit made with a symbol page up shows at once; otherwise the next page switch reads it.
                 val shown = keyboardView?.shownBoard
                 if (shown == KeyboardViews.SYMBOLS || shown == KeyboardViews.SYMBOLS2) {
                     keyboardView?.setKeyboardLayout(views.symbolLayout(shown))
                 }
+            } else if (config.editPage != previous.editPage && keyboardView?.shownBoard == EditPage.NAME) {
+                keyboardView?.setKeyboardLayout(views.editPageLayout())
             }
         }
         prefListener = listener
@@ -279,7 +288,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     }
 
     internal fun loadDictionaryAsync() {
-        residents.load({ config }, { currentGeometry }, ::installWaits) { p ->
+        residents.load({ config }, { currentGeometry }, ::installWaits, learner::scheduleUserDictReload) { p ->
             // A language that left (a switch from Polish) must not keep its standing.
             momentum.retain(residentLanguages())
             composer = WordComposer(
@@ -300,6 +309,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
      * still uses the composer, and a gesture queued before the post may start the next word.
      */
     internal fun wordEnded() {
+        keyboardView?.releaseTrail()
         if (residents.holdsInstall) mainHandler.post { residents.releaseInstall(installWaits()) }
     }
 
@@ -319,6 +329,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         suggestionBar = bar
         keyboardView = kv
         emojiPicker = null
+        emojiSearch.reset()
 
         val container = InputContainerView(
             this, bar, kv,
@@ -340,33 +351,41 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         // Landscape has its own sizes: the turned phone reads its set before the views rebuild.
+        // The phone's dark theme turning on or off arrives here too, and picks the look.
         config = readConfig(
             PreferenceManager.getDefaultSharedPreferences(this),
             newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE,
+            LookSets.systemNight(newConfig.uiMode),
         )
         if (keyboardView != null) {
             setInputView(onCreateInputView())
         }
     }
 
-    /** The settings for the orientation the keyboard is shown in. */
+    /** The settings for the orientation the keyboard is shown in, and the look for the phone's theme. */
     private fun readConfig(
         prefs: SharedPreferences,
         landscape: Boolean = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE,
-    ): KeyboardConfig = KeyboardConfig.from(prefs, landscape)
+        systemNight: Boolean = LookSets.systemNight(resources.configuration.uiMode),
+    ): KeyboardConfig = KeyboardConfig.from(prefs, landscape, systemNight)
 
     // ------------------------------------------------------------- lifecycle
 
     override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
         super.onStartInput(attribute, restarting)
-        // Ctrl held for the next key belongs to the field it was armed in.
-        if (!restarting) commands.ctrlPending = false
-        // An app's restartInput lands here too and clears the bar with it.
+        // Ctrl held for the next key, and Select, belong to the field they were set in.
+        if (!restarting) {
+            commands.ctrlPending = false
+            commands.setSelecting(false)
+        }
+        // An app's restartInput lands here too and clears the bar with it. The package names the
+        // editor engine behind a field-specific report, a WebView rich editor for one.
         DecodeTrace.log {
-            "  start restarting=$restarting pending=${wordState.tentativeLength > 0 || composer?.hasPendingWord == true}"
+            "  start restarting=$restarting pending=${wordState.tentativeLength > 0 || composer?.hasPendingWord == true}" +
+                " pkg=${attribute?.packageName}"
         }
         languageSync.synchronizeLanguageOnStart()
-        editorState = EditorState.from(attribute)
+        editorState = EditorState.from(attribute, packageName)
         backspace.target = null
         commit.abandonWord()
         composer?.reset()
@@ -395,10 +414,13 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
 
     override fun onStartInputView(editorInfo: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(editorInfo, restarting)
+        suggestionBar?.endShortcuts()
         suggestionBar?.clearSuggestions()
+
         barContents.updateBarWordPending()
         keyboardView?.setShiftUppercase(shift.isShifted)
         views.closeEmojiPicker()
+        emojiSearch.close("field")
         val onLetters = keyboardView?.showsLetters ?: true
         // Left by hand in the meantime, the pad is no longer the field's to take down.
         if (onLetters) views.numpadAuto = false
@@ -407,8 +429,13 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
                 keyboardView?.setKeyboardLayout(views.layoutFor("numpad"))
                 views.numpadAuto = true
             }
-            // A pad a number field put up goes with it, whatever the letters setting.
-            opensOnLetters(restarting, config.lettersOnNewField || views.numpadAuto, onLetters) -> {
+            // A pad a number field put up goes with it, whatever the letters setting, and so does
+            // the editing page: it is for the field it was opened in.
+            opensOnLetters(
+                restarting,
+                config.lettersOnNewField || views.numpadAuto || keyboardView?.shownBoard == EditPage.NAME,
+                onLetters,
+            ) -> {
                 keyboardView?.setKeyboardLayout(views.alphaLayout())
                 views.numpadAuto = false
             }
@@ -513,6 +540,11 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         shift.onOtherKey()
         backspace.autocorrectUndo = null
         autospace.cancel()
+        // The search panel's query takes the gesture: nothing below may touch the field.
+        if (emojiSearch.active) {
+            emojiSearch.onToken(token)
+            return
+        }
         barContents.clearCorrection()
         // A tapped letter under the one-shot Ctrl is a key combination, not a letter; a swipe
         // is a word and lets Ctrl go.
@@ -607,6 +639,11 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         literal: String,
         generation: Int,
     ) {
+        // A swipe into the search panel: its word is the query's, not the field's.
+        if (emojiSearch.active) {
+            emojiSearch.onDecoded((tentative ?: candidates.firstOrNull())?.word)
+            return
+        }
         val rejected = edits.retypeRejected
         val ranked = demoteRejected(candidates, rejected)
         // Spent on the first decode that has anything to say, so an empty one in between
@@ -674,9 +711,15 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     private val keyboardListener = object : KeyboardView.Listener {
         override fun onKeyTap(key: Key) {
             if (key.type != KeyType.SHIFT) shift.onOtherKey()
+            if (emojiSearch.onKeyTap(key)) return
             when (key.type) {
                 KeyType.CHAR -> onPunctuation(key.output)
-                KeyType.SPACE -> onSpace()
+                KeyType.SPACE -> {
+                    onSpace()
+                    if (lettersAfterSpace(config.lettersAfterSpace, keyboardView?.shownBoard)) {
+                        keyboardView?.setKeyboardLayout(views.alphaLayout())
+                    }
+                }
                 KeyType.BACKSPACE -> backspace.onKey(tap = true)
                 KeyType.ENTER -> onEnter()
                 KeyType.SHIFT -> {
@@ -700,6 +743,10 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         }
 
         override fun onCursorMove(direction: Int, byWord: Boolean) {
+            // The query has no cursor, and the field's must not move under the search.
+            if (emojiSearch.active) return
+            // One tick per step, as the backspace slide ticks per unit, under the same setting.
+            views.vibrateForKeyPress()
             // The ledger does not expect the resulting selection change, so onUpdateSelection
             // abandons the pending word.
             if (byWord) {
@@ -717,16 +764,24 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             )
         }
 
-        override fun onDeleteChar(tap: Boolean) = backspace.onKey(tap)
+        override fun onDeleteChar(tap: Boolean) {
+            if (emojiSearch.active) emojiSearch.delete() else backspace.onKey(tap)
+        }
 
-        override fun onStageDelete(units: Int, granularity: DeleteSpan.Granularity) =
-            backspace.stage(units, granularity)
+        // The slide selects the field's text to show what it will delete: not while searching.
+        override fun onStageDelete(units: Int, granularity: DeleteSpan.Granularity) {
+            if (!emojiSearch.active) backspace.stage(units, granularity)
+        }
 
-        override fun onCommitStagedDelete() = backspace.commitStaged()
+        override fun onCommitStagedDelete() {
+            if (emojiSearch.active) emojiSearch.delete() else backspace.commitStaged()
+        }
 
         override fun onEdgeSwipe(output: String) {
             autospace.cancel()
+            if (emojiSearch.active && output != "emoji") return
             if (output == "emoji") {
+                emojiSearch.close("emoji")
                 // Always available: the secondary trigger independent of the
                 // comma long-press opt-in.
                 views.openEmojiPicker()
@@ -748,6 +803,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             if (key.type != KeyType.SHIFT) shift.onOtherKey()
             autospace.cancel()
             if (text.isEmpty()) return
+            if (emojiSearch.onAlternate(text)) return
             // Shift's cells are labels, not text: the key is the command and the cell its
             // argument. So they need no reserved prefix, and this branch must come before
             // every commit path below.
@@ -813,6 +869,16 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             commands.openSettings(SettingsSynonyms.LONGPRESS_GROUP, Prefs.letterAlternatesKey(letter))
         }
 
+        override fun onEditSymbolAlternates(symbol: String) {
+            views.vibrateForKeyPress()
+            commands.openSettings(SettingsSynonyms.SYMBOL_PAGES_GROUP, Prefs.symbolAlternatesKey(symbol))
+        }
+
+        // Select is the editing page's: any other board ends it.
+        override fun onBoardShown(name: String) {
+            if (name != EditPage.NAME) commands.setSelecting(false)
+        }
+
         override fun onMenuAction(index: Int) = commands.performMenuAction(index)
 
         override fun onRestingFingerDropped() {
@@ -834,6 +900,8 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             val action = EditorAction.of(expansion)
             when {
                 action != null -> commands.performShortcut(action)
+                // A chord's text has no place in a query.
+                emojiSearch.active -> return
                 !commands.performIfAction(expansion) -> finalizeThenCommitText(expansion)
             }
             updateAutoShift()
@@ -846,6 +914,9 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
 
         override fun onKeyPressFeedback(key: Key) {
             autospace.cancel()
+            // Typing resumed: a shortcut row the bar's button brought up gives the words back.
+            suggestionBar?.endShortcuts()
+            emojiSearch.cancelWordEnd()
             // Only a backspace tap may still take back the word the automatic space committed.
             if (key.type != KeyType.BACKSPACE) gestureUndo.forgetCommitted()
             // Any key ends the offer before it acts: the word around the cursor was never in
@@ -858,11 +929,12 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         }
 
         override fun onDoubleSpace() {
-            this@KineticaIME.onDoubleSpace()
+            // This lift stands for the second space; in a query it is a space, never a period.
+            if (emojiSearch.active) emojiSearch.space() else this@KineticaIME.onDoubleSpace()
         }
 
         override fun onSpacelessSpace() {
-            this@KineticaIME.onSpacelessSpace()
+            if (emojiSearch.active) emojiSearch.space() else this@KineticaIME.onSpacelessSpace()
         }
     }
 
@@ -890,6 +962,8 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             commands.performIfAction(EditorAction.RETYPE.output)
         }
 
+        override fun onShortcutsButton() = views.vibrateForKeyPress()
+
         override fun onBarAction(index: Int) = commands.performBarAction(index)
 
         override fun onRecentPicked(back: Int, word: String) {
@@ -914,17 +988,16 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
      * of it, so tap-typing "matadór" must not commit "matad" at the accent. The apostrophe
      * key still breaks the word, since "nell'immagine" is no dictionary word.
      *
-     * The token carries the folded base key the trie is keyed on, while the editor and
-     * [tentativeWord] carry the accented glyph, as reloadWordUnderCursor does: the decode
-     * keeps composing and the user's accent stays on screen.
+     * The tokens carry the folded base keys the trie is keyed on, one per letter (`ß` is two
+     * taps on `s`), while the editor and [tentativeWord] carry the glyph once, as
+     * reloadWordUnderCursor does: the decode keeps composing and the user's accent stays on screen.
      */
     private fun composeAccentedLetter(text: String): Boolean {
         if (config.peckMode || editorState.privateMode) return false
         val comp = composer ?: return false
         val g = currentGeometry ?: return false
-        val code = AccentFolder.accentedLetterCode(text, boardAlphabet)
-        if (code < 0 || !g.hasKey(code)) return false
-        if (comp.tokenCount >= KineticaConstants.MAX_WORD_LEN) return false
+        val taps = accentTaps(text, g, SystemClock.uptimeMillis()) ?: return false
+        if (comp.tokenCount + taps.size > KineticaConstants.MAX_WORD_LEN) return false
         barContents.clearCorrection()
         rememberWordBeforeGesture()
         if (wordState.tentativeLength == 0) wordState.wordShift = shift.state
@@ -933,13 +1006,8 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         commitTracked(text)
         wordState.tentativeLength += text.length
         wordState.tentativeWord += text
-        val now = SystemClock.uptimeMillis()
-        comp.onToken(
-            TapToken(
-                StreamId.LEFT, code, g.centerX(code), g.centerY(code),
-                longPress = false, tStart = now, tEnd = now + 1,
-            ),
-        )
+        // One gesture: a backspace takes both of `ß`'s taps back with its glyph.
+        taps.forEach(comp::onToken)
         return true
     }
 
@@ -1063,6 +1131,19 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         barContents.refreshPredictions()
     }
 
+    /** The editing page, or back to the letters when it is up: one action opens and closes it. */
+    internal fun toggleEditPage() {
+        if (keyboardView?.shownBoard == EditPage.NAME) {
+            keyboardView?.setKeyboardLayout(views.alphaLayout())
+            return
+        }
+        emojiSearch.close("edit")
+        views.closeEmojiPicker()
+        autospace.cancel()
+        commit.finalizePendingWord()
+        keyboardView?.setKeyboardLayout(views.editPageLayout())
+    }
+
     internal fun onEnter() {
         if (commands.consumeCtrl("enter")) return
         autospace.cancel()
@@ -1108,11 +1189,13 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
      * The language a commit of [word] is learned into ([SharedWordFiling]); [provenance] is the list
      * the decode drew it from. With no primary language the bundled lists say which hold the word,
      * since the active language says nothing about the text and a learned copy can be a misfiling.
+     * A [seeded] commit, a word reloaded from the editor, is filed there but leads nothing after it.
      */
-    internal fun filedLanguage(word: String, provenance: String): String {
+    internal fun filedLanguage(word: String, provenance: String, seeded: Boolean = false): String {
         val follow = config.languageMode == LanguageMode.FOLLOW
         val held = residents.heldBy(word, config.language, listsOnly = follow)
-        return sharedFiling.languageFor(held, provenance, if (follow) residentLanguages() else emptyList())
+        val residentsIfFollow = if (follow) residentLanguages() else emptyList()
+        return sharedFiling.languageFor(held, provenance, residentsIfFollow, anchors = !(follow && seeded))
     }
 
     /**
@@ -1151,8 +1234,17 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     }
 
     internal fun replaceTentative(word: String) {
-        ich.replaceBeforeCursor(wordState.tentativeLength, word)
-        expectAfter(wordState.tentativeLength, word.length)
+        // Only the changed tail is written; see TentativeEdit. A word whose text and length
+        // disagree is rewritten whole, as the length is what the editor holds.
+        val edit = if (wordState.tentativeWord.length == wordState.tentativeLength) {
+            TentativeEdit.between(wordState.tentativeWord, word)
+        } else {
+            TentativeEdit.Edit(wordState.tentativeLength, word)
+        }
+        if (!edit.writesNothing) {
+            ich.replaceBeforeCursor(edit.drop, edit.add)
+            expectAfter(edit.drop, edit.add.length)
+        }
         wordState.tentativeLength = word.length
         wordState.tentativeWord = word
     }

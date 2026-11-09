@@ -82,6 +82,44 @@ class KeyboardConfigTest {
     }
 
     @Test
+    fun barWordsCarryNoMarkUntilChosen() {
+        assertEquals(false, MapPrefs.config().barWordMarks)
+        assertEquals(true, MapPrefs.config(mapOf(Prefs.BAR_WORD_MARKS to true)).barWordMarks)
+    }
+
+    @Test
+    fun theFirstBarWordIsBoldAndTheLettersLastUntilChosen() {
+        assertEquals(false, MapPrefs.config().barSpaceBold)
+        assertEquals(true, MapPrefs.config(mapOf(Prefs.BAR_SPACE_BOLD to true)).barSpaceBold)
+    }
+
+    @Test
+    fun aSpaceKeepsTheSymbolPageUntilChosen() {
+        assertEquals(false, MapPrefs.config().lettersAfterSpace)
+        assertEquals(true, MapPrefs.config(mapOf(Prefs.LETTERS_AFTER_SPACE to true)).lettersAfterSpace)
+    }
+
+    @Test
+    fun shiftSwapsNoSlideUntilChosen() {
+        assertEquals(false, MapPrefs.config().shiftSwapsSlides)
+        assertEquals(true, MapPrefs.config(mapOf(Prefs.SHIFT_SWAPS_SLIDES to true)).shiftSwapsSlides)
+    }
+
+    @Test
+    fun theShortcutsButtonIsOffUntilChosen() {
+
+        assertEquals(false, MapPrefs.config().shortcutsButton)
+        assertEquals(true, MapPrefs.config(mapOf(Prefs.SHORTCUTS_BUTTON to true)).shortcutsButton)
+    }
+
+
+    @Test
+    fun barWordsAreCutAtTheirEndUntilTheMiddleCutIsChosen() {
+        assertEquals(false, MapPrefs.config().barMiddleCut)
+        assertEquals(true, MapPrefs.config(mapOf(Prefs.BAR_MIDDLE_CUT to true)).barMiddleCut)
+    }
+
+    @Test
     fun theSwipeLookIsTheTrailUntilChosen() {
         assertEquals(com.kinetica.keyboard.ui.SwipeLook.TRAIL, MapPrefs.config().swipeLook)
         assertEquals(com.kinetica.keyboard.ui.SwipeLook.KEYS, MapPrefs.config(mapOf(Prefs.SWIPE_LOOK to "keys")).swipeLook)

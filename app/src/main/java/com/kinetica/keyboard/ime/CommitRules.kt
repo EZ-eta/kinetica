@@ -112,6 +112,50 @@ internal fun userDictDemoted(countBefore: Int, countAfter: Int): Boolean =
     countBefore >= KineticaConstants.PERSONAL_MERGE_MIN_COUNT && countAfter < countBefore
 
 /**
+ * Whether a commit may rewrite the letters on screen. Not in a URL or email field: an address is
+ * no dictionary word. Not with a [selection] in the field: an app's completion sits selected after
+ * the cursor (Firefox's `eb|ay.com/`), and a rewrite deletes it (#52).
+ */
+internal fun commitMayRewrite(addressField: Boolean, selection: Int): Boolean =
+    !addressField && selection == 0
+
+/**
+ * Whether a delimiter may still rewrite a word's letters: tapped only, letters to read, not a
+ * private field, [commitMayRewrite]. Shared by the commit and by the bar's bold, so the two never
+ * disagree.
+ */
+internal fun tapCommitMayCorrect(
+    hasSwipe: Boolean,
+    literal: String,
+    privateMode: Boolean,
+    addressField: Boolean,
+    selection: Int,
+): Boolean = !hasSwipe && literal.isNotEmpty() && !privateMode && commitMayRewrite(addressField, selection)
+
+/**
+ * The word a space would write now, before its capital. A swipe writes its lead ([swipeLead]; with
+ * none, the [tentative] already on screen). Tapped letters are written as typed unless
+ * [autocorrect] gives a target, the gate [CommitPath.finalizePendingWord] applies.
+ */
+internal fun spaceCommitWord(
+    tentative: String,
+    swipeLead: String?,
+    hasSwipe: Boolean,
+    literal: String,
+    privateMode: Boolean,
+    addressField: Boolean,
+    selection: Int,
+    asWritten: Boolean,
+    autocorrect: () -> String?,
+): String {
+    if (hasSwipe) return swipeLead ?: tentative
+    if (!asWritten && tapCommitMayCorrect(hasSwipe, literal, privateMode, addressField, selection)) {
+        autocorrect()?.let { return it }
+    }
+    return tentative
+}
+
+/**
  * Whether the trie must be rebuilt because a word's personal count has just made it
  * mergeable, judged from the count before and after one [Learner.learnWord] call.
  *
@@ -165,6 +209,107 @@ internal class HeldInstall {
         install()
         return true
     }
+}
+
+/**
+ * The count changes a dictionary load has not read. Each load opens a journal when its row read is
+ * queued; its install replays the journal over the rows, so a word learned mid-load keeps its count.
+ *
+ * Main thread only. A load held under a word can wait seconds, and a learn in that time was lost.
+ */
+internal class LearnJournal {
+    class Learn(val lang: String, val word: String, val amount: Int)
+
+    private var next = 0
+    private val open = LinkedHashMap<Int, MutableList<Learn>>()
+    // The newest load whose rows are live, -1 before the first install.
+    private var installed = -1
+
+    /** A new load's journal; its token goes to [take]. */
+    fun open(): Int {
+        val load = next++
+        open[load] = ArrayList()
+        return load
+    }
+
+    /** One count change, kept by every load still open. */
+    fun note(lang: String, word: String, amount: Int) {
+        if (open.isEmpty()) return
+        val learn = Learn(lang, word, amount)
+        for (learns in open.values) learns += learn
+    }
+
+    /**
+     * [load]'s changes, in order, or null once it is closed: a newer load superseded it. Closes it
+     * and every older load: an older install after a newer one would put back older rows.
+     */
+    fun take(load: Int): List<Learn>? {
+        val learns = open[load] ?: return null
+        open.keys.removeAll { it <= load }
+        return learns
+    }
+
+    /**
+     * Called when [load]'s parse is posted, before it installs or is held. False when a newer load
+     * already did: [load] read older rows, and its trie and blocked set are older too. Otherwise
+     * closes every older load, whose post may still be on its way.
+     */
+    fun supersede(load: Int): Boolean {
+        if (load !in open) return false
+        open.keys.removeAll { it < load }
+        return true
+    }
+
+    /** [load]'s rows are now the live counts. */
+    fun installed(load: Int) {
+        installed = maxOf(installed, load)
+    }
+
+    /** The token a learn keeps: a load opened before it has a smaller one. */
+    fun mark(): Int = next
+
+    /**
+     * A learn's stored row read [gap] above its live count: a row past the load limit, never read.
+     * Every load opened before the learn ([mark]) read its rows before the write and gets the gap;
+     * one opened after reads the row itself. True when the live counts also lack it: no load
+     * opened after the learn has installed.
+     */
+    fun correct(mark: Int, lang: String, word: String, gap: Int): Boolean {
+        val learn = Learn(lang, word, gap)
+        for ((load, learns) in open) if (load < mark) learns += learn
+        return installed < mark
+    }
+}
+
+/**
+ * How far a learn's live count [after] reads below its stored row [stored], read back behind the
+ * write. A row past the load limit is never read, so a word at 1 counted 0 to 1 live while the row
+ * went to 2: no merge, no reload, until the next load. Never negative: a live count above the row
+ * is left alone, and a failed read ([stored] null) corrects nothing.
+ */
+internal fun learnedCountGap(after: Int, stored: Int?): Int =
+    if (stored == null) 0 else (stored - after).coerceAtLeast(0)
+
+/**
+ * Replays the [learns] filed in [lang] over [counts], clamped at zero each step as the live map and
+ * the database are. Returns the words that crossed the merge floor and [trieHas] lacks: the rows
+ * missed them, so the new trie did too.
+ */
+internal fun replayLearns(
+    counts: MutableMap<String, Int>,
+    lang: String,
+    learns: List<LearnJournal.Learn>,
+    trieHas: (String) -> Boolean,
+): List<String> {
+    val before = HashMap<String, Int>()
+    for (l in learns) {
+        // An unlearn of a word with no row leaves no row, as the live map's computeIfPresent does.
+        if (l.lang != lang || (l.amount <= 0 && l.word !in counts)) continue
+        val now = counts[l.word] ?: 0
+        before.putIfAbsent(l.word, now)
+        counts[l.word] = (now + l.amount).coerceAtLeast(0)
+    }
+    return before.filter { (w, b) -> userDictNeedsReload(b, counts[w] ?: 0, trieHas(w)) }.keys.toList()
 }
 
 /**

@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The guided setup's choice steps, one screen each. Every row is copied as it stands in
+     keyboard_prefs.xml, so the setup and the settings store the same values (SetupPrefsTest). -->
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceScreen
+        android:key="setup_languages"
+        android:title="@string/setup_languages_title">
+        <ListPreference
+            android:key="pref_language"
+            android:title="@string/pref_language_title"
+            app:singleLineTitle="false"
+            android:entries="@array/language_entries"
+            android:entryValues="@array/language_values"
+            android:defaultValue="en"
+            app:useSimpleSummaryProvider="true" />
+        <MultiSelectListPreference
+            android:key="pref_enabled_languages"
+            android:title="@string/pref_enabled_languages_title"
+            app:singleLineTitle="false"
+            android:summary="@string/pref_enabled_languages_summary"
+            android:entries="@array/language_entries"
+            android:entryValues="@array/language_values"
+            android:defaultValue="@array/language_default_values" />
+        <ListPreference
+            android:key="pref_language_mode"
+            android:title="@string/pref_language_mode_title"
+            app:singleLineTitle="false"
+            android:summary="@string/pref_language_mode_summary"
+            android:entries="@array/language_mode_entries"
+            android:entryValues="@array/language_mode_values"
+            android:defaultValue="one" />
+        <SwitchPreferenceCompat
+            android:key="pref_sync_system_language"
+            android:title="@string/pref_sync_system_language_title"
+            app:singleLineTitle="false"
+            android:summary="@string/pref_sync_system_language_summary"
+            android:defaultValue="true" />
+    </PreferenceScreen>
+
+    <PreferenceScreen
+        android:key="setup_height"
+        android:title="@string/setup_height_title">
+        <com.kinetica.keyboard.settings.SizePreviewPreference
+            android:key="pref_size_preview"
+            android:persistent="false"
+            android:selectable="false" />
+        <SeekBarPreference
+            android:key="pref_keyboard_height_pct"
+            android:title="@string/pref_height_title"
+            app:singleLineTitle="false"
+            android:defaultValue="35"
+            android:max="50"
+            app:min="10"
+            app:showSeekBarValue="true" />
+    </PreferenceScreen>
+
+    <PreferenceScreen
+        android:key="setup_spacing"
+        android:title="@string/setup_spacing_title">
+        <SwitchPreferenceCompat
+            android:key="pref_autospace"
+            android:title="@string/pref_autospace_title"
+            app:singleLineTitle="false"
+            android:defaultValue="true" />
+        <com.kinetica.keyboard.settings.SteppedSliderPreference
+            android:key="pref_autospace_delay_ms"
+            android:title="@string/pref_autospace_delay_title"
+            android:summary="@string/pref_autospace_delay_summary"
+            app:singleLineTitle="false"
+            android:defaultValue="300"
+            app:sliderSteps="@array/timing_steps_autospace"
+            android:dependency="pref_autospace" />
+        <SwitchPreferenceCompat
+            android:key="pref_autospace_tapped_words"
+            android:title="@string/pref_autospace_tapped_words_title"
+            app:singleLineTitle="false"
+            android:summary="@string/pref_autospace_tapped_words_summary"
+            android:dependency="pref_autospace"
+            android:defaultValue="false" />
+        <com.kinetica.keyboard.settings.SteppedSliderPreference
+            android:key="pref_autospace_tap_delay_ms"
+            android:title="@string/pref_autospace_tap_delay_title"
+            android:summary="@string/pref_autospace_tap_delay_summary"
+            app:singleLineTitle="false"
+            android:defaultValue="300"
+            app:sliderSteps="@array/timing_steps_autospace"
+            android:dependency="pref_autospace" />
+    </PreferenceScreen>
+
+    <PreferenceScreen
+        android:key="setup_theme"
+        android:title="@string/setup_theme_title">
+        <ListPreference
+            android:key="pref_theme_mode"
+            android:title="@string/pref_theme_mode_title"
+            app:singleLineTitle="false"
+            android:entries="@array/theme_mode_entries"
+            android:entryValues="@array/theme_mode_values"
+            android:defaultValue="default"
+            app:useSimpleSummaryProvider="true" />
+        <ListPreference
+            android:key="pref_theme_brightness"
+            android:title="@string/pref_theme_brightness_title"
+            app:singleLineTitle="false"
+            android:entries="@array/theme_brightness_entries"
+            android:entryValues="@array/theme_brightness_values"
+            android:defaultValue="dark"
+            app:useSimpleSummaryProvider="true" />
+        <com.kinetica.keyboard.settings.ColorHexPreference
+            android:key="pref_theme_color_hex"
+            android:title="@string/pref_theme_color_hex_title"
+            app:singleLineTitle="false" />
+        <com.kinetica.keyboard.settings.ThemePreviewPreference
+            android:key="pref_theme_preview"
+            android:persistent="false"
+            android:selectable="false" />
+    </PreferenceScreen>
+</PreferenceScreen>

@@ -1,6 +1,7 @@
 package com.kinetica.keyboard.ime
 
 import com.kinetica.keyboard.layout.LayoutMutations
+import com.kinetica.keyboard.layout.SymbolRows
 import com.kinetica.keyboard.settings.Prefs
 
 /**
@@ -104,3 +105,10 @@ internal fun opensOnNumpad(restarting: Boolean, enabled: Boolean, numeric: Boole
  */
 internal fun opensOnLetters(restarting: Boolean, enabled: Boolean, onLetters: Boolean): Boolean =
     enabled && !restarting && !onLetters
+
+/**
+ * Whether a space typed on [board] brings the letters back: the setting on and a symbol page
+ * (#53). The number pad and the editing page stay, as numbers and moves run on past a space.
+ */
+internal fun lettersAfterSpace(enabled: Boolean, board: String?): Boolean =
+    enabled && board in SymbolRows.PAGES

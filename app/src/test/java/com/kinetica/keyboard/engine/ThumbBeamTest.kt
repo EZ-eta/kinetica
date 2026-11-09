@@ -117,4 +117,74 @@ class ThumbBeamTest {
         val beam = lines.firstOrNull { it.startsWith("beam[") }
         assertTrue("the beam must run and report: $lines", beam != null && "cands=" in beam)
     }
+
+    /**
+     * The census's diagnosis: the beam held to one word reads every way of sharing its letters
+     * between the thumbs, scores each, and names the letter where none goes on. A recorded `who` is
+     * read as tapped, `w` on the left thumb and `ho` on the right stroke; `whoa` stops at its `a`,
+     * with no item left on either thumb and the stroke nowhere near it.
+     */
+    @Test
+    fun theBeamHeldToOneWordReadsItsWaysAndWhereTheyStop() {
+        val p = predictor("en")
+        val tokens = TraceReplay.tokens(
+            "decode in[en]: tap[w,LEFT,t=18395486] " +
+                "swipe[RIGHT,t=18395591..18395868,keys=h@0-64,j@64-108,k@108-146,o@146-277,arc=3.09,n=63/4ms] ctx=[]",
+            g,
+        )
+        val seq = MergeAlternatives.sequences(tokens, DtwMatcher()).first()
+        val items = Matcher.buildPattern(seq, g)!!
+        fun alone(word: String): ThumbBeam {
+            val nodes = IntArray(word.length) { p.trie.prefixNode(word.substring(0, it + 1)) }
+            val b = ThumbBeam(p, g, seq, items, CandidateHeap(KineticaConstants.TOP_K), -1, null)
+            b.watch = nodes
+            b.only = nodes
+            b.width = 20_000
+            b.maxAttempts = Int.MAX_VALUE
+            b.run()
+            return b
+        }
+        val who = alone("who")
+        val best = who.readings.maxByOrNull { it.score }
+        assertTrue("who must be read: ${who.watchAt}", best != null && best.score > 0f)
+        assertEquals("w on the left thumb, h and o on the right", listOf(0, 1, 1), best!!.stream.toList())
+        val whoa = alone("whoa")
+        assertTrue("whoa cannot be spelled here", whoa.readings.isEmpty())
+        assertEquals(3, whoa.reached)
+        val at = whoa.watchAt[4].orEmpty()
+        assertTrue("its a: no item left, and off the stroke: $at", "open.none" in at && "cont.nopass" in at)
+    }
+
+    /**
+     * A recorded `who`, a `w` tap then the right thumb's stroke. Read as `how`, the tap steps
+     * back about 300 ms: past the allowance, so charged, and scored below `who`. Moved earlier,
+     * the tap is still opened for `how` at about 600 ms back and refused at about 1 000, past
+     * HANDOVER_CHARGE_MAX_MS.
+     */
+    @Test
+    fun aHandOverIsChargedUpToItsCapAndRefusedPastIt() {
+        val p = predictor("en")
+        fun beam(shift: Long, watched: String?): Pair<List<String>, Map<String, Int>> {
+            val tokens = TraceReplay.tokens(
+                "decode in[en]: tap[w,LEFT,t=${18395486 - shift}] " +
+                    "swipe[RIGHT,t=18395591..18395868,keys=h@0-64,j@64-108,k@108-146,o@146-277,arc=3.09,n=63/4ms] ctx=[]",
+                g,
+            )
+            val seq = MergeAlternatives.sequences(tokens, DtwMatcher()).first()
+            val items = Matcher.buildPattern(seq, g)
+            assertTrue(ThumbBeam.applies(seq, items))
+            val heap = CandidateHeap(KineticaConstants.TOP_K)
+            val b = ThumbBeam(p, g, seq, items!!, heap, -1, null)
+            if (watched != null) b.watch = IntArray(watched.length) { p.trie.prefixNode(watched.substring(0, it + 1)) }
+            b.run()
+            return heap.sortedByScoreDesc().map { it.word } to b.watchWhy
+        }
+        val near = beam(0, null).first
+        assertTrue("how must be read with its tap 300 ms back: $near", "how" in near)
+        assertEquals("who must lead its own buffer: $near", "who", near.first())
+        val inside = beam(300, "how").second
+        assertTrue("the tap must open for how about 600 ms back: $inside", "open.taptime" !in inside)
+        val past = beam(700, "how").second
+        assertTrue("the tap must be refused for how about 1 000 ms back: $past", "open.taptime" in past)
+    }
 }

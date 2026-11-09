@@ -31,6 +31,9 @@ class ColorHexPreference @JvmOverloads constructor(
         }
     }
 
+    /** Redraws the swatch after the colour was written elsewhere ([RowSync]). */
+    fun refresh() = notifyChanged()
+
     override fun onClick() {
         ColourDialog.show(context, title, hex) { value ->
             if (callChangeListener(value)) {

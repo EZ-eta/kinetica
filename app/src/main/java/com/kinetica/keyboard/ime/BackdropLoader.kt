@@ -21,20 +21,24 @@ internal class BackdropLoader(private val context: Context, private val main: Ha
     var bitmap: Bitmap? = null
         private set
 
-    /** Reads the image again if [current] differs from the last stamp; [onReady] runs on main. */
-    fun refresh(current: String, onReady: () -> Unit) {
-        if (current == stamp) return
-        stamp = current
-        if (current.isEmpty()) {
+    /**
+     * Reads the image again if [current] or the look ([night]) differs from the last; [onReady]
+     * runs on main. The night look starts with the day's stamp, so the stamp alone is not enough.
+     */
+    fun refresh(current: String, night: Boolean, onReady: () -> Unit) {
+        val key = if (current.isEmpty()) "" else "$night/$current"
+        if (key == stamp) return
+        stamp = key
+        if (key.isEmpty()) {
             bitmap = null
             onReady()
             return
         }
         io.execute {
-            val read = BackdropStore.load(context)
+            val read = BackdropStore.load(context, night)
             main.post {
                 // A newer pick while this one was read wins.
-                if (stamp == current) {
+                if (stamp == key) {
                     bitmap = read
                     onReady()
                 }

@@ -67,7 +67,8 @@ data class WordCandidate(
 
         /**
          * Found only by the rescue pass, through a gate it relaxed. Pick-only when
-         * nothing else was found: 10 of 46 such leads were the word, so none auto-commits.
+         * nothing else was found: 10 of 46 such leads were the word. Only a lead that fits
+         * within RESCUE_COMMIT_D and stands clear commits.
          */
         RESCUE,
     }

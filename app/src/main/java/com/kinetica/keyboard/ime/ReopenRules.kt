@@ -72,6 +72,22 @@ internal fun tapAnchors(word: String, g: KeyboardGeometry, beforeTime: Long): Li
     return taps.ifEmpty { null }
 }
 
+/**
+ * The taps an accented letter from a popup joins the word as, at [now]: one per letter it folds
+ * to, so `ß` is two taps on `s` and the decode reads `grusse` for a written `grüße`. Null when
+ * [text] is no accented letter or a letter has no key on this board.
+ */
+internal fun accentTaps(text: String, g: KeyboardGeometry, now: Long): List<TapToken>? {
+    val codes = AccentFolder.accentedLetterCodes(text, g.alphabet) ?: return null
+    if (codes.any { !g.hasKey(it) }) return null
+    return codes.mapIndexed { i, code ->
+        TapToken(
+            StreamId.LEFT, code, g.centerX(code), g.centerY(code),
+            longPress = false, tStart = now + i, tEnd = now + i + 1,
+        )
+    }
+}
+
 /** The shift a reloaded word's alternatives are shown in, read off the word itself. */
 internal fun shiftOf(word: String): ShiftState.State = when {
     word.length > 1 && word.all { it.isUpperCase() } -> ShiftState.State.CAPS_LOCK

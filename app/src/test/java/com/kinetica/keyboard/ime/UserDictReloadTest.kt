@@ -24,7 +24,19 @@ class UserDictReloadTest {
     }
 
     @Test
+    fun aNewSpellingOfAHeldKeyAsksByItsSpelling() {
+        // `carə` folds onto `care`: asked whether the trie held the folded key, the learn path
+        // and the load's replay never merged it. Both ask by spelling.
+        val learner = ImeSources.declaring("private fun askUserDictReload(").text
+        assertTrue(learner.contains("userDictNeedsReload(before, after, p?.holdsSpelling(word) ?: true)"))
+        val load = ImeSources.declaring("stale += replayLearns(counts, lang, learns,").text
+        assertEquals(3, Regex("replayLearns\\([^)]*::holdsSpelling\\)").findAll(load).count())
+        assertFalse(load.contains("::isWordIgnoringCase"))
+    }
+
+    @Test
     fun aWordBelowTheFloorAsksForNothing() {
+
         // The floor keeps a misdecode out of the trie: a word's first commit changes nothing.
         assertFalse(userDictNeedsReload(0, floor - 1, trieHasWord = false))
     }
@@ -98,7 +110,8 @@ class UserDictReloadTest {
 
     @Test
     fun theNewestHeldLoadIsTheOneInstalled() {
-        // A second reload under the same word read newer rows; the first must never install.
+        // A second reload under the same word read newer rows; the first must never install. Newest
+        // by load id: LearnJournal.supersede refuses an older parse posted after a newer one.
         val held = HeldInstall()
         val ran = mutableListOf<String>()
         held.offer(wordPending = true) { ran += "old" }

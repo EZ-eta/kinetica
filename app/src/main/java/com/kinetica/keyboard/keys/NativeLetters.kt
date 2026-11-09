@@ -27,6 +27,10 @@ object NativeLetters {
     /** The letters [lang] writes; empty for English and for a language on its own script. */
     fun of(lang: String): String = LETTERS[lang].orEmpty()
 
+    /** Every language with letters of its own. */
+    val languages: Set<String> get() = LETTERS.keys
+
+
     /** Every letter the enabled [languages] write, as alternates spell them. */
     fun keptBy(languages: List<String>): Set<String> =
         languages.flatMap { lang -> of(lang).map { it.toString() } }.toSet()

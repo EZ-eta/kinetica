@@ -17,6 +17,10 @@ import com.kinetica.keyboard.settings.KeyboardConfig
 import com.kinetica.keyboard.settings.LanguageMode
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.Executor
+import java.util.concurrent.FutureTask
+import java.util.concurrent.RejectedExecutionException
 
 /**
  * The dictionaries resident for decoding and the personal data each one ranks with: the active
@@ -25,7 +29,11 @@ import java.util.concurrent.ConcurrentHashMap
  * Loaded off the main thread and installed on it. The decode threads read the predictors, and the
  * maps through them, so the maps are concurrent and the main thread is their only writer.
  */
-internal class ResidentDictionaries(private val context: Context, private val mainHandler: Handler) {
+internal class ResidentDictionaries(
+    private val context: Context,
+    private val mainHandler: Handler,
+    private val dbExecutor: Executor,
+) {
 
     // Populated asynchronously once the dictionary is parsed.
     @Volatile
@@ -73,17 +81,32 @@ internal class ResidentDictionaries(private val context: Context, private val ma
     private val heldInstall = HeldInstall()
     val holdsInstall: Boolean get() = heldInstall.isHeld
 
+    // Count changes since each load's rows were read. Main thread only.
+    private val learnJournal = LearnJournal()
+
+    /** A count change a load in flight has not read; its install replays it. Main thread. */
+    fun noteLearn(lang: String, word: String, amount: Int) = learnJournal.note(lang, word, amount)
+
+    /** The journal's token for a learn now; see [correctLearn]. Main thread. */
+    fun learnMark(): Int = learnJournal.mark()
+
+    /** A learn's live count read [gap] short of its row; true when the live map needs it. Main thread. */
+    fun correctLearn(mark: Int, lang: String, word: String, gap: Int): Boolean =
+        learnJournal.correct(mark, lang, word, gap)
+
     /**
      * Loads the active language and the residents beside it, and installs them on the main
      * thread; [onReady] then gets the active predictor. [config] is read where the load reads
      * it: the languages now, the phrase and spelling settings on the load thread, the language
      * again on install, since the user may have switched it mid-parse. While [wordPending] the
-     * install waits for [releaseInstall].
+     * install waits for [releaseInstall]. [onStale] asks another load: a word learned mid-load
+     * crossed the merge floor after its rows were read.
      */
     fun load(
         config: () -> KeyboardConfig,
         geometry: () -> KeyboardGeometry?,
         wordPending: () -> Boolean,
+        onStale: () -> Unit,
         onReady: (WordPredictor) -> Unit,
     ) {
         val lang = config().language
@@ -97,19 +120,29 @@ internal class ResidentDictionaries(private val context: Context, private val ma
         val detectLang = if (mode != LanguageMode.ONE) sameScript.firstOrNull() else null
         // With no primary language, a third resident: the next enabled one in the same script.
         val extraLang = if (mode == LanguageMode.FOLLOW && KineticaConstants.MAX_RESIDENT_LANGUAGES > 2) sameScript.getOrNull(1) else null
+        // The rows are read on the database thread, behind every learn already queued there; a
+        // learn from now on goes into the journal, which the install replays over these rows.
+        val journal = learnJournal.open()
+        val phrases = config().learnPhrases
+        val rowsRead = FutureTask {
+            listOfNotNull(lang, detectLang, extraLang).associateWith { readUserRows(it, phrases) }
+        }
+        try {
+            dbExecutor.execute(rowsRead)
+        } catch (e: RejectedExecutionException) {
+            // The service is shutting down: nothing will install.
+            learnJournal.take(journal)
+            return
+        }
         Thread({
             try {
+                val read = rowsRead.get()
                 // Learned words merge into the trie at load, gated and scaled by
                 // PERSONAL_MERGE_MIN_COUNT and USER_FREQ_SCALE (rationale in KineticaConstants).
-                val userRows = try {
-                    KineticaDb.get(context).userWords().topN(lang, USER_DICT_LIMIT)
-                } catch (e: RuntimeException) {
-                    Log.w(KineticaIME.TAG, "user dictionary unavailable", e)
-                    emptyList()
-                }
+                val userRows = read.getValue(lang).words
                 val userWords =
                     DictionaryLoader.userWordsForMerge(userRows.map { it.word to it.frequency })
-                val pairRows = if (config().learnPhrases) userBigramRows(lang) else emptyList()
+                val pairRows = read.getValue(lang).pairs
                 // Words the user has blocked never reach the trie, so they
                 // cannot be decoded, completed or suggested.
                 val blocked = blockedWords(lang)
@@ -128,13 +161,8 @@ internal class ResidentDictionaries(private val context: Context, private val ma
                 var altPairRows: List<UserBigram> = emptyList()
                 val alt = detectLang?.let { other ->
                     try {
-                        altRows = try {
-                            KineticaDb.get(context).userWords().topN(other, USER_DICT_LIMIT)
-                        } catch (e: RuntimeException) {
-                            Log.w(KineticaIME.TAG, "user dictionary unavailable for $other", e)
-                            emptyList()
-                        }
-                        altPairRows = if (config().learnPhrases) userBigramRows(other) else emptyList()
+                        altRows = read.getValue(other).words
+                        altPairRows = read.getValue(other).pairs
                         val d = openWordlist(other).bufferedReader().use {
                             DictionaryLoader.load(
                                 it,
@@ -160,13 +188,8 @@ internal class ResidentDictionaries(private val context: Context, private val ma
                 var extraPairRows: List<UserBigram> = emptyList()
                 val extra = extraLang?.let { other ->
                     try {
-                        extraRows = try {
-                            KineticaDb.get(context).userWords().topN(other, USER_DICT_LIMIT)
-                        } catch (e: RuntimeException) {
-                            Log.w(KineticaIME.TAG, "user dictionary unavailable for $other", e)
-                            emptyList()
-                        }
-                        extraPairRows = if (config().learnPhrases) userBigramRows(other) else emptyList()
+                        extraRows = read.getValue(other).words
+                        extraPairRows = read.getValue(other).pairs
                         val d = openWordlist(other).bufferedReader().use {
                             DictionaryLoader.load(
                                 it,
@@ -187,10 +210,18 @@ internal class ResidentDictionaries(private val context: Context, private val ma
                     }
                 }
                 mainHandler.post {
+                    // Two parses race to the main thread: an older one landing after a newer one
+                    // would put back older rows, an older trie and an older blocked set.
+                    if (!learnJournal.supersede(journal)) {
+                        DecodeTrace.log { "  userdict install dropped lang=$lang superseded" }
+                        return@post
+                    }
                     blockedSpellings = allBlocked
                     val held = heldInstall.offer(wordPending()) install@{
+                        val learns = learnJournal.take(journal) ?: return@install
                         // The user may have toggled languages again mid-parse, or while it was held.
                         if (lang != config().language) return@install
+                        val stale = ArrayList<String>()
                         val counts = ConcurrentHashMap<String, Int>(userRows.size * 2)
                         for (row in userRows) counts[row.word] = row.frequency
                         personalCounts = counts
@@ -202,6 +233,9 @@ internal class ResidentDictionaries(private val context: Context, private val ma
                         val p = WordPredictor(
                             dict.trie, bigrams, geometry(), dict.forms, counts, pairs, lang, dict.learned,
                         )
+                        // Before any decode reads them: no composer holds these predictors yet. By
+                        // spelling, as askUserDictReload: a new accented form of a held key is not merged.
+                        stale += replayLearns(counts, lang, learns, p::holdsSpelling)
                         predictor = p
                         val altCounts = ConcurrentHashMap<String, Int>(altRows.size * 2)
                         for (row in altRows) altCounts[row.word] = row.frequency
@@ -214,7 +248,7 @@ internal class ResidentDictionaries(private val context: Context, private val ma
                             WordPredictor(
                                 d.trie, b, geometry(), d.forms, altCounts, altPairs,
                                 language = detectLang ?: "", learnedOnly = d.learned,
-                            )
+                            ).also { s -> stale += replayLearns(altCounts, s.language, learns, s::holdsSpelling) }
                         }
                         val xCounts = ConcurrentHashMap<String, Int>(extraRows.size * 2)
                         for (row in extraRows) xCounts[row.word] = row.frequency
@@ -224,8 +258,16 @@ internal class ResidentDictionaries(private val context: Context, private val ma
                         extraLanguage = if (extra != null) extraLang else null
                         extraPredictor = extra?.let { (d, b) ->
                             WordPredictor(d.trie, b, geometry(), d.forms, xCounts, xPairs, language = extraLang ?: "", learnedOnly = d.learned)
+                                .also { x -> stale += replayLearns(xCounts, x.language, learns, x::holdsSpelling) }
                         }
+                        learnJournal.installed(journal)
                         onReady(p)
+                        for ((l, r) in read) DecodeTrace.log { "  userdict rows lang=$l ${r.tally}" }
+                        if (learns.isNotEmpty()) DecodeTrace.log { "  userdict install replay learns=${learns.size}" }
+                        if (stale.isNotEmpty()) {
+                            DecodeTrace.log { "  userdict stale words=${stale.joinToString(",")} src=install" }
+                            onStale()
+                        }
                         Log.i(
                             KineticaIME.TAG,
                             "dictionary ready [$lang]: ${dict.trie.wordCount} words, " +
@@ -239,6 +281,10 @@ internal class ResidentDictionaries(private val context: Context, private val ma
                 }
             } catch (e: IOException) {
                 Log.e(KineticaIME.TAG, "dictionary load failed for $lang", e)
+            } catch (e: ExecutionException) {
+                Log.e(KineticaIME.TAG, "dictionary load failed for $lang", e)
+            } catch (e: InterruptedException) {
+                Log.e(KineticaIME.TAG, "dictionary load interrupted for $lang", e)
             } catch (e: RuntimeException) {
                 // On its own thread an exception kills the keyboard; the dictionary already
                 // loaded keeps serving instead.
@@ -369,11 +415,69 @@ internal class ResidentDictionaries(private val context: Context, private val ma
         return out
     }
 
+    private fun userRowsFor(lang: String): UserRows {
+        val dao = KineticaDb.get(context).userWords()
+        val top = dao.topN(lang, USER_DICT_LIMIT)
+        // Under the limit the top rows are the whole list.
+        if (top.size < USER_DICT_LIMIT) return UserRows(top, emptyList(), "loaded=${top.size}")
+        val capitals = dao.withCapitals(lang, USER_DICT_LIMIT)
+        val mergeable = dao.mergeable(lang, KineticaConstants.PERSONAL_MERGE_MIN_COUNT, USER_MERGE_LIMIT)
+        val words = loadedUserRows(top, capitals, mergeable)
+        return UserRows(
+            words, emptyList(),
+            "loaded=${words.size} top=${top.size} mergeable=${mergeable.size} capitals=${capitals.size}",
+        )
+    }
+
+    /** One list's rows, and [tally], how many each read returned, for the trace. */
+    private class UserRows(val words: List<UserWord>, val pairs: List<UserBigram>, val tally: String)
+
+    /** [lang]'s learned words and, with [phrases], pairs. An unavailable store is no rows. */
+    private fun readUserRows(lang: String, phrases: Boolean): UserRows {
+        val read = try {
+            userRowsFor(lang)
+        } catch (e: RuntimeException) {
+            Log.w(KineticaIME.TAG, "user dictionary unavailable for $lang", e)
+            UserRows(emptyList(), emptyList(), "unavailable")
+        }
+        return UserRows(read.words, if (phrases) userBigramRows(lang) else emptyList(), read.tally)
+    }
+
     private fun casesOf(rows: List<UserWord>): Map<String, DictionaryLoader.LearnedCase> =
         DictionaryLoader.learnedCases(rows.map { Triple(it.word, it.display, it.caseVotes) })
 
     private companion object {
+        /** The most used rows a load reads, for their counts; the reads below add what it drops. */
         const val USER_DICT_LIMIT = 5000
         const val USER_PAIR_LIMIT = 5000
+
+        /**
+         * The rows over the merge floor a load reads past [USER_DICT_LIMIT]. 20 000 new words parse
+         * in the time of none on the JVM, 0.9 MB more trie; 50 000 take 60% longer. Bundled words
+         * are skipped at the merge, so only a word the lists lack grows the trie.
+         */
+        const val USER_MERGE_LIMIT = 20_000
     }
+}
+
+/**
+ * The user rows a load reads: the [top] counts, then every row with a learned capital, then every
+ * row over the merge floor ([mergeable]) they miss.
+ *
+ * The install rebuilds the capital mirror and the live counts from these rows. Past the limit, a
+ * word learned this week sits behind thousands of older ones at its count: its settled capital was
+ * dropped, and a word over the floor never reached the trie, its count read as none.
+ */
+internal fun loadedUserRows(
+    top: List<UserWord>,
+    capitals: List<UserWord>,
+    mergeable: List<UserWord> = emptyList(),
+): List<UserWord> {
+    if (capitals.isEmpty() && mergeable.isEmpty()) return top
+    val have = top.mapTo(HashSet()) { it.word }
+    val out = ArrayList<UserWord>(top.size + capitals.size + mergeable.size)
+    out.addAll(top)
+    for (r in capitals) if (have.add(r.word)) out.add(r)
+    for (r in mergeable) if (have.add(r.word)) out.add(r)
+    return out
 }

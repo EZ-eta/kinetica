@@ -108,6 +108,8 @@ object TraceRecorder {
         if (old.exists()) old.delete()
         f.renameTo(old)
         lines = 0L
+        // A rotation can drop the file holding the board line; the next swipe writes it again.
+        DecodeTrace.epoch++
     }
 
     /** Oldest first, so an exported trace reads in the order it happened. */
@@ -136,6 +138,8 @@ object TraceRecorder {
             File(f.parentFile, CRASH_NAME).delete()
             f.delete()
             lines = 0L
+            // The board line went with the file: the next swipe writes it again.
+            DecodeTrace.epoch++
         }
     }
 

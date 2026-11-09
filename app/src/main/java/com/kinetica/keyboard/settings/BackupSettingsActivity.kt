@@ -4,6 +4,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.text.format.Formatter
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ProgressBar
@@ -14,6 +15,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.setPadding
+import androidx.preference.PreferenceManager
 import com.kinetica.keyboard.R
 import com.kinetica.keyboard.data.KineticaDb
 import java.io.IOException
@@ -34,7 +36,7 @@ class BackupSettingsActivity : AppCompatActivity() {
 
     private val createBackup =
         registerForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
-            if (uri != null) exportBackup(uri, includePhrases)
+            if (uri != null) exportBackup(uri, includePhrases, includeImage)
         }
     private val pickBackup =
         registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -43,6 +45,9 @@ class BackupSettingsActivity : AppCompatActivity() {
 
     /** Ticked in the export dialog; phrases ride only when it is. */
     private var includePhrases = false
+
+    /** Ticked in the export dialog; the background image rides only when it is. */
+    private var includeImage = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -90,7 +95,7 @@ class BackupSettingsActivity : AppCompatActivity() {
             Button(this).apply {
                 text = getString(R.string.backup_export)
                 isEnabled = !BackupRun.progress.running
-                setOnClickListener { askPhrasesThenExport() }
+                setOnClickListener { askThenExport() }
             },
         )
         container.addView(
@@ -124,35 +129,46 @@ class BackupSettingsActivity : AppCompatActivity() {
     // ------------------------------------------------------- whole-keyboard backup
 
     /**
-     * Phrases are the only part the export asks about.
+     * Phrases and the background image are the parts the export asks about, each unticked.
      *
      * Learned word pairs are opt-in because a pair is a fragment of a sentence, and a backup file
      * can be copied anywhere. Leaving them out silently would lose data and putting them in
-     * silently would undo the consent, so the export asks, unticked, every time.
+     * silently would undo the consent, so the export asks, unticked, every time. The image is
+     * a photo of the user's own, and most of the file's size.
      */
-    private fun askPhrasesThenExport() {
+    private fun askThenExport() {
         io.execute {
             val pairs = try {
                 Prefs.ALL_LANGUAGES.sumOf { KineticaDb.get(this).userBigrams().countForLanguage(it) }
             } catch (e: RuntimeException) {
                 0
             }
+            val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+            // The day and night looks' images travel together, under one tick.
+            val imageBytes = listOf(false, true)
+                .filter { BackdropStore.isSet(this, prefs, it) }
+                .sumOf { BackdropStore.file(this, it).length() }
             main.post {
                 if (isDestroyed) return@post
-                if (pairs == 0) {
-                    includePhrases = false
+                val choices = ArrayList<String>()
+                if (pairs > 0) choices.add(getString(R.string.backup_include_phrases, pairs))
+                if (imageBytes > 0) {
+                    choices.add(getString(R.string.backup_include_image, Formatter.formatShortFileSize(this, imageBytes)))
+                }
+                includePhrases = false
+                includeImage = false
+                if (choices.isEmpty()) {
                     createBackup.launch(Backup.filename(LocalDateTime.now()))
                     return@post
                 }
-                val checked = booleanArrayOf(false)
+                val checked = BooleanArray(choices.size)
                 AlertDialog.Builder(this)
                     .setTitle(R.string.backup_export)
-                    .setMultiChoiceItems(
-                        arrayOf(getString(R.string.backup_include_phrases, pairs)),
-                        checked,
-                    ) { _, _, isChecked -> checked[0] = isChecked }
+                    .setMultiChoiceItems(choices.toTypedArray(), checked) { _, i, isChecked -> checked[i] = isChecked }
                     .setPositiveButton(android.R.string.ok) { _, _ ->
-                        includePhrases = checked[0]
+                        // Phrases come first when offered, so the image is the last row either way.
+                        includePhrases = pairs > 0 && checked[0]
+                        includeImage = imageBytes > 0 && checked[choices.size - 1]
                         createBackup.launch(Backup.filename(LocalDateTime.now()))
                     }
                     .setNegativeButton(android.R.string.cancel, null)
@@ -161,10 +177,10 @@ class BackupSettingsActivity : AppCompatActivity() {
         }
     }
 
-    private fun exportBackup(uri: Uri, withPhrases: Boolean) {
+    private fun exportBackup(uri: Uri, withPhrases: Boolean, withImage: Boolean) {
         io.execute {
             try {
-                val data = BackupRun.collect(this, withPhrases)
+                val data = BackupRun.collect(this, withPhrases, withImage)
                 val dropped = Backup.unencodable(data)
                 var lines = 0
                 contentResolver.openOutputStream(uri)?.bufferedWriter()?.use { w ->

@@ -125,6 +125,59 @@ class SymbolsLayoutTest {
         }
     }
 
+    /** Arithmetic beside the digits, each with the signs it is asked with on a long press. */
+    @Test
+    fun theNumpadCarriesTheArithmeticKeysAndTheirHolds() {
+        val numpad = read("numpad.json")
+        for (ch in listOf("+", "*", "=", "%")) {
+            assertTrue("$ch must be tappable on the numpad", tappable(numpad, ch))
+        }
+        for (ch in listOf("±", "/", "≠", "≈", "$", "€", "£", "¢", "_")) {
+            assertTrue("$ch must be on a numpad long press", onLongPress(numpad, ch))
+        }
+    }
+
+    @Test
+    fun theNumpadDigitsSitInTheMiddle() {
+        val numpad = read("numpad.json")
+        for (id in listOf("n2", "n5", "n8", "n0")) {
+            val r = rect(numpad, id)!!
+            assertEquals("$id centred", 0.5f, r[0] + r[2] / 2f, 1e-3f)
+        }
+    }
+
+    @Test
+    fun theNumpadHasAbcAndTheSymbolsKeyOnTheSpaceRow() {
+        val numpad = read("numpad.json")
+        assertTrue("the numpad needs a ?123 key", numpad.contains("\"type\": \"mode_symbols\""))
+        val space = rect(numpad, "space")!!
+        for (id in listOf("abc", "mode")) {
+            assertEquals("$id on the space row", space[1], rect(numpad, id)!![1], 1e-4f)
+        }
+    }
+
+    @Test
+    fun theNumpadKeysTileTheBoard() {
+        val rects = Regex(""""x": ([0-9.]+), "y": ([0-9.]+), "w": ([0-9.]+), "h": ([0-9.]+)""")
+            .findAll(read("numpad.json")).map { m -> m.groupValues.drop(1).map { it.toFloat() } }.toList()
+        val n = 120
+        for (yi in 0 until n) {
+            for (xi in 0 until n) {
+                val x = (xi + 0.5f) / n
+                val y = (yi + 0.5f) / n
+                val over = rects.count { r -> x >= r[0] && x < r[0] + r[2] && y >= r[1] && y < r[1] + r[3] }
+                assertEquals("cell at $x, $y", 1, over)
+            }
+        }
+    }
+
+    @Test
+    fun splitModeLeavesTheNumpadWhole() {
+        assertEquals(LayoutMode.FULL, LayoutTransforms.modeFor(LayoutMode.SPLIT, "numpad"))
+        assertEquals(LayoutMode.SPLIT, LayoutTransforms.modeFor(LayoutMode.SPLIT, "symbols"))
+        assertEquals(LayoutMode.LEFT_ALIGNED, LayoutTransforms.modeFor(LayoutMode.LEFT_ALIGNED, "numpad"))
+    }
+
     @Test
     fun theNumpadIsReachedBySlideAndNoKeyOfItsOwn() {
         // No 123 key, so the rows line up; a slide right on either page key opens the numpad.

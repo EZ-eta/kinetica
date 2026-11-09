@@ -54,6 +54,8 @@ data class EditorState(
     /** The action id that goes with [actionLabel]. */
     val customActionId: Int = 0,
     val fieldKind: FieldKind = FieldKind.TEXT,
+    /** The try field under Kinetica's own settings: the settings are already open behind it. */
+    val ownTryField: Boolean = false,
 ) {
     /** True when nothing about this field may be persisted, for either reason. */
     val teachesNothing: Boolean get() = privateMode || noLearning
@@ -78,7 +80,19 @@ data class EditorState(
         const val ONE_TOKEN_OPTION = "com.kinetica.keyboard.oneToken"
 
         internal fun asksForOneToken(privateImeOptions: String?): Boolean =
-            privateImeOptions?.split(',')?.any { it.trim() == ONE_TOKEN_OPTION } == true
+            hasOption(privateImeOptions, ONE_TOKEN_OPTION)
+
+        /**
+         * The private option on the try field under every settings screen. Only read with the
+         * field's package equal to the keyboard's own, so another app cannot claim it.
+         */
+        const val TRY_FIELD_OPTION = "com.kinetica.keyboard.tryField"
+
+        internal fun isOwnTryField(privateImeOptions: String?, fieldPackage: String?, ownPackage: String?): Boolean =
+            ownPackage != null && fieldPackage == ownPackage && hasOption(privateImeOptions, TRY_FIELD_OPTION)
+
+        private fun hasOption(privateImeOptions: String?, option: String): Boolean =
+            privateImeOptions?.split(',')?.any { it.trim() == option } == true
 
         val DEFAULT = EditorState(
             privateMode = false, noLearning = false, multiline = false,
@@ -86,7 +100,8 @@ data class EditorState(
             addressField = false,
         )
 
-        fun from(info: EditorInfo?): EditorState {
+        /** [ownPackage] is the keyboard's package at runtime, `.dev` included. */
+        fun from(info: EditorInfo?, ownPackage: String? = null): EditorState {
             if (info == null) return DEFAULT
             val inputType = info.inputType
             val cls = inputType and InputType.TYPE_MASK_CLASS
@@ -145,6 +160,7 @@ data class EditorState(
                 actionLabel = info.actionLabel?.toString()?.takeIf { it.isNotBlank() },
                 customActionId = info.actionId,
                 fieldKind = kind,
+                ownTryField = isOwnTryField(info.privateImeOptions, info.packageName, ownPackage),
             )
         }
     }

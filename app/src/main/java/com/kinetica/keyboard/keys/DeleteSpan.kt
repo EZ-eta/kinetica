@@ -55,15 +55,23 @@ object DeleteSpan {
      * Length of the tail of [text] holding the last [units] whitespace-delimited
      * words, trailing whitespace included. Punctuation is part of a word, so one slide step
      * removes "word," and leaves no comma behind.
+     *
+     * A line break is a step of its own, with the spaces beside it: a run of empty lines goes one
+     * line per step, as punctuation stops a piece, and never takes the word above with it.
      */
     fun words(text: CharSequence, units: Int): Int {
         if (units <= 0) return 0
         var i = text.length
         var n = 0
         while (n < units && i > 0) {
-            while (i > 0 && text[i - 1].isWhitespace()) i--
-            while (i > 0 && !text[i - 1].isWhitespace()) i--
+            i = backOverSpaces(text, i)
             n++
+            val lineBreak = breakEndingAt(text, i)
+            if (lineBreak > 0) {
+                i -= lineBreak
+                continue
+            }
+            while (i > 0 && !text[i - 1].isWhitespace()) i--
         }
         return text.length - i
     }
@@ -76,13 +84,20 @@ object DeleteSpan {
      *
      * Letters, digits and combining marks make a piece; everything else that is not whitespace
      * cuts one. A surrogate pair is never split: both halves are on the same side of that line.
+     * A line break is a step of its own, as in [words].
      */
     fun pieces(text: CharSequence, units: Int): Int {
         if (units <= 0) return 0
         var i = text.length
         var n = 0
         while (n < units && i > 0) {
-            while (i > 0 && text[i - 1].isWhitespace()) i--
+            i = backOverSpaces(text, i)
+            val lineBreak = breakEndingAt(text, i)
+            if (lineBreak > 0) {
+                i -= lineBreak
+                n++
+                continue
+            }
             while (i > 0 && isMark(text[i - 1])) i--
             while (i > 0 && isPieceChar(text[i - 1])) i--
             var open = i
@@ -114,18 +129,42 @@ object DeleteSpan {
      * left lands before one. That is the usual editor convention (ctrl-right stops at word ends,
      * ctrl-left at word starts), and deletion needs the trailing space to go with its word. A
      * round trip does not return to its starting offset, and DeleteSpanTest asserts it.
+     *
+     * A line break is a stop here too, so a line's end and the next line's start are a step
+     * apart, as they are going back.
      */
     fun wordsForward(text: CharSequence, units: Int): Int {
         if (units <= 0) return 0
         var i = 0
         var n = 0
         while (n < units && i < text.length) {
-            while (i < text.length && text[i].isWhitespace()) i++
-            while (i < text.length && !text[i].isWhitespace()) i++
+            while (i < text.length && text[i].isWhitespace() && !isLineBreak(text[i])) i++
             n++
+            if (i < text.length && isLineBreak(text[i])) {
+                i += if (text[i] == '\r' && i + 1 < text.length && text[i + 1] == '\n') 2 else 1
+                continue
+            }
+            while (i < text.length && !text[i].isWhitespace()) i++
         }
         return i
     }
+
+    /** Where the spaces and tabs ending at [end] start; a line break stops it. */
+    private fun backOverSpaces(text: CharSequence, end: Int): Int {
+        var i = end
+        while (i > 0 && text[i - 1].isWhitespace() && !isLineBreak(text[i - 1])) i--
+        return i
+    }
+
+    /** Length of the line break ending at [end], 0 when there is none; CR LF is one break. */
+    private fun breakEndingAt(text: CharSequence, end: Int): Int = when {
+        end <= 0 || !isLineBreak(text[end - 1]) -> 0
+        end >= 2 && text[end - 1] == '\n' && text[end - 2] == '\r' -> 2
+        else -> 1
+    }
+
+    private fun isLineBreak(c: Char): Boolean =
+        c == '\n' || c == '\r' || c == '\u2028' || c == '\u2029'
 
     /**
      * Length of the tail of [text] holding the last [units] characters, counting a surrogate pair

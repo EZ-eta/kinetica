@@ -4,6 +4,7 @@ import android.os.SystemClock
 import android.view.KeyEvent
 import android.view.inputmethod.ExtractedTextRequest
 import android.view.inputmethod.InputConnection
+import com.kinetica.keyboard.keys.KeyCombo
 
 /**
  * All editor mutations go through here. The InputConnection is re-fetched per
@@ -19,8 +20,10 @@ class InputConnectionHelper(private val connection: () -> InputConnection?) {
     fun sendKey(keyCode: Int, metaState: Int): Boolean {
         val ic = connection() ?: return false
         val now = SystemClock.uptimeMillis()
-        ic.sendKeyEvent(KeyEvent(now, now, KeyEvent.ACTION_DOWN, keyCode, 0, metaState))
-        ic.sendKeyEvent(KeyEvent(now, now, KeyEvent.ACTION_UP, keyCode, 0, metaState))
+        for (s in KeyCombo.strokes(keyCode, metaState)) {
+            val action = if (s.down) KeyEvent.ACTION_DOWN else KeyEvent.ACTION_UP
+            ic.sendKeyEvent(KeyEvent(now, now, action, s.keyCode, 0, s.metaState))
+        }
         return true
     }
 

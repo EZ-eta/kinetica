@@ -8,7 +8,7 @@ import com.kinetica.keyboard.engine.models.StreamId
 
 /**
  * Per-stream swipe trails, in the hue [TrailHue] gives; points fade and shrink over
- * TRAIL_LIFE_MS.
+ * [TrailLife.LIFE_MS], or with [keeps] stay whole until [release].
  *
  * One smoothed piece per sample, so a fast swipe does not read as facets; the joins are
  * [TrailPath]'s and are tested there.
@@ -21,6 +21,7 @@ class TrailRenderer(private val density: Float) {
         var t: Long,
         var hue: Float,
         var breakBefore: Boolean,
+        var kept: Boolean,
     )
 
     private val trails = arrayOf(ArrayDeque<TrailPoint>(), ArrayDeque<TrailPoint>())
@@ -49,6 +50,9 @@ class TrailRenderer(private val density: Float) {
     /** Rainbow: the hue steps per key and the right stream starts offset. */
     var cycles = true
 
+    /** Points laid from now on stay whole until [release]: the trail kept until the word ends. */
+    var keeps = false
+
     fun startStream(stream: StreamId) {
         val i = stream.ordinal
         hues[i] = TrailHue.start(baseHue, stream, cycles)
@@ -73,7 +77,7 @@ class TrailRenderer(private val density: Float) {
         val breakBefore = forceNextPoint[i]
         forceNextPoint[i] = false
         val point = if (pointPool.isEmpty()) {
-            TrailPoint(x, y, t, hue, breakBefore)
+            TrailPoint(x, y, t, hue, breakBefore, keeps)
         } else {
             pointPool.removeLast().also {
                 it.x = x
@@ -81,6 +85,7 @@ class TrailRenderer(private val density: Float) {
                 it.t = t
                 it.hue = hue
                 it.breakBefore = breakBefore
+                it.kept = keeps
             }
         }
         trail.addLast(point)
@@ -93,16 +98,33 @@ class TrailRenderer(private val density: Float) {
         hues[stream.ordinal] = TrailHue.next(hues[stream.ordinal], cycles)
     }
 
-    /** Drops expired points; returns true while anything is still visible. */
+    /**
+     * Drops expired points; returns true while anything is still fading. Kept points are laid after
+     * any fading ones, so a trail whose first point is kept is still: no frame needs drawing.
+     */
     fun prune(now: Long): Boolean {
         var alive = false
         for (trail in trails) {
-            while (trail.isNotEmpty() && now - trail.first().t > TRAIL_LIFE_MS) {
+            while (trail.isNotEmpty() && TrailLife.expired(trail.first().kept, trail.first().t, now)) {
                 recycle(trail.removeFirst())
             }
-            if (trail.isNotEmpty()) alive = true
+            if (trail.isNotEmpty() && !trail.first().kept) alive = true
         }
         return alive
+    }
+
+    /** The kept points start fading [now]; true when there were any. */
+    fun release(now: Long): Boolean {
+        var any = false
+        for (trail in trails) {
+            for (p in trail) {
+                if (!p.kept) continue
+                p.kept = false
+                p.t = now
+                any = true
+            }
+        }
+        return any
     }
 
     fun clear() {
@@ -123,8 +145,7 @@ class TrailRenderer(private val density: Float) {
                 val p = trail[i]
                 val a = trail[i - 1]
                 if (p.breakBefore) continue
-                val age = (now - p.t).coerceAtLeast(0)
-                val f = 1f - age / TRAIL_LIFE_MS.toFloat()
+                val f = TrailLife.strength(p.kept, p.t, now)
                 if (f <= 0f) continue
                 hsv[0] = p.hue
                 hsv[1] = saturation
@@ -150,7 +171,6 @@ class TrailRenderer(private val density: Float) {
     }
 
     private companion object {
-        const val TRAIL_LIFE_MS = 250L
         const val MIN_SAMPLE_INTERVAL_MS = 8L
         const val MAX_POOLED_POINTS = 128
     }

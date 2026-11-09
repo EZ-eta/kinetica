@@ -37,6 +37,10 @@ object TouchRules {
      */
     fun ignoresExtraFinger(onLetter: Boolean, engineFull: Boolean): Boolean = onLetter && engineFull
 
-    /** No long-press menu opens while another thumb is on the letters: two thumbs down is typing. */
-    fun holdOpensMenu(otherOnLetters: Boolean): Boolean = !otherOnLetters
+    /**
+     * No long-press menu opens while another thumb is on the letters, nor once another thumb swiped
+     * during the hold: two thumbs down is typing, and a thumb resting on a word's letter while the
+     * other draws is too, even when the other lifts first.
+     */
+    fun holdOpensMenu(otherOnLetters: Boolean, swipeBeside: Boolean): Boolean = !otherOnLetters && !swipeBeside
 }

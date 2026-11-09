@@ -18,32 +18,45 @@ Features
 
 * Two thumbs, each read with its own cursor, so a word can pass between them in
   any order; one tap can stand for a double letter
+* Long words in one stroke or two thumbs, up to 40 letters, learned as you
+  write them
 * English, Italian, Spanish, Polish, Czech, Dutch, German, French, Norwegian
-  and Romanian, plus Russian, Ukrainian, Hebrew and Arabic as experimental: 46k to 50k words
-  per language with real corpus frequencies. Accented words are drawn on their
-  base keys and restored on commit
+  and Romanian, plus Russian, Ukrainian, Hebrew and Arabic as experimental: 46k
+  to 50k words per language with real corpus frequencies. Accented words are
+  drawn on their base keys and restored on commit
 * Several languages at once: mix two in the suggestions, or let the keyboard
   follow the language you are typing, each word learned into its own
+* A short setup on first open: languages, height, automatic space, theme and a
+  two-thumb practice
+* Settings in two groups, with search, a field to try the keyboard on every
+  screen, and a list of what you changed with a way back
 * Next-word suggestions beside the word's corrections, recent words on the
   bar, and a correction strip right after each word
 * Tap inside a word you wrote to swap it for another; swipe shift to change
   its case
+* An editing page: arrows, selection, word moves, undo and redo, the clipboard,
+  each key yours to change
 * Tap autocorrect with three levels; backspace right after it undoes it
 * Your words rank higher as you use them; slide a suggestion to raise, lower or
   block it. Names you write with a capital keep it
 * Chords on ?123 or the spacebar, edge swipes on any key, and text expansions:
   type text, run an action, or press Ctrl and a key
-* Long-press menus as grids, with your own list for every letter, and symbol
-  pages you can rewrite as text
+* 1 906 emoji with search in 14 languages
+* Voice input through a voice keyboard you install: Kinetica itself records
+  nothing and has no microphone permission
+* Long-press menus as grids, with your own list for every letter and symbol,
+  and symbol pages you can rewrite as text. The letter menus follow your
+  languages: German on, and s offers ß
+* A letter from a long-press menu stays in the word: ß, ő, the Italian schwa
 * Keys that fit the field: @ in email fields, / and .com in web addresses,
-  and an optional number pad for numbers
+  words as typed there, and an optional number pad for numbers
 * Clean links: tracking parameters out of a link, as a shortcut or on paste
 * Optional numbers row, a wider middle row, landscape split, one-handed for
   either hand, split mode, adjustable height and margins; landscape keeps its
   own sizes
 * Peck-type mode for slang and code: every tap types exactly its letter
 * Dark, light, Material You or your own colour; key borders, keys that light
-  up along a swipe, and a background image of your own
+  up along a swipe, a background image, and a night look of its own
 * Backup of every setting, learned word and shortcut in one file
 * Settings in English and Italian, with short tips and a two-thumb tutor
 

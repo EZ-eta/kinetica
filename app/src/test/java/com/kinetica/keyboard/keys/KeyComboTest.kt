@@ -20,6 +20,29 @@ class KeyComboTest {
     }
 
     @Test
+    fun aShiftedMoveHoldsShiftAsAKeyOfItsOwn() {
+        // Select on the editing page: the cursor moved in a TextView and nothing was selected.
+        val left = KeyCombo.parse(SelectMode.withShift(EditorAction.ARROW_LEFT.output))!!
+        val s = KeyCombo.strokes(left.keyCode(), left.metaState())
+        assertEquals(
+            listOf(KeyEvent.KEYCODE_SHIFT_LEFT, KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_SHIFT_LEFT),
+            s.map { it.keyCode },
+        )
+        assertEquals(listOf(true, true, false, false), s.map { it.down })
+        assertTrue(s.dropLast(1).all { it.metaState and KeyEvent.META_SHIFT_ON != 0 })
+        assertEquals(0, s.last().metaState)
+        // A chord's own combo takes the same path; Ctrl stays in the meta to the end.
+        val word = KeyCombo.parse("combo:ctrl+shift+right")!!
+        val w = KeyCombo.strokes(word.keyCode(), word.metaState())
+        assertEquals(KeyEvent.KEYCODE_SHIFT_LEFT, w.first().keyCode)
+        assertTrue(w.last().metaState and KeyEvent.META_CTRL_ON != 0)
+        assertFalse(w.last().metaState and KeyEvent.META_SHIFT_ON != 0)
+        // No Shift, no extra key.
+        val undo = KeyCombo.parse("combo:ctrl+z")!!
+        assertEquals(listOf(KeyEvent.KEYCODE_Z, KeyEvent.KEYCODE_Z), KeyCombo.strokes(undo.keyCode(), undo.metaState()).map { it.keyCode })
+    }
+
+    @Test
     fun theKeyEventIsTheOneAHardwareKeyboardSends() {
         val selectAll = KeyCombo.parse("combo:ctrl+a")!!
         assertEquals(KeyEvent.KEYCODE_A, selectAll.keyCode())
