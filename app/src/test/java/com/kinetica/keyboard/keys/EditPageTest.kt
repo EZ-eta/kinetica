@@ -16,8 +16,9 @@ class EditPageTest {
     @Test
     fun theDefaultIsTheDPadWithSelectionAndTheClipboard() {
         val rows = EditPage.DEFAULT.rows
-        assertEquals(listOf(4, 5, 5, 5), rows.map { it.size })
+        assertEquals(listOf(5, 5, 5, 5), rows.map { it.size })
         assertEquals(EditorAction.SELECT_MODE.output, rows[0][0])
+        assertEquals(EditorAction.CTRL_NEXT.output, rows[0].last())
         assertEquals(
             listOf("combo:ctrl+left", EditorAction.ARROW_LEFT.output, EditorAction.ARROW_DOWN.output, EditorAction.ARROW_RIGHT.output, "combo:ctrl+right"),
             rows[2],

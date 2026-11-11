@@ -11,7 +11,7 @@ import java.net.URLEncoder
 /**
  * The editing page (#49): up to [MAX_ROWS] rows of keys, each one text, a key combination or an
  * action, above a bottom row no edit reaches (letters, space, backspace, enter), so an edited page
- * always keeps its way back. The default is a D-pad with selection and the clipboard.
+ * always keeps its way back. The default is a D-pad with selection, the clipboard and Ctrl.
  *
  * Stored as text, not JSON, so the rules here run on the JVM: each key percent-encoded, keys split
  * by `,` and rows by `|`, neither of which the encoder writes.
@@ -87,7 +87,11 @@ data class EditPage(val rows: List<List<String>>) {
 
         val DEFAULT = EditPage(
             listOf(
-                listOf(EditorAction.SELECT_MODE.output, EditorAction.SELECT_ALL.output, EditorAction.COPY.output, EditorAction.PASTE.output),
+                // Ctrl last: the next key goes out with it, as Ctrl+Home or Ctrl+Z.
+                listOf(
+                    EditorAction.SELECT_MODE.output, EditorAction.SELECT_ALL.output, EditorAction.COPY.output,
+                    EditorAction.PASTE.output, EditorAction.CTRL_NEXT.output,
+                ),
                 // Tab first, so up sits over down: both the middle of a row of five.
                 listOf(EditorAction.TAB.output, EditorAction.HOME.output, EditorAction.ARROW_UP.output, EditorAction.END.output, EditorAction.PAGE_UP.output),
                 listOf(

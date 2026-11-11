@@ -525,6 +525,7 @@
     <string name="pref_letter_alternates_reset_summary">Ogni lettera torna al suo elenco di serie</string>
     <string name="pref_letter_alternates_reset_message">Cancella gli elenchi che hai scritto per le lettere. Ogni lettera torna al suo elenco di serie.</string>
     <string name="pref_letter_alternates_dialog_title">Pressione lunga su %1$s</string>
+    <string name="pref_list_field_hint">Caratteri separati da spazi</string>
     <string name="pref_popup_shape_title">Forma del menu a pressione lunga</string>
     <string name="pref_plain_letter_alternates_title">Nascondi le lettere accentate nella pressione lunga</string>
     <string name="pref_plain_letter_alternates_summary">I tasti delle lettere offrono solo cifre, simboli e le lettere delle lingue attive, così il polacco tiene la ą sui tasti inglesi. Ignorato per le lingue che usano accenti</string>

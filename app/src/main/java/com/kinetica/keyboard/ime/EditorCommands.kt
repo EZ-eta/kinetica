@@ -46,6 +46,36 @@ internal class EditorCommands(private val ime: KineticaIME) {
         DecodeTrace.log { "  select=$on" }
     }
 
+    // Home or End pressed again goes on a line (LineEdgeRepeat).
+    private val lineEdges = LineEdgeRepeat()
+
+    /** A key went down: any key but Home or End ends a run of them. */
+    fun onKeyDown(output: String) {
+        if (LineEdgeRepeat.edgeOf(output) == null) lineEdges.clear()
+    }
+
+    /** The user moved the cursor; the edge key's own report is told apart by time. */
+    fun onUserMove(now: Long) = lineEdges.onUserMove(now)
+
+    fun clearLineEdge() = lineEdges.clear()
+
+    /**
+     * One arrow past the line edge the cursor sits on, so the edge sent next lands on the line
+     * before or after. Under Select it holds Shift as any move does. Not under a pending Ctrl:
+     * Ctrl+Home is the text's start, and the arrow would spend the Ctrl.
+     */
+    private fun stepPastLineEdge(edge: EditorAction) {
+        if (ctrlPending) return
+        val step = LineEdgeRepeat.stepPast(
+            edge,
+            ime.ich.textBeforeCursor(WORD_STEP_LOOK_CHARS) ?: "",
+            ime.ich.textAfterCursor(WORD_STEP_LOOK_CHARS) ?: "",
+        )
+        DecodeTrace.log { "  line edge again edge=${edge.name} step=${step.name}" }
+        val shifted = if (selecting) KeyCombo.parse(SelectMode.withShift(step.output)) else null
+        if (shifted != null) sendKeyCombo(shifted) else sendSpecialKey(step)
+    }
+
     // Clears the spacebar's shortcut notice; the label has no timer of its own. See
     // showSpacebarNotice.
     private val spacebarNoticeRunnable = Runnable { ime.keyboardView?.spacebarNotice = null }
@@ -60,6 +90,8 @@ internal class EditorCommands(private val ime: KineticaIME) {
      * is what it aims at.
      */
     fun performIfAction(text: String): Boolean {
+        val edge = LineEdgeRepeat.edgeOf(text)
+        if (lineEdges.press(edge, SystemClock.uptimeMillis()) && edge != null) stepPastLineEdge(edge)
         // Under Select a move holds Shift, so the selection grows from the cursor.
         if (selecting) {
             val shifted = SelectMode.withShift(text)

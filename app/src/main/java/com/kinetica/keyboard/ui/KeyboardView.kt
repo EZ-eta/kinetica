@@ -807,10 +807,11 @@ class KeyboardView @JvmOverloads constructor(
         cancelActivePointers()
         val before = layout?.name
         layout = l
-        if (l.name != before) listener?.onBoardShown(l.name)
         if (width > 0 && height > 0) {
             rebuild()
         }
+        // After the rebuild: a listener that redraws (Select's light going out) reads the new board's rects.
+        if (l.name != before) listener?.onBoardShown(l.name)
     }
 
     fun setShiftUppercase(value: Boolean) {
@@ -976,6 +977,8 @@ class KeyboardView @JvmOverloads constructor(
     private fun renderStaticLayer() {
         if (width <= 0 || height <= 0) return
         val l = layout ?: return
+        // Rects of another board, mid-switch: the rebuild draws this one.
+        if (keyInsets.size != l.keys.size) return
         val bmp = staticLayer?.takeIf { it.width == width && it.height == height }
             ?: Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).also { staticLayer = it }
         val c = Canvas(bmp)

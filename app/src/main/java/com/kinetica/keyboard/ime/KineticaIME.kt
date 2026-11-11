@@ -377,6 +377,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         if (!restarting) {
             commands.ctrlPending = false
             commands.setSelecting(false)
+            commands.clearLineEdge()
         }
         // An app's restartInput lands here too and clears the bar with it. The package names the
         // editor engine behind a field-specific report, a WebView rich editor for one.
@@ -474,6 +475,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         if (verdict == SelectionLedger.Verdict.USER) {
             backspace.autocorrectUndo = null
             gestureUndo.forgetCommitted()
+            commands.onUserMove(SystemClock.uptimeMillis())
         }
         if (verdict != SelectionLedger.Verdict.USER) {
             DecodeTrace.log {
@@ -914,6 +916,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
 
         override fun onKeyPressFeedback(key: Key) {
             autospace.cancel()
+            commands.onKeyDown(key.output)
             // Typing resumed: a shortcut row the bar's button brought up gives the words back.
             suggestionBar?.endShortcuts()
             emojiSearch.cancelWordEnd()

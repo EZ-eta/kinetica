@@ -124,8 +124,8 @@ channel can install and update over the other.
 - Slide along the spacebar to move the cursor, by letter or by word, with a tick per step. Hold
   shift with the other thumb to swap the step, on the spacebar and the backspace slide (Shortcuts
   and gestures > Swipes and slides > *Hold shift to swap the slide step*, off).
-- An editing page, opened by a slide up on `?123`: Select, Select all, Copy, Paste, Cut, Tab, Home,
-  End, the arrows, word left and right, Page up and down, Undo, Redo and forward delete. Held keys
+- An editing page, opened by a slide up on `?123`: Select, Select all, Copy, Paste, Ctrl, Cut, Tab,
+  Home, End, the arrows, word left and right, Page up and down, Undo, Redo and forward delete. Held keys
   repeat. Any key can be changed, up to four rows (Keys > Editing page).
 - Slide left from backspace to mark words for deletion; slide back to keep them, lift to delete.
   The distance per word can be set, and the slide can stop at punctuation, so a link goes a piece

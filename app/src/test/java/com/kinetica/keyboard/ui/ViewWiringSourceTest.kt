@@ -123,6 +123,39 @@ class ViewWiringSourceTest {
         assertTrue(commands.contains("EditorAction.SELECT_MODE -> setSelecting(!selecting)"))
     }
 
+    /**
+     * Leaving the editing page with Select on crashed the keyboard: Select's light went out and
+     * redrew the letters with the page's key rects, before the rebuild made the letters' own.
+     */
+    @Test
+    fun selectEndingOffThePageDrawsTheNewBoard() {
+        val view = source("ui/KeyboardView.kt")
+        val set = body(view, "fun setKeyboardLayout(")
+        val rebuilt = set.indexOf("rebuild()")
+        assertTrue("no rebuild", rebuilt >= 0)
+        assertTrue("the board is announced before its rects exist", rebuilt < set.indexOf("listener?.onBoardShown(l.name)"))
+        assertTrue("a redraw reads another board's rects", body(view, "private fun renderStaticLayer(").contains("if (keyInsets.size != l.keys.size) return"))
+    }
+
+    /**
+     * Home or End again steps past the line edge first (LineEdgeRepeat): every command passes
+     * through the run, any other key down or a user move ends it, and so does a new field.
+     */
+    @Test
+    fun homeOrEndAgainGoesOnALine() {
+        val commands = source("ime/EditorCommands.kt")
+        val perform = body(commands, "fun performIfAction(")
+        assertTrue("the run is not asked", perform.contains("if (lineEdges.press(edge, SystemClock.uptimeMillis()) && edge != null) stepPastLineEdge(edge)"))
+        assertTrue("the step runs after the move", perform.indexOf("stepPastLineEdge(edge)") < perform.indexOf("SelectMode.withShift(text)"))
+        val step = body(commands, "private fun stepPastLineEdge(")
+        assertTrue("a pending Ctrl is spent by the step", step.contains("if (ctrlPending) return"))
+        assertTrue("the step does not select", step.contains("SelectMode.withShift(step.output)"))
+        val ime = source("ime/KineticaIME.kt")
+        assertTrue("a key down does not end the run", body(ime, "override fun onKeyPressFeedback(").contains("commands.onKeyDown(key.output)"))
+        assertTrue("a user move does not end the run", body(ime, "override fun onUpdateSelection(").contains("commands.onUserMove(SystemClock.uptimeMillis())"))
+        assertTrue("a new field does not end the run", body(ime, "override fun onStartInput(").contains("commands.clearLineEdge()"))
+    }
+
     /** Every key sent with modifiers goes out as KeyCombo.strokes, so a shifted move selects. */
     @Test
     fun aKeySentWithShiftPressesShiftAsAKey() {

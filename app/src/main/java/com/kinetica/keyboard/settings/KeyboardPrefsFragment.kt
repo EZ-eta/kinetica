@@ -723,6 +723,9 @@ class KeyboardPrefsFragment : PreferenceFragmentCompat() {
         row.isSingleLineTitle = false
         row.dialogTitle = getString(R.string.pref_letter_alternates_dialog_title, letter)
         row.dialogMessage = note
+        // The field on top and the note scrolling under it: every action name made the note long
+        // enough to push the field out of sight.
+        row.dialogLayoutResource = R.layout.preference_dialog_list
         row.summaryProvider = Preference.SummaryProvider<EditTextPreference> { p ->
             val t = p.text
             when {
@@ -737,9 +740,10 @@ class KeyboardPrefsFragment : PreferenceFragmentCompat() {
                 edit.setText(ownText)
                 edit.setSelection(ownText.length)
             }
-            // Beside the field, not a dialog button: EditTextPreference owns those.
-            if (defaultText.isNotEmpty()) {
-                (edit.parent as? ViewGroup)?.addView(
+            // Under the field, not a dialog button: EditTextPreference owns those.
+            val box = edit.parent as? ViewGroup
+            if (defaultText.isNotEmpty() && box != null) {
+                box.addView(
                     Button(edit.context).apply {
                         text = defaultLabel
                         setOnClickListener {
@@ -747,6 +751,7 @@ class KeyboardPrefsFragment : PreferenceFragmentCompat() {
                             edit.setSelection(defaultText.length)
                         }
                     },
+                    box.indexOfChild(edit) + 1,
                 )
             }
         }

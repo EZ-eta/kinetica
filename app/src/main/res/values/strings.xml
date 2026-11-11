@@ -560,6 +560,7 @@
     <string name="pref_letter_alternates_reset_summary">Every letter back to its built-in list</string>
     <string name="pref_letter_alternates_reset_message">Clear the lists you wrote for every letter. Each letter goes back to its built-in list.</string>
     <string name="pref_letter_alternates_dialog_title">Long-press on %1$s</string>
+    <string name="pref_list_field_hint">Characters separated by spaces</string>
     <string name="pref_popup_shape_title">Long-press menu shape</string>
     <string name="pref_plain_letter_alternates_title">Hide accented letters on long-press</string>
     <string name="pref_plain_letter_alternates_summary">Letter keys offer only digits, symbols and the letters of your enabled languages, so Polish keeps ą on the English keys. Ignored for a language whose own alphabet uses accents</string>

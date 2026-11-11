@@ -1,0 +1,11 @@
+Hotfix: no crash when leaving the editing page for ABC with Select on
+New in 3.0:
+Two-thumb and long words read better; up to 40 letters
+First-run setup; settings regrouped, with search
+Day and night looks
+Editing page, by a slide up on ?123
+New number pad; long-press lists on symbol keys
+1 906 emoji, searchable in 14 languages
+Voice input through your voice keyboard
+Accents stay in the word; letter menus follow your languages
+Options: shortcuts button, shift swaps slide step, space to letters
