@@ -57,6 +57,13 @@ object AccentFolder {
     }
 
     /**
+     * The typographic apostrophe, as other keyboards and smart-quote editors write `I’d`. The
+     * trie spells contractions with U+0027, so a reopened or learned `I’d` reaches `i'd`. Kept
+     * out of [FOLD]: a popup `’` is punctuation, not a letter of the word.
+     */
+    private const val CURLY_APOSTROPHE = '\u2019'
+
+    /**
      * Marks a folded key never carries: Arabic tatweel and short vowels. Text almost always omits
      * them, and a key cannot be drawn for a mark.
      */
@@ -93,7 +100,7 @@ object AccentFolder {
     fun fold(word: String): String {
         var needsFold = false
         for (ch in word) {
-            if (ch in DIGRAPHS || FOLD.containsKey(ch) || ch.isUpperCase() || ch in DROPPED) {
+            if (ch in DIGRAPHS || FOLD.containsKey(ch) || ch.isUpperCase() || ch in DROPPED || ch == CURLY_APOSTROPHE) {
                 needsFold = true
                 break
             }
@@ -104,6 +111,10 @@ object AccentFolder {
             // Lowercase first, so the maps need only lowercase keys and "Ä" folds as "ä" does.
             val lower = ch.lowercaseChar()
             if (lower in DROPPED) continue
+            if (lower == CURLY_APOSTROPHE) {
+                sb.append('\'')
+                continue
+            }
             val digraph = DIGRAPHS[lower]
             if (digraph != null) sb.append(digraph) else sb.append(FOLD[lower] ?: lower)
         }

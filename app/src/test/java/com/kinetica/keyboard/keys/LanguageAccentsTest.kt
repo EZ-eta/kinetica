@@ -12,8 +12,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * The long-press lists follow the enabled languages: `ß` on `s` while German is on, without the
- * Default button, and a list the user wrote keeps its own cells.
+ * The built-in long-press lists follow the enabled languages: `ß` on `s` while German is on, without
+ * the Default button. A list the user wrote is shown as written.
  */
 class LanguageAccentsTest {
 
@@ -44,29 +44,6 @@ class LanguageAccentsTest {
         assertSame(same, LanguageAccents.added(same, 's', listOf("de")))
     }
 
-    @Test
-    fun aUserListKeepsItsCellsAndFollowsTheLanguages() {
-        val stored = listOf("#", "$", "ß")
-        assertEquals(stored, LanguageAccents.followed(stored, 's', listOf("it", "de"), cap))
-        assertEquals(listOf("#", "$"), LanguageAccents.followed(stored, 's', listOf("it"), cap))
-        assertEquals(listOf("#", "$", "š"), LanguageAccents.followed(stored, 's', listOf("it", "cs"), cap))
-        assertEquals(listOf("#", "$", "ß"), LanguageAccents.followed(listOf("#", "$"), 's', listOf("de"), cap))
-    }
-
-    @Test
-    fun aUserLetterNoLanguageNamesStays() {
-        // The schwa and a typed word are the user's, not a language's.
-        val stored = listOf("ə", "è", "ok", ":paste")
-        assertEquals(listOf("ə", "ok", ":paste"), LanguageAccents.followed(stored, 'e', listOf("en"), cap))
-        assertEquals(listOf("ə", "è", "ok", "é", ":paste"), LanguageAccents.followed(stored, 'e', listOf("it"), cap))
-    }
-
-    @Test
-    fun aFollowedListStaysUnderTheCap() {
-        val full = (1..14).map { it.toString() }
-        assertEquals(full, LanguageAccents.followed(full, 's', listOf("de"), cap))
-    }
-
     private fun italian() = KeyboardLayout(
         name = "qwerty_it", locale = "it_IT",
         keys = listOf(
@@ -87,9 +64,60 @@ class LanguageAccentsTest {
         assertEquals(listOf("š", "#"), cells(it, "s"))
         assertEquals(listOf("š", "ß", "#"), cells(de, "s"))
         assertEquals(listOf("à", "ä", "@"), cells(de, "a"))
-        // A stored list: German off drops its letter, on adds it back.
+    }
+
+    private fun polish() = KeyboardLayout(
+        name = "qwerty_pl", locale = "pl_PL",
+        keys = listOf(
+            Key("i", KeyType.CHAR, "i", "i", 0.75f, 0f, 0.1f, 0.25f, alternates = listOf("ì", "í", "î", "ï", "ī", "8")),
+            Key("o", KeyType.CHAR, "o", "o", 0.85f, 0f, 0.1f, 0.25f, alternates = listOf("ó", "ò", "ô", "ö", "9")),
+        ),
+        nativeAccents = true,
+    )
+
+    private fun english() = polish().copy(name = "qwerty", locale = "en_US", nativeAccents = false)
+
+    private fun cellsOn(board: KeyboardLayout, prefs: Map<String, Any>, id: String): List<String> =
+        AlphaLayouts.build(board, MapPrefs.config(prefs + (Prefs.NUMBER_PRIORITY to false)))
+            .keys.first { it.id == id }.alternates
+
+    /**
+     * A Polish and English writer took Default on `i`, then deleted some: `ï` belongs to neither
+     * language and was dropped from the stored list, so Default again was the only way back.
+     */
+    @Test
+    fun aStoredListKeepsALetterNoEnabledLanguageWrites() {
+        val plEn = mapOf<String, Any>(
+            Prefs.LANGUAGE to "pl",
+            Prefs.ENABLED_LANGUAGES to setOf("pl", "en"),
+            Prefs.LANGUAGE_MODE to "follow",
+            Prefs.PLAIN_LETTER_ALTERNATES to true,
+            Prefs.letterAlternatesKey('i') to "ï 8",
+        )
+        assertEquals(listOf("ï", "8"), cellsOn(polish(), plEn, "i"))
+        // The English board too: the hide setting never trims a list the user wrote.
+        assertEquals(listOf("ï", "8"), cellsOn(english(), plEn + (Prefs.LANGUAGE to "en"), "i"))
+    }
+
+    @Test
+    fun aStoredListKeepsALetterTheUserDeleted() {
+        // Default on `o`, then ó deleted: Polish is on, but the deletion is the user's.
+        val pl = mapOf<String, Any>(
+            Prefs.LANGUAGE to "pl",
+            Prefs.ENABLED_LANGUAGES to setOf("pl", "en"),
+            Prefs.letterAlternatesKey('o') to "ö 9",
+        )
+        assertEquals(listOf("ö", "9"), cellsOn(polish(), pl, "o"))
+    }
+
+    @Test
+    fun aStoredListIgnoresALanguageTurnedOnOrOff() {
+        val it = mapOf<String, Any>(Prefs.LANGUAGE to "it", Prefs.ENABLED_LANGUAGES to setOf("it"))
+        val de = mapOf<String, Any>(Prefs.LANGUAGE to "it", Prefs.ENABLED_LANGUAGES to setOf("it", "de"))
         val stored = mapOf<String, Any>(Prefs.letterAlternatesKey('s') to "# $ ß")
-        assertEquals(listOf("#", "$"), cells(it + stored, "s"))
+        assertEquals(listOf("#", "$", "ß"), cells(it + stored, "s"))
         assertEquals(listOf("#", "$", "ß"), cells(de + stored, "s"))
+        val noEszett = mapOf<String, Any>(Prefs.letterAlternatesKey('s') to "# $")
+        assertEquals(listOf("#", "$"), cells(de + noEszett, "s"))
     }
 }

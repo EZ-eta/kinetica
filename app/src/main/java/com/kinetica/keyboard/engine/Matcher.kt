@@ -24,6 +24,8 @@ sealed class Matcher {
         val y: Float,
         val stream: StreamId? = null,
         val t: Long = 0L,
+        /** A tapped apostrophe: no key in the geometry, so it reads as itself, never as a letter near it. */
+        val keyless: Boolean = false,
     ) : Matcher()
 
     /** From a swipe, with all per-letter geometry precomputed for O(1) pruning. */
@@ -147,8 +149,11 @@ sealed class Matcher {
             for (t in tokens) {
                 when (t) {
                     is TapToken -> {
-                        if (!g.hasKey(t.code)) return null
-                        out.add(Anchor(t.code, t.x, t.y, t.streamId, t.tStart))
+                        // The trie spells the apostrophe with a code of its own, so a tapped one is an
+                        // anchor like a letter, though no key in the geometry holds it.
+                        val apostrophe = t.code >= 0 && t.code == g.alphabet.apostrophe
+                        if (!apostrophe && !g.hasKey(t.code)) return null
+                        out.add(Anchor(t.code, t.x, t.y, t.streamId, t.tStart, keyless = apostrophe))
                     }
                     is SwipeToken -> out.add(buildSegment(t, g))
                 }

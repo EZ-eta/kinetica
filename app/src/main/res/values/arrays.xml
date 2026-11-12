@@ -139,6 +139,24 @@
         <item>5</item>
     </string-array>
 
+    <string-array name="emoji_tone_entries">
+        <item>None (yellow)</item>
+        <item>Light</item>
+        <item>Medium-light</item>
+        <item>Medium</item>
+        <item>Medium-dark</item>
+        <item>Dark</item>
+    </string-array>
+    <!-- Order and names as EmojiTone.NAMES. -->
+    <string-array name="emoji_tone_values" translatable="false">
+        <item>none</item>
+        <item>light</item>
+        <item>medium_light</item>
+        <item>medium</item>
+        <item>medium_dark</item>
+        <item>dark</item>
+    </string-array>
+
     <string-array name="landscape_arrangement_entries">
         <item>Split to the edges</item>
         <item>Centred</item>

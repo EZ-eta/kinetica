@@ -131,6 +131,12 @@ object SymbolRows {
     fun symbolsOf(page: KeyboardLayout): List<String> =
         (0 until ROWS).flatMap { r -> rowKeys(page, r).map { it.output } }.distinct()
 
+    /**
+     * The rows a directional swipe reaches on a page, as on the letters: the top row, and the
+     * lowest symbol row, the one between the page key and backspace. The bottom row is not one.
+     */
+    fun edgeRows(page: KeyboardLayout): Pair<List<Key>, List<Key>> = rowKeys(page, 0) to rowKeys(page, ROWS - 1)
+
     /** Whether [key] on the page named [pageName] is a symbol a list can be written for. */
     fun carriesList(pageName: String?, key: Key): Boolean = pageName in PAGES && inUpperRows(key)
 

@@ -21,11 +21,19 @@ class GestureStream(
     val streamId: StreamId,
     val pointerId: Int,
     private val geometry: KeyboardGeometry,
-    tapDispKw: Float,
+    private val tapDispKw: Float,
     downXPx: Float,
     downYPx: Float,
     val downTime: Long,
     val downCode: Int,
+    /**
+     * The rest of a stroke cut at the apostrophe key ([cut]): no key seeds it, its first contact
+     * is the first letter it reaches, and its swipe is softStart (a lead-in from the key, not a
+     * first letter).
+     */
+    val resumed: Boolean = false,
+    /** For a [resumed] stream: whether [finish] drops the travel from the key ([LeadIn]). */
+    private val trimsLeadIn: Boolean = true,
     private val onKeyTransition: (Int) -> Unit,
 ) {
     private val points = ArrayList<PathPoint>(128)
@@ -60,7 +68,8 @@ class GestureStream(
      *
      * [contacts] is appended only when the pointer leaves a key, so the current one is not in
      * it yet; for an engine-owned stream `currentKey` is never -1, since it is seeded from the
-     * down key and a transition never assigns -1. Hence the plus one.
+     * down key and a transition never assigns -1. Hence the plus one. A [resumed] stream is -1
+     * until it reaches a letter, and counts 0 till then.
      *
      * Counts intervals, not distinct keys: a path that returns to an earlier key counts it
      * twice. The caller asks whether the pointer has been travelling, not which keys it saw.
@@ -150,7 +159,12 @@ class GestureStream(
         dwells.removeAt(shortest)
     }
 
-    fun finish(t: Long): InputToken {
+    /**
+     * The token for this stroke, lifted at [t]. [softEnd]: the stroke was cut, so its end is run-out
+     * onto the apostrophe key, not its last letter. A [resumed] stream with no contact has no token;
+     * the caller asks [contactCount] first.
+     */
+    fun finish(t: Long, softEnd: Boolean = false): InputToken {
         // The open run is not closed: a pause with no following leg is not a boundary, so a
         // thumb resting before it lifts must not segment the gesture.
         if (currentKey != -1) contacts.add(KeyContact(currentKey, currentEnter, t))
@@ -158,18 +172,61 @@ class GestureStream(
         if (maxDispSqKw < tapDispSqKw) {
             // Spec-literal taps are <150 ms; a stationary dwell decodes like a
             // zero-length swipe would, and the flag is the UI's long-press hook.
+            // A resumed stroke has no down key: its tap is the letter it reached.
+            val code = if (resumed) contacts.firstOrNull()?.code ?: -1 else downCode
             return TapToken(
-                streamId, downCode, downX, downY,
+                streamId, code, downX, downY,
                 longPress = dur >= KineticaConstants.TAP_MAX_MS,
                 tStart = downTime, tEnd = t,
             )
+        }
+        if (resumed && trimsLeadIn) {
+            // The travel from the apostrophe key spells nothing: the word starts where it turns.
+            val start = LeadIn.end(points, dwells)
+            if (start > 0 && start < points.size - 1) {
+                val kw = geometry.keyWidthPx
+                val word = GestureStream(
+                    streamId, pointerId, geometry, tapDispKw, points[start].x * kw, points[start].y * kw,
+                    points[start].t, -1, resumed = true, trimsLeadIn = false,
+                ) {}
+                for (i in start + 1 until points.size) word.addPoint(points[i].x * kw, points[i].y * kw, points[i].t)
+                if (word.contactCount > 0) return word.finish(t, softEnd)
+            }
         }
         val resampled = FloatArray(2 * KineticaConstants.RESAMPLE_N)
         RESAMPLER.resample(points, resampled)
         return SwipeToken(
             streamId, ArrayList(points), resampled, ArrayList(contacts),
-            arcLen, downTime, t, dwells = ArrayList(dwells),
+            arcLen, downTime, t, softStart = resumed, softEnd = softEnd, dwells = ArrayList(dwells),
         )
+    }
+
+    /** A stroke cut at the apostrophe key: the token before it, and the stream that goes on after. */
+    class Cut(val head: InputToken, val tail: GestureStream)
+
+    /**
+     * Cuts this stroke where it entered the apostrophe key ([tEnter], the first sample inside) and left
+     * it ([tExit], the first sample outside). Both
+     * halves are this stroke's own points replayed into fresh streams, so each is classified as a
+     * lift would classify it. The head is finished softEnd; the tail goes on as a [resumed] stream.
+     * Null when either half has no point, or the head reached no letter.
+     */
+    fun cut(tEnter: Long, tExit: Long): Cut? {
+        val headPts = points.filter { it.t < tEnter }
+        val tailPts = points.filter { it.t >= tExit }
+        if (headPts.isEmpty() || tailPts.isEmpty()) return null
+        val kw = geometry.keyWidthPx
+        val head = GestureStream(
+            streamId, pointerId, geometry, tapDispKw, headPts[0].x * kw, headPts[0].y * kw, downTime, downCode, resumed,
+        ) {}
+        for (i in 1 until headPts.size) head.addPoint(headPts[i].x * kw, headPts[i].y * kw, headPts[i].t)
+        if (head.contactCount == 0) return null
+        val tail = GestureStream(
+            streamId, pointerId, geometry, tapDispKw, tailPts[0].x * kw, tailPts[0].y * kw, tailPts[0].t, -1,
+            resumed = true, onKeyTransition = onKeyTransition,
+        )
+        for (i in 1 until tailPts.size) tail.addPoint(tailPts[i].x * kw, tailPts[i].y * kw, tailPts[i].t)
+        return Cut(head.finish(tEnter, softEnd = true), tail)
     }
 
     private companion object {

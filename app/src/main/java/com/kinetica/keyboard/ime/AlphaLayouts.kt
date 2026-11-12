@@ -1,7 +1,6 @@
 package com.kinetica.keyboard.ime
 
 import com.kinetica.keyboard.keys.ActionRow
-import com.kinetica.keyboard.keys.LanguageAccents
 import com.kinetica.keyboard.keys.NativeLetters
 import com.kinetica.keyboard.layout.KeyboardLayout
 import com.kinetica.keyboard.layout.LayoutMutations
@@ -71,10 +70,9 @@ object AlphaLayouts {
         if (config.numberRow) l = LayoutMutations.withNumberRowSymbols(l)
         // Last in the alternates chain, so a list the user wrote wins (#8). An action written
         // by name (`:paste`) becomes the symbol that runs it.
-        // A list the user wrote keeps its own cells; its language letters follow the languages.
-        val lists = config.letterAlternates.mapValues { (c, list) ->
-            LanguageAccents.followed(list, c, languages, KeyboardConfig.MAX_LETTER_ALTERNATES).map(::cell)
-        }
+        // A list the user wrote is shown as written: Default then a few deletions must keep `ï` with
+        // Polish and English on, and a deleted letter of an enabled language stays deleted.
+        val lists = config.letterAlternates.mapValues { (_, list) -> list.map(::cell) }
         l = LayoutMutations.withLetterAlternates(l, lists)
         // After the emoji mutation, so a removal can relocate the emoji
         // alternate and a repurposed key keeps it in its popup.

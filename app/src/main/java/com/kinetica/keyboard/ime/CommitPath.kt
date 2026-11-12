@@ -218,6 +218,8 @@ internal class CommitPath(private val ime: KineticaIME) {
     }
 
     fun abandonWord() {
+        // No `'` for a word that is gone; what lifted meanwhile goes with it.
+        ime.apostropheSwipe.drop()
         ime.wordState.keptBar = null
         ime.wordState.midWordOffer = null
         ime.wordState.midWordHistory = null

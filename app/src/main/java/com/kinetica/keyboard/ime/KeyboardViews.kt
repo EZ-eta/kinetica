@@ -102,6 +102,7 @@ internal class KeyboardViews(private val ime: KineticaIME) {
         picker.theme = KeyboardTheme.resolve(
             ime, ime.config.themeMode, ime.config.themeColor, ime.config.themeBrightness,
         )
+        picker.tone = ime.config.emojiTone
         // On open, not on every pick: the panel stays up while the user taps, and
         // re-ordering the first tab under a moving finger would shift the next cell.
         picker.recents = EmojiRecents.ordered(ime.learner.emojiUses.values)
@@ -153,6 +154,7 @@ internal class KeyboardViews(private val ime: KineticaIME) {
         // A kept trail spells the word until it ends, longer than the 250 ms that makes a trail
         // harmless in a no-learning field, so there it fades as usual.
         kv.keepTrail = ime.config.keepTrail && !ime.editorState.teachesNothing
+        kv.apostropheSwipe = ime.config.apostropheSwipe
         // Per field: the key names the action enter will run, and its hold offers a newline
         // whenever enter itself will not write one.
         kv.enterNewlineCell =
@@ -168,6 +170,7 @@ internal class KeyboardViews(private val ime: KineticaIME) {
         ime.suggestionBar?.theme = theme
         ime.containerView?.applyTheme(theme)
         ime.emojiPicker?.theme = theme
+        ime.emojiPicker?.tone = ime.config.emojiTone
         backdrop.refresh(ime.config.backdropStamp, ime.config.nightLook) { applyBackdrop() }
         applyBackdrop()
         applyNavigationBarColor(theme)
@@ -205,9 +208,12 @@ internal class KeyboardViews(private val ime: KineticaIME) {
         // When enabled, layer the layout-derived implicit alternate
         // swipes under the user/built-in bindings (explicit shadows implicit).
         // Synthesized from the active-language alpha layout, so qwerty_es "n"
-        // yields "!" and each language's digits/symbols follow its own keys.
+        // yields "!" and each language's digits/symbols follow its own keys; and from both
+        // symbol pages as the user's rows and lists leave them. Not the number pad or editing page.
         kv.edgeSwipeBindings = if (ime.config.alternateSwipes) {
-            EdgeSwipeBindings.withImplicitAlternates(alphaLayout(), ime.config.edgeSwipes)
+            EdgeSwipeBindings.withImplicitAlternates(
+                alphaLayout(), ime.config.edgeSwipes, listOf(symbolLayout(SYMBOLS), symbolLayout(SYMBOLS2)),
+            )
         } else {
             ime.config.edgeSwipes
         }

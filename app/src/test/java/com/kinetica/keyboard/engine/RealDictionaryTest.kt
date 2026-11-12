@@ -367,8 +367,9 @@ class RealDictionaryTest {
         val en = WordPredictor(enDict.trie, BigramTable.EMPTY, g, enDict.forms)
         val it = WordPredictor(itDict.trie, BigramTable.EMPTY, g, itDict.forms)
 
-        // English contractions: the whole token is a word, so the space is earned.
-        for (w in listOf("don't", "it's", "can't")) {
+        // English contractions: the whole token is a word, so the space is earned. `i'd` and
+        // `i'll` are listed too; a curly apostrophe folds onto the straight one.
+        for (w in listOf("don't", "it's", "can't", "i'd", "i'll", "we'll", "we're", "i\u2019d")) {
             assertTrue("$w should be an English word", en.isWord(w))
         }
         // Not words, so a token like this stays refused, the reported behaviour to keep.

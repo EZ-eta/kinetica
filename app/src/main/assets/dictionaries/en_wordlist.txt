@@ -82,6 +82,7 @@ time	1453708
 an	1449181
 okay	1428884
 back	1405024
+i'll	1389383
 look	1348467
 us	1346903
 would	1340070
@@ -101,6 +102,7 @@ man	1173588
 some	1166914
 say	1153915
 hey	1149292
+we're	1136793
 could	1111837
 didn	1100643
 by	1090424
@@ -192,6 +194,7 @@ money	471643
 around	471463
 doesn	471037
 name	455543
+i'd	455015
 place	444863
 ever	444088
 feel	444014
@@ -230,6 +233,7 @@ dad	378540
 enough	376973
 happened	375703
 came	374486
+we'll	374076
 may	373526
 mother	372846
 wrong	370949
@@ -370,6 +374,7 @@ says	215090
 true	214773
 die	214062
 heart	213914
+he'll	213304
 soon	213279
 each	211943
 worry	211329
@@ -377,9 +382,11 @@ later	208878
 year	208705
 wasn't	207957
 watch	207949
+should've	207364
 couldn't	207284
 who's	207284
 music	207205
+he'd	206459
 hand	206247
 having	206106
 probably	202736
@@ -425,6 +432,7 @@ aren't	178286
 hit	177770
 taking	177667
 easy	177337
+it'll	177275
 times	176522
 check	176507
 hands	176291
@@ -586,6 +594,7 @@ running	116973
 boss	116736
 alright	116629
 promise	115908
+she'd	115299
 taken	115236
 safe	114104
 ma	114026
@@ -606,6 +615,7 @@ himself	109748
 here's	109699
 perhaps	109240
 sounds	109140
+she'll	108860
 serious	108774
 sick	108596
 company	108073
@@ -658,6 +668,7 @@ catch	96609
 follow	96529
 sense	96442
 sex	96431
+would've	96396
 lie	95930
 evening	95321
 master	95131
@@ -680,6 +691,7 @@ calling	90868
 worked	90771
 quiet	90552
 looked	90441
+could've	90158
 less	90011
 pull	89880
 beat	89787
@@ -1048,6 +1060,7 @@ liked	52485
 cute	52240
 evil	52175
 professor	52026
+that'll	51834
 contact	51750
 joke	51728
 cop	51701
@@ -1169,6 +1182,7 @@ yep	45096
 shh	44939
 nervous	44913
 de	44903
+must've	44869
 choose	44853
 themselves	44832
 decide	44806
@@ -1248,6 +1262,7 @@ bigger	41873
 grunting	41866
 low	41837
 helping	41832
+we'd	41819
 admit	41817
 closed	41801
 names	41772
@@ -1586,6 +1601,7 @@ e	31369
 fake	31355
 records	31339
 breathing	31306
+what'll	31302
 sweetie	31295
 numbers	31285
 oil	31269
@@ -1850,6 +1866,7 @@ drinks	25643
 dave	25633
 buried	25623
 brian	25604
+who'll	25568
 trade	25560
 journey	25518
 stomach	25500
@@ -2112,6 +2129,7 @@ pizza	21677
 image	21669
 clears	21657
 golden	21644
+what're	21551
 patients	21543
 watched	21542
 committed	21517
@@ -2472,6 +2490,7 @@ staring	17630
 chances	17624
 circumstances	17621
 sin	17617
+might've	17612
 gordon	17605
 progress	17605
 unusual	17603
@@ -3572,6 +3591,7 @@ scientific	10774
 lovers	10769
 chaos	10764
 rocket	10752
+it'd	10750
 math	10739
 stubborn	10738
 august	10736
@@ -3900,6 +3920,7 @@ indians	9616
 commission	9616
 growls	9614
 nicole	9611
+there'll	9607
 sins	9604
 fraud	9599
 branch	9598
@@ -6423,6 +6444,7 @@ sites	4884
 brennan	4884
 maddie	4882
 vienna	4882
+who'd	4882
 issued	4881
 lasted	4881
 explosive	4879

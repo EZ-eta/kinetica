@@ -77,6 +77,77 @@ class DeleteSpanTest {
         assertEquals(1, DeleteSpan.chars("\uDE00", 1))
     }
 
+    // ---- one tap, one whole character (#56) ---------------------------------
+
+    private fun lastOf(text: String) = tailOf(text, DeleteSpan.grapheme(text))
+
+    @Test
+    fun aTapTakesAWholeEmoji() {
+        // Reported: one tap left a lone surrogate, drawn as a replacement diamond.
+        assertEquals("\uD83D\uDE00", lastOf("hi \uD83D\uDE00"))
+        assertEquals("i", lastOf("hi"))
+        assertEquals(0, DeleteSpan.grapheme(""))
+    }
+
+    @Test
+    fun aJoinedFamilyIsOneTap() {
+        val family = "\uD83D\uDC68\u200D\uD83D\uDC69\u200D\uD83D\uDC67\u200D\uD83D\uDC66"
+        assertEquals(11, family.length)
+        assertEquals(family, lastOf("ok $family"))
+        // A heart on fire: a selector before the joiner.
+        val fire = "\u2764\uFE0F\u200D\uD83D\uDD25"
+        assertEquals(fire, lastOf("a$fire"))
+    }
+
+    @Test
+    fun aFlagIsItsPairAndPairsCountFromTheRunStart() {
+        val it = "\uD83C\uDDEE\uD83C\uDDF9"
+        assertEquals(it, lastOf("x$it"))
+        // Two flags: the second pair goes, the first stays whole.
+        assertEquals(it, lastOf("$it$it"))
+        // An odd run ends on a lone indicator: it goes alone.
+        assertEquals("\uD83C\uDDF9", lastOf("$it\uD83C\uDDF9"))
+        // A subdivision flag: the black flag and its tags, cancel tag last.
+        val england = "\uD83C\uDFF4\uDB40\uDC67\uDB40\uDC62\uDB40\uDC65\uDB40\uDC6E\uDB40\uDC67\uDB40\uDC7F"
+        assertEquals(14, england.length)
+        assertEquals(england, lastOf("go $england"))
+    }
+
+    @Test
+    fun aSelectorASkinToneAndAKeycapRideOnTheirBase() {
+        assertEquals("\u2764\uFE0F", lastOf("love \u2764\uFE0F"))
+        assertEquals("\uD83D\uDC4D\uD83C\uDFFD", lastOf("ok \uD83D\uDC4D\uD83C\uDFFD"))
+        assertEquals("1\uFE0F\u20E3", lastOf("step 1\uFE0F\u20E3"))
+        // A tone after a letter is no emoji's: it goes alone.
+        assertEquals("\uD83C\uDFFD", lastOf("a\uD83C\uDFFD"))
+    }
+
+    @Test
+    fun aLoneSurrogateGoesAlone() {
+        assertEquals(1, DeleteSpan.grapheme("\uDE00"))
+        assertEquals(1, DeleteSpan.grapheme("ab\uD83D"))
+        assertEquals(1, DeleteSpan.grapheme("a\uDE00"))
+    }
+
+    @Test
+    fun anAccentMarkAndALetterJoinerStillGoOneAtATime() {
+        // As a framework field's own backspace: a decomposed letter loses its mark first.
+        assertEquals("\u0301", lastOf("re\u0301"))
+        // A joiner between letters, as in a Devanagari conjunct, binds nothing.
+        assertEquals("\u0937", lastOf("\u0915\u094D\u200D\u0937"))
+        assertEquals("\n", lastOf("a\n"))
+        assertEquals("\r\n", lastOf("a\r\n"))
+    }
+
+    @Test
+    fun aCharSlideStepIsATapsCharacter() {
+        val family = "\uD83D\uDC68\u200D\uD83D\uDC69\u200D\uD83D\uDC67"
+        val t = "a$family\u2764\uFE0F"
+        assertEquals(2, DeleteSpan.chars(t, 1))
+        assertEquals(2 + family.length, DeleteSpan.chars(t, 2))
+        assertEquals(t.length, DeleteSpan.chars(t, 3))
+    }
+
     // ---- a selection is the first staged unit -------------------------------
 
     @Test

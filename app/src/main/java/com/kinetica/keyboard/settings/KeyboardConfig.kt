@@ -16,6 +16,7 @@ import com.kinetica.keyboard.layout.LayoutTransforms
 import com.kinetica.keyboard.layout.SymbolRows
 import com.kinetica.keyboard.ui.BackdropFit
 import com.kinetica.keyboard.ui.BarMetrics
+import com.kinetica.keyboard.ui.EmojiTone
 import com.kinetica.keyboard.ui.Hsv
 import com.kinetica.keyboard.ui.KeyBorder
 import com.kinetica.keyboard.ui.SwipeLook
@@ -83,6 +84,8 @@ data class KeyboardConfig(
     val language: String,
     val reinforceIncrement: Int,
     val emojiKey: Boolean,
+    /** Skin tone of emoji that take one, 0 none to 5 dark ([EmojiTone]). */
+    val emojiTone: Int,
     /** Digits/symbols before accents in long-press popups and key hints. */
     val numberPriority: Boolean,
     /** Accented letters removed from the letter keys' long-press popups. */
@@ -189,6 +192,8 @@ data class KeyboardConfig(
     val letterAlternates: Map<Char, List<String>>,
     /** Optional apostrophe key in the home-row right padding. */
     val apostropheKey: Boolean,
+    /** A swipe across the apostrophe key writes `'` and goes on as the next word. */
+    val apostropheSwipe: Boolean,
     /** Comma-key role (pre-coerced: char/text without a custom fall to keep). */
     val commaMode: String,
     val commaCustom: String,
@@ -369,6 +374,7 @@ data class KeyboardConfig(
                 else -> 5
             },
             emojiKey = prefs.getBoolean(Prefs.EMOJI_KEY, Prefs.DEFAULT_EMOJI_KEY),
+            emojiTone = EmojiTone.of(prefs.getString(Prefs.EMOJI_TONE, Prefs.DEFAULT_EMOJI_TONE)),
             numberPriority = prefs.getBoolean(
                 Prefs.NUMBER_PRIORITY, Prefs.DEFAULT_NUMBER_PRIORITY,
             ),
@@ -473,6 +479,7 @@ data class KeyboardConfig(
             apostropheKey = prefs.getBoolean(
                 Prefs.APOSTROPHE_KEY, Prefs.DEFAULT_APOSTROPHE_KEY,
             ),
+            apostropheSwipe = prefs.getBoolean(Prefs.APOSTROPHE_SWIPE, Prefs.DEFAULT_APOSTROPHE_SWIPE),
             commaMode = punctuationMode(prefs, Prefs.COMMA_MODE, Prefs.COMMA_CUSTOM),
             commaCustom = punctuationCustom(prefs, Prefs.COMMA_CUSTOM),
             periodMode = punctuationMode(prefs, Prefs.PERIOD_MODE, Prefs.PERIOD_CUSTOM),

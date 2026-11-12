@@ -10,8 +10,8 @@ import java.net.URLEncoder
 
 /**
  * The editing page (#49): up to [MAX_ROWS] rows of keys, each one text, a key combination or an
- * action, above a bottom row no edit reaches (letters, space, backspace, enter), so an edited page
- * always keeps its way back. The default is a D-pad with selection, the clipboard and Ctrl.
+ * action, above a bottom row no edit reaches (letters, symbols, space, backspace, enter), so an
+ * edited page always keeps its way back. The default is a D-pad with selection, the clipboard and Ctrl.
  *
  * Stored as text, not JSON, so the rules here run on the JVM: each key percent-encoded, keys split
  * by `,` and rows by `|`, neither of which the encoder writes.
@@ -38,7 +38,10 @@ data class EditPage(val rows: List<List<String>>) {
         val y = rows.size * h
         // `mode`, the id of `?123`, so the slide that opened the page closes it from the same corner.
         keys.add(Key("mode", KeyType.MODE_ALPHA, "ABC", "", 0f, y, SIDE_W, h))
-        keys.add(Key("space", KeyType.SPACE, " ", "", SIDE_W, y, 1f - 3 * SIDE_W, h))
+        // Beside it as on the numpad: a tap opens the symbols, a slide right the numpad. Its own id,
+        // so the page's slide up stays on `ABC`.
+        keys.add(Key(SYMBOLS_ID, KeyType.MODE_SYMBOLS, "?123", "", SIDE_W, y, SIDE_W, h))
+        keys.add(Key("space", KeyType.SPACE, " ", "", 2 * SIDE_W, y, 1f - 4 * SIDE_W, h))
         keys.add(Key("backspace", KeyType.BACKSPACE, "⌫", "", 1f - 2 * SIDE_W, y, SIDE_W, h))
         keys.add(Key("enter", KeyType.ENTER, "⏎", "", 1f - SIDE_W, y, SIDE_W, h))
         return KeyboardLayout(NAME, "", keys)
@@ -81,6 +84,9 @@ data class EditPage(val rows: List<List<String>>) {
 
         /** The width of each fixed key beside the space. */
         private const val SIDE_W = 0.15f
+
+        /** The page's `?123`. */
+        const val SYMBOLS_ID = "edit_symbols"
 
         private const val ROW_SEP = "|"
         private const val KEY_SEP = ","

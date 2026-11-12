@@ -62,6 +62,9 @@ class WordComposer(
     private val context = ArrayDeque<String>()
     private val generation = AtomicInteger()
 
+    /** The newest decode request's generation: a result at or past it has every token sent so far. */
+    val currentGeneration: Int get() = generation.get()
+
     /**
      * At most one decode worker is queued at a time. Fast taps could otherwise
      * queue a full dictionary decode per letter faster than the decode thread

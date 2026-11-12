@@ -56,15 +56,33 @@ class EmojiPickerView(
         set(value) {
             if (field == value) return
             field = value
-            // Filtered like the asset is: a recent picked on another device, or before a
-            // system update removed a font, must not come back as a tofu box.
-            recentEntries = value.filter { assets.canDraw(it) }
-                .map { byChar[it] ?: EmojiCatalog.Entry(it, "", -1) }
-            recentGroup?.let { grids.remove(it) }
-            recentGroup = null
-            rebuildTabs()
-            showCategory(shownCategory.coerceIn(0, (panels().size - 1).coerceAtLeast(0)))
+            rebuildRecents()
         }
+
+    /**
+     * The skin tone ([EmojiTone]) every emoji that takes one is shown and typed in. Pushed from the
+     * service; a change builds the grids again.
+     */
+    var tone: Int = EmojiTone.NONE
+        set(value) {
+            if (field == value) return
+            field = value
+            grids.clear()
+            rebuildRecents()
+        }
+
+    private fun rebuildRecents() {
+        // Filtered like the asset is: a recent picked on another device, or before a
+        // system update removed a font, must not come back as a tofu box. One cell per emoji
+        // as shown: a plain pick from before the tone and a toned one are the same cell.
+        recentEntries = recents.filter { assets.canDraw(it) }
+            .map { byChar[it] ?: EmojiCatalog.Entry(it, "", -1) }
+            .distinctBy { assets.shown(it, tone) }
+        recentGroup?.let { grids.remove(it) }
+        recentGroup = null
+        rebuildTabs()
+        if (panels().isNotEmpty()) showCategory(shownCategory.coerceIn(0, panels().size - 1))
+    }
 
     /**
      * Resolved color roles, pushed from the service like [SuggestionBarView.theme] and
@@ -187,7 +205,7 @@ class EmojiPickerView(
         val perRow = COLUMNS
         var row: LinearLayout? = null
         for ((i, entry) in shown.entries.withIndex()) {
-            val ch = entry.ch
+            val ch = assets.shown(entry, tone)
             if (i % perRow == 0) {
                 row = LinearLayout(context).apply { orientation = HORIZONTAL }
                 grid.addView(row, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))

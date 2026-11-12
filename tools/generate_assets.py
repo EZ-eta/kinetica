@@ -165,11 +165,11 @@ TOKEN_STRIP_RE = re.compile(r"^[^\w']+|[^\w']+$")
 # "didn" 1100643, "needn" 5234, none of them English words). The
 # apostrophe-less spelling in the list ("dont" 9523, "heres" 163) counts only
 # the misspelling, 2-3 orders of magnitude below the contraction.
-# Straight apostrophe U+0027 only (Alphabet.encode drops the curly one).
-# Stripped forms that are common words themselves (well/we'll, ill/I'll,
-# id/I'd, wed/we'd) are excluded so the real word is never displaced; I-pronoun
-# forms stay lowercase like the rest of the list (a capital "I" would fail
-# Alphabet.encode; standalone-I casing is handled separately).
+# Straight apostrophe U+0027 only (AccentFolder folds U+2019 onto it at load).
+# Forms whose stripped spelling is a word itself (ill, id, well, wed, were,
+# hell, shell, shed) are priced by CLITIC_SPLIT below, never by that word's
+# count. I-pronoun forms stay lowercase like the rest of the list (a capital
+# "I" would fail Alphabet.encode; standalone-I casing is handled separately).
 CONTRACTIONS = {
     "en": {
         "dont": "don't", "wont": "won't", "cant": "can't", "isnt": "isn't",
@@ -184,7 +184,42 @@ CONTRACTIONS = {
         "theyre": "they're", "weve": "we've", "youve": "you've",
         "theyve": "they've", "ive": "i've", "im": "i'm", "youll": "you'll",
         "theyll": "they'll", "youd": "you'd", "theyd": "they'd",
+        # Priced by CLITIC_SPLIT: the key is a real word or absent.
+        "ill": "i'll", "id": "i'd", "well": "we'll", "wed": "we'd",
+        "were": "we're", "hell": "he'll", "hed": "he'd", "shell": "she'll",
+        "shed": "she'd", "itll": "it'll", "itd": "it'd", "thatll": "that'll",
+        "whatll": "what'll", "wholl": "who'll", "therell": "there'll",
+        "whod": "who'd", "whatre": "what're", "shouldve": "should've",
+        "wouldve": "would've", "couldve": "could've", "mustve": "must've",
+        "mightve": "might've",
     },
+}
+
+# Corpus count of a clitic, split among the words it attaches to.
+#
+# FrequencyWords keeps each clitic whole ('ll 2913428), so it cannot say how
+# much of it is "i'll". Where the stripped spelling is a word ("ill" 24763,
+# "well" 2159909) the misspelling proxy reads that word, not a typo: "i'd"
+# would come out at 16835 * 673 = 11.3M. Tatoeba writes the contraction whole,
+# so its share of the clitic there, times the FrequencyWords total, is the
+# count: i'll 17932 / 37602 * 2913428 = 1389383.
+#
+# Tatoeba eng sentences, lowercased, straight or curly apostrophe,
+# \b([a-z]+)'(ll|d|re|ve)\b; forms seen 100 times or more, names left out.
+# On the eight forms the proxy already prices the split runs 1.0x to 3.0x
+# higher (you've 1.04, you'll 1.51, they'd 3.0), inside the 3x the proxy
+# note below allows.
+CLITIC_TOTALS = {"ll": 2913428, "d": 1109205, "re": 4059719, "ve": 1991871}
+TATOEBA_CLITIC_TOTALS = {"ll": 37602, "d": 28168, "re": 40501, "ve": 38000}
+CLITIC_SPLIT = {
+    "i'll": 17932, "we'll": 4828, "he'll": 2753, "it'll": 2288,
+    "she'll": 1405, "that'll": 669, "what'll": 404, "who'll": 330,
+    "there'll": 124,
+    "i'd": 11555, "he'd": 5243, "she'd": 2928, "we'd": 1062, "it'd": 273,
+    "who'd": 124,
+    "we're": 11341, "what're": 215,
+    "should've": 3956, "would've": 1839, "could've": 1720, "must've": 856,
+    "might've": 336,
 }
 # How much more often a contraction is written correctly than misspelled, so
 # freq(X'y) = misspelling(Xy) * this, capped by the stem (see estimate below).
@@ -950,6 +985,10 @@ def contraction_freq(misspelled: str, contracted: str, freq: dict[str, int]) -> 
     the proxy's validated error.
     """
     stem = contracted.split("'")[0]
+    if contracted in CLITIC_SPLIT:
+        clitic = contracted.split("'")[1]
+        share = CLITIC_SPLIT[contracted] / TATOEBA_CLITIC_TOTALS[clitic]
+        return int(share * CLITIC_TOTALS[clitic])
     proxy: float | None = None
     if misspelled in freq:
         proxy = freq[misspelled] * CONTRACTION_PROXY_RATIO

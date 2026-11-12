@@ -50,7 +50,16 @@ data class TapToken(
     val longPress: Boolean,
     override val tStart: Long,
     override val tEnd: Long,
-) : InputToken()
+) : InputToken() {
+    companion object {
+        /** Far from every key, kw: a reader that measures a keyless tap against a letter finds it out of reach. */
+        const val NO_KEY_KW = -1000f
+
+        /** A tapped apostrophe, [code] the alphabet's: no key in the letter geometry, so it carries no position. */
+        fun apostrophe(streamId: StreamId, code: Int, t: Long): TapToken =
+            TapToken(streamId, code, NO_KEY_KW, NO_KEY_KW, longPress = false, tStart = t, tEnd = t + 1)
+    }
+}
 
 /**
  * A swipe gesture. Carries both the resampled raw path (DTW input: quantizing

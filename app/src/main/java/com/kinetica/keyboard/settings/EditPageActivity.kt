@@ -92,7 +92,7 @@ class EditPageActivity : AppCompatActivity() {
             })
         }
         val fixed = rowView()
-        for (label in listOf("ABC", "␣", "⌫", "⏎")) {
+        for (label in listOf("ABC", "?123", "␣", "⌫", "⏎")) {
             fixed.addView(keyButton(label) {}.apply { isEnabled = false })
         }
         grid.addView(fixed)

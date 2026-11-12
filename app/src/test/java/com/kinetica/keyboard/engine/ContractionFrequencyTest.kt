@@ -31,6 +31,11 @@ import org.junit.Test
  */
 class ContractionFrequencyTest {
 
+    private companion object {
+        /** The generator's CONTRACTION_PROXY_RATIO. */
+        const val CONTRACTION_PROXY_RATIO = 673
+    }
+
     /** The generator's CONTRACTIONS["en"] map: misspelling -> apostrophe form. */
     private val contractions = mapOf(
         "dont" to "don't", "wont" to "won't", "cant" to "can't", "isnt" to "isn't",
@@ -45,6 +50,15 @@ class ContractionFrequencyTest {
         "theyre" to "they're", "weve" to "we've", "youve" to "you've",
         "theyve" to "they've", "ive" to "i've", "im" to "i'm", "youll" to "you'll",
         "theyll" to "they'll", "youd" to "you'd", "theyd" to "they'd",
+    )
+
+    /**
+     * Forms whose stripped spelling is a word (`ill`, `id`, `well`), left out until the clitic
+     * split priced them: the misspelling proxy would read the word's own count.
+     */
+    private val splitPriced = mapOf(
+        "ill" to "i'll", "id" to "i'd", "well" to "we'll", "wed" to "we'd", "were" to "we're",
+        "hell" to "he'll", "shell" to "she'll", "shed" to "she'd",
     )
 
     private fun assetPath(name: String): Path {
@@ -185,6 +199,45 @@ class ContractionFrequencyTest {
                 listOf(TestData.swipe(word, g, 0, 500)), emptyList(),
             ).map { it.word }
             assertEquals("'$word' no longer leads its own path: $got", word, got.firstOrNull())
+        }
+    }
+
+    @Test
+    fun theFormsWhoseSpellingIsAWordAreListedAtTheirSplit() {
+        // `I'd` could not be swiped: the list left out every form whose stripped spelling is a
+        // word. Priced from the clitic, not the word: the proxy would put i'd at 16835 * 673.
+        val f = counts()
+        for ((plain, form) in splitPriced) {
+            val c = f[form]
+            assertTrue("$form missing from the asset", c != null)
+            assertTrue("$form=$c priced by '$plain' as a typo", c!! < f.getValue(plain) * CONTRACTION_PROXY_RATIO)
+        }
+        for (form in listOf("he'd", "it'll", "it'd", "that'll", "would've", "should've", "could've")) {
+            assertTrue("$form missing from the asset", f.containsKey(form))
+        }
+    }
+
+    @Test
+    fun aContractionWhoseSpellingIsAWordLeadsByFrequencyAlone() {
+        // The apostrophe is free on the path, so each pair decodes at one distance and fw
+        // decides. The plain word keeps its path where it is the commoner (well 2.2M, its
+        // contraction 0.37M); the contraction leads where the plain word is rare (id 17k, i'd 0.46M).
+        val (predictor, g) = predictor()
+        fun lead(letters: String, overshoot: Float): List<String> = predictor.decode(
+            listOf(TestData.sloppySwipe(letters, g, 0, 400, overshootKw = overshoot)), emptyList(),
+        ).map { it.word }
+        for (overshoot in listOf(0.25f, 0.45f)) {
+            for ((letters, first, second) in listOf(
+                Triple("id", "i'd", "id"), Triple("ill", "i'll", "ill"), Triple("well", "well", "we'll"),
+                Triple("were", "were", "we're"), Triple("hell", "hell", "he'll"),
+            )) {
+                val words = lead(letters, overshoot)
+                val i = words.indexOf(first)
+                val j = words.indexOf(second)
+                assertTrue("'$first' missing from '$letters' at $overshoot: $words", i >= 0)
+                assertTrue("'$second' missing from '$letters' at $overshoot: $words", j >= 0)
+                assertTrue("'$first' does not lead '$second' on '$letters' at $overshoot: $words", i < j)
+            }
         }
     }
 

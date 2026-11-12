@@ -178,21 +178,33 @@ internal class Autospace(private val ime: KineticaIME) {
      * tapped word before it was not over. [shiftPressAt] is a shift press since the space, or -1;
      * after one, a learned camel-case word decides, within [shiftRetractMs].
      */
-    fun retractBeforeLetter(letter: Char, tStart: Long, shiftPressAt: Long) {
+    fun retractBeforeLetter(letter: Char, tStart: Long, shiftPressAt: Long) =
+        retractBefore(tStart, shiftPressAt) { fusedBase, shifted ->
+            // The word this letter would rejoin, asked of the dictionary, not the clock. Read from
+            // the editor, not lastLiteral, so it agrees with what reloadWordUnderCursor puts back.
+            // After a shift press, of the learned spellings instead.
+            if (shifted) {
+                learnedCamelPrefix(fusedBase, ime.shift.apply(letter), learnedDisplays())
+            } else {
+                fuseIsLivePrefix(fusedBase, letter)
+            }
+        }
+
+    /**
+     * The same before a tapped apostrophe, at [tStart], when the tapped word before the space would join
+     * it ([KineticaIME.joinsAtApostrophe]): `I`, a pause, `'` still writes `I'`. No shift reading.
+     */
+    fun retractBeforeApostrophe(tStart: Long) =
+        retractBefore(tStart, -1L) { fusedBase, _ -> ime.joinsAtApostrophe(fusedBase) }
+
+    private fun retractBefore(tStart: Long, shiftPressAt: Long, rejoins: (String, Boolean) -> Boolean) {
         val fusedBase = wordBeforeAutospace(
             ime.ich.textBeforeCursor(KineticaConstants.MAX_WORD_LEN + 2) ?: "",
         )
         val shifted = shiftPressAt >= 0
         val elapsed = retractClockMs(SystemClock.uptimeMillis(), writtenAt, shiftPressAt)
         val window = if (shifted) shiftRetractMs(ime.config.autospaceRetractMs) else ime.config.autospaceRetractMs
-        // The word this letter would rejoin, asked of the dictionary, not the clock. Read from
-        // the editor, not lastLiteral, so it agrees with what reloadWordUnderCursor puts back.
-        // After a shift press, of the learned spellings instead.
-        val prefix = if (shifted) {
-            learnedCamelPrefix(fusedBase, ime.shift.apply(letter), learnedDisplays())
-        } else {
-            fuseIsLivePrefix(fusedBase, letter)
-        }
+        val prefix = rejoins(fusedBase, shifted)
         val held = ime.engine.swipeHeldSince(tStart)
         val why = retractRefusal(
             fromTappedWord = fromTaps && inserted,

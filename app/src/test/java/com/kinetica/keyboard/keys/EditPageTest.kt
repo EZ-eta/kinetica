@@ -105,9 +105,12 @@ class EditPageTest {
         val page = EditPage(listOf(listOf("a1", "b2", "c3"), listOf(EditorAction.ARROW_LEFT.output)))
         val l = page.layout()
         assertEquals(EditPage.NAME, l.name)
-        val bottom = l.keys.takeLast(4)
-        assertEquals(listOf("mode", "space", "backspace", "enter"), bottom.map { it.id })
-        assertEquals(listOf(KeyType.MODE_ALPHA, KeyType.SPACE, KeyType.BACKSPACE, KeyType.ENTER), bottom.map { it.type })
+        val bottom = l.keys.takeLast(5)
+        assertEquals(listOf("mode", EditPage.SYMBOLS_ID, "space", "backspace", "enter"), bottom.map { it.id })
+        assertEquals(
+            listOf(KeyType.MODE_ALPHA, KeyType.MODE_SYMBOLS, KeyType.SPACE, KeyType.BACKSPACE, KeyType.ENTER),
+            bottom.map { it.type },
+        )
         assertEquals(1f, bottom.sumOf { it.w.toDouble() }.toFloat(), 1e-4f)
         // Three rows share the height; a row's keys share its width.
         assertTrue(l.keys.all { kotlin.math.abs(it.h - 1f / 3f) < 1e-4f })
@@ -117,7 +120,26 @@ class EditPageTest {
         assertFalse(l.keys.any { it.isLetter })
         assertFalse(EditPage.DEFAULT.layout().keys.any { it.isLetter })
         // An emptied page is its bottom row alone.
-        assertEquals(4, EditPage(emptyList()).layout().keys.size)
+        assertEquals(5, EditPage(emptyList()).layout().keys.size)
+    }
+
+    /**
+     * `?123` beside `ABC`, as on the numpad: a tap the symbols, a slide right the numpad (both by its
+     * type). Not `mode`: the page's slide up, which closes it, stays on `ABC`.
+     */
+    @Test
+    fun theSymbolsKeySitsBesideAbcUnderItsOwnId() {
+        val keys = EditPage.DEFAULT.layout().keys
+        val abc = keys.single { it.id == "mode" }
+        val symbols = keys.single { it.type == KeyType.MODE_SYMBOLS }
+        assertEquals("?123", symbols.label)
+        assertNotEquals("mode", symbols.id)
+        assertEquals(abc.y, symbols.y, 1e-4f)
+        assertEquals(abc.x + abc.w, symbols.x, 1e-4f)
+        assertEquals(abc.w, symbols.w, 1e-4f)
+        val space = keys.single { it.type == KeyType.SPACE }
+        assertEquals(symbols.x + symbols.w, space.x, 1e-4f)
+        assertEquals(KeyType.MODE_ALPHA, keys.single { it.id == EdgeSwipeBindings.EDIT_PAGE.keyId }.type)
     }
 
     @Test

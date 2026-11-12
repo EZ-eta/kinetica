@@ -167,21 +167,101 @@ object DeleteSpan {
         c == '\n' || c == '\r' || c == '\u2028' || c == '\u2029'
 
     /**
-     * Length of the tail of [text] holding the last [units] characters, counting a surrogate pair
-     * as one, so a slide step removes a whole emoji and leaves no unpaired surrogate.
-     *
-     * Tap backspace still deletes a single `char`; that asymmetry predates this rule, which
-     * should not change it on one path only.
+     * Length of the tail of [text] holding the last [units] characters, each a whole emoji or
+     * code point as [grapheme] reads it, so a slide step leaves no half of an emoji behind.
      */
     fun chars(text: CharSequence, units: Int): Int {
         if (units <= 0) return 0
         var i = text.length
         var n = 0
         while (n < units && i > 0) {
-            i--
-            if (i > 0 && Character.isLowSurrogate(text[i]) && Character.isHighSurrogate(text[i - 1])) i--
+            i -= grapheme(text, i)
             n++
         }
         return text.length - i
     }
+
+    /**
+     * Length of the character ending at [end] that one backspace deletes: a code point, or a
+     * whole emoji with its joiners, selectors, skin tone, keycap or tags, or a flag's pair.
+     *
+     * The same cut as a framework text field's own backspace: a combining accent still goes
+     * alone, so a decomposed letter loses its mark first. Written out, not
+     * `java.text.BreakIterator`, whose rules on the JVM differ from the phone's.
+     */
+    fun grapheme(text: CharSequence, end: Int = text.length): Int {
+        if (end <= 0) return 0
+        var start = baseStart(text, codePointStart(text, end))
+        while (true) {
+            val cp = Character.codePointAt(text, start)
+            if (isRegional(cp)) {
+                // Flags pair from the start of the run: an even run ends on a pair's second half.
+                if (regionalRun(text, start) % 2 == 0) start = codePointStart(text, start)
+                break
+            }
+            if (cp == '\n'.code) {
+                if (start > 0 && text[start - 1] == '\r') start--
+                break
+            }
+            if (!isPictographic(cp) || start < 2 || text[start - 1] != ZWJ) break
+            val joined = baseStart(text, codePointStart(text, start - 1))
+            if (!isPictographic(Character.codePointAt(text, joined))) break
+            start = joined
+        }
+        return end - start
+    }
+
+    private const val ZWJ = '\u200D'
+
+    /** Start of the code point ending at [end]; a lone surrogate is a code point of its own. */
+    private fun codePointStart(text: CharSequence, end: Int): Int {
+        val i = end - 1
+        return if (i > 0 && Character.isLowSurrogate(text[i]) && Character.isHighSurrogate(text[i - 1])) i - 1 else i
+    }
+
+    /** Walks back from the code point at [at] over the marks that ride on the one before. */
+    private fun baseStart(text: CharSequence, at: Int): Int {
+        var s = at
+        while (s > 0) {
+            val cp = Character.codePointAt(text, s)
+            val prev = codePointStart(text, s)
+            val rides = isSelectorOrTag(cp) || cp == KEYCAP ||
+                (isSkinTone(cp) && isPictographic(Character.codePointAt(text, prev)))
+            if (!rides) break
+            s = prev
+        }
+        return s
+    }
+
+    private fun regionalRun(text: CharSequence, last: Int): Int {
+        var n = 1
+        var s = last
+        while (s > 0) {
+            val prev = codePointStart(text, s)
+            if (!isRegional(Character.codePointAt(text, prev))) break
+            n++
+            s = prev
+        }
+        return n
+    }
+
+    private const val KEYCAP = 0x20E3
+
+    private fun isRegional(cp: Int): Boolean = cp in 0x1F1E6..0x1F1FF
+
+    private fun isSkinTone(cp: Int): Boolean = cp in 0x1F3FB..0x1F3FF
+
+    /** Variation selectors, both blocks, and the tag characters of a subdivision flag. */
+    private fun isSelectorOrTag(cp: Int): Boolean =
+        cp in 0xFE00..0xFE0F || cp in 0xE0100..0xE01EF || cp in 0xE0020..0xE007F
+
+    /**
+     * The blocks emoji are drawn from, taken wide: a joiner only binds two of these, so a
+     * joiner between letters, as Indic conjuncts use, still deletes on its own.
+     */
+    private fun isPictographic(cp: Int): Boolean =
+        cp in 0x1F000..0x1FAFF || cp in 0x2600..0x27BF || cp in 0x2300..0x23FF ||
+            cp in 0x2B00..0x2BFF || cp in 0x2190..0x21FF || cp == 0x00A9 || cp == 0x00AE ||
+            cp == 0x203C || cp == 0x2049 || cp == 0x2122 || cp == 0x2139 || cp == 0x3030 ||
+            cp == 0x303D || cp == 0x3297 || cp == 0x3299
 }

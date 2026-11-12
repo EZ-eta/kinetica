@@ -117,6 +117,8 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     internal val backspace = Backspace(this)
     internal val views = KeyboardViews(this)
     internal val emojiSearch = EmojiSearchMode(this)
+    internal val apostropheSwipe = ApostropheSwipe()
+    private val apostropheSettle = Runnable { settleApostropheSwipe("wait") }
     internal val edits = WordEdits(this)
     internal val commit = CommitPath(this)
     internal val reopen = WordReopen(this)
@@ -536,6 +538,11 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     // -------------------------------------------------- engine listener (UI)
 
     override fun onTokenFinalized(token: InputToken) {
+        // The next word's, after the `'` a swipe crossed is written.
+        if (apostropheSwipe.hold(token)) {
+            DecodeTrace.log { "  apostrophe swipe hold ${if (token is SwipeToken) "swipe" else "tap"}" }
+            return
+        }
         // Spent by this gesture, whatever it is.
         val shiftAt = autospace.takeShiftAt()
         gestureUndo.forgetCommitted()
@@ -662,6 +669,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             tentative
         }
         onCandidatesRanked(ranked, lead, literal)
+        if (apostropheSwipe.due(generation)) settleApostropheSwipe("decode")
     }
 
     private fun onCandidatesRanked(
@@ -715,7 +723,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             if (key.type != KeyType.SHIFT) shift.onOtherKey()
             if (emojiSearch.onKeyTap(key)) return
             when (key.type) {
-                KeyType.CHAR -> onPunctuation(key.output)
+                KeyType.CHAR -> onPunctuation(key.output, key)
                 KeyType.SPACE -> {
                     onSpace()
                     if (lettersAfterSpace(config.lettersAfterSpace, keyboardView?.shownBoard)) {
@@ -848,7 +856,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             // A held letter's accent reaches the composer folded, so without this line a capture
             // cannot tell a long-press from a tap.
             DecodeTrace.log { "  alternate key=${key.output} out=$text" }
-            if (!composeAccentedLetter(text)) finalizeThenCommitText(text)
+            if (!composeAccentedLetter(text) && !joinApostrophe(text, key)) finalizeThenCommitText(text)
             if (shift.state == ShiftState.State.SHIFT) {
                 shift.onLetterCommitted()
                 keyboardView?.setShiftUppercase(shift.isShifted)
@@ -915,6 +923,9 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         }
 
         override fun onKeyPressFeedback(key: Key) {
+            // A key acts after the `'` a swipe crossed, so the `'` is written first.
+            settleApostropheSwipe("key")
+            keyDownAt[key.id] = SystemClock.uptimeMillis()
             autospace.cancel()
             commands.onKeyDown(key.output)
             // Typing resumed: a shortcut row the bar's button brought up gives the words back.
@@ -929,6 +940,15 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
                 commit.abandonWord()
             }
             views.vibrateForKeyPress()
+        }
+
+        override fun mayCutAtApostrophe(): Boolean = !emojiSearch.active && composer != null
+
+        override fun onApostropheSwipe() {
+            val comp = composer ?: return
+            apostropheSwipe.begin(comp.currentGeneration)
+            mainHandler.removeCallbacks(apostropheSettle)
+            mainHandler.postDelayed(apostropheSettle, KineticaConstants.APOSTROPHE_CUT_WAIT_MS)
         }
 
         override fun onDoubleSpace() {
@@ -1015,6 +1035,49 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     }
 
 
+    /** When each key last went down, by id: a tapped apostrophe takes its place in the word by its touch. */
+    private val keyDownAt = HashMap<String, Long>()
+
+    /** Whether a tapped apostrophe joins [word], asked of every resident lexicon; see [apostropheJoins]. */
+    internal fun joinsAtApostrophe(word: String): Boolean {
+        val g = currentGeometry ?: return false
+        val lexicons = residentLanguages().mapNotNull { lang -> predictorFor(lang)?.let { lang to it } }
+        return apostropheJoins(word, lexicons, g.alphabet, elidingEnabled(config.enabledLanguages + config.language))
+    }
+
+    /**
+     * A tapped or held `'` joins the tapped word in hand when the two can still become a word
+     * ([joinsAtApostrophe]): `I` `'` `d` is `I'd`, learned as one word. False otherwise, and the caller
+     * ends the word as before, so `l'altro` stays two words.
+     *
+     * A word with a swipe in it is left alone: `[swipe, ']` decodes to nothing until the next letter, and
+     * the stale timeout can close it first. A swipe reaches `don't` and `I'd` without the key.
+     */
+    private fun joinApostrophe(text: String, key: Key): Boolean {
+        if (text != "'" || config.peckMode || editorState.privateMode) return false
+        val comp = composer ?: return false
+        val g = currentGeometry ?: return false
+        if (g.alphabet.apostrophe < 0) return false
+        // The touch, not the lift: a letter the other thumb pressed while this key was down sorts after it.
+        val t = keyDownAt[key.id] ?: SystemClock.uptimeMillis()
+        // A tapped word's automatic space is still provisional: the apostrophe takes it back as a letter does.
+        if (!comp.hasPendingWord) autospace.retractBeforeApostrophe(t)
+        val word = wordState.tentativeWord
+        if (!comp.hasPendingWord || word.isEmpty()) return false
+        val joins = !comp.hasSwipeToken() && comp.tokenCount < KineticaConstants.MAX_WORD_LEN && joinsAtApostrophe(word)
+        DecodeTrace.log { "  apostrophe ${if (joins) "join" else "break"} word=$word" }
+        if (!joins) return false
+        barContents.clearCorrection()
+        rememberWordBeforeGesture()
+        commitTracked("'")
+        wordState.tentativeLength += 1
+        wordState.tentativeWord += "'"
+        wordState.seededWithoutTokens = false
+        val side = if (key.x + key.w / 2f < 0.5f) StreamId.LEFT else StreamId.RIGHT
+        comp.onToken(TapToken.apostrophe(side, g.alphabet.apostrophe, t))
+        return true
+    }
+
     /**
      * Moves the cursor one word in [direction], returning false when the editor's text does
      * not allow it; the caller then falls back to the arrow key.
@@ -1051,9 +1114,10 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     private fun onSpace() {
         if (commands.consumeCtrl("space")) return
         // A space tapped after the automatic one says the word was over.
-        if (autospace.inserted) commitMarks.unspaceAt(cursorExpected() - 1)
+        val keyboardSpace = autospace.inserted
+        if (keyboardSpace) commitMarks.unspaceAt(cursorExpected() - 1)
         if (config.tidySpaces && composer?.hasPendingWord != true) {
-            when (tidySpaceTap(ich.textBeforeCursor(2) ?: "", config.doubleSpacePeriod)) {
+            when (tidySpaceTap(ich.textBeforeCursor(2) ?: "", config.doubleSpacePeriod, keyboardSpace)) {
                 SpaceTap.SENTENCE_END -> {
                     onDoubleSpace()
                     return
@@ -1065,7 +1129,14 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
                     if (commit.finalizePendingWord() && ich.textBeforeCursor(1)?.lastOrNull() != ' ') {
                         commitTracked(" ")
                     } else {
-                        DecodeTrace.log { "  space swallowed" }
+                        // The tap confirms the keyboard's space: from here it is the user's, so
+                        // punctuation leaves it, a backspace takes it alone, and the next tap ends
+                        // the sentence.
+                        if (keyboardSpace) {
+                            autospace.forget()
+                            gestureUndo.forgetCommitted()
+                        }
+                        DecodeTrace.log { "  space swallowed adopted=$keyboardSpace" }
                     }
                     updateAutoShift()
                     barContents.refreshPredictions()
@@ -1082,6 +1153,31 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     }
 
     /**
+     * Writes the `'` a swipe crossed: the word before the key as decoded, or the elision head among
+     * its first readings (a swipe cannot show `ll`, so `nel` outranks `nell`), then `'` with no space,
+     * then the tokens that lifted meanwhile, as the next word. The break a tapped `'` makes.
+     */
+    private fun settleApostropheSwipe(why: String) {
+        if (!apostropheSwipe.pending) return
+        mainHandler.removeCallbacks(apostropheSettle)
+        // Taken first: the commit below can abandon the word, and that drops what is held.
+        val held = apostropheSwipe.take()
+        if (composer?.hasSwipeToken() == true && wordState.tentativeLength > 0) {
+            val heads = elisionHeadsFor(config.enabledLanguages + config.language)
+            val head = elisionHead(wordState.lastCandidates.map { it.word }, heads)
+            if (head != null && !head.equals(wordState.tentativeWord, ignoreCase = true)) replaceTentative(displayWord(head))
+        }
+        val word = wordState.tentativeWord
+        autospace.cancel()
+        commit.finalizePendingWord()
+        commitTracked("'")
+        updateAutoShift()
+        barContents.refreshPredictions()
+        DecodeTrace.log { "  apostrophe swipe settle word=$word held=${held.size} why=$why" }
+        for (t in held) onTokenFinalized(t)
+    }
+
+    /**
      * Second spacebar tap of a double: the space it wrote becomes a sentence end.
      *
      * [doubleSpaceEndsSentence] refuses more than it accepts: at the start of a field, after a
@@ -1091,7 +1187,8 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
      */
     private fun onDoubleSpace() {
         val before = ich.textBeforeCursor(2) ?: ""
-        if (!doubleSpaceEndsSentence(before)) {
+        // A full stop takes two spaces the user tapped: the keyboard's own space is not the first.
+        if (autospace.inserted || !doubleSpaceEndsSentence(before)) {
             onSpace()
             return
         }
@@ -1119,11 +1216,12 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         updateAutoShift()
     }
 
-    private fun onPunctuation(text: String) {
+    private fun onPunctuation(text: String, key: Key) {
         if (text.length == 1 && commands.consumeCtrl(text.lowercase())) return
         autospace.cancel()
         // Reserved action outputs never reach the editor as text.
         if (commands.performIfAction(text)) return
+        if (joinApostrophe(text, key)) return
         // "Hi" + autospace + "!" should read "Hi!", not "Hi !".
         autospace.eatBefore(text)
         commit.finalizePendingWord()

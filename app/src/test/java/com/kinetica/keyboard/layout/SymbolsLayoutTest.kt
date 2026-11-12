@@ -137,6 +137,13 @@ class SymbolsLayoutTest {
         }
     }
 
+    /** A colon for times and ratios, held on the full stop beside the zero. */
+    @Test
+    fun theNumpadFullStopHoldsTheColon() {
+        val period = read("numpad.json").lines().single { it.contains("\"id\": \"period\"") }
+        assertTrue(period, onLongPress(period, ":"))
+    }
+
     @Test
     fun theNumpadDigitsSitInTheMiddle() {
         val numpad = read("numpad.json")

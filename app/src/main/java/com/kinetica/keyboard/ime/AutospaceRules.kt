@@ -330,9 +330,13 @@ internal enum class SpaceTap { WRITE, SWALLOW, SENTENCE_END }
  * A space tapped straight after a space: with the double-space full stop on and a word before
  * it, the pair ends the sentence as a double tap would; otherwise the tap is dropped, because
  * the space is already there. [before] is the two characters before the cursor.
+ *
+ * [keyboardSpace]: the space there is the keyboard's (autospace, a pick's space). A full stop
+ * takes two spaces the user tapped, so that tap is dropped and the space becomes the user's.
  */
-internal fun tidySpaceTap(before: CharSequence, doubleSpacePeriod: Boolean): SpaceTap = when {
+internal fun tidySpaceTap(before: CharSequence, doubleSpacePeriod: Boolean, keyboardSpace: Boolean): SpaceTap = when {
     before.isEmpty() || before[before.length - 1] != ' ' -> SpaceTap.WRITE
+    keyboardSpace -> SpaceTap.SWALLOW
     doubleSpacePeriod && doubleSpaceEndsSentence(before) -> SpaceTap.SENTENCE_END
     else -> SpaceTap.SWALLOW
 }

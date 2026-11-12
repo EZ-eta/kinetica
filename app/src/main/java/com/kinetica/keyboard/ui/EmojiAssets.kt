@@ -18,6 +18,18 @@ class EmojiAssets(private val context: Context) {
 
     fun canDraw(ch: String): Boolean = glyphPaint.hasGlyph(ch)
 
+    private val tonedDrawable = HashMap<String, Boolean>()
+
+    /**
+     * What [entry] shows and types in [tone] ([EmojiTone]); its plain form when the font has no
+     * glyph for the toned one: an older phone shows yellow, not a hand and a swatch.
+     */
+    fun shown(entry: EmojiCatalog.Entry, tone: Int): String {
+        val toned = EmojiTone.apply(entry, tone)
+        if (toned == entry.ch) return toned
+        return if (tonedDrawable.getOrPut(toned) { canDraw(toned) }) toned else entry.ch
+    }
+
     val catalog: EmojiCatalog by lazy {
         read("emoji/emoji.tsv") { EmojiCatalog.parse(it, ::canDraw) } ?: EmojiCatalog(emptyList())
     }

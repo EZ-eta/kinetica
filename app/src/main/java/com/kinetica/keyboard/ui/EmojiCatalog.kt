@@ -9,8 +9,11 @@ import com.kinetica.keyboard.engine.AccentFolder
  */
 class EmojiCatalog(val groups: List<Group>) {
 
-    /** [index] is the emoji's line among all emoji in the file, the line of its search words. */
-    class Entry(val ch: String, val name: String, val index: Int)
+    /**
+     * [index] is the emoji's line among all emoji in the file, the line of its search words.
+     * [toned] is its light skin tone form, null when it takes no tone ([EmojiTone]).
+     */
+    class Entry(val ch: String, val name: String, val index: Int, val toned: String? = null)
 
     class Group(val name: String, val icon: String, val entries: List<Entry>)
 
@@ -50,7 +53,10 @@ class EmojiCatalog(val groups: List<Group>) {
                     continue
                 }
                 val ch = line.substring(0, tab)
-                if (drawable(ch)) entries.add(Entry(ch, line.substring(tab + 1), index))
+                val toneTab = line.indexOf('\t', tab + 1)
+                val name = if (toneTab < 0) line.substring(tab + 1) else line.substring(tab + 1, toneTab)
+                val toned = if (toneTab < 0) null else line.substring(toneTab + 1).ifEmpty { null }
+                if (drawable(ch)) entries.add(Entry(ch, name, index, toned))
                 index++
             }
             close()

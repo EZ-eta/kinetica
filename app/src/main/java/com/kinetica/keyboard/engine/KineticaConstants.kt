@@ -136,6 +136,32 @@ object KineticaConstants {
     /** Fewest taps before one may be skipped or a letter added: a short word has too many neighbours. Reasoned, not swept. */
     const val TAP_EDIT_MIN_TAPS = 5
 
+    /**
+     * Trie nodes a list-prefix walk visits before it answers yes. Apostrophe subtrees are a few
+     * dozen nodes (uk, the largest, 331 rows over every head); a wider one is the list's. Reasoned.
+     */
+    const val LIST_PREFIX_NODES = 4096
+
+    /**
+     * Travel, kw, over which a stroke resumed past the apostrophe key measures its heading, and the
+     * least travel from the key before its first letter. Under a key: the turn onto a word's first
+     * letter is read across one key's width either side. Reasoned on the cut goldens, not swept.
+     */
+    const val LEAD_IN_WINDOW_KW = 0.5f
+
+    /**
+     * Heading change, degrees, that marks the first letter after the apostrophe key: the thumb
+     * turns onto it from the travel. 60 keeps the gentle bend of a letter passed on the way.
+     * Reasoned on the cut goldens, not swept; no capture holds a cut.
+     */
+    const val LEAD_IN_TURN_DEG = 60f
+
+    /**
+     * Longest wait, ms, for the decode of the word before a swiped-over apostrophe before its `'` is
+     * written anyway. The phone's decode p99 is about 105 ms; four times that. Reasoned.
+     */
+    const val APOSTROPHE_CUT_WAIT_MS = 400L
+
     // Live tap-typing completions (pick-only): once the exact all-anchor pass has consumed every
     // tapped letter, the search keeps descending and emits longer words as Source.COMPLETION.
     // Only the exact pass completes: completing fuzzy or transposed prefixes would dress typos up

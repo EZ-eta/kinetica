@@ -54,6 +54,88 @@ class EdgeSwipeBindingsTest {
 
     private val empty = EdgeSwipeBindings(emptyList())
 
+    private fun symbolKey(id: String, out: String, y: Float, alternates: List<String> = emptyList()) = Key(
+        id = id, type = KeyType.CHAR, label = out, output = out,
+        x = 0f, y = y, w = 0.1f, h = 0.25f, alternates = alternates,
+    )
+
+    /** Mirrors symbols.json rows and lists; `1` carries a list as a user's would. */
+    private fun symbols(): KeyboardLayout = KeyboardLayout(
+        name = "symbols", locale = "en_US",
+        keys = listOf(
+            symbolKey("d1", "1", 0.00f, listOf("¹", "½")),
+            symbolKey("d2", "2", 0.00f),
+            symbolKey("dollar", "$", 0.25f, listOf("€", "£")),
+            Key("page2", KeyType.MODE_SYMBOLS2, "=\\<", "", 0f, 0.50f, 0.15f, 0.25f),
+            symbolKey("quote", "\"", 0.50f, listOf("«", "»")),
+            symbolKey("quest", "?", 0.50f, listOf("¿")),
+            Key("backspace", KeyType.BACKSPACE, "⌫", "", 0.85f, 0.50f, 0.15f, 0.25f),
+            symbolKey("comma", ",", 0.75f, listOf(";")),
+        ),
+    )
+
+    private fun symbols2(): KeyboardLayout = KeyboardLayout(
+        name = "symbols2", locale = "en_US",
+        keys = listOf(
+            symbolKey("euro", "€", 0.00f, listOf("₹")),
+            symbolKey("lbracket", "[", 0.25f, listOf("⟨")),
+            symbolKey("pi", "π", 0.50f, listOf("Π")),
+        ),
+    )
+
+    @Test
+    fun bothSymbolPagesFlickUpOnTheTopRowAndDownOnTheLowestSymbolRow() {
+        // Reported in #57: the swipes worked on the letters only.
+        val b = EdgeSwipeBindings.withImplicitAlternates(layout(), empty, listOf(symbols(), symbols2()))
+        val page = symbols().keys.associateBy { it.id }
+        assertEquals("¹", b.outputFor(page.getValue("d1"), Direction.UP))
+        assertEquals("«", b.outputFor(page.getValue("quote"), Direction.DOWN))
+        assertEquals("¿", b.outputFor(page.getValue("quest"), Direction.DOWN))
+        assertEquals("₹", b.outputFor("euro", Direction.UP))
+        assertEquals("Π", b.outputFor("pi", Direction.DOWN))
+        // The other direction, the middle row, the bottom row and a key with no list: nothing.
+        assertNull(b.outputFor(page.getValue("d1"), Direction.DOWN))
+        assertNull(b.outputFor(page.getValue("quote"), Direction.UP))
+        assertNull(b.outputFor(page.getValue("dollar"), Direction.UP))
+        assertNull(b.outputFor(page.getValue("dollar"), Direction.DOWN))
+        assertNull(b.outputFor("lbracket", Direction.UP))
+        assertNull(b.outputFor(page.getValue("comma"), Direction.DOWN))
+        assertNull(b.outputFor(page.getValue("d2"), Direction.UP))
+        assertNull(b.outputFor("backspace", Direction.DOWN))
+        // The letters keep theirs.
+        assertEquals("1", b.outputFor("q", Direction.UP))
+        assertEquals("?", b.outputFor("m", Direction.DOWN))
+    }
+
+    @Test
+    fun aUserBindingOnASymbolsCharacterWinsOverItsCorner() {
+        // Typed triggers are stored by character, and outputFor reads the key's id first: the
+        // corner must not be there to win.
+        val mine = EdgeSwipeBindings(
+            listOf(
+                EdgeSwipeBinding("1", Direction.UP, "one"),
+                EdgeSwipeBinding("quote", Direction.DOWN, "q!"),
+            ),
+        )
+        val b = EdgeSwipeBindings.withImplicitAlternates(layout(), mine, listOf(symbols()))
+        val page = symbols().keys.associateBy { it.id }
+        assertEquals("one", b.outputFor(page.getValue("d1"), Direction.UP))
+        assertEquals("q!", b.outputFor(page.getValue("quote"), Direction.DOWN))
+        org.junit.Assert.assertFalse(b.isImplicitUp(page.getValue("d1")))
+        assertEquals("¿", b.outputFor(page.getValue("quest"), Direction.DOWN))
+    }
+
+    @Test
+    fun theNumberPadGainsNothingFromTheSymbolPages() {
+        // Its `1` types the same character as the page's, under an id of its own.
+        val b = EdgeSwipeBindings.withImplicitAlternates(layout(), empty, listOf(symbols()))
+        val pad = symbolKey("n1", "1", 0.00f, listOf("¹"))
+        assertNull(b.outputFor(pad, Direction.UP))
+        // Without the pages, as with the switch's old reach, the page is unbound.
+        val lettersOnly = EdgeSwipeBindings.withImplicitAlternates(layout(), empty)
+        assertNull(lettersOnly.outputFor(symbols().keys.first { it.id == "d1" }, Direction.UP))
+    }
+
     @Test
     fun onlyTheTopRowsOwnCornerHintsAreImplicitUpFlicks() {
         val numbered = LayoutMutations.withNumberRow(LayoutMutations.withNumberRowSymbols(layout()))

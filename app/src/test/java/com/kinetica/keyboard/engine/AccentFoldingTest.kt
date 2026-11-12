@@ -184,6 +184,20 @@ class AccentFoldingTest {
     }
 
     @Test
+    fun theCurlyApostropheFoldsOntoTheStraightOne() {
+        // Smart-quote editors write `I’d`; the trie spells it `i'd`. Before the fold the curly
+        // spelling reached no node, so a reopened `I’d` was no word.
+        assertEquals("i'd", AccentFolder.fold("i\u2019d"))
+        assertEquals("i'll", AccentFolder.fold("I\u2019ll"))
+        val d = dict("i'd" to 455015, "id" to 16835)
+        val p = WordPredictor(d.trie, BigramTable.EMPTY, g, d.forms)
+        assertTrue(p.isWordIgnoringCase("I\u2019d"))
+        assertTrue(p.isLivePrefix("i\u2019"))
+        // A popup `’` stays punctuation: it is no letter of the word.
+        assertNull(codes("\u2019"))
+    }
+
+    @Test
     fun theLatinFoldLeavesOtherScriptsAlone() {
         // `й` decomposes to `и` but is a key of its own on both Cyrillic boards.
         assertEquals("йод", AccentFolder.fold("йод"))

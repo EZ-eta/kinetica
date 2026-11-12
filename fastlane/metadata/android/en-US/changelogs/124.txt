@@ -1,0 +1,10 @@
+Emoji skin tone: none or one of five (Keys)
+Number pad: hold . for :
+Editing page: ?123 for the symbols, slide right for the number pad
+English I'd, I'll, we're, should've and more
+A tapped ' stays in the word: don't, I'd
+One backspace deletes a whole emoji
+Flicks on the symbol pages' top and bottom rows
+Swipe across the apostrophe key to write ' (Keys, off)
+Fixed: one space tap after an automatic space no longer adds a full stop
+Fixed: an edited long-press list stays as written

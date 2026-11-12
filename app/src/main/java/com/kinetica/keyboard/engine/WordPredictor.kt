@@ -270,6 +270,36 @@ class WordPredictor(
         s.isNotEmpty() && trie.prefixNode(AccentFolder.fold(s.lowercase())) != -1
 
     /**
+     * [isLivePrefix] by the bundled list alone: a word under [s] that the user did not only learn.
+     * A learned Italian elision filed to English (`l'ora`) makes `l'` live there, never listed.
+     * The walk stops at [KineticaConstants.LIST_PREFIX_NODES]: a prefix that wide is the list's anyway.
+     */
+    fun holdsListPrefix(s: String): Boolean {
+        if (s.isEmpty()) return false
+        val start = trie.prefixNode(AccentFolder.fold(s.lowercase()))
+        if (start == -1) return false
+        val stack = ArrayDeque<Int>()
+        stack.addLast(start)
+        var seen = 0
+        while (stack.isNotEmpty()) {
+            val node = stack.removeLast()
+            if (++seen > KineticaConstants.LIST_PREFIX_NODES) return true
+            if (trie.isWord(node)) {
+                val variants = forms[node]
+                val listed = if (variants == null) {
+                    trie.wordOf(node) !in learnedOnly
+                } else {
+                    variants.any { it.display.lowercase() !in learnedOnly }
+                }
+                if (listed) return true
+            }
+            val first = trie.firstChild(node)
+            for (i in 0 until trie.childCount(node)) stack.addLast(first + i)
+        }
+        return false
+    }
+
+    /**
      * Ranked candidates for [tokens]. [context] is the last committed words, oldest first
      * (window of 2). [beam] lets the thumb-cursor beam read the buffer too (per
      * [KineticaConstants.SEARCH_ENGINE]); the composer turns it off for the second language,
@@ -1449,8 +1479,9 @@ class WordPredictor(
             if (editsLeft > 0) {
                 val pen = tapPen + KineticaConstants.TAP_EDIT_PEN_KW
                 editsLeft--
-                // This tap was a stray: the word goes on from the next one.
-                dfs(node, ti + 1, depth, pen, contactKeep)
+                // This tap was a stray: the word goes on from the next one. Never a tapped
+                // apostrophe: it is pressed on purpose, and `l'altro` read as `laltro` drops it.
+                if (!m.keyless) dfs(node, ti + 1, depth, pen, contactKeep)
                 // A letter before this tap was never tapped.
                 if (depth + 1 < KineticaConstants.MAX_WORD_LEN) {
                     val first = trie.firstChild(node)
@@ -1464,7 +1495,9 @@ class WordPredictor(
                 }
                 editsLeft++
             }
-            if (!fuzzyAnchors) {
+            // A tapped apostrophe stands for no other key: the loop below visits letters only, so
+            // the fuzzy pass would lose it and `i's` would never reach `i'd`.
+            if (!fuzzyAnchors || m.keyless) {
                 tryAnchor(node, m.code, 0f, ti, depth, tapPen, contactKeep)
             } else {
                 for (code in 0 until alphabet.letterCount) {

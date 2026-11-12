@@ -216,14 +216,17 @@ internal class EmojiSearchMode(private val ime: KineticaIME) {
         val v = view ?: return
         val assets = ime.views.emojiAssets
         val uses = ime.learner.emojiUses.values
+        val tone = ime.config.emojiTone
         results = if (query.text.isBlank()) {
             val recents = EmojiRecents.ordered(uses).filter { assets.canDraw(it) }
             // Twice the strip: enough to fill it whichever recents the catalog's head repeats.
-            EmojiRecents.strip(recents, assets.catalog.entries.take(2 * EmojiRecents.MAX).map { it.ch })
+            EmojiRecents.strip(recents, assets.catalog.entries.take(2 * EmojiRecents.MAX).map { assets.shown(it, tone) })
         } else {
             val langs = (ime.config.enabledLanguages + ENGLISH).distinct().map { assets.words(it) }
-            EmojiSearch.rank(query.text, assets.catalog.entries, langs, uses.associate { it.emoji to it.count })
-                .map { it.ch }
+            EmojiSearch.rank(
+                query.text, assets.catalog.entries, langs, uses.associate { it.emoji to it.count },
+                shown = { assets.shown(it, tone) },
+            ).map { assets.shown(it, tone) }
         }
         v.show(query.text, results)
         if (query.text.isNotBlank()) {

@@ -39,7 +39,7 @@ internal class WordReopen(private val ime: KineticaIME) {
         val after = ime.ich.textAfterCursor(1)
         if (after != null && after.isNotEmpty() && after[0].isLetter()) return
         val before = ime.ich.textBeforeCursor(KineticaConstants.MAX_WORD_LEN + 1) ?: return
-        val fragment = reloadFragment(trailingLetterRun(before), ::isResidentWord)
+        val fragment = reloadFragment(reloadRun(before), ::isResidentWord, ime::joinsAtApostrophe)
         if (fragment.isEmpty() || fragment.length > KineticaConstants.MAX_WORD_LEN) return
         val taps = tapAnchors(fragment, g, beforeTime) ?: return
         ime.wordState.wordShift = shiftOf(fragment)
@@ -86,7 +86,7 @@ internal class WordReopen(private val ime: KineticaIME) {
         val around = wordAroundCursor(before, after, KineticaConstants.MAX_WORD_LEN) ?: return true
         // An elision is offered as tapping wrote it, the piece after its apostrophe, as the reload
         // reopens it: whole, `l'altro` would seed `laltro`.
-        val word = midWordPiece(around, ::isResidentWord) ?: return true
+        val word = midWordPiece(around, ::isResidentWord, ime::joinsAtApostrophe) ?: return true
         val whole = word.head + word.tail
         val taps = tapAnchors(whole, g, SystemClock.uptimeMillis()) ?: return true
         ime.wordState.wordShift = shiftOf(whole)
@@ -121,7 +121,7 @@ internal class WordReopen(private val ime: KineticaIME) {
         val old = offer.head + offer.tail
         val history = ime.wordState.midWordHistory
         ime.commit.abandonWord()
-        if (!midWordStillThere(before, after, offer, ::isResidentWord)) {
+        if (!midWordStillThere(before, after, offer, ::isResidentWord, ime::joinsAtApostrophe)) {
             DecodeTrace.log { "  midword refused word=$word old=$old" }
             return
         }

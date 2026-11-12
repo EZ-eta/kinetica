@@ -26,7 +26,8 @@ import kotlin.math.sqrt
  */
 object TraceReplay {
 
-    private val TAP = Regex("""tap\[([a-z]),(LEFT|RIGHT),t=(\d+)]""")
+    // A tapped apostrophe joins a word as an anchor of its own, so a trace can hold `tap[',`.
+    private val TAP = Regex("""tap\[([a-z']),(LEFT|RIGHT),t=(\d+)]""")
     // The whole bracket, not just the contacts, so the fields that follow `keys=` can be
     // read. Stops at the first `]`, and a swipe label contains none.
     private val SWIPE = Regex("""swipe\[(LEFT|RIGHT),t=(\d+)\.\.(\d+),keys=([^\]]*)\]""")
@@ -104,11 +105,16 @@ object TraceReplay {
     fun tokens(line: String, g: KeyboardGeometry): List<InputToken> {
         val out = ArrayList<InputToken>(4)
         for (m in TAP.findAll(line)) {
-            val code = m.groupValues[1][0] - 'a'
             val t = m.groupValues[3].toLong()
+            val stream = StreamId.valueOf(m.groupValues[2])
+            if (m.groupValues[1] == "'") {
+                out.add(TapToken.apostrophe(stream, g.alphabet.apostrophe, t))
+                continue
+            }
+            val code = m.groupValues[1][0] - 'a'
             out.add(
                 TapToken(
-                    StreamId.valueOf(m.groupValues[2]), code,
+                    stream, code,
                     g.centerX(code), g.centerY(code), false, t, t + 60,
                 ),
             )

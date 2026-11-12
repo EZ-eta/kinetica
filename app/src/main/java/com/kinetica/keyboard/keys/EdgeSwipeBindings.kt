@@ -2,6 +2,7 @@ package com.kinetica.keyboard.keys
 
 import com.kinetica.keyboard.layout.Key
 import com.kinetica.keyboard.layout.KeyboardLayout
+import com.kinetica.keyboard.layout.SymbolRows
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -142,6 +143,11 @@ class EdgeSwipeBindings(
          * one, inserts the glyph that key draws in its corner. Home-row and non-letter keys get
          * nothing.
          *
+         * Each of [symbolPages] gives the same: up on its top row, down on its lowest symbol row.
+         * Their ids are their own, so no letter or number pad key shares one. A user binding on a
+         * symbol's character wins too: [outputFor] reads the id first, so the implicit row is
+         * left out, not left to be overwritten.
+         *
          * The output is [Key.hintChar], so what a key shows is what it types under every
          * combination of the long-press settings. The first non-letter alternate would disagree
          * with the hint whenever a key lists an accent first: qwerty "z" draws `ž`.
@@ -153,21 +159,35 @@ class EdgeSwipeBindings(
         fun withImplicitAlternates(
             layout: KeyboardLayout,
             explicit: EdgeSwipeBindings,
+            symbolPages: List<KeyboardLayout> = emptyList(),
         ): EdgeSwipeBindings {
             val implicit = ArrayList<EdgeSwipeBinding>()
             val letters = layout.keys.filter { it.isLetter }
-            val topY = letters.minOfOrNull { it.y } ?: return explicit
-            val bottomY = letters.maxOf { it.y }
-            for (k in letters) {
-                val direction = when {
-                    kotlin.math.abs(k.y - topY) < SAME_ROW_Y -> EdgeSwipeBinding.Direction.UP
-                    bottomY - topY > SAME_ROW_Y && kotlin.math.abs(k.y - bottomY) < SAME_ROW_Y ->
-                        EdgeSwipeBinding.Direction.DOWN
-                    else -> continue
+            val topY = letters.minOfOrNull { it.y }
+            if (topY != null) {
+                val bottomY = letters.maxOf { it.y }
+                for (k in letters) {
+                    val direction = when {
+                        kotlin.math.abs(k.y - topY) < SAME_ROW_Y -> EdgeSwipeBinding.Direction.UP
+                        bottomY - topY > SAME_ROW_Y && kotlin.math.abs(k.y - bottomY) < SAME_ROW_Y ->
+                            EdgeSwipeBinding.Direction.DOWN
+                        else -> continue
+                    }
+                    val symbol = k.hintChar ?: continue
+                    implicit.add(EdgeSwipeBinding(k.id, direction, symbol))
                 }
-                val symbol = k.hintChar ?: continue
-                implicit.add(EdgeSwipeBinding(k.id, direction, symbol))
             }
+            for (page in symbolPages) {
+                val (top, lowest) = SymbolRows.edgeRows(page)
+                for ((row, direction) in listOf(top to EdgeSwipeBinding.Direction.UP, lowest to EdgeSwipeBinding.Direction.DOWN)) {
+                    for (k in row) {
+                        val symbol = k.hintChar ?: continue
+                        if (k.chordChar?.let { explicit.outputFor(it.toString(), direction) } != null) continue
+                        implicit.add(EdgeSwipeBinding(k.id, direction, symbol))
+                    }
+                }
+            }
+            if (implicit.isEmpty()) return explicit
             val explicitUp = explicit.bindings
                 .filter { it.direction == EdgeSwipeBinding.Direction.UP }
                 .mapTo(HashSet()) { it.keyId }

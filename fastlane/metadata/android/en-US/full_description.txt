@@ -41,7 +41,8 @@ Features
   block it. Names you write with a capital keep it
 * Chords on ?123 or the spacebar, edge swipes on any key, and text expansions:
   type text, run an action, or press Ctrl and a key
-* 1 906 emoji with search in 14 languages
+* 1 906 emoji with search in 14 languages, people and hands in the skin tone
+  you choose
 * Voice input through a voice keyboard you install: Kinetica itself records
   nothing and has no microphone permission
 * Long-press menus as grids, with your own list for every letter and symbol,

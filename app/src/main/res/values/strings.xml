@@ -547,7 +547,7 @@
     <string name="pref_group_longpress_title">Long-press menus</string>
     <string name="pref_group_longpress_summary">Grid or strip, and what each letter offers when held</string>
     <string name="pref_letter_alternates_note_title">Each letter\'s list</string>
-    <string name="pref_letter_alternates_note_summary">Characters separated by spaces. The first is the key\'s corner character, typed by a plain long-press or an up-swipe. Built-in is what the active language\'s key offers: leave a list blank, or type the built-in back, to keep it. Each enabled language\'s own letters join a list by themselves and leave when the language is turned off; everything else stays as you wrote it. Default fills in the accents of every enabled language\'s keys. A list is shared by every language and replaces the built-in one in all of them</string>
+    <string name="pref_letter_alternates_note_summary">Characters separated by spaces. The first is the key\'s corner character, typed by a plain long-press or an up-swipe. Built-in is what the active language\'s key offers: leave a list blank, or type the built-in back, to keep it. A list you write stays as you wrote it, whatever the languages or the setting that hides accents. Default fills in the accents of every enabled language\'s keys. A list is shared by every language and replaces the built-in one in all of them</string>
     <!-- %1$s is the list of :names, generated from the code: they stay in English. -->
     <string name="pref_letter_alternates_names">A shortcut runs from its bar symbol or its name, here and in the comma, period and enter lists: %1$s</string>
     <string name="pref_edit_from_menu_title">Edit a menu from the keyboard</string>
@@ -690,7 +690,7 @@
     <string name="pref_spacebar_step_summary">How far you slide along the spacebar to move the cursor one step. Lower is faster</string>
 
     <string name="pref_alternate_swipes_title">Directional number/symbol swipes</string>
-    <string name="pref_alternate_swipes_summary">Swipe up on a top-row letter, or down on a bottom-row one, to type the small character on the key. Your own edge swipes come first</string>
+    <string name="pref_alternate_swipes_summary">Swipe up on a top-row key, or down on a bottom-row one, to type the small character on the key: on the letters and on both symbol pages. Your own edge swipes come first</string>
 
     <string name="pref_enter_alternates_title">Enter slide-up symbols</string>
     <!-- The symbols in quotes are the stored default: keep them. -->
@@ -698,6 +698,8 @@
     <string name="pref_enter_alternates_default" translatable="false">\? ! ,</string>
 
     <string name="pref_apostrophe_key_title">Apostrophe key</string>
+    <string name="pref_apostrophe_swipe_title">Swipe across the apostrophe</string>
+    <string name="pref_apostrophe_swipe_summary">With the apostrophe key on, a swipe that crosses it writes \' and goes on as the next word: nell, across \', altro writes nell\'altro</string>
     <string name="pref_apostrophe_key_summary">Adds a narrow apostrophe key right of L, for writing contracted and elided words (don\'t, nell\'immagine) without the symbols layer</string>
 
     <string name="edge_swipe_settings_title">Edge swipe shortcuts</string>
@@ -726,6 +728,7 @@
 
     <string name="pref_emoji_key_title">Emoji on comma long-press</string>
     <string name="pref_emoji_key_summary">Makes the emoji picker the first long-press option on the comma key</string>
+    <string name="pref_emoji_tone_title">Emoji skin tone</string>
     <string name="pref_comma_mode_title">Comma key</string>
     <string name="pref_comma_mode_summary">Keep the comma, remove it (the spacebar widens), or make it a character, text or action of your own. A repurposed key keeps the comma in its long-press menu</string>
     <string name="pref_period_alternates_title">Period long-press symbols</string>

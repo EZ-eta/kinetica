@@ -94,6 +94,12 @@ class KeyboardConfigTest {
     }
 
     @Test
+    fun aSwipeCrossesTheApostropheKeyOnlyWhenChosen() {
+        assertEquals(false, MapPrefs.config().apostropheSwipe)
+        assertEquals(true, MapPrefs.config(mapOf(Prefs.APOSTROPHE_SWIPE to true)).apostropheSwipe)
+    }
+
+    @Test
     fun aSpaceKeepsTheSymbolPageUntilChosen() {
         assertEquals(false, MapPrefs.config().lettersAfterSpace)
         assertEquals(true, MapPrefs.config(mapOf(Prefs.LETTERS_AFTER_SPACE to true)).lettersAfterSpace)

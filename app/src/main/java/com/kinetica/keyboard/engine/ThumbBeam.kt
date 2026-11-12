@@ -590,9 +590,14 @@ internal class ThumbBeam(
         /** Distinct refusal notes kept per letter, so a diagnosed row stays readable. */
         private const val MAX_NOTES = 24
 
-        /** Whether the beam reads a buffer: a swipe in it and a pattern item for every token. */
+        /**
+         * Whether the beam reads a buffer: a swipe in it and a pattern item for every token. Not one with a
+         * tapped apostrophe: the beam reads a tap as a letter and takes the trie's apostrophe free, so the
+         * passes read that buffer alone.
+         */
         fun applies(tokens: List<InputToken>, items: List<Matcher>?): Boolean =
             items != null && items.size == tokens.size && tokens.any { it is SwipeToken } &&
-                tokens.all { it is SwipeToken || it is TapToken }
+                tokens.all { it is SwipeToken || it is TapToken } &&
+                items.none { it is Matcher.Anchor && it.keyless }
     }
 }

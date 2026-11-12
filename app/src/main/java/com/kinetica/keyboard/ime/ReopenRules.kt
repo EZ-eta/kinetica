@@ -101,16 +101,43 @@ internal fun midWordStillThere(
     after: CharSequence,
     offer: WordAround,
     isWord: (String) -> Boolean,
-): Boolean = wordAroundCursor(before, after, KineticaConstants.MAX_WORD_LEN)?.let { midWordPiece(it, isWord) } == offer
+    joins: (String) -> Boolean = { false },
+): Boolean = wordAroundCursor(before, after, KineticaConstants.MAX_WORD_LEN)?.let { midWordPiece(it, isWord, joins) } == offer
 
 /**
- * The part of [run] a reload reopens: all of it when it is a word (`don't`), else what follows
- * its last apostrophe. The apostrophe key ends a word, so `l'al` was typed as `l` and `al` and
- * reopens as `al`; whole, its letters would come back as `laltro` and commit `l'altro` as new.
+ * The part of [run] a reload reopens: all of it when it is a word (`don't`), else what follows the
+ * last apostrophe that ended a word as it was typed. A tapped `'` ends the word unless [joins] took
+ * it for the piece before it, so `i'` and `don'` come back whole, while `l'al` was typed as `l` and
+ * `al` and reopens as `al`: whole, its letters would come back as `laltro` and commit `l'altro` as
+ * new. A `’` never joins.
  */
-internal fun reloadFragment(run: String, isWord: (String) -> Boolean): String {
-    if (run.indexOf('\'') < 0 || isWord(run)) return run
-    return tailAfterLastApostrophe(run)
+internal fun reloadFragment(run: String, isWord: (String) -> Boolean, joins: (String) -> Boolean): String {
+    if (run.none { it == '\'' || it == '\u2019' } || isWord(run)) return run
+    var start = 0
+    for (i in run.indices) {
+        val c = run[i]
+        if (c == '\u2019' || (c == '\'' && !joins(run.substring(start, i)))) start = i + 1
+    }
+    return run.substring(start)
+}
+
+/** [reloadFragment] for a run no tapped apostrophe joined: cut after its last one. */
+internal fun reloadFragment(run: String, isWord: (String) -> Boolean): String = reloadFragment(run, isWord) { false }
+
+/**
+ * The run before the cursor a reload reads: [trailingLetterRun]'s, and a `’` between two letters, so a
+ * word a smart-quote editor wrote (`I’d`) comes back whole. A `’` with no letter on either side is a
+ * quote and ends the run, as it always did.
+ */
+internal fun reloadRun(before: CharSequence): String {
+    var start = before.length
+    while (start > 0) {
+        val c = before[start - 1]
+        val inner = c == '\u2019' && start >= 2 && start < before.length &&
+            before[start - 2].isLetter() && before[start].isLetter()
+        if (isWordChar(c) || inner) start-- else break
+    }
+    return before.subSequence(start, before.length).toString()
 }
 
 /**
@@ -119,15 +146,18 @@ internal fun reloadFragment(run: String, isWord: (String) -> Boolean): String {
  * the cursor at or before that apostrophe (`l|'altro`): the piece it sits in is no word the reload
  * would reopen either. An apostrophe that ends the run splits nothing: `dogs'` and `po'` stay whole.
  */
-internal fun midWordPiece(word: WordAround, isWord: (String) -> Boolean): WordAround? {
+internal fun midWordPiece(word: WordAround, isWord: (String) -> Boolean, joins: (String) -> Boolean): WordAround? {
     val whole = word.head + word.tail
     val core = whole.trimEnd('\'')
-    val piece = reloadFragment(core, isWord)
+    val piece = reloadFragment(core, isWord, joins)
     if (piece.length == core.length) return word
     val cut = core.length - piece.length
     if (word.head.length <= cut) return null
     return WordAround(word.head.substring(cut), word.tail)
 }
+
+/** [midWordPiece] for a word no tapped apostrophe joined. */
+internal fun midWordPiece(word: WordAround, isWord: (String) -> Boolean): WordAround? = midWordPiece(word, isWord) { false }
 
 /**
  * True when a user-driven selection change parks a collapsed cursor somewhere a word

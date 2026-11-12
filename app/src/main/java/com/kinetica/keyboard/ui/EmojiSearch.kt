@@ -30,7 +30,8 @@ object EmojiSearch {
     /**
      * [words] holds one list per searched language, each indexed by [EmojiCatalog.Entry.index].
      * Ties go to the emoji this user picks more ([uses]), then the shorter name, the more
-     * generic emoji (`red heart` before `heart with arrow`), then Unicode order.
+     * generic emoji (`red heart` before `heart with arrow`), then Unicode order. An emoji's uses
+     * count its plain form and its form [shown] in the set skin tone, the one a pick records.
      */
     fun rank(
         query: String,
@@ -38,10 +39,13 @@ object EmojiSearch {
         words: List<List<EmojiCatalog.Words>>,
         uses: Map<String, Int> = emptyMap(),
         limit: Int = RESULTS,
+        shown: (EmojiCatalog.Entry) -> String = { it.ch },
     ): List<EmojiCatalog.Entry> {
         val q = words(query)
         if (q.isEmpty()) return emptyList()
-        class Hit(val entry: EmojiCatalog.Entry, val score: Int, val nameSize: Int)
+        class Hit(val entry: EmojiCatalog.Entry, val score: Int, val nameSize: Int) {
+            val used: Int = (uses[entry.ch] ?: 0) + shown(entry).let { if (it == entry.ch) 0 else uses[it] ?: 0 }
+        }
         val hits = ArrayList<Hit>()
         for (e in entries) {
             var best = 0
@@ -58,7 +62,7 @@ object EmojiSearch {
         }
         hits.sortWith(
             compareByDescending<Hit> { it.score }
-                .thenByDescending { uses[it.entry.ch] ?: 0 }
+                .thenByDescending { it.used }
                 .thenBy { it.nameSize }
                 .thenBy { it.entry.index },
         )

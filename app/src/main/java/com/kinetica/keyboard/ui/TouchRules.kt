@@ -11,6 +11,37 @@ import com.kinetica.keyboard.engine.KineticaConstants
 object TouchRules {
 
     /**
+     * One pointer's pass over the apostrophe key, for a swipe that writes `'` by crossing it. The
+     * cut is due once the pointer has entered the key, left it, and reached a letter: a swipe that
+     * overshoots onto the key and lifts there writes no `'`. Re-entering before a letter keeps the
+     * first entry.
+     */
+    class ApostropheCut {
+        private var tEnter = -1L
+        private var tExit = -1L
+
+        /** The cut's entry and exit times when this sample makes it due, else null; then it starts over. */
+        fun onSample(inside: Boolean, onLetter: Boolean, t: Long): Pair<Long, Long>? {
+            if (inside) {
+                if (tEnter < 0) tEnter = t
+                tExit = -1L
+                return null
+            }
+            if (tEnter < 0) return null
+            if (tExit < 0) tExit = t
+            if (!onLetter) return null
+            val cut = tEnter to tExit
+            reset()
+            return cut
+        }
+
+        fun reset() {
+            tEnter = -1L
+            tExit = -1L
+        }
+    }
+
+    /**
      * A numbers-row digit tapped while the other thumb draws a swipe is dropped: it would
      * commit the word so far and leave the rest of the swipe a word of its own.
      */

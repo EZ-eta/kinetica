@@ -290,11 +290,9 @@ internal class Backspace(private val ime: KineticaIME) {
         // standard editing contract, and the one case where deleting a single
         // character would destroy text the user did not point at.
         val selected = ime.selectionLength()
-        val span = if (ime.config.tidySpaces && selected == 0) {
-            backspaceSpan(ime.ich.textBeforeCursor(SPACE_RUN_READ_CHARS) ?: "")
-        } else {
-            1
-        }
+        val before = if (selected == 0) ime.ich.textBeforeCursor(TAP_READ_CHARS) ?: "" else ""
+        val span = if (selected == 0) tapSpan(before) else 1
+        val deleted = before.takeLast(span)
         if (selected > 0) {
             // The editor's live selection, never the cached offsets: a cache behind the editor
             // put this delete somewhere else in the text. An editor that cannot report its
@@ -308,7 +306,11 @@ internal class Backspace(private val ime: KineticaIME) {
             ime.ich.deleteBeforeCursor(span)
             ime.expectAfter(span, 0)
         }
-        if (span > 1) DecodeTrace.log { "  backspace collapsed spaces=${span + 1}" }
+        if (span > 1) {
+            DecodeTrace.log {
+                if (deleted.isBlank()) "  backspace collapsed spaces=${span + 1}" else "  backspace whole char=$span"
+            }
+        }
         if (eating != null) traceInto(eating, "key")
         // Editing inside a decoded word invalidates gesture tracking; the
         // remaining text becomes plain committed text, then reloads as exact
@@ -322,12 +324,25 @@ internal class Backspace(private val ime: KineticaIME) {
         ime.reopen.reloadWordUnderCursor(reopens = selected == 0)
     }
 
+    /**
+     * What one tap takes from [before]: a run of spaces down to one with tidy spaces on,
+     * otherwise the last whole character, an emoji never cut in half. At least 1, so an editor
+     * that reports no text still gets its delete.
+     */
+    private fun tapSpan(before: CharSequence): Int {
+        if (ime.config.tidySpaces) backspaceSpan(before).let { if (it > 1) return it }
+        return DeleteSpan.grapheme(before).coerceAtLeast(1)
+    }
+
     private companion object {
         // Backspace slide: how much text to fetch for word-span staging.
         const val STAGE_FETCH_CHARS = 256
 
-        /** Spaces read back for a backspace to collapse; a longer run collapses in steps. */
-        const val SPACE_RUN_READ_CHARS = 32
+        /**
+         * Text read back for one tap: a run of spaces to collapse, a longer one in steps, and
+         * the longest emoji, a subdivision flag at 14 chars.
+         */
+        const val TAP_READ_CHARS = 32
 
         /** Stands for a selected character the editor would not hand over, in the chip. */
         const val UNREADABLE = "\u00b7"

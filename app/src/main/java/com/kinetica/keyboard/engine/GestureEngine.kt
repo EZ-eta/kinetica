@@ -112,11 +112,38 @@ class GestureEngine(private val listener: Listener) {
         val g = geometry
         val other = streams[1 - slotByPointer[pointerId]]
         if (g != null && other != null) DecodeTrace.log { nearLine("up", stream.streamId, xPx, yPx, other, g) }
+        // The rest of a stroke cut at the apostrophe that lifted before reaching a letter: nothing.
+        if (stream.resumed && stream.contactCount == 0) {
+            release(pointerId)
+            if (activeCount() == 0) listener.onAllPointersUp()
+            return
+        }
         val token = stream.finish(t)
         if (token is SwipeToken && g != null && DecodeTrace.enabled) tracePath(token, g)
         release(pointerId)
         listener.onTokenFinalized(token)
         if (activeCount() == 0) listener.onAllPointersUp()
+    }
+
+    /**
+     * Cuts [pointerId]'s stroke at the apostrophe key: the part before [tEnter] is finalized as a
+     * token of its own, as at a lift, and the pointer goes on as a new stroke from [tExit], in the
+     * same slot and stream. No [Listener.onAllPointersUp]: the pointer is still down. False when the
+     * pointer is not the engine's or the cut leaves no letter before it.
+     */
+    fun cutPointer(pointerId: Int, tEnter: Long, tExit: Long): Boolean {
+        val stream = streamFor(pointerId) ?: return false
+        val cut = stream.cut(tEnter, tExit) ?: return false
+        streams[slotByPointer[pointerId]] = cut.tail
+        val head = cut.head
+        val g = geometry
+        if (head is SwipeToken && g != null && DecodeTrace.enabled) tracePath(head, g)
+        DecodeTrace.log {
+            "  apostrophe swipe cut stream=${stream.streamId} head=${if (head is SwipeToken) "swipe" else "tap"} " +
+                "tEnter=$tEnter tExit=$tExit"
+        }
+        listener.onTokenFinalized(head)
+        return true
     }
 
     // The decode trace says which keys a stroke crossed, not where it went. A replay drawn

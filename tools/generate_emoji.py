@@ -7,9 +7,10 @@ Produces:
 
 Sources (downloaded, pinned):
   - Unicode emoji-test.txt 16.0 (Unicode License v3): the set, its order and its groups.
-    Fully-qualified forms only. Skin-tone variants and the Component group are left out:
-    the panel has no tone picker. ZWJ sequences are kept; the app hides any the device
-    font cannot draw as one glyph (Paint.hasGlyph).
+    Fully-qualified forms only, the Component group left out. A skin-tone variant is not a
+    line of its own: an emoji that takes a tone carries its light-tone form, and the app
+    swaps the modifier for the tone the user set. ZWJ sequences are kept; the app hides any
+    the device font cannot draw as one glyph (Paint.hasGlyph).
   - Unicode CLDR 46.1.0 annotations and derived annotations (Unicode License v3), from
     the cldr-json npm packages, whose published versions are immutable: the name and
     keywords per language. Derived annotations cover flags and ZWJ sequences.
@@ -18,7 +19,9 @@ Sources (downloaded, pinned):
 
 emoji.tsv:
   @<group> TAB <tab icon>
-  <emoji> TAB <English name>
+  <emoji> TAB <English name> [TAB <light skin tone form>]
+The toned column is written only where all five tones, U+1F3FB swapped for U+1F3FC-U+1F3FF,
+are fully-qualified sequences in emoji-test.txt.
 
 kw_<lang>.tsv, one line per emoji in emoji.tsv order:
   <hand-written words> TAB <CLDR name words> TAB <other CLDR words>
@@ -34,6 +37,7 @@ import json
 import logging
 import re
 import sys
+from itertools import combinations
 import urllib.request
 from pathlib import Path
 
@@ -75,9 +79,10 @@ def fetch(url: str, timeout: int = 120) -> bytes:
         return resp.read()
 
 
-def parse_emoji_test(text: str) -> list[tuple[str, str, str]]:
-    """(emoji, tab group, English name) in Unicode order, tones and components dropped."""
-    out: list[tuple[str, str, str]] = []
+def parse_emoji_test(text: str) -> list[tuple[str, str, str, str]]:
+    """(emoji, tab group, English name, light-tone form or "") in Unicode order, components dropped."""
+    base: list[tuple[str, str, str]] = []
+    qualified: set[str] = set()
     group = ""
     for line in text.splitlines():
         if line.startswith("# group:"):
@@ -90,12 +95,42 @@ def parse_emoji_test(text: str) -> list[tuple[str, str, str]]:
         if status.strip() != "fully-qualified" or group == "Component":
             continue
         ch = "".join(chr(int(cp, 16)) for cp in cps.split())
+        qualified.add(ch)
         if any(ord(c) in SKIN_TONES for c in ch):
             continue
         # The comment reads "<emoji> E<version> <name>".
         name = comment.strip().split(" ", 2)[2]
-        out.append((ch, GROUPS[group][0], name))
-    return out
+        base.append((ch, GROUPS[group][0], name))
+    # A modifier base is any code point a tone follows in some qualified sequence.
+    bases = {s[i - 1] for s in qualified for i in range(1, len(s)) if ord(s[i]) in SKIN_TONES}
+    return [(ch, g, name, toned_form(ch, bases, qualified)) for ch, g, name in base]
+
+
+def with_tone(ch: str, at: set[int], tone: int) -> str:
+    """[ch] with [tone] after each code point at [at], the variation selector it replaces dropped."""
+    out: list[str] = []
+    i = 0
+    while i < len(ch):
+        out.append(ch[i])
+        if i in at:
+            out.append(chr(tone))
+            if i + 1 < len(ch) and ch[i + 1] == "\ufe0f":
+                i += 1
+        i += 1
+    return "".join(out)
+
+
+def toned_form(ch: str, bases: set[str], qualified: set[str]) -> str:
+    """
+    The light-tone form of [ch], or "" when it takes no tone. The most bases toned alike wins:
+    people holding hands tones both people, not the handshake between them.
+    """
+    places = [i for i, c in enumerate(ch) if c in bases]
+    for k in range(len(places), 0, -1):
+        for at in combinations(places, k):
+            if all(with_tone(ch, set(at), t) in qualified for t in SKIN_TONES):
+                return with_tone(ch, set(at), SKIN_TONES[0])
+    return ""
 
 
 def words(phrases: list[str]) -> list[str]:
@@ -155,12 +190,12 @@ def main() -> int:
 
     lines: list[str] = []
     group = ""
-    for ch, g, name in entries:
+    for ch, g, name, toned in entries:
         if g != group:
             group = g
             icon = next(icon for tab, icon in GROUPS.values() if tab == g)
             lines.append(f"@{g}\t{icon}")
-        lines.append(f"{ch}\t{name}")
+        lines.append(f"{ch}\t{name}\t{toned}" if toned else f"{ch}\t{name}")
     files = {"emoji.tsv": "\n".join(lines) + "\n"}
 
     hand = extras(Path(__file__).resolve().parent / "emoji_extra_en.tsv")
@@ -168,7 +203,7 @@ def main() -> int:
         table = annotations(lang, args.cache_dir)
         rows = []
         missing = 0
-        for ch, _, _ in entries:
+        for ch, _, _, _ in entries:
             key = ch.replace("\ufe0f", "")
             name, kw = table.get(key, ([], []))
             if not name and not kw:
@@ -190,7 +225,7 @@ def main() -> int:
         if not args.dry_run:
             args.out_dir.mkdir(parents=True, exist_ok=True)
             (args.out_dir / name).write_text(text, encoding="utf-8")
-    log.info("%d emoji, %d bytes in all", len(entries), total)
+    log.info("%d emoji, %d with skin tones, %d bytes in all", len(entries), sum(1 for e in entries if e[3]), total)
     return 0
 
 

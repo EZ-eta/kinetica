@@ -32,6 +32,32 @@ class ViewWiringSourceTest {
         return src.substring(start, src.indexOf("\n    }\n", start))
     }
 
+    /** A swipe across the apostrophe key is cut through the engine, after the sample is in, both loops. */
+    @Test
+    fun theApostropheCutFollowsEveryEngineSample() {
+        val src = source("ui/KeyboardView.kt")
+        val move = body(src, "private fun handleMove(")
+        for (call in listOf("trackApostropheCut(e, pid, hx, hy, ht)", "trackApostropheCut(e, pid, x, y, ev.eventTime)")) {
+            val at = move.indexOf(call)
+            assertTrue(call, at > 0)
+            val feed = move.lastIndexOf("e.onPointerMove(pid", at)
+            assertTrue(call, feed in 0 until at)
+        }
+        val cut = body(src, "private fun trackApostropheCut(")
+        assertTrue(cut.contains("if (!apostropheSwipe || idx < 0"))
+        assertTrue(cut.indexOf("mayCutAtApostrophe()") < cut.indexOf("e.cutPointer(pid, cut.first, cut.second)"))
+        assertTrue(cut.contains("if (e.cutPointer(pid, cut.first, cut.second)) listener?.onApostropheSwipe()"))
+        assertTrue(body(src, "private fun handleDown(").contains("apostropheCuts[pid].reset()"))
+        assertTrue(source("ime/KeyboardViews.kt").contains("kv.apostropheSwipe = ime.config.apostropheSwipe"))
+    }
+
+    /** The directional swipes reach both symbol pages as shown, and only them (#57). */
+    @Test
+    fun theDirectionalSwipesReadBothSymbolPages() {
+        val src = source("ime/KeyboardViews.kt")
+        assertTrue(src.contains("alphaLayout(), ime.config.edgeSwipes, listOf(symbolLayout(SYMBOLS), symbolLayout(SYMBOLS2)),"))
+    }
+
     /**
      * The long-press lists follow the enabled languages (LanguageAccents), so a language turned on
      * or off redraws the letters at once, not at the next field.
@@ -270,6 +296,18 @@ class ViewWiringSourceTest {
         assertTrue("the bar comes back over the search panel", hide.contains("if (picker?.visibility == VISIBLE) suggestionBar.visibility = VISIBLE"))
         val open = body(source("ime/KeyboardViews.kt"), "fun openEmojiPicker(")
         assertTrue(open.contains("showEmojiPicker(picker, dpToPx(KeyboardHeights.emojiSearchDp("))
+    }
+
+    /** The skin tone reaches the pane when it opens and when the setting changes, and the search through `shown`. */
+    @Test
+    fun theEmojiToneReachesThePaneAndTheSearch() {
+        val views = source("ime/KeyboardViews.kt")
+        assertTrue(body(views, "fun openEmojiPicker(").contains("picker.tone = ime.config.emojiTone"))
+        assertTrue(body(views, "fun applyViewConfig(").contains("ime.emojiPicker?.tone = ime.config.emojiTone"))
+        val refresh = body(source("ime/EmojiSearchMode.kt"), "private fun refresh(")
+        assertTrue(refresh.contains("shown = { assets.shown(it, tone) }"))
+        assertTrue(refresh.contains(".map { assets.shown(it, tone) }"))
+        assertTrue(body(source("ui/EmojiPickerView.kt"), "private fun buildGrid(").contains("assets.shown(entry, tone)"))
     }
 
         /** A hidden trail still steps its hue, or rainbow lit keys stay one colour. */

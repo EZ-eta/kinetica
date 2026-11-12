@@ -1,6 +1,7 @@
 package com.kinetica.keyboard.ui
 
 import com.kinetica.keyboard.engine.KineticaConstants
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -62,5 +63,31 @@ class TouchRulesTest {
     fun aHoldBesideASwipeOpensNothingAfterTheSwipeEnds() {
         assertFalse(TouchRules.holdOpensMenu(otherOnLetters = false, swipeBeside = true))
         assertFalse(TouchRules.holdOpensMenu(otherOnLetters = true, swipeBeside = true))
+    }
+
+    @Test
+    fun aSwipeOverTheApostropheIsCutOnceItReachesALetter() {
+        val c = TouchRules.ApostropheCut()
+        assertEquals(null, c.onSample(inside = false, onLetter = true, t = 10))
+        assertEquals(null, c.onSample(inside = true, onLetter = false, t = 20))
+        assertEquals(null, c.onSample(inside = true, onLetter = false, t = 30))
+        // Out of the key between keys: not yet.
+        assertEquals(null, c.onSample(inside = false, onLetter = false, t = 40))
+        assertEquals(20L to 40L, c.onSample(inside = false, onLetter = true, t = 50))
+        // Spent: the next letter is no second cut.
+        assertEquals(null, c.onSample(inside = false, onLetter = true, t = 60))
+    }
+
+    @Test
+    fun anOvershootOntoTheApostropheThatComesBackIsOneEntry() {
+        val c = TouchRules.ApostropheCut()
+        c.onSample(inside = true, onLetter = false, t = 20)
+        c.onSample(inside = false, onLetter = false, t = 30)
+        c.onSample(inside = true, onLetter = false, t = 40)
+        assertEquals(20L to 70L, c.onSample(inside = false, onLetter = true, t = 70))
+        // A reset (a new touch) forgets an entry.
+        c.onSample(inside = true, onLetter = false, t = 80)
+        c.reset()
+        assertEquals(null, c.onSample(inside = false, onLetter = true, t = 90))
     }
 }

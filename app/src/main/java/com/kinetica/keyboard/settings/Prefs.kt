@@ -255,6 +255,8 @@ object Prefs {
     const val AUTOCORRECT_LEVEL = "pref_autocorrect_level"
     const val REINFORCE_INCREMENT = "pref_reinforce_increment"
     const val EMOJI_KEY = "pref_emoji_key"
+    /** The skin tone of emoji that take one, by name (`EmojiTone.NAMES`); none is the yellow default. */
+    const val EMOJI_TONE = "pref_emoji_tone"
     /**
      * Put the digit or symbol ahead of the accents in a letter key's alternates.
      *
@@ -551,6 +553,13 @@ object Prefs {
     const val APOSTROPHE_KEY = "pref_apostrophe_key"
 
     /**
+     * A swipe that crosses the apostrophe key writes `'` there and goes on as the next word
+     * (`nell` over `'` `altro`). Needs the apostrophe key. Off by default: a swipe ending on L
+     * overshoots onto the key.
+     */
+    const val APOSTROPHE_SWIPE = "pref_apostrophe_swipe"
+
+    /**
      * Bumped whenever dictionary state changes outside the IME (base wordlist imported or
      * removed, personal dictionary reset or imported): the IME reloads when this value moves.
      */
@@ -734,6 +743,7 @@ object Prefs {
     const val DEFAULT_AUTOCORRECT_LEVEL = "normal"
     const val DEFAULT_REINFORCE_INCREMENT = "medium"
     const val DEFAULT_EMOJI_KEY = false
+    const val DEFAULT_EMOJI_TONE = "none"
     const val DEFAULT_NUMBER_PRIORITY = true
 
     /** Full width, the mode the one-handed toggle leaves and returns to. */
@@ -833,6 +843,7 @@ object Prefs {
     const val DEFAULT_NUMBER_ROW = false
     const val DEFAULT_ENTER_ALTERNATES = "? ! ,"
     const val DEFAULT_APOSTROPHE_KEY = false
+    const val DEFAULT_APOSTROPHE_SWIPE = false
     const val DEFAULT_COMMA_MODE = "keep"
     const val DEFAULT_COMMA_CUSTOM = ""
     const val DEFAULT_PERIOD_MODE = "keep"

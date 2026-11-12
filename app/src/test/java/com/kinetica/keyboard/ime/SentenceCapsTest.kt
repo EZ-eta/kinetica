@@ -149,13 +149,38 @@ class SentenceCapsTest {
     @Test
     fun withTidySpacesASecondSpaceIsDroppedOrEndsTheSentence() {
         // From #17: "I never need to use more than one space. If I tap it twice, I expect a full stop."
-        assertEquals(SpaceTap.WRITE, tidySpaceTap("ok", doubleSpacePeriod = true))
-        assertEquals(SpaceTap.WRITE, tidySpaceTap("", doubleSpacePeriod = false))
-        assertEquals(SpaceTap.SENTENCE_END, tidySpaceTap("k ", doubleSpacePeriod = true))
-        assertEquals(SpaceTap.SWALLOW, tidySpaceTap("k ", doubleSpacePeriod = false))
+        assertEquals(SpaceTap.WRITE, tidySpaceTap("ok", doubleSpacePeriod = true, keyboardSpace = false))
+        assertEquals(SpaceTap.WRITE, tidySpaceTap("", doubleSpacePeriod = false, keyboardSpace = false))
+        assertEquals(SpaceTap.SENTENCE_END, tidySpaceTap("k ", doubleSpacePeriod = true, keyboardSpace = false))
+        assertEquals(SpaceTap.SWALLOW, tidySpaceTap("k ", doubleSpacePeriod = false, keyboardSpace = false))
         // After punctuation or a run there is no sentence to end, and still only one space.
-        assertEquals(SpaceTap.SWALLOW, tidySpaceTap(". ", doubleSpacePeriod = true))
-        assertEquals(SpaceTap.SWALLOW, tidySpaceTap("  ", doubleSpacePeriod = true))
+        assertEquals(SpaceTap.SWALLOW, tidySpaceTap(". ", doubleSpacePeriod = true, keyboardSpace = false))
+        assertEquals(SpaceTap.SWALLOW, tidySpaceTap("  ", doubleSpacePeriod = true, keyboardSpace = false))
+    }
+
+    @Test
+    fun aTapAfterTheAutomaticSpaceIsNoFullStop() {
+        // A full stop takes two tapped spaces: the autospace and one tap is the word's space, kept.
+        assertEquals(SpaceTap.SWALLOW, tidySpaceTap("k ", doubleSpacePeriod = true, keyboardSpace = true))
+        assertEquals(SpaceTap.SWALLOW, tidySpaceTap("k ", doubleSpacePeriod = false, keyboardSpace = true))
+        // No space before the cursor: the flag is stale and the tap writes its space.
+        assertEquals(SpaceTap.WRITE, tidySpaceTap("ok", doubleSpacePeriod = true, keyboardSpace = true))
+    }
+
+    @Test
+    fun theSwallowedTapMakesTheSpaceTheUsersAndTheDoubleTapAsksToo() {
+        // The service has no JVM reach: the swallowed tap adopts the space, so the next tap ends
+        // the sentence, and the timed double tap refuses over the keyboard's own space.
+        val onSpace = ImeSources.declaring("private fun onSpace()").text
+            .substringAfter("private fun onSpace()").substringBefore("private fun onDoubleSpace()")
+        assertTrue(onSpace.contains("val keyboardSpace = autospace.inserted"))
+        assertTrue(onSpace.contains("config.doubleSpacePeriod, keyboardSpace)"))
+        val swallow = onSpace.substringAfter("SpaceTap.SWALLOW ->").substringBefore("SpaceTap.WRITE ->")
+        assertTrue(swallow.indexOf("autospace.forget()") in 0 until swallow.indexOf("space swallowed"))
+        assertTrue(swallow.contains("gestureUndo.forgetCommitted()"))
+        val onDouble = ImeSources.declaring("private fun onDoubleSpace()").text
+            .substringAfter("private fun onDoubleSpace()").substringBefore("private fun onSpacelessSpace()")
+        assertTrue(onDouble.contains("if (autospace.inserted || !doubleSpaceEndsSentence(before))"))
     }
 
     @Test

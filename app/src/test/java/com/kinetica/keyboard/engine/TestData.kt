@@ -163,8 +163,9 @@ object TestData {
         ),
     )
 
-    /** Tap at the exact key center. */
+    /** Tap at the exact key center; an apostrophe has no key and carries no position. */
     fun tap(c: Char, g: KeyboardGeometry, t0: Long, stream: StreamId = StreamId.LEFT): TapToken {
+        if (c == '\'') return TapToken.apostrophe(stream, g.alphabet.apostrophe, t0)
         val code = g.alphabet.codeOf(c)
         return TapToken(stream, code, g.centerX(code), g.centerY(code), false, t0, t0 + 60)
     }

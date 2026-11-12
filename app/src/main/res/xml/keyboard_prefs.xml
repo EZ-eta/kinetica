@@ -975,11 +975,25 @@
                 app:singleLineTitle="false"
                 android:summary="@string/pref_emoji_key_summary"
                 android:defaultValue="false" />
+            <ListPreference
+                android:key="pref_emoji_tone"
+                android:title="@string/pref_emoji_tone_title"
+                app:singleLineTitle="false"
+                android:entries="@array/emoji_tone_entries"
+                android:entryValues="@array/emoji_tone_values"
+                android:defaultValue="none"
+                app:useSimpleSummaryProvider="true" />
             <SwitchPreferenceCompat
                 android:key="pref_apostrophe_key"
                 android:title="@string/pref_apostrophe_key_title"
                 app:singleLineTitle="false"
                 android:summary="@string/pref_apostrophe_key_summary"
+                android:defaultValue="false" />
+            <SwitchPreferenceCompat
+                android:key="pref_apostrophe_swipe"
+                android:title="@string/pref_apostrophe_swipe_title"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_apostrophe_swipe_summary"
                 android:defaultValue="false" />
             <com.kinetica.keyboard.settings.SteppedSliderPreference
                 android:key="pref_long_press_ms"

@@ -126,7 +126,8 @@ channel can install and update over the other.
   and gestures > Swipes and slides > *Hold shift to swap the slide step*, off).
 - An editing page, opened by a slide up on `?123`: Select, Select all, Copy, Paste, Ctrl, Cut, Tab,
   Home, End, the arrows, word left and right, Page up and down, Undo, Redo and forward delete. Held keys
-  repeat. Any key can be changed, up to four rows (Keys > Editing page).
+  repeat. Any key can be changed, up to four rows (Keys > Editing page). Its `?123` opens the symbols,
+  a slide right on it the number pad.
 - Slide left from backspace to mark words for deletion; slide back to keep them, lift to delete.
   The distance per word can be set, and the slide can stop at punctuation, so a link goes a piece
   at a time (Shortcuts and gestures > Swipes and slides). A word step stops at each line break.
@@ -195,13 +196,14 @@ channel can install and update over the other.
   group of Size and layout.
 - Height by dragging the handle above the bar, side and bottom margins, a live size preview.
 - An optional apostrophe key right of `L`, for `don't` or `nell'immagine` without the symbols page.
-- Two symbol pages and a number pad with `+ ±`, `* /`, `= ≠ ≈` and the currency signs on long
+- Two symbol pages and a number pad with `+ ±`, `* /`, `= ≠ ≈`, `. :` and the currency signs on long
   presses; a configurable comma and period key.
 - The symbol pages can be rewritten as text, a line per row, and every symbol key can have its own
   long-press list (Keys > Symbol pages).
 - Emoji: 1 906 of them, Unicode 16 with sequences and flags. Search in 14 languages from the pane's
   Search or the Emoji search shortcut: a panel takes the bar's place and the keys type the query;
-  what you pick joins Frequently used. Also on the comma's long-press (Keys, off).
+  what you pick joins Frequently used. Also on the comma's long-press (Keys, off). People and hands
+  in one skin tone of your choice (Keys > Emoji skin tone).
 - Words per minute on the spacebar while you type (Keys, off).
 
 ### Look

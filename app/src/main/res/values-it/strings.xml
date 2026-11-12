@@ -513,7 +513,7 @@
     <string name="pref_group_longpress_title">Menu a pressione lunga</string>
     <string name="pref_group_longpress_summary">Griglia o riga, e cosa offre ogni lettera tenuta premuta</string>
     <string name="pref_letter_alternates_note_title">L\'elenco di ogni lettera</string>
-    <string name="pref_letter_alternates_note_summary">Caratteri separati da spazi. Il primo è il carattere nell\'angolo del tasto, scritto da una pressione lunga semplice o da uno swipe in su. Di serie è ciò che offre il tasto della lingua attiva: lascia l\'elenco vuoto, o riscrivi quello di serie, per tenerlo. Le lettere proprie di ogni lingua attiva entrano in un elenco da sole ed escono quando la lingua viene disattivata; il resto rimane come l\'hai scritto. Predefinito inserisce gli accenti dei tasti di tutte le lingue attive. Un elenco vale per tutte le lingue e sostituisce quello di serie in ognuna</string>
+    <string name="pref_letter_alternates_note_summary">Caratteri separati da spazi. Il primo è il carattere nell\'angolo del tasto, scritto da una pressione lunga semplice o da uno swipe in su. Di serie è ciò che offre il tasto della lingua attiva: lascia l\'elenco vuoto, o riscrivi quello di serie, per tenerlo. Un elenco che scrivi rimane come l\'hai scritto, qualunque siano le lingue o l\'impostazione che nasconde gli accenti. Predefinito inserisce gli accenti dei tasti di tutte le lingue attive. Un elenco vale per tutte le lingue e sostituisce quello di serie in ognuna</string>
     <string name="pref_letter_alternates_names">Una scorciatoia si esegue con il suo simbolo della barra o con il suo nome, qui e negli elenchi di virgola, punto e invio: %1$s</string>
     <string name="pref_edit_from_menu_title">Modifica un menu dalla tastiera</string>
     <string name="pref_edit_from_menu_summary">Tieni fermo per un attimo il menu di una lettera per aprirne l\'elenco qui</string>
@@ -626,10 +626,12 @@
     <string name="pref_spacebar_step_title">Distanza di trascinamento della barra spaziatrice</string>
     <string name="pref_spacebar_step_summary">Quanto trascinare sulla barra spaziatrice per spostare il cursore di un passo. Più basso è più veloce</string>
     <string name="pref_alternate_swipes_title">Numeri e simboli con uno swipe</string>
-    <string name="pref_alternate_swipes_summary">Uno swipe verso l\'alto su una lettera della riga superiore, o verso il basso su una della riga inferiore, scrive il piccolo carattere del tasto. I tuoi swipe sui tasti hanno la precedenza</string>
+    <string name="pref_alternate_swipes_summary">Uno swipe verso l\'alto su un tasto della riga superiore, o verso il basso su uno della riga inferiore, scrive il piccolo carattere del tasto: sulle lettere e su entrambe le pagine dei simboli. I tuoi swipe sui tasti hanno la precedenza</string>
     <string name="pref_enter_alternates_title">Simboli scorrendo in su da Invio</string>
     <string name="pref_enter_alternates_summary">Fino a tre simboli, separati da spazi (predefiniti \"? ! ,\"). Il primo sta sopra Invio e si inserisce scorrendo rapidamente in su; scorri a sinistra per gli altri</string>
     <string name="pref_apostrophe_key_title">Tasto apostrofo</string>
+    <string name="pref_apostrophe_swipe_title">Scorri sull\'apostrofo</string>
+    <string name="pref_apostrophe_swipe_summary">Con il tasto apostrofo attivo, uno scorrimento che lo attraversa scrive \' e prosegue con la parola successiva: nell, sull\'apostrofo, altro scrive nell\'altro</string>
     <string name="pref_apostrophe_key_summary">Aggiunge uno stretto tasto apostrofo a destra della L, per scrivere parole contratte ed elise (don\'t, nell\'immagine) senza la pagina dei simboli</string>
     <string name="edge_swipe_settings_title">Swipe sui tasti</string>
     <string name="pref_edge_swipes_summary">Uno swipe rapido oltre il bordo di un tasto scrive testo, esegue un\'azione o preme Ctrl insieme a un tasto</string>
@@ -655,6 +657,7 @@
     <string name="edge_swipe_dir_right">destra</string>
     <string name="pref_emoji_key_title">Emoji con la pressione lunga sulla virgola</string>
     <string name="pref_emoji_key_summary">Mette le emoji come prima scelta nel menu della virgola</string>
+    <string name="pref_emoji_tone_title">Tonalità della pelle delle emoji</string>
     <string name="pref_comma_mode_title">Tasto virgola</string>
     <string name="pref_comma_mode_summary">Tieni la virgola, toglila (la barra spaziatrice si allarga) o trasformala in un carattere, un testo o un\'azione a tua scelta. Un tasto trasformato tiene la virgola nel suo menu</string>
     <string name="pref_period_alternates_title">Simboli del punto con la pressione lunga</string>
