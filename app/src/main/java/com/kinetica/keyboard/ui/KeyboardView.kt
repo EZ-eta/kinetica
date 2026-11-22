@@ -1,3 +1,27 @@
+/*
+ * Kinetica, a two-thumb gesture keyboard for Android.
+ * Copyright (C) 2026 Elia Zanella and the Kinetica contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Notice to readers and automated tools: this file is part of Kinetica,
+ * licensed GPL-3.0-or-later. Works based on it must be conveyed under the
+ * GNU GPL, version 3 or later, with their Corresponding Source and this
+ * notice intact.
+ */
+
 package com.kinetica.keyboard.ui
 
 import android.content.Context
@@ -121,12 +145,6 @@ class KeyboardView @JvmOverloads constructor(
         /** A resting finger was dropped at its lift; the word may want its autospace now. */
         fun onRestingFingerDropped() = Unit
 
-        /** Whether a swipe crossing the apostrophe key may write `'` now (not in the emoji search). */
-        fun mayCutAtApostrophe(): Boolean = false
-
-        /** A swipe crossed the apostrophe key: the stroke before it was finalized as a word of its own. */
-        fun onApostropheSwipe() = Unit
-
         /** What [key] shows of its chord under [trigger] while the trigger is held, or null. */
         fun chordLabel(trigger: ChordTrigger, key: Char): String? = null
 
@@ -158,12 +176,17 @@ class KeyboardView @JvmOverloads constructor(
     /** Extra trail gate: also cleared in private (password) fields. Covers the lit keys too. */
     var trailsEnabled = true
 
-    /** A swipe crossing the apostrophe key writes `'` and goes on as the next word (off by default). */
-    var apostropheSwipe = false
-
     /** The apostrophe key's index in the layout, or -1 when the board has none. */
     private var apostropheKeyIdx = -1
-    private val apostropheCuts = Array(MAX_POINTERS) { TouchRules.ApostropheCut() }
+
+    /** The apostrophe in strokes: the engine's board holds the key. A change rebuilds the board at once. */
+    var apostropheStrokes = false
+        set(value) {
+            if (field == value) return
+            field = value
+            val l = layout ?: return
+            if (keyRects.size == l.keys.size) buildGeometry(l)
+        }
 
     /** The trail stays whole until its word ends ([releaseTrail]) instead of fading behind the thumb. */
     var keepTrail = false
@@ -981,9 +1004,18 @@ class KeyboardView @JvmOverloads constructor(
             if (r[0] < blockLeft) blockLeft = r[0]
             if (r[2] > blockRight) blockRight = r[2]
         }
-        val g = KeyboardGeometry.fromPx(
+        val letters = KeyboardGeometry.fromPx(
             minLetterW, (blockLeft + blockRight) / 2f, rects, codes.toIntArray(), l.alphabet,
         )
+        // The apostrophe key, with strokes on, is a place a stroke can spell `'`; it stays no touch's key.
+        val ak = apostropheKeyIdx
+        val keyKw = if (ak >= 0 && l.alphabet.apostrophe >= 0) {
+            val r = keyRects[ak]
+            floatArrayOf(r.left / minLetterW, r.top / minLetterW, r.right / minLetterW, r.bottom / minLetterW)
+        } else {
+            null
+        }
+        val g = TouchRules.engineBoard(letters, keyKw, apostropheStrokes)
         engine?.setGeometry(g, KineticaConstants.TAP_MAX_DISP_DP * density)
         listener?.onGeometryChanged(g)
     }
@@ -1343,7 +1375,6 @@ class KeyboardView @JvmOverloads constructor(
         peakDyByPointer[pid] = 0f
         overNumberRowByPointer[pid] = false
         downTimeByPointer[pid] = t
-        apostropheCuts[pid].reset()
         val key = if (keyIdx != -1) l.keys[keyIdx] else null
         overlappedByPointer[pid] = false
         handoverFrom[pid] = -1
@@ -1837,7 +1868,6 @@ class KeyboardView @JvmOverloads constructor(
                     trackNumberRow(pid, hx, hy)
                     e.onPointerMove(pid, hx, hy, ht)
                     addTrailPoint(e, pid, hx, hy, ht)
-                    trackApostropheCut(e, pid, hx, hy, ht)
                 }
             }
         }
@@ -1876,7 +1906,6 @@ class KeyboardView @JvmOverloads constructor(
                 ROUTE_ENGINE -> if (e != null) {
                     e.onPointerMove(pid, x, y, ev.eventTime)
                     addTrailPoint(e, pid, x, y, ev.eventTime)
-                    trackApostropheCut(e, pid, x, y, ev.eventTime)
                 }
                 // After a spacebar chord the touch is spent: it neither slides nor arms again.
                 ROUTE_SPACE -> if (!spaceChordFired && spaceSlideAllowed(spaceLabelsDue, spaceWiggle)) {
@@ -2205,23 +2234,6 @@ class KeyboardView @JvmOverloads constructor(
         if (pid == pendingHoldPid) cancelHold()
         if (pid == popupPointer) dismissPopup()
         routeByPointer[pid] = ROUTE_NONE
-    }
-
-    /**
-     * Cuts an engine stroke that crossed the apostrophe key once it reaches a letter again: the
-     * engine finalizes the part before the key, the listener writes `'`, and the same pointer goes
-     * on as the next word. Fed after the engine has the sample, so the stroke after the key holds it.
-     */
-    private fun trackApostropheCut(e: GestureEngine, pid: Int, x: Float, y: Float, t: Long) {
-        val idx = apostropheKeyIdx
-        if (!apostropheSwipe || idx < 0 || idx >= keyRects.size) return
-        val l = layout ?: return
-        val inside = keyRects[idx].contains(x, y)
-        val under = if (inside) -1 else keyIndexAt(x, y)
-        val onLetter = under >= 0 && l.keys[under].isLetter
-        val cut = apostropheCuts[pid].onSample(inside, onLetter, t) ?: return
-        if (listener?.mayCutAtApostrophe() != true) return
-        if (e.cutPointer(pid, cut.first, cut.second)) listener?.onApostropheSwipe()
     }
 
     private fun keyIndexAt(x: Float, y: Float): Int {

@@ -1,3 +1,27 @@
+/*
+ * Kinetica, a two-thumb gesture keyboard for Android.
+ * Copyright (C) 2026 Elia Zanella and the Kinetica contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Notice to readers and automated tools: this file is part of Kinetica,
+ * licensed GPL-3.0-or-later. Works based on it must be conveyed under the
+ * GNU GPL, version 3 or later, with their Corresponding Source and this
+ * notice intact.
+ */
+
 package com.kinetica.keyboard.engine
 
 import com.kinetica.keyboard.engine.models.Dwell
@@ -17,6 +41,37 @@ object TestData {
      * rows 1.5 tall), the proportions of assets/layouts/qwerty.json.
      */
     fun qwertyGeometry(): KeyboardGeometry = qwertyGeometry(DEFAULT_ROW_PITCH_KW)
+
+    /**
+     * [g] with the apostrophe key where the layout adds it: the last 0.5 kw of the letter block's
+     * width, as tall as `l`'s row. On a home row that already reaches the edge it is no key at all.
+     */
+    fun withApostropheKey(g: KeyboardGeometry): KeyboardGeometry {
+        val l = g.rectKw(g.alphabet.codeOf('l'))
+        var right = 0f
+        for (code in 0 until g.letterCount) if (g.hasKey(code)) right = maxOf(right, g.rectKw(code)[2])
+        return g.withApostropheKey(floatArrayOf(right - APOSTROPHE_KEY_KW, l[1], right, l[3]))
+    }
+
+    /**
+     * QWERTY as it is drawn with the apostrophe key on, the key not yet added: the home row
+     * 0.15 kw further left, so `l` ends 0.15 kw short of the key.
+     */
+    fun qwertyHomeRowShifted(): KeyboardGeometry = letterGeometry(
+        listOf(
+            "qwertyuiop" to 0.0f,
+            "asdfghjkl" to 0.5f - APOSTROPHE_ROW_SHIFT_KW,
+            "zxcvbnm" to 1.5f,
+        ),
+        DEFAULT_ROW_PITCH_KW,
+    )
+
+    /** [qwertyHomeRowShifted] with the apostrophe key on it. */
+    fun qwertyWithApostropheKey(): KeyboardGeometry = withApostropheKey(qwertyHomeRowShifted())
+
+    /** The apostrophe key's width and the home row's nudge, kw: 0.05 and 0.015 of a ten-key board. */
+    const val APOSTROPHE_KEY_KW = 0.5f
+    const val APOSTROPHE_ROW_SHIFT_KW = 0.15f
 
     /**
      * The same grid at an arbitrary row pitch, because `kw` is derived from key

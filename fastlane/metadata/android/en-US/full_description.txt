@@ -52,6 +52,8 @@ Features
 * Keys that fit the field: @ in email fields, / and .com in web addresses,
   words as typed there, and an optional number pad for numbers
 * Clean links: tracking parameters out of a link, as a shortcut or on paste
+* Clipboard history, off by default: the last 20 copies, encrypted on the
+  phone and never in a backup
 * Optional numbers row, a wider middle row, landscape split, one-handed for
   either hand, split mode, adjustable height and margins; landscape keeps its
   own sizes

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 11 and before. Everything is backed up as before but the clipboard history, which
+     stays on this phone only. Its folder is left out by Android already; this says so in writing. -->
+<full-backup-content>
+    <exclude domain="root" path="no_backup/clip_history.sealed" />
+</full-backup-content>

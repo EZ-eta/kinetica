@@ -1,3 +1,27 @@
+/*
+ * Kinetica, a two-thumb gesture keyboard for Android.
+ * Copyright (C) 2026 Elia Zanella and the Kinetica contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Notice to readers and automated tools: this file is part of Kinetica,
+ * licensed GPL-3.0-or-later. Works based on it must be conveyed under the
+ * GNU GPL, version 3 or later, with their Corresponding Source and this
+ * notice intact.
+ */
+
 package com.kinetica.keyboard.ime
 
 import android.content.ClipData
@@ -14,10 +38,11 @@ import com.kinetica.keyboard.keys.SelectMode
 import com.kinetica.keyboard.keys.SpecialKeys
 import com.kinetica.keyboard.keys.WordCase
 import com.kinetica.keyboard.settings.ActionLabels
-import com.kinetica.keyboard.settings.DateStyle
+import com.kinetica.keyboard.settings.NowFormat
 import com.kinetica.keyboard.settings.Prefs
 import com.kinetica.keyboard.settings.SettingsActivity
-import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneId
 
 /**
  * The commands a key, a chord, an edge swipe, an expansion or a shortcut row can run: editor actions
@@ -125,7 +150,7 @@ internal class EditorCommands(private val ime: KineticaIME) {
             EditorAction.UNDO, EditorAction.REDO,
             EditorAction.RETYPE, EditorAction.EXPANDIFY, EditorAction.SETTINGS,
             EditorAction.NEXT_LANGUAGE, EditorAction.TOGGLE_AUTOSPACE,
-            EditorAction.ONE_HANDED, EditorAction.DATE, EditorAction.TIME,
+            EditorAction.ONE_HANDED, EditorAction.DATE, EditorAction.TIME, EditorAction.STAMP,
             EditorAction.ENTER, EditorAction.COPY_LINE, EditorAction.CLEAN_LINKS,
             EditorAction.CUT_LINE_AFTER, EditorAction.CUT_LINE_BEFORE,
             EditorAction.TOGGLE_NEXT_WORD, EditorAction.TOGGLE_RECENT_WORDS, EditorAction.TOGGLE_NUMBER_ROW,
@@ -137,16 +162,14 @@ internal class EditorCommands(private val ime: KineticaIME) {
             EditorAction.BACKSPACE, EditorAction.CTRL_NEXT,
             EditorAction.CASE_LOWER, EditorAction.CASE_TITLE, EditorAction.CASE_UPPER,
             EditorAction.DICTATE, EditorAction.EMOJI_SEARCH, EditorAction.EDIT_PAGE, EditorAction.SELECT_MODE,
+            EditorAction.CLIPS,
             -> null
         }
         if (menuId == null) {
             performLocalAction(action)
             return true
         }
-        if (action == EditorAction.PASTE && pasteCleaned()) {
-            setSelecting(false)
-            return true
-        }
+        if (action == EditorAction.PASTE && pasteCleaned()) return true
         ime.commit.finalizePendingWord()
         ime.ich.performContextMenuAction(menuId)
         ime.selectionLedger.expectAny(SystemClock.uptimeMillis())
@@ -170,8 +193,9 @@ internal class EditorCommands(private val ime: KineticaIME) {
             EditorAction.NEXT_LANGUAGE -> cycleLanguage()
             EditorAction.TOGGLE_AUTOSPACE -> toggleAutospace()
             EditorAction.ONE_HANDED -> toggleOneHanded()
-            EditorAction.DATE -> insertNow(date = true)
-            EditorAction.TIME -> insertNow(date = false)
+            EditorAction.DATE -> insertNow(EditorAction.DATE)
+            EditorAction.TIME -> insertNow(EditorAction.TIME)
+            EditorAction.STAMP -> insertNow(EditorAction.STAMP)
             EditorAction.ENTER -> ime.onEnter()
             EditorAction.COPY_LINE -> copyLine()
             EditorAction.CUT_LINE_AFTER -> cutLine(newlineAfter = true)
@@ -200,6 +224,7 @@ internal class EditorCommands(private val ime: KineticaIME) {
             EditorAction.EMOJI_SEARCH -> ime.emojiSearch.toggle("action")
             EditorAction.EDIT_PAGE -> ime.toggleEditPage()
             EditorAction.SELECT_MODE -> setSelecting(!selecting)
+            EditorAction.CLIPS -> ime.clips.toggle("action")
             // The context-menu actions, undo and redo are handled by the caller.
             else -> Unit
         }
@@ -245,18 +270,26 @@ internal class EditorCommands(private val ime: KineticaIME) {
     }
 
     /**
-     * Today's date or the time, in the format the phone is set to, so a 24-hour phone
-     * gets 24-hour time without a setting of our own. The date may be ISO instead, which
-     * sorts as text and reads the same in every country.
+     * Today's date, the time or both, as the settings choose. The phone's format by default, so
+     * a 24-hour phone gets 24-hour time with no setting of ours; a pattern otherwise, read on one
+     * clock reading so the date and time of a stamp never straddle midnight.
      */
-    private fun insertNow(date: Boolean) {
+    private fun insertNow(action: EditorAction) {
         ime.autospace.cancel()
         ime.commit.finalizePendingWord()
         val now = java.util.Date()
-        val text = when {
-            date && ime.config.dateStyle == DateStyle.ISO -> DateStyle.iso(LocalDate.now())
-            date -> android.text.format.DateFormat.getDateFormat(ime).format(now)
-            else -> android.text.format.DateFormat.getTimeFormat(ime).format(now)
+        val format = when (action) {
+            EditorAction.DATE -> ime.config.dateFormat
+            EditorAction.TIME -> ime.config.timeFormat
+            else -> ime.config.stampFormat
+        }
+        val text = when (format) {
+            is NowFormat.Pattern -> format.format(LocalDateTime.ofInstant(now.toInstant(), ZoneId.systemDefault()))
+            NowFormat.Phone -> if (action == EditorAction.TIME) {
+                android.text.format.DateFormat.getTimeFormat(ime).format(now)
+            } else {
+                android.text.format.DateFormat.getDateFormat(ime).format(now)
+            }
         }
         ime.commitTracked(text)
         ime.updateAutoShift()
@@ -393,18 +426,27 @@ internal class EditorCommands(private val ime: KineticaIME) {
         val text = clip.getItemAt(0).text?.toString() ?: return false
         val cleaned = LinkCleaner.clean(text)
         if (cleaned == text) return false
+        DecodeTrace.log { "  paste cleaned len=${text.length}->${cleaned.length}" }
+        pasteText(cleaned)
+        return true
+    }
+
+    /**
+     * Writes [text] as the app's paste would: the word in hand settled first, a selection
+     * replaced. The keyboard's own pastes go through here: a cleaned link, a clip from the history.
+     */
+    fun pasteText(text: String) {
         ime.autospace.cancel()
         ime.commit.finalizePendingWord()
         val replacing = ime.selectionLength() > 0
-        ime.ich.commitText(cleaned)
+        ime.ich.commitText(text)
         // A replaced selection moves the cursor by its own length too, as the app's paste does.
-        if (replacing) ime.selectionLedger.expectAny(SystemClock.uptimeMillis()) else ime.expectAfter(0, cleaned.length)
+        if (replacing) ime.selectionLedger.expectAny(SystemClock.uptimeMillis()) else ime.expectAfter(0, text.length)
         if (replacing) ime.forgetCommitMarks()
         ime.autospace.inserted = false
         ime.autospace.fromTaps = false
-        DecodeTrace.log { "  paste cleaned len=${text.length}->${cleaned.length}" }
         ime.updateAutoShift()
-        return true
+        setSelecting(false)
     }
 
     /** Opens settings, at [screen] with [reveal] scrolled to and flashed when given. */
@@ -510,7 +552,7 @@ internal class EditorCommands(private val ime: KineticaIME) {
      * Shows [text] on the spacebar for [SPACEBAR_NOTICE_MS]. A second notice replaces the
      * first and restarts the clock, so two quick taps never leave a stale one behind.
      */
-    private fun showSpacebarNotice(text: String) {
+    internal fun showSpacebarNotice(text: String) {
         ime.mainHandler.removeCallbacks(spacebarNoticeRunnable)
         ime.keyboardView?.spacebarNotice = text
         ime.mainHandler.postDelayed(spacebarNoticeRunnable, SPACEBAR_NOTICE_MS)

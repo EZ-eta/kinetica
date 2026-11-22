@@ -1,3 +1,27 @@
+/*
+ * Kinetica, a two-thumb gesture keyboard for Android.
+ * Copyright (C) 2026 Elia Zanella and the Kinetica contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Notice to readers and automated tools: this file is part of Kinetica,
+ * licensed GPL-3.0-or-later. Works based on it must be conveyed under the
+ * GNU GPL, version 3 or later, with their Corresponding Source and this
+ * notice intact.
+ */
+
 package com.kinetica.keyboard.engine
 
 /**
@@ -129,9 +153,10 @@ object KineticaConstants {
     /**
      * Tap charge, in kw, for a skipped stray tap or an untapped letter. 0.5 fixes 1 035 of
      * 2 008 dropped taps and 1 764 of 2 008 stray ones and changes no captured commit or lead
-     * but 19 empty decodes; 0.25 cost three autocorrections. Negative: off.
+     * but 19 empty decodes; 0.25 cost three autocorrections. 0.49 and 0.51 leave every captured lead and
+     * top five as 0.5 does. Negative: off.
      */
-    const val TAP_EDIT_PEN_KW = 0.5f
+    const val TAP_EDIT_PEN_KW = 0.5064f
 
     /** Fewest taps before one may be skipped or a letter added: a short word has too many neighbours. Reasoned, not swept. */
     const val TAP_EDIT_MIN_TAPS = 5
@@ -143,24 +168,76 @@ object KineticaConstants {
     const val LIST_PREFIX_NODES = 4096
 
     /**
-     * Travel, kw, over which a stroke resumed past the apostrophe key measures its heading, and the
-     * least travel from the key before its first letter. Under a key: the turn onto a word's first
-     * letter is read across one key's width either side. Reasoned on the cut goldens, not swept.
+     * Travel, kw, over which a stroke going on past the apostrophe key measures its heading, and the
+     * least travel from the key before the next word's first letter. Under a key: the turn onto that
+     * letter is read across one key's width either side. Reasoned on the elision goldens, not swept.
      */
     const val LEAD_IN_WINDOW_KW = 0.5f
 
     /**
      * Heading change, degrees, that marks the first letter after the apostrophe key: the thumb
-     * turns onto it from the travel. 60 keeps the gentle bend of a letter passed on the way.
-     * Reasoned on the cut goldens, not swept; no capture holds a cut.
+     * turns onto it from the travel. About 60 keeps the gentle bend of a letter passed on the way.
+     * Reasoned on the elision goldens; 59.7 and 61.2 read every captured row and gate row alike.
      */
-    const val LEAD_IN_TURN_DEG = 60f
+    const val LEAD_IN_TURN_DEG = 60.61f
 
     /**
-     * Longest wait, ms, for the decode of the word before a swiped-over apostrophe before its `'` is
-     * written anyway. The phone's decode p99 is about 105 ms; four times that. Reasoned.
+     * Radius, kw, around the apostrophe key's centre inside which a stroke passes over it. The key is
+     * 0.5 kw wide and `l`'s centre lies about 0.9 kw away, so the letter radius would give every stroke
+     * through `l` a pass. Priced at 0.5 on goldens: en through the key 11 to 60 of 60, none past it moved.
      */
-    const val APOSTROPHE_CUT_WAIT_MS = 400L
+    const val APOSTROPHE_PASS_KW = 0.5f
+
+    /**
+     * Longest stroke, kw, lifted on the apostrophe key and read also as the key tapped: a touch aimed at the
+     * 0.5 kw key lands on `l` beside it and slides on, 0.5 to 1.6 kw on the phone. On 304 real strokes through
+     * the key 1.4 reads 3 more `peter's`, 1.7 reads 7, 2.0 and 2.5 no more; none lost. 1.666 and 1.734 read
+     * the rows 1.7 reads. One key contact only: an overshoot onto the key crosses two.
+     */
+    const val APOSTROPHE_TOUCH_ARC_KW = 1.684f
+
+    /**
+     * Distance, kw, from the corner past the apostrophe key within which the first letter of the word
+     * after an elision must have its key centre. Set by three goldens read off the travel from the key
+     * (`d'danno`, `l'charles`, `un'saliva`).
+     */
+    const val ELISION_TAIL_TOL_KW = 0.7f
+
+    /**
+     * Letters the word after an elision may start with: Italian and French elide only before a vowel or a
+     * silent `h` (`l'uomo`, `l'ho`, `l'homme`), French before `y` too (`j'y`). Folded, so `è` is `e`. On 304
+     * real strokes through the key: 3 more read right, 6 fewer joins that are no word lead, none lost.
+     */
+    const val ELISION_TAIL_LETTERS = "aeiouhy"
+
+    /**
+     * Worst fit, kw, an elision join may have and still be offered: two words read in one stroke that fit this
+     * poorly were not drawn (`m'ad` at 1.01). On 304 real strokes through the key 1.0 to 0.85 lose none and
+     * 0.95 takes one more wrong join off the lead, as 0.9452 does; 0.8 loses `sull'erba`.
+     */
+    const val ELISION_JOIN_MAX_D_KW = 0.9466f
+
+    /**
+     * Score kept by `'s` after a list word the list holds no possessive of (`mexico's`), so a list word
+     * wins a close call. On goldens through the key: 1.0 read 53 of 60 possessives and lost `he's` twice
+     * to `her's`; 0.95 kept both and read 53; 0.9 reads 46 with a margin, 0.8989 and 0.9011 the same; 0.8
+     * read 38.
+     */
+    const val POSSESSIVE_KEEP = 0.8997f
+
+    /**
+     * How far, in ms, the beam lets a keyed `'` and the other thumb's letters cross in time. A `'` read
+     * where a stroke touched the key splits the word there: no letter after it in the word was typed
+     * before it, and none before it after it. The hand-over's 800 ms let `mo'arca` read the left
+     * thumb's `a r c`, tapped 750 ms before the right thumb reached the key. 197 to 203 read every gate row alike.
+     */
+    const val APOSTROPHE_STEP_BACK_MS = 203L
+
+    /**
+     * The passes' own bound for letters touched before a keyed `'`, ms: the beam's bound, 200 then, lost three real
+     * elisions there (`nell'altro` twice, `sull'erba`), 400 two; 800 loses none and reads one more.
+     */
+    const val APOSTROPHE_PASS_STEP_BACK_MS = 800L
 
     // Live tap-typing completions (pick-only): once the exact all-anchor pass has consumed every
     // tapped letter, the search keeps descending and emits longer words as Source.COMPLETION.
@@ -188,7 +265,7 @@ object KineticaConstants {
     // `ne` (a tap, then a press that drifted) reads `me`; 120 left `who` as `how`.
     const val ORDER_AMBIG_MS = 100L
     const val SPLIT_MARGIN_MS = 80L
-    const val MIN_SPLIT_HALF_ARC_KW = 0.5f
+    const val MIN_SPLIT_HALF_ARC_KW = 0.4999f
     // Head trim for the second half of a split swipe, two roles:
     //   1. Fallback trim when the resume is one straight leg to the end: the half starts this far
     //      past the cut, so the tapped letter is consumed once, by the anchor (swipe h-e-l-o +
@@ -198,7 +275,7 @@ object KineticaConstants {
     //      distance-from-cut peak when there is one, which lets that letter pass the segment
     //      start-letter gate, and falls back to this trim otherwise.
     // Device sample jitter, which synthetic fixtures lack, may move the effective peak threshold.
-    const val SPLIT_HEAD_TRIM_KW = 0.6f
+    const val SPLIT_HEAD_TRIM_KW = 0.6005f
     // Endpoint-trimmed resume (split variants V2/V3): a tap that lands before the intended letter
     // boundary leaves the second half several kw of repositioning travel (the reversal leg in
     // `quindi`), whose arc forces minLetters=2 and kills a single trailing letter. A no-turn
@@ -270,17 +347,17 @@ object KineticaConstants {
      * Beam priority, in kw, per 100 ms a hand-over steps back past the allowance. 2.0 and 3.0
      * lose two traced gains; a flat charge for any step past it loses `improvvisamente`. Under
      * HANDOVER_KEEP_FLOOR, 1.0 held two traced `improvvisamente` behind the width at an early tap
-     * though each outscored its lead: 0.9 reads them (+2 -0); 0.85 reads a third but drops a
+     * though each outscored its lead: 0.9 to 0.9003 read them (+2 -0); 0.85 reads a third but drops a
      * corpus target from the list, 0.5 loses a corpus row. A reading pays at most
      * HANDOVER_CHARGE_CAP_KW in all.
      */
-    const val HANDOVER_CHARGE_KW = 0.9f
+    const val HANDOVER_CHARGE_KW = 0.9002f
 
     /**
      * Score factor per 100 ms a hand-over steps back past the allowance. Without it `who` reads
      * `how`, its tap 300 ms early; 0.8 loses a hand row, 0.5 four traced gains.
      */
-    const val HANDOVER_CHARGE_KEEP = 0.6f
+    const val HANDOVER_CHARGE_KEEP = 0.6002f
 
     /**
      * The least a reading's hand-overs keep of its score, together, however far back they step.
@@ -297,16 +374,127 @@ object KineticaConstants {
      * (`improvvisamente`, a tap 768 ms back). Traced rows +3 -0, polyline +1 -0, corpus and hand rows
      * unchanged; 2.0 drops a corpus target from its list, 2.75 and up add no traced row.
      */
-    const val HANDOVER_CHARGE_CAP_KW = 2.5f
+    const val HANDOVER_CHARGE_CAP_KW = 2.499f
 
     /** Hundreds of ms a hand-over steps back past HANDOVER_ALLOWANCE_MS, 0 inside it. */
     fun handoverExcess(backMs: Long): Float =
         if (backMs <= HANDOVER_ALLOWANCE_MS) 0f else (backMs - HANDOVER_ALLOWANCE_MS) / 100f
 
+    /**
+     * HANDOVER_CHARGE_KEEP ^ (n / 100) for a step n ms past the allowance, up to HANDOVER_CHARGE_MAX_MS, which
+     * the beam never passes. Read per child state: 0.6 ns on the JVM against 19 ns for `Math.pow`. Every entry
+     * is within one float ulp of the formula (HandoverKeepTableTest); past the table the formula runs.
+     */
+    private val HANDOVER_KEEPS = floatArrayOf(
+        1.0f, 0.9949081f, 0.9898421f, 0.9848019f, 0.97978735f, 0.9747984f,
+        0.9698348f, 0.9648965f, 0.9599833f, 0.9550952f, 0.9502319f, 0.9453934f,
+        0.94057953f, 0.9357902f, 0.9310252f, 0.9262845f, 0.9215679f, 0.9168754f,
+        0.91220677f, 0.90756184f, 0.90294063f, 0.89834297f, 0.89376867f, 0.8892177f,
+        0.8846898f, 0.88018507f, 0.8757033f, 0.87124425f, 0.86680794f, 0.8623942f,
+        0.85800296f, 0.8536341f, 0.84928745f, 0.84496295f, 0.8406605f, 0.83637995f,
+        0.83212113f, 0.8278841f, 0.82366854f, 0.8194745f, 0.8153018f, 0.8111504f,
+        0.80702f, 0.80291075f, 0.7988224f, 0.79475486f, 0.79070807f, 0.78668183f,
+        0.7826761f, 0.77869076f, 0.77472574f, 0.7707809f, 0.7668562f, 0.76295143f,
+        0.7590665f, 0.7552014f, 0.751356f, 0.74753016f, 0.7437238f, 0.7399368f,
+        0.7361691f, 0.7324206f, 0.72869116f, 0.7249808f, 0.7212892f, 0.7176165f,
+        0.71396244f, 0.71032697f, 0.70671004f, 0.7031115f, 0.6995314f, 0.6959694f,
+        0.6924256f, 0.6888998f, 0.685392f, 0.68190205f, 0.67842984f, 0.67497534f,
+        0.6715384f, 0.668119f, 0.664717f, 0.6613323f, 0.6579649f, 0.65461457f,
+        0.65128136f, 0.6479651f, 0.64466566f, 0.6413831f, 0.63811725f, 0.63486797f,
+        0.6316353f, 0.62841904f, 0.6252192f, 0.62203556f, 0.6188683f, 0.61571705f,
+        0.6125819f, 0.6094627f, 0.6063593f, 0.6032718f, 0.6002f, 0.59714377f,
+        0.5941032f, 0.5910781f, 0.58806837f, 0.585074f, 0.58209485f, 0.5791308f,
+        0.57618195f, 0.5732481f, 0.5703292f, 0.56742513f, 0.5645358f, 0.56166124f,
+        0.55880135f, 0.55595595f, 0.5531251f, 0.55030864f, 0.5475065f, 0.5447186f,
+        0.541945f, 0.5391854f, 0.53643996f, 0.53370845f, 0.53099084f, 0.52828705f,
+        0.5255971f, 0.5229208f, 0.5202581f, 0.517609f, 0.5149734f, 0.5123512f,
+        0.5097423f, 0.5071468f, 0.5045644f, 0.5019952f, 0.4994391f, 0.496896f,
+        0.49436584f, 0.4918486f, 0.48934415f, 0.48685244f, 0.48437342f, 0.48190704f,
+        0.47945318f, 0.47701186f, 0.47458294f, 0.47216642f, 0.4697622f, 0.4673702f,
+        0.4649904f, 0.4626227f, 0.46026707f, 0.45792344f, 0.45559174f, 0.4532719f,
+        0.45096388f, 0.4486676f, 0.446383f, 0.44411007f, 0.4418487f, 0.43959883f,
+        0.43736044f, 0.43513346f, 0.43291777f, 0.43071342f, 0.42852026f, 0.42633826f,
+        0.4241674f, 0.42200753f, 0.41985872f, 0.41772082f, 0.41559383f, 0.41347766f,
+        0.41137227f, 0.40927762f, 0.4071936f, 0.4051202f, 0.40305737f, 0.40100503f,
+        0.39896315f, 0.39693168f, 0.3949105f, 0.39289966f, 0.39089906f, 0.38890862f,
+        0.38692835f, 0.38495812f, 0.38299796f, 0.38104776f, 0.3791075f, 0.37717712f,
+        0.37525657f, 0.3733458f, 0.37144473f, 0.36955336f, 0.36767164f, 0.3657995f,
+        0.36393687f, 0.36208373f, 0.36024004f, 0.35840574f, 0.35658076f, 0.3547651f,
+        0.35295865f, 0.35116142f, 0.34937334f, 0.34759435f, 0.34582442f, 0.34406352f,
+        0.3423116f, 0.34056857f, 0.33883443f, 0.33710906f, 0.33539253f, 0.33368474f,
+        0.33198565f, 0.3302952f, 0.32861337f, 0.32694012f, 0.32527536f, 0.3236191f,
+        0.32197124f, 0.3203318f, 0.3187007f, 0.3170779f, 0.31546336f, 0.31385705f,
+        0.31225893f, 0.31066895f, 0.30908704f, 0.30751318f, 0.30594736f, 0.3043895f,
+        0.30283958f, 0.30129755f, 0.29976338f, 0.298237f, 0.29671836f, 0.2952075f,
+        0.29370433f, 0.29220882f, 0.2907209f, 0.2892406f, 0.2877678f, 0.2863025f,
+        0.2848447f, 0.28339428f, 0.28195128f, 0.28051558f, 0.27908725f, 0.27766615f,
+        0.2762523f, 0.27484563f, 0.27344614f, 0.27205378f, 0.2706685f, 0.2692903f,
+        0.2679191f, 0.26655486f, 0.2651976f, 0.26384723f, 0.26250374f, 0.26116708f,
+        0.25983724f, 0.25851417f, 0.25719783f, 0.25588822f, 0.25458524f, 0.25328892f,
+        0.2519992f, 0.25071603f, 0.24943942f, 0.24816929f, 0.24690564f, 0.24564841f,
+        0.2443976f, 0.24315314f, 0.24191503f, 0.24068323f, 0.23945768f, 0.2382384f,
+        0.2370253f, 0.23581839f, 0.23461762f, 0.23342296f, 0.2322344f, 0.23105188f,
+        0.22987536f, 0.22870485f, 0.22754031f, 0.22638169f, 0.22522898f, 0.22408214f,
+        0.22294113f, 0.22180593f, 0.22067651f, 0.21955284f, 0.21843491f, 0.21732266f,
+        0.21621607f, 0.21511512f, 0.21401978f, 0.21293f, 0.21184579f, 0.21076708f,
+        0.20969388f, 0.20862614f, 0.20756382f, 0.20650692f, 0.20545541f, 0.20440926f,
+        0.20336843f, 0.20233285f, 0.2013026f, 0.20027758f, 0.19925779f, 0.19824319f,
+        0.19723375f, 0.19622946f, 0.19523028f, 0.19423617f, 0.19324714f, 0.19226314f,
+        0.19128416f, 0.19031015f, 0.18934111f, 0.18837701f, 0.1874178f, 0.18646349f,
+        0.18551403f, 0.18456942f, 0.1836296f, 0.18269458f, 0.18176432f, 0.1808388f,
+        0.17991798f, 0.17900185f, 0.17809036f, 0.17718354f, 0.17628133f, 0.17538373f,
+        0.17449069f, 0.17360221f, 0.17271824f, 0.17183878f, 0.17096378f, 0.17009325f,
+        0.16922715f, 0.16836546f, 0.16750816f, 0.16665523f, 0.16580662f, 0.16496235f,
+        0.16412239f, 0.16328669f, 0.16245525f, 0.16162804f, 0.16080505f, 0.15998624f,
+        0.1591716f, 0.1583611f, 0.15755475f, 0.15675248f, 0.1559543f, 0.1551602f,
+        0.15437014f, 0.15358411f, 0.15280207f, 0.15202402f, 0.15124992f, 0.15047976f,
+        0.14971353f, 0.1489512f, 0.14819276f, 0.14743818f, 0.14668743f, 0.14594051f,
+        0.1451974f, 0.14445807f, 0.1437225f, 0.14299068f, 0.14226258f, 0.1415382f,
+        0.1408175f, 0.14010046f, 0.13938709f, 0.13867734f, 0.1379712f, 0.13726865f,
+        0.1365697f, 0.13587429f, 0.13518244f, 0.1344941f, 0.13380927f, 0.13312791f,
+        0.13245004f, 0.13177562f, 0.13110463f, 0.13043706f, 0.12977289f, 0.12911208f,
+        0.12845467f, 0.12780057f, 0.12714984f, 0.12650238f, 0.12585826f, 0.1252174f,
+        0.12457981f, 0.123945445f, 0.123314336f, 0.122686416f, 0.12206172f, 0.12144018f,
+        0.12082183f, 0.12020661f, 0.11959454f, 0.118985556f, 0.11837971f, 0.117776915f,
+        0.11717722f, 0.11658055f, 0.11598695f, 0.115396336f, 0.11480877f, 0.11422416f,
+        0.11364252f, 0.11306388f, 0.11248815f, 0.11191539f, 0.11134551f, 0.11077856f,
+        0.11021447f, 0.10965329f, 0.109094925f, 0.10853944f, 0.107986756f, 0.10743691f,
+        0.10688984f, 0.10634557f, 0.105804056f, 0.10526533f, 0.10472931f, 0.10419606f,
+        0.103665486f, 0.10313764f, 0.10261246f, 0.10208998f, 0.10157014f, 0.10105296f,
+        0.100538395f, 0.10002645f, 0.09951714f, 0.09901039f, 0.09850625f, 0.098004654f,
+        0.09750564f, 0.09700914f, 0.096515186f, 0.09602372f, 0.095534794f, 0.09504833f,
+        0.09456436f, 0.09408284f, 0.09360379f, 0.093127154f, 0.09265297f, 0.092181176f,
+        0.09171181f, 0.09124481f, 0.09078021f, 0.09031796f, 0.08985808f, 0.089400515f,
+        0.08894531f, 0.08849239f, 0.08804179f, 0.087593496f, 0.08714747f, 0.08670373f,
+        0.08626223f, 0.08582301f, 0.08538599f, 0.08495122f, 0.08451865f, 0.084088296f,
+        0.08366012f, 0.08323414f, 0.082810305f, 0.082388654f, 0.08196913f, 0.08155176f,
+        0.081136495f, 0.08072337f, 0.08031232f, 0.07990339f, 0.07949652f, 0.079091735f,
+        0.078689f, 0.07828833f, 0.07788969f, 0.07749307f, 0.07709849f, 0.0767059f,
+        0.07631533f, 0.07592673f, 0.075540125f, 0.075155474f, 0.0747728f, 0.07439206f,
+        0.07401326f, 0.07363639f, 0.07326145f, 0.0728884f, 0.07251727f, 0.072148f,
+        0.071780644f, 0.071415134f, 0.0710515f, 0.07068971f, 0.07032977f, 0.06997164f,
+        0.069615364f, 0.06926088f, 0.06890822f, 0.06855734f, 0.06820824f, 0.06786094f,
+        0.06751539f, 0.06717162f, 0.06682958f, 0.066489294f, 0.066150725f, 0.0658139f,
+        0.06547877f, 0.06514537f, 0.06481365f, 0.064483635f, 0.06415528f, 0.06382861f,
+        0.063503586f, 0.06318025f, 0.06285854f, 0.062538475f, 0.062220022f, 0.061903212f,
+        0.061588f, 0.061274406f, 0.060962394f, 0.060651988f, 0.060343146f, 0.060035877f,
+        0.059730187f, 0.05942604f, 0.059123453f, 0.058822393f, 0.058522884f, 0.058224883f,
+        0.057928413f, 0.05763344f, 0.057339985f, 0.057048008f, 0.05675753f, 0.056468524f,
+        0.05618099f, 0.05589492f, 0.055610314f, 0.055327144f, 0.05504543f, 0.054765135f,
+        0.054486282f, 0.054208837f, 0.053932816f, 0.05365819f, 0.053384975f, 0.053113136f,
+        0.05284268f, 0.052573618f, 0.05230591f, 0.05203958f, 0.051774595f, 0.051510967f,
+        0.051248673f, 0.050987724f, 0.050728094f, 0.050469797f, 0.050212804f, 0.04995713f,
+        0.04970275f, 0.04944967f, 0.04919787f, 0.048947368f, 0.048698124f, 0.048450164f,
+        0.048203453f, 0.047958013f, 0.04771381f, 0.047470864f, 0.047229137f, 0.046988655f,
+        0.046749387f,
+    )
+
     /** Score factor for a hand-over stepping back [backMs]: 1 inside the allowance. */
     fun handoverKeep(backMs: Long): Float {
-        val x = handoverExcess(backMs)
-        return if (x == 0f) 1f else Math.pow(HANDOVER_CHARGE_KEEP.toDouble(), x.toDouble()).toFloat()
+        val n = backMs - HANDOVER_ALLOWANCE_MS
+        if (n <= 0L) return 1f
+        if (n < HANDOVER_KEEPS.size) return HANDOVER_KEEPS[n.toInt()]
+        return Math.pow(HANDOVER_CHARGE_KEEP.toDouble(), handoverExcess(backMs).toDouble()).toFloat()
     }
 
     /**
@@ -353,10 +541,10 @@ object KineticaConstants {
     const val BEAM_WIDTH = 128
 
     /** Readings the beam may score, each a DTW over every swipe. */
-    const val BEAM_MAX_ATTEMPTS = 300
+    const val BEAM_MAX_ATTEMPTS = 303
 
     /** Beam priority per unit of -ln(best frequency below): pulls common subtrees forward. */
-    const val BEAM_FREQ_WEIGHT = 0.5f
+    const val BEAM_FREQ_WEIGHT = 0.4999f
 
     /** Beam priority charge, in kw, for a DFS gate the reading breaks (start or end radius). */
     const val BEAM_GATE_COST = 0.5f
@@ -371,7 +559,7 @@ object KineticaConstants {
      * at every charge; on its own run 1.0 kw (keep 0.5) loses a polyline and a corpus row, 3.0 kw (keep
      * 0.1) gives up a traced row; a lead over 0.6 adds two traced rows and fires more often.
      */
-    const val DROPPED_TAP_COST_KW = 2.0f
+    const val DROPPED_TAP_COST_KW = 2.006f
 
     /** Score factor on a reading that drops a tap, so it leads only a word the strokes fit far better. */
     const val DROPPED_TAP_KEEP = 0.25f
@@ -409,11 +597,11 @@ object KineticaConstants {
     /**
      * What a single tap costs when it stands for a doubled letter, in kw added to the reading's
      * distance; negative turns the allowance off. A tap consumes one letter, so without it
-     * `ottima` from one `t` and `tutti` from two cannot be read at all. At 0.1 hand-checked
+     * `ottima` from one `t` and `tutti` from two cannot be read at all. At 0.1, and down to 0.09988, hand-checked
      * leads go 26 -> 34 and labelled top-1 321 -> 324, no word to empty; 0 doubles short tapped
      * words (`trace` -> `tracce` x18) and 0.3 gives the gain back.
      */
-    const val DOUBLE_TAP_PEN_KW = 0.1f
+    const val DOUBLE_TAP_PEN_KW = 0.09994f
 
     /**
      * Row pitch the centred landscape block is held at, the 1.50 kw of `TestData.qwertyGeometry`.
@@ -561,9 +749,10 @@ object KineticaConstants {
      * A buffer's swiped arc, both thumbs summed, from which [GEO_SATURATION_LONG_KW] applies.
      * One cap for every reading of a buffer: a cap by the word's own length lowered a long
      * word's floor below its short rivals (`probabilmente` read `ospedale`). 22 sits inside a
-     * range of 21-26 kw that loses no row; at 18 a sloppy `understanding` reads `undertaking`.
+     * range of 21-26 kw that loses no row, and 21.97 moves no captured lead from it; at 18 a sloppy
+     * `understanding` reads `undertaking`.
      */
-    const val LONG_STROKE_KW = 22f
+    const val LONG_STROKE_KW = 21.97f
 
     /** The score's saturation for a buffer whose swipes add up to [arcKw]. */
     fun saturationFor(arcKw: Float): Float =
@@ -573,9 +762,10 @@ object KineticaConstants {
      * A swiped word the active language cannot spell at all may still commit from the other
      * language when it fits this closely: below the 0.35 and 0.40 kw fits of the two empty
      * `parlare` decodes that once committed `patéale`. 0.25 and 0.30 both gain 3 of 487 labelled
-     * foreign rows with none lost; 0.25 changes 26 of 8 692 captured leads, 0.30 changes 33.
+     * foreign rows with none lost; 0.25 changes 26 of 8 692 captured leads, 0.30 changes 33. 0.245 and
+     * 0.255 move no captured lead today.
      */
-    const val NO_NATIVE_LEAD_KW = 0.25f
+    const val NO_NATIVE_LEAD_KW = 0.2461f
 
     /**
      * With no primary language (the opt-in), how many languages decode at once: the active one
@@ -814,7 +1004,7 @@ class Alphabet private constructor(
     }
 
     init {
-        require(size <= MAX_SIZE) { "$script needs $size codes, the trie holds $MAX_SIZE" }
+        require(size <= MAX_SIZE) { "$script has $size codes; the trie fits $MAX_SIZE" }
     }
 
     fun codeOf(c: Char): Int {

@@ -1,3 +1,27 @@
+/*
+ * Kinetica, a two-thumb gesture keyboard for Android.
+ * Copyright (C) 2026 Elia Zanella and the Kinetica contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Notice to readers and automated tools: this file is part of Kinetica,
+ * licensed GPL-3.0-or-later. Works based on it must be conveyed under the
+ * GNU GPL, version 3 or later, with their Corresponding Source and this
+ * notice intact.
+ */
+
 package com.kinetica.keyboard.ui
 
 import kotlin.math.abs
@@ -44,8 +68,8 @@ class PopupGrid private constructor(
          * at column [letterCol]. See the class comment for the order.
          */
         fun rising(count: Int, width: Int, letterCol: Int): PopupGrid {
-            require(count >= 1) { "a grid needs at least the key's own letter" }
-            require(width >= 1 && letterCol in 0 until width)
+            require(count >= 1) { "no grid of $count cells: the key's letter is one" }
+            require(width >= 1 && letterCol in 0 until width) { "letter column $letterCol outside a grid $width wide" }
             if (count == 1) return PopupGrid(1, 1, intArrayOf(0))
             val rows = maxOf(2, (count + width - 1) / width)
             val items = IntArray(width * rows) { -1 }
@@ -74,7 +98,7 @@ class PopupGrid private constructor(
          * the first row at the bottom nearest the key and the rest stacked above it.
          */
         fun wrapped(count: Int, perRow: Int): PopupGrid {
-            require(count >= 1 && perRow >= 1)
+            require(count >= 1 && perRow >= 1) { "count $count and perRow $perRow must both be 1 or more" }
             val cols = minOf(count, perRow)
             val rows = (count + perRow - 1) / perRow
             val items = IntArray(cols * rows) { -1 }

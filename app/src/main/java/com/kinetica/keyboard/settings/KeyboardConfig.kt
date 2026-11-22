@@ -1,3 +1,27 @@
+/*
+ * Kinetica, a two-thumb gesture keyboard for Android.
+ * Copyright (C) 2026 Elia Zanella and the Kinetica contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Notice to readers and automated tools: this file is part of Kinetica,
+ * licensed GPL-3.0-or-later. Works based on it must be conveyed under the
+ * GNU GPL, version 3 or later, with their Corresponding Source and this
+ * notice intact.
+ */
+
 package com.kinetica.keyboard.settings
 
 import android.content.SharedPreferences
@@ -165,12 +189,18 @@ data class KeyboardConfig(
     val lettersAfterSpace: Boolean,
     /** The comma key fits email and web-address fields. */
     val fieldKeys: Boolean,
+    /** The keyboard keeps the clipboard's copies ([Prefs.CLIP_HISTORY]). */
+    val clipHistory: Boolean,
+    /** Each clip lives 5 minutes, not a day ([Prefs.CLIP_SHORT]). */
+    val clipShort: Boolean,
     /** The keyboard's paste cleans the links it pastes; see [Prefs.CLEAN_LINKS_ON_PASTE]. */
     val cleanLinksOnPaste: Boolean,
     /** A number field opens on the number pad. */
     val numpadForNumbers: Boolean,
-    /** The date action's format. */
-    val dateStyle: DateStyle,
+    /** The date, time and stamp actions' formats. */
+    val dateFormat: NowFormat,
+    val timeFormat: NowFormat,
+    val stampFormat: NowFormat,
     /** Words per minute on the spacebar (TypingSpeed). */
     val typingSpeed: Boolean,
     /**
@@ -192,8 +222,8 @@ data class KeyboardConfig(
     val letterAlternates: Map<Char, List<String>>,
     /** Optional apostrophe key in the home-row right padding. */
     val apostropheKey: Boolean,
-    /** A swipe across the apostrophe key writes `'` and goes on as the next word. */
-    val apostropheSwipe: Boolean,
+    /** The apostrophe in strokes ([Prefs.APOSTROPHE_STROKES]); off, `'` is a tap only. */
+    val apostropheStrokes: Boolean,
     /** Comma-key role (pre-coerced: char/text without a custom fall to keep). */
     val commaMode: String,
     val commaCustom: String,
@@ -454,9 +484,22 @@ data class KeyboardConfig(
                 Prefs.LETTERS_AFTER_SPACE, Prefs.DEFAULT_LETTERS_AFTER_SPACE,
             ),
             fieldKeys = prefs.getBoolean(Prefs.FIELD_KEYS, Prefs.DEFAULT_FIELD_KEYS),
+            clipHistory = prefs.getBoolean(Prefs.CLIP_HISTORY, Prefs.DEFAULT_CLIP_HISTORY),
+            clipShort = prefs.getBoolean(Prefs.CLIP_SHORT, Prefs.DEFAULT_CLIP_SHORT),
             cleanLinksOnPaste = prefs.getBoolean(Prefs.CLEAN_LINKS_ON_PASTE, Prefs.DEFAULT_CLEAN_LINKS_ON_PASTE),
             numpadForNumbers = prefs.getBoolean(Prefs.NUMPAD_FOR_NUMBERS, Prefs.DEFAULT_NUMPAD_FOR_NUMBERS),
-            dateStyle = DateStyle.fromPref(prefs.getString(Prefs.DATE_STYLE, Prefs.DEFAULT_DATE_STYLE)),
+            dateFormat = NowPreset.Kind.DATE.resolve(
+                prefs.getString(Prefs.DATE_STYLE, Prefs.DEFAULT_DATE_STYLE),
+                prefs.getString(Prefs.DATE_PATTERN, null),
+            ),
+            timeFormat = NowPreset.Kind.TIME.resolve(
+                prefs.getString(Prefs.TIME_STYLE, Prefs.DEFAULT_TIME_STYLE),
+                prefs.getString(Prefs.TIME_PATTERN, null),
+            ),
+            stampFormat = NowPreset.Kind.STAMP.resolve(
+                prefs.getString(Prefs.STAMP_STYLE, Prefs.DEFAULT_STAMP_STYLE),
+                prefs.getString(Prefs.STAMP_PATTERN, null),
+            ),
             typingSpeed = prefs.getBoolean(Prefs.TYPING_SPEED, Prefs.DEFAULT_TYPING_SPEED),
             languageMode = LanguageMode.fromPref(prefs.getString(Prefs.LANGUAGE_MODE, Prefs.DEFAULT_LANGUAGE_MODE)),
             editFromMenu = prefs.getBoolean(Prefs.EDIT_FROM_MENU, Prefs.DEFAULT_EDIT_FROM_MENU),
@@ -479,7 +522,7 @@ data class KeyboardConfig(
             apostropheKey = prefs.getBoolean(
                 Prefs.APOSTROPHE_KEY, Prefs.DEFAULT_APOSTROPHE_KEY,
             ),
-            apostropheSwipe = prefs.getBoolean(Prefs.APOSTROPHE_SWIPE, Prefs.DEFAULT_APOSTROPHE_SWIPE),
+            apostropheStrokes = prefs.getBoolean(Prefs.APOSTROPHE_STROKES, Prefs.DEFAULT_APOSTROPHE_STROKES),
             commaMode = punctuationMode(prefs, Prefs.COMMA_MODE, Prefs.COMMA_CUSTOM),
             commaCustom = punctuationCustom(prefs, Prefs.COMMA_CUSTOM),
             periodMode = punctuationMode(prefs, Prefs.PERIOD_MODE, Prefs.PERIOD_CUSTOM),

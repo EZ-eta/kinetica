@@ -1,6 +1,6 @@
 de	8435682
 je	8308698
-est	6942594
+est	6942590
 pas	5833676
 le	5306023
 que	5083388
@@ -116,7 +116,7 @@ avait	320073
 accord	315183
 faut	313023
 dois	310780
-vie	310140
+vie	310137
 aller	303502
 fois	297685
 vu	290541
@@ -296,7 +296,7 @@ tué	98218
 question	97869
 partie	97788
 histoire	97363
-devrais	97220
+devrais	97258
 aide	96574
 dernière	97483
 demande	95954
@@ -563,7 +563,7 @@ tôt	45249
 inquiète	45553
 payer	44636
 dès	44598
-pouvais	44535
+pouvais	44580
 reviens	44478
 chien	44449
 suffit	44353
@@ -824,7 +824,7 @@ sorti	29142
 cadeau	29135
 expliquer	29117
 volé	29042
-plusieurs	29005
+plusieurs	29019
 gauche	29001
 ferait	29000
 neuf	28997
@@ -898,7 +898,7 @@ conseil	26321
 bar	26306
 normal	26242
 danger	26235
-dangereux	26231
+dangereux	26229
 folle	26212
 jure	26199
 tiré	26123
@@ -1061,7 +1061,7 @@ servir	21656
 peuple	21655
 exemple	21652
 fiche	21652
-max	21608
+max	21616
 promets	21565
 lequel	21558
 blessé	21552
@@ -1140,7 +1140,7 @@ tas	20038
 empêcher	20276
 longue	20004
 sexe	19997
-niveau	19994
+niveau	19992
 banque	19988
 éviter	20204
 étions	20116
@@ -1166,7 +1166,7 @@ nord	19732
 appelez	19711
 copine	19703
 baiser	19692
-anglais	19687
+anglais	19677
 henry	19636
 toilettes	19610
 portes	19599
@@ -1178,7 +1178,7 @@ dérange	19617
 rôle	19706
 censé	19369
 james	19347
-reine	19286
+reine	19294
 croit	19276
 cour	19270
 église	19259
@@ -1356,7 +1356,7 @@ stop	16540
 accepter	16539
 restes	16529
 nouveaux	16518
-sauter	16513
+sauter	16517
 suspect	16512
 vies	16509
 durant	16501
@@ -1693,7 +1693,7 @@ champ	12543
 comptes	12541
 échapper	12663
 valeur	12521
-in	12520
+in	12519
 réel	12518
 couverture	12517
 million	12512
@@ -1772,7 +1772,7 @@ conduit	11825
 passage	11813
 piège	11943
 kevin	11800
-ressens	11798
+ressens	11791
 accepte	11786
 grace	11784
 amusant	11766
@@ -1865,7 +1865,7 @@ pleure	11165
 traitement	11165
 jerry	11163
 senti	11163
-cancer	11161
+cancer	11160
 répète	11156
 reposer	11137
 regrette	11135
@@ -2000,7 +2000,7 @@ partons	10201
 perdue	10201
 dirige	10198
 verras	10180
-charmant	10166
+charmant	10169
 chante	10161
 sport	10154
 viré	10128
@@ -3796,7 +3796,7 @@ blake	4745
 martha	4742
 regardant	4742
 riz	4741
-aurions	4736
+aurions	4737
 correctement	4733
 ailles	4729
 crée	4727

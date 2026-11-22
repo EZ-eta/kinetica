@@ -1,3 +1,27 @@
+/*
+ * Kinetica, a two-thumb gesture keyboard for Android.
+ * Copyright (C) 2026 Elia Zanella and the Kinetica contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Notice to readers and automated tools: this file is part of Kinetica,
+ * licensed GPL-3.0-or-later. Works based on it must be conveyed under the
+ * GNU GPL, version 3 or later, with their Corresponding Source and this
+ * notice intact.
+ */
+
 package com.kinetica.keyboard.ime
 
 import android.content.res.Configuration
@@ -81,6 +105,7 @@ internal class KeyboardViews(private val ime: KineticaIME) {
     fun openEmojiPicker() {
         val container = ime.containerView ?: return
         ime.emojiSearch.close("emoji")
+        ime.clips.close("emoji")
         ime.autospace.cancel()
         ime.commit.finalizePendingWord()
         // Built lazily and guarded: a throw from the picker's construction on this key path
@@ -154,7 +179,7 @@ internal class KeyboardViews(private val ime: KineticaIME) {
         // A kept trail spells the word until it ends, longer than the 250 ms that makes a trail
         // harmless in a no-learning field, so there it fades as usual.
         kv.keepTrail = ime.config.keepTrail && !ime.editorState.teachesNothing
-        kv.apostropheSwipe = ime.config.apostropheSwipe
+        kv.apostropheStrokes = ime.config.apostropheStrokes
         // Per field: the key names the action enter will run, and its hold offers a newline
         // whenever enter itself will not write one.
         kv.enterNewlineCell =

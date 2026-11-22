@@ -102,7 +102,7 @@ uno	345353
 dove	344643
 su	340528
 vero	337704
-vuoi	334292
+vuoi	334286
 noi	329379
 due	328195
 quindi	327478
@@ -521,7 +521,7 @@ vista	50593
 prova	50161
 nuova	49966
 ricordo	49786
-divertente	49581
+divertente	49573
 avessi	49492
 sicura	49481
 paio	49342
@@ -636,7 +636,7 @@ parole	37888
 lasciare	37877
 dicono	37811
 new	37800
-prossima	37691
+prossima	37689
 nostre	37687
 arrivato	37654
 paese	37633
@@ -786,7 +786,7 @@ fondo	29402
 resta	29301
 devono	29257
 prossimo	29085
-pronti	29055
+pronti	29065
 saputo	29025
 scusate	28999
 potere	28726
@@ -1101,7 +1101,7 @@ ballo	19776
 ascoltami	19755
 birra	19752
 ovunque	19714
-club	19708
+club	19702
 paul	19678
 arrivati	19655
 governo	19586
@@ -1219,7 +1219,7 @@ trovata	17647
 eccolo	17645
 carne	17617
 lavorato	17616
-star	17603
+star	17607
 umano	17582
 certa	17580
 miglior	17576
@@ -1407,7 +1407,7 @@ molta	14827
 saltare	14822
 correre	14808
 frega	14797
-edificio	14786
+edificio	14770
 colazione	14767
 collo	14762
 difesa	14759
@@ -1483,7 +1483,7 @@ accanto	13878
 eroe	13837
 turno	13835
 piccoli	13828
-entrambe	13781
+entrambe	13766
 dovremo	13742
 potrai	13736
 londra	13697
@@ -1622,7 +1622,7 @@ piaciuto	12480
 stile	12475
 corsa	12469
 entrata	12464
-soluzione	12462
+soluzione	12458
 maria	12448
 fanculo	12403
 contratto	12393
@@ -1886,7 +1886,7 @@ altezza	10490
 seduta	10489
 minaccia	10484
 età	19870
-controlla	10476
+controlla	10483
 nazionale	10470
 genio	10466
 caduto	10464
@@ -2082,7 +2082,7 @@ domenica	9443
 tette	9442
 vorrà	18245
 ted	9437
-spia	9436
+spia	9434
 manda	9433
 rimani	9427
 partner	9407
@@ -2362,7 +2362,7 @@ louis	8080
 pavimento	8076
 tolto	8076
 mila	8071
-famoso	8064
+famoso	8070
 desideri	8055
 lily	8050
 traffico	8049
@@ -2598,7 +2598,7 @@ rapina	7176
 cercavo	7172
 parlava	7171
 nazione	7171
-band	7169
+band	7167
 argomento	7165
 sbagli	7164
 artista	7163
@@ -2968,7 +2968,7 @@ disgustoso	6131
 specchio	6127
 butta	6126
 perdonami	6121
-dosso	6120
+dosso	6119
 cambiamento	6106
 svegliato	6105
 venisse	6103
@@ -3490,7 +3490,7 @@ eccitante	5006
 miseria	5006
 accadere	5005
 han	5005
-cognome	5004
+cognome	5003
 esser	5001
 corto	5001
 dacci	5001
@@ -6937,7 +6937,7 @@ ring	2118
 occidentale	2118
 valeva	2115
 spaghetti	2115
-annullato	2114
+annullato	2113
 terremo	2112
 rivederla	2112
 north	2111

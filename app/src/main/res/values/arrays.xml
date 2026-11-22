@@ -334,10 +334,43 @@
     <string-array name="date_style_entries" tools:ignore="TypographyDashes">
         <item>As the phone writes it</item>
         <item>ISO, 2025-12-31</item>
+        <item>2025 12 31</item>
+        <item>31.12.2025</item>
+        <item>20251231</item>
+        <item>Custom</item>
     </string-array>
+    <!-- NowPreset.Kind.DATE, in its order. -->
     <string-array name="date_style_values" translatable="false">
         <item>system</item>
         <item>iso</item>
+        <item>spaced</item>
+        <item>dotted</item>
+        <item>compact</item>
+        <item>custom</item>
+    </string-array>
+    <string-array name="time_style_entries">
+        <item>As the phone writes it</item>
+        <item>23:59</item>
+        <item>23:59:30</item>
+        <item>235930</item>
+        <item>Custom</item>
+    </string-array>
+    <string-array name="time_style_values" translatable="false">
+        <item>system</item>
+        <item>hm</item>
+        <item>hms</item>
+        <item>hms_compact</item>
+        <item>custom</item>
+    </string-array>
+    <string-array name="stamp_style_entries" tools:ignore="TypographyDashes">
+        <item>2025-12-31 23:59:30</item>
+        <item>20251231-235930</item>
+        <item>Custom</item>
+    </string-array>
+    <string-array name="stamp_style_values" translatable="false">
+        <item>iso</item>
+        <item>compact</item>
+        <item>custom</item>
     </string-array>
     <string-array name="language_mode_values" translatable="false">
         <item>one</item>

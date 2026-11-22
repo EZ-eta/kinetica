@@ -7,7 +7,7 @@ phew	grinning face with sweat	cold dejected excited mouth nervous open smile smi
 	rolling on the floor laughing	crying face funny haha happy hehe hilarious joy laugh lmao lol rofl roflmao tear
 	face with tears of joy	crying feels funny haha happy hehe hilarious laugh lmao lol rofl roflmao tear
 	slightly smiling face	happy smile
-silly sarcasm	upside down face	hehe smile
+sarcasm silly	upside down face	hehe smile
 	melting face	disappear dissolve embarrassed haha heat hot liquid lol melt sarcasm sarcastic
 	winking face	flirt heartbreaker sexy slide tease wink winks
 	smiling face with eyes	blush eye glad satisfied smile
@@ -53,7 +53,7 @@ meh	unamused face	bored fine jealous jel jelly pissed smh ugh uhh unhappy weird 
 	relieved face	calm peace relief zen
 	pensive face	awful bored dejected died disappointed losing lost sad sucks
 	sleepy face	crying good night sad sleep sleeping tired
-yum drool	drooling face	
+drool yum	drooling face	
 	sleeping face	bed bedtime good goodnight nap night sleep tired whatever yawn zzz
 	face with bags under eyes	bored exhausted fatigued late sleepy tired weary
 	face with medical mask	cold dentist dermatologist doctor dr germs medicine sick
@@ -96,7 +96,7 @@ phew	sad but relieved face	anxious call close complicated disappointed not sweat
 	confounded face	annoyed confused cringe distraught feels frustrated mad sad
 struggle	persevering face	concentrate concentration focus headache persevere
 	disappointed face	awful blame dejected fail losing sad unhappy
-tired stress	downcast face with sweat	close cold feels headache nervous sad scared yikes
+stress tired	downcast face with sweat	close cold feels headache nervous sad scared yikes
 	weary face	crying fail feels hungry mad nooo sad sleepy tired unhappy
 exhausted	tired face	cost feels nap sad sneeze
 	yawning face	bedtime bored goodnight nap night sleep sleepy tired whatever yawn zzz
@@ -767,7 +767,7 @@ snack	pretzel	convoluted twisted
 	hamburger	burger eat fast food hungry
 	french fries	fast food
 	pizza	cheese food hungry pepperoni slice
-fast food	hot dog	frankfurter hotdog sausage
+food fast	hot dog	frankfurter hotdog sausage
 	sandwich	bread
 	taco	mexican
 	burrito	mexican wrap
@@ -953,7 +953,7 @@ bike	motorcycle	racing
 	railway track	train
 	oil drum	
 	fuel pump	diesel fuelpump gas gasoline station
-tyre drive	wheel	car circle tire turn vehicle
+drive tyre	wheel	car circle tire turn vehicle
 	police car light	alarm alert beacon emergency revolving siren
 	horizontal traffic light	intersection signal stop stoplight
 	vertical traffic light	drove intersection signal stop stoplight
@@ -1128,9 +1128,9 @@ gaming	joystick	game video videogame
 	game die	dice entertainment
 	puzzle piece	clue interlocking jigsaw
 	teddy bear	plaything plush stuffed toy
-comb hair	piñata	candy celebrate celebration cinco de festive mayo party pinada pinata
+hair comb	piñata	candy celebrate celebration cinco de festive mayo party pinada pinata
 	mirror ball	dance disco glitter party
-fan cool	nesting dolls	babooshka baboushka babushka doll matryoshka russia
+cool fan	nesting dolls	babooshka baboushka babushka doll matryoshka russia
 	spade suit	card game
 cards	heart suit	card emotion game hearts
 	diamond suit	card game
@@ -1209,7 +1209,7 @@ paint	artist palette	art artsy arty colorful creative entertainment museum paint
 	level slider	music
 	control knobs	music
 	microphone	karaoke mic music sing sound
-music listen	headphone	earbud sound
+listen music	headphone	earbud sound
 	radio	entertainment tbt video
 	saxophone	instrument music sax
 	accordion	box concertina instrument music squeeze squeezebox
@@ -1305,7 +1305,7 @@ write	pencil
 write	pen	ballpoint
 	paintbrush	painting
 	crayon	
-note write	memo	communication media notes pencil
+write note	memo	communication media notes pencil
 	briefcase	office
 	file folder	
 	open file folder	
@@ -1373,7 +1373,7 @@ vaccine	syringe	doctor flu medicine needle shot sick tool vaccination
 	drop of blood	bleed donation injury medicine menstruation
 	pill	doctor drugs medicated medicine pills sick vitamin
 	adhesive bandage	
-injury walk	crutch	aid cane disability help hurt injured mobility stick
+walk injury	crutch	aid cane disability help hurt injured mobility stick
 	stethoscope	doctor heart medicine
 	x ray	bones doctor medical skeleton skull xray
 	door	back closet front
@@ -1536,7 +1536,7 @@ correct	hollow red circle	heavy large o
 yes	check mark button	✓ checked checkmark complete completed done fixed tick
 	check box with	✓ ballot checked done off tick
 	check mark	✓ checked checkmark done heavy tick
-wrong no	cross mark	× cancel multiplication multiply x
+no wrong	cross mark	× cancel multiplication multiply x
 	cross mark button	× multiplication multiply square x
 	curly loop	curl
 	double curly loop	curl

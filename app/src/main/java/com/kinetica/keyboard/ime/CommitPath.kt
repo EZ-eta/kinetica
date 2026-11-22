@@ -1,3 +1,27 @@
+/*
+ * Kinetica, a two-thumb gesture keyboard for Android.
+ * Copyright (C) 2026 Elia Zanella and the Kinetica contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Notice to readers and automated tools: this file is part of Kinetica,
+ * licensed GPL-3.0-or-later. Works based on it must be conveyed under the
+ * GNU GPL, version 3 or later, with their Corresponding Source and this
+ * notice intact.
+ */
+
 package com.kinetica.keyboard.ime
 
 import com.kinetica.keyboard.R
@@ -139,7 +163,10 @@ internal class CommitPath(private val ime: KineticaIME) {
         }
         // Read before the candidates go: what the keyboard proposed for these letters, and the
         // text before the word (the editor holds the word, so it is cut off the read).
-        val proposal = ime.wordState.lastCandidates.firstOrNull { it.word.equals(word, ignoreCase = true) }?.word
+        val proposed = ime.wordState.lastCandidates.firstOrNull { it.word.equals(word, ignoreCase = true) }
+        val proposal = proposed?.word
+        // An elision the decode joined over the apostrophe key is learned as its two words.
+        val parts = learnedParts(word, proposed?.joinAt ?: -1)
         val textBefore = if (ime.editorState.addressField || ime.editorState.teachesNothing) {
             null
         } else {
@@ -149,6 +176,12 @@ internal class CommitPath(private val ime: KineticaIME) {
         // Read before the commit clears the buffer: a reloaded word does not lead Follow's filing.
         val seeded = ime.composer?.bufferSeeded == true
         ime.composer?.commitWord(word.lowercase())
+        // The head's pair is read before the context holds the two words.
+        val headContext = if (parts.size == 2) ime.composer?.contextSnapshot()?.dropLast(1)?.plus(parts[0].lowercase()) else null
+        if (parts.size == 2) {
+            ime.composer?.replaceLastContext(parts.map { it.lowercase() })
+            DecodeTrace.log { "  apostrophe elision word=$word head=${parts[0]} lang=${ime.languageOf(word)}" }
+        }
         ime.wordState.reopenedContext = null
         ime.wordState.tentativeLength = 0
         ime.wordState.tentativeWord = ""
@@ -173,22 +206,16 @@ internal class CommitPath(private val ime: KineticaIME) {
             // A reopened commit committed again unchanged stays learned once: backspaced into and
             // retyped, the reload's letters are not the word, so learnsOnCommit alone counts it twice.
             if (!ime.wordState.swipeDecodeEmpty && learnsOnCommit(word, ime.wordState.reloadedWord) && !keepsReopened(reopened?.word, word)) {
-                val filed = ime.filedLanguage(word, lang, seeded)
-                val counted = ime.learner.learnWord(word, lang = filed)
-                val held = ime.predictorFor(filed)?.holdsExactSpelling(word) == true
-                val caseBefore = ime.casesFor(filed)[word.lowercase()]
-                val vote = caseVote(word, proposal, held, textBefore, caseBefore?.display, filed)
-                if (vote.vote == 0 && word.any { it.isUpperCase() }) {
-                    DecodeTrace.log { "  learn capital none word=$word why=${vote.why} lang=$filed" }
+                // An elision's head first, with no lesson of its own: a reload reopens the word after
+                // the apostrophe, whose lesson the commit keeps.
+                if (parts.size == 2) {
+                    val head = parts[0]
+                    learnOne(head, proposal?.take(head.length), textBefore, lang, seeded, headContext)
                 }
-                val voted = ime.learner.voteCase(word, filed, vote)
-                ime.learner.lastLearnedWord = word.lowercase()
-                ime.learner.lastLearnedWordLang = filed
-                // The pair is learned from the same evidence as the word, under the same
-                // guards. composer.commitWord has already pushed, so the predecessor is the
-                // second-from-last context entry; lastCommit is emptied on every field change.
-                val pair = ime.learner.learnPair(ime.composer?.contextSnapshot(), word, filed)
-                lesson = CommitLesson(word.lowercase(), filed, counted, voted, caseBefore, pair)
+                val last = parts.last()
+                val before = if (parts.size == 2) textBefore?.let { it + parts[0] + "'" } else textBefore
+                val tailProposal = if (parts.size == 2) proposal?.drop(parts[0].length + 1) else proposal
+                lesson = learnOne(last, tailProposal, before, lang, seeded, ime.composer?.contextSnapshot())
             }
         }
         if (word.isNotEmpty()) ime.commitMarks.record(start, word, lesson)
@@ -217,9 +244,36 @@ internal class CommitPath(private val ime: KineticaIME) {
         ime.wordEnded()
     }
 
+    /**
+     * One word learned and filed from a commit: its count, its case vote and the pair ending in it.
+     * [context] is the composer's, the word last: the predecessor is the entry before it.
+     */
+    private fun learnOne(
+        word: String,
+        proposal: String?,
+        textBefore: String?,
+        lang: String,
+        seeded: Boolean,
+        context: List<String>?,
+    ): CommitLesson {
+        val filed = ime.filedLanguage(word, lang, seeded)
+        val counted = ime.learner.learnWord(word, lang = filed)
+        val held = ime.predictorFor(filed)?.holdsExactSpelling(word) == true
+        val caseBefore = ime.casesFor(filed)[word.lowercase()]
+        val vote = caseVote(word, proposal, held, textBefore, caseBefore?.display, filed)
+        if (vote.vote == 0 && word.any { it.isUpperCase() }) {
+            DecodeTrace.log { "  learn capital none word=$word why=${vote.why} lang=$filed" }
+        }
+        val voted = ime.learner.voteCase(word, filed, vote)
+        ime.learner.lastLearnedWord = word.lowercase()
+        ime.learner.lastLearnedWordLang = filed
+        // The pair is learned from the same evidence as the word, under the same guards; lastCommit
+        // is emptied on every field change.
+        val pair = ime.learner.learnPair(context, word, filed)
+        return CommitLesson(word.lowercase(), filed, counted, voted, caseBefore, pair)
+    }
+
     fun abandonWord() {
-        // No `'` for a word that is gone; what lifted meanwhile goes with it.
-        ime.apostropheSwipe.drop()
         ime.wordState.keptBar = null
         ime.wordState.midWordOffer = null
         ime.wordState.midWordHistory = null

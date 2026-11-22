@@ -1,3 +1,27 @@
+/*
+ * Kinetica, a two-thumb gesture keyboard for Android.
+ * Copyright (C) 2026 Elia Zanella and the Kinetica contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Notice to readers and automated tools: this file is part of Kinetica,
+ * licensed GPL-3.0-or-later. Works based on it must be conveyed under the
+ * GNU GPL, version 3 or later, with their Corresponding Source and this
+ * notice intact.
+ */
+
 package com.kinetica.keyboard.engine
 
 import com.kinetica.keyboard.engine.models.Dwell
@@ -50,13 +74,19 @@ object TraceReplay {
         val kwPx = m.groupValues[1].toFloat()
         val rects = ArrayList<FloatArray>()
         val codes = ArrayList<Int>()
+        var apostropheKw: FloatArray? = null
         for (k in m.groupValues[4].split(';')) {
             val (ch, r) = k.split(':')
-            val v = r.split(',').map { it.toFloat() * kwPx }
-            rects.add(floatArrayOf(v[0], v[1], v[2], v[3]))
+            val kwRect = r.split(',').map { it.toFloat() }
+            if (ch[0] == '\'') {
+                apostropheKw = kwRect.toFloatArray()
+                continue
+            }
+            rects.add(FloatArray(4) { kwRect[it] * kwPx })
             codes.add(Alphabet.LATIN.codeOf(ch[0]))
         }
-        val g = KeyboardGeometry.fromPx(kwPx, m.groupValues[2].toFloat() * kwPx, rects, codes.toIntArray())
+        val letters = KeyboardGeometry.fromPx(kwPx, m.groupValues[2].toFloat() * kwPx, rects, codes.toIntArray())
+        val g = apostropheKw?.let { letters.withApostropheKey(it) } ?: letters
         return Board(g, m.groupValues[3].toFloat())
     }
 

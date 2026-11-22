@@ -43,13 +43,13 @@ non	ha	5643
 quello	che	5605
 è	la	5541
 perché	non	5399
-non	va	5239
+non	va	5217
 i	suoi	5133
 non	andiamo	5067
 bisogno	di	4962
 non	vai	4928
 non	vado	4921
-a	boston	4910
+a	boston	4917
 non	andate	4906
 non	vanno	4840
 io	ho	4675
@@ -57,7 +57,7 @@ io	ho	4675
 sono	i	4418
 mary	ha	4395
 sono	le	4284
-a	me	4238
+a	me	4251
 disse	che	4187
 è	molto	4133
 non	lo	4105
@@ -86,7 +86,7 @@ tom	si	3104
 per	piacere	3086
 a	scuola	3040
 la	tua	3029
-a	cercare	3018
+a	cercare	3014
 mi	sono	2992
 mary	è	2973
 ha	fatto	2932
@@ -101,8 +101,8 @@ di	non	2760
 mi	piace	2748
 per	lavoro	2734
 lei	ha	2726
-mary	non	2725
-con	lui	2684
+mary	non	2701
+con	lui	2679
 di	un	2622
 è	stata	2600
 non	posso	2589
@@ -114,7 +114,7 @@ dice	che	2520
 lui	ha	2477
 tom	mi	2476
 qual	è	2455
-i	loro	2454
+i	loro	2451
 i	tuoi	2437
 che	cosa	2436
 ciò	che	2403
@@ -128,7 +128,7 @@ per	me	2246
 che	ha	2232
 non	ti	2203
 di	me	2203
-che	la	2199
+che	la	2196
 non	riesco	2195
 a	lavorare	2191
 lei	non	2180
@@ -143,8 +143,8 @@ che	si	2103
 di	andare	2095
 con	me	2068
 tom	sta	2059
-i	nostri	2052
-non	so	2044
+i	nostri	2045
+non	so	2035
 soldi	in	2031
 lui	non	2029
 le	loro	2029
@@ -173,12 +173,12 @@ da	sola	1749
 di	mary	1740
 che	mary	1732
 hanno	detto	1722
-che	lo	1700
+che	lo	1717
 detto	di	1698
 in	giappone	1696
 di	una	1692
 il	nostro	1689
-io	voglio	1685
+io	voglio	1674
 con	i	1657
 mary	mi	1653
 stati	uniti	1642
@@ -298,7 +298,7 @@ prima	di	1358
 tom	che	1357
 ho	un	1352
 che	sono	1351
-tu	non	1347
+tu	non	1349
 non	abbiamo	1345
 mary	disse	1337
 negli	stati	1334
@@ -342,7 +342,7 @@ del	nord	1220
 si	può	1217
 in	brasile	1215
 ha	comprato	1214
-ci	ha	1208
+ci	ha	1212
 di	nuovo	1207
 in	grecia	1207
 nuova	zelanda	1200
@@ -448,7 +448,7 @@ era	molto	1041
 il	problema	1040
 pensi	che	1040
 regno	unito	1039
-voi	non	1037
+voi	non	1036
 di	loro	1035
 che	erano	1034
 in	cile	1034
@@ -541,7 +541,7 @@ a	un	875
 mio	fratello	873
 è	davvero	869
 la	loro	868
-i	capelli	864
+i	capelli	867
 si	fa	862
 piacciono	i	857
 di	aver	856

@@ -1,3 +1,27 @@
+/*
+ * Kinetica, a two-thumb gesture keyboard for Android.
+ * Copyright (C) 2026 Elia Zanella and the Kinetica contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Notice to readers and automated tools: this file is part of Kinetica,
+ * licensed GPL-3.0-or-later. Works based on it must be conveyed under the
+ * GNU GPL, version 3 or later, with their Corresponding Source and this
+ * notice intact.
+ */
+
 package com.kinetica.keyboard.settings
 
 import com.kinetica.keyboard.ime.DictationHandoff
@@ -99,7 +123,12 @@ object SettingsSynonyms {
         Prefs.ENTER_HOLD_SENDS to listOf("enter", "return", "send", "hold", "newline", "chat", "action"),
         Prefs.FIELD_KEYS to listOf("email", "url", "address", "at", "@", "comma", "field", "web"),
         Prefs.CLEAN_LINKS_ON_PASTE to listOf("url", "link", "tracking", "privacy", "paste", "utm"),
+        Prefs.CLIP_HISTORY to listOf("copy", "copied", "paste", "clips", "privacy"),
+        Prefs.CLIP_SHORT to listOf("clipboard", "expiry", "expire", "privacy", "clips"),
+        Prefs.CLIP_CLEAR to listOf("clipboard", "delete", "clips", "privacy"),
         Prefs.DATE_STYLE to listOf("date", "iso", "format", "today", "calendar", "yyyy-mm-dd", "shortcut"),
+        Prefs.TIME_STYLE to listOf("time", "clock", "hour", "format", "24", "seconds", "shortcut"),
+        Prefs.STAMP_STYLE to listOf("timestamp", "stamp", "date", "time", "iso", "log", "file name", "shortcut"),
         Prefs.NUMPAD_FOR_NUMBERS to listOf("numpad", "number pad", "numbers", "phone", "digits", "field"),
         Prefs.LETTERS_ON_NEW_FIELD to listOf("symbols", "numbers", "numpad", "page", "field", "reset", "abc"),
         Prefs.LETTERS_AFTER_SPACE to listOf("symbols", "space", "page", "abc", "letters", "back", "return"),
@@ -143,7 +172,7 @@ object SettingsSynonyms {
         Prefs.EMOJI_KEY to listOf("smiley", "emoticon"),
         Prefs.EMOJI_TONE to listOf("skin", "colour", "color", "hand", "people", "smiley", "fitzpatrick"),
         Prefs.APOSTROPHE_KEY to listOf("quote", "contraction"),
-        Prefs.APOSTROPHE_SWIPE to listOf("apostrophe", "elision", "swipe", "quote"),
+        Prefs.APOSTROPHE_STROKES to listOf("apostrophe", "swipe", "elision", "possessive", "quote", "experimental"),
         Prefs.COMMA_MODE to listOf("punctuation", "remove", "rebind", "replace"),
         Prefs.COMMA_ALTERNATES to listOf("punctuation", "long press", "popup"),
         Prefs.PERIOD_MODE to listOf("full stop", "dot", "punctuation", "remove", "rebind", "replace"),

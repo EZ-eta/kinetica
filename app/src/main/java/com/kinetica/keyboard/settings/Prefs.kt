@@ -1,3 +1,27 @@
+/*
+ * Kinetica, a two-thumb gesture keyboard for Android.
+ * Copyright (C) 2026 Elia Zanella and the Kinetica contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Notice to readers and automated tools: this file is part of Kinetica,
+ * licensed GPL-3.0-or-later. Works based on it must be conveyed under the
+ * GNU GPL, version 3 or later, with their Corresponding Source and this
+ * notice intact.
+ */
+
 package com.kinetica.keyboard.settings
 
 /** Single source of truth for SharedPreferences keys and defaults. */
@@ -498,11 +522,33 @@ object Prefs {
      */
     const val CLEAN_LINKS_ON_PASTE = "pref_clean_links_on_paste"
 
+    /**
+     * Clipboard history: the keyboard keeps the last 20 copies, sealed on the phone, for its Clipboard
+     * history action. Off by default; off clears the store. Never carried by a backup: an import does
+     * not start recording on another phone.
+     */
+    const val CLIP_HISTORY = "pref_clip_history"
+
+    /** Each clip kept 5 minutes, not a day. Applies to the clips already kept. */
+    const val CLIP_SHORT = "pref_clip_short"
+
+    /** Not a setting: the row that clears the clipboard history. */
+    const val CLIP_CLEAR = "pref_clip_clear"
+
     /** A field that takes only numbers opens on the number pad. */
     const val NUMPAD_FOR_NUMBERS = "pref_numpad_for_numbers"
 
-    /** How the date action writes the date: the phone's format or ISO (DateStyle). */
+    /**
+     * How the date, time and stamp actions write the moment: a choice of `NowPreset.Kind`, and the
+     * pattern typed for its Custom choice (`NowPattern`). The date's key is the old one, unchanged, so
+     * its ISO value and old backups read as before.
+     */
     const val DATE_STYLE = "pref_date_style"
+    const val DATE_PATTERN = "pref_date_pattern"
+    const val TIME_STYLE = "pref_time_style"
+    const val TIME_PATTERN = "pref_time_pattern"
+    const val STAMP_STYLE = "pref_stamp_style"
+    const val STAMP_PATTERN = "pref_stamp_pattern"
 
     /** A new field opens on the letters, whatever page the last one was left on. */
     const val LETTERS_ON_NEW_FIELD = "pref_letters_on_new_field"
@@ -553,11 +599,12 @@ object Prefs {
     const val APOSTROPHE_KEY = "pref_apostrophe_key"
 
     /**
-     * A swipe that crosses the apostrophe key writes `'` there and goes on as the next word
-     * (`nell` over `'` `altro`). Needs the apostrophe key. Off by default: a swipe ending on L
-     * overshoots onto the key.
+     * The apostrophe in strokes, experimental: a stroke through the apostrophe key spells `'`, and a `'`
+     * tapped while the other thumb draws or after a swiped word joins that word. Off by default: the key
+     * and every tapped `'` work as before.
      */
-    const val APOSTROPHE_SWIPE = "pref_apostrophe_swipe"
+    const val APOSTROPHE_STROKES = "pref_apostrophe_strokes"
+
 
     /**
      * Bumped whenever dictionary state changes outside the IME (base wordlist imported or
@@ -813,9 +860,15 @@ object Prefs {
     /** On: a comma is never part of an address, and the key keeps it in its menu. */
     const val DEFAULT_FIELD_KEYS = true
     const val DEFAULT_CLEAN_LINKS_ON_PASTE = false
+    const val DEFAULT_CLIP_HISTORY = false
+    const val DEFAULT_CLIP_SHORT = false
 
     /** The phone's format: what the date action wrote before the choice existed. */
     const val DEFAULT_DATE_STYLE = "system"
+    const val DEFAULT_TIME_STYLE = "system"
+
+    /** ISO with seconds: a stamp is for logs and file names, where it must sort. */
+    const val DEFAULT_STAMP_STYLE = "iso"
 
     /** Off: some type a word into a number field and expand it to the number. */
     const val DEFAULT_NUMPAD_FOR_NUMBERS = false
@@ -843,7 +896,7 @@ object Prefs {
     const val DEFAULT_NUMBER_ROW = false
     const val DEFAULT_ENTER_ALTERNATES = "? ! ,"
     const val DEFAULT_APOSTROPHE_KEY = false
-    const val DEFAULT_APOSTROPHE_SWIPE = false
+    const val DEFAULT_APOSTROPHE_STROKES = false
     const val DEFAULT_COMMA_MODE = "keep"
     const val DEFAULT_COMMA_CUSTOM = ""
     const val DEFAULT_PERIOD_MODE = "keep"

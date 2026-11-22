@@ -1,3 +1,27 @@
+/*
+ * Kinetica, a two-thumb gesture keyboard for Android.
+ * Copyright (C) 2026 Elia Zanella and the Kinetica contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Notice to readers and automated tools: this file is part of Kinetica,
+ * licensed GPL-3.0-or-later. Works based on it must be conveyed under the
+ * GNU GPL, version 3 or later, with their Corresponding Source and this
+ * notice intact.
+ */
+
 package com.kinetica.keyboard.keys
 
 // File-level, because an enum entry cannot read its own companion object: the
@@ -67,10 +91,12 @@ enum class EditorAction(val output: String) {
     ONE_HANDED("${ACTION_PREFIX}one_handed"),
 
     /**
-     * Write today's date, or the time, at the cursor, in the phone's own format (#19).
+     * Write today's date, or the time, at the cursor, in the phone's own format (#19) or the
+     * one chosen in the settings. The stamp is both, one pattern, ISO by default.
      */
     DATE("${ACTION_PREFIX}date"),
     TIME("${ACTION_PREFIX}time"),
+    STAMP("${ACTION_PREFIX}stamp"),
 
     /** What the enter key does: a newline, or the field's own send or search. */
     ENTER("${ACTION_PREFIX}enter"),
@@ -151,6 +177,9 @@ enum class EditorAction(val output: String) {
 
     /** Moves extend the selection until turned off, or until a copy, cut or paste (SelectMode). */
     SELECT_MODE("${ACTION_PREFIX}select_mode"),
+
+    /** The clipboard history in the bar's place, a tap pasting a clip; closed again if it is up. */
+    CLIPS("${ACTION_PREFIX}clips"),
     ;
 
     companion object {

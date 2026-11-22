@@ -1,3 +1,27 @@
+/*
+ * Kinetica, a two-thumb gesture keyboard for Android.
+ * Copyright (C) 2026 Elia Zanella and the Kinetica contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Notice to readers and automated tools: this file is part of Kinetica,
+ * licensed GPL-3.0-or-later. Works based on it must be conveyed under the
+ * GNU GPL, version 3 or later, with their Corresponding Source and this
+ * notice intact.
+ */
+
 package com.kinetica.keyboard.ime
 
 import com.kinetica.keyboard.engine.Alphabet
@@ -132,22 +156,6 @@ class ApostropheJoinTest {
     }
 
     @Test
-    fun aSwipedHeadBeforeTheApostropheIsAnElision() {
-        val it = elisionHeadsFor(listOf("it", "en"))
-        // A swipe cannot show `ll`: the elision outranks the commoner word.
-        assertEquals("nell", elisionHead(listOf("nel", "nell", "bel"), it))
-        // None among the first three: the longest head one of them begins with.
-        assertEquals("quest", elisionHead(listOf("quel", "questo", "queste"), it))
-        assertEquals("dell", elisionHead(listOf("dello", "della", "del"), it))
-        assertEquals("c", elisionHead(listOf("cl", "con", "col"), it))
-        // Past the third candidate nothing is read.
-        assertEquals(null, elisionHead(listOf("bene", "beh", "ben", "nell"), it))
-        // No eliding language: the lead stands.
-        assertEquals(null, elisionHead(listOf("nel", "nell"), elisionHeadsFor(listOf("en"))))
-        assertEquals("qu", elisionHead(listOf("que", "quoi"), elisionHeadsFor(listOf("fr"))))
-    }
-
-    @Test
     fun aListPrefixIsOneTheUserDidNotOnlyLearn() {
         val en = lexicon("en", listOf("l'ora" to 2, "y'all" to 2, "we'dz" to 2))
         assertTrue(en.holdsListPrefix("i'"))
@@ -210,6 +218,43 @@ class ApostropheJoinTest {
         assertFalse(learnable("i'"))
     }
 
+    /** English as the keyboard loads it: `'s` after a list word on. */
+    private fun possessiveEn(learned: List<Pair<String, Int>> = emptyList()): WordPredictor =
+        lexicon("en", learned).also { it.possessive = true }
+
+    @Test
+    fun aListWordJoinsForItsPossessive() {
+        val en = "en" to possessiveEn(listOf("kinetica" to 3))
+        for (w in listOf("marco", "Marco", "peter", "rock", "dogs")) assertTrue(w, joins(w, en))
+        // A learned word has no list row to read `'s` after: the apostrophe ends it as before.
+        assertFalse(joins("kinetica", en))
+        // Italian on: its elision heads stay elisions, `all'inizio` and `l'altro` two words.
+        val it = "it" to lexicon("it")
+        val heads = elisionHeadsFor(listOf("en", "it"))
+        fun joinsWithIt(w: String) = apostropheJoins(w, listOf(en, it), latin, elidingOn = true, heads = heads)
+        for (w in listOf("all", "l", "un", "d", "dell")) assertFalse(w, joinsWithIt(w))
+        for (w in listOf("marco", "peter")) assertTrue(w, joinsWithIt(w))
+        // Without English's possessive nothing changes.
+        assertFalse(joins("marco", "en" to lexicon("en")))
+    }
+
+    @Test
+    fun aTappedPossessiveDecodesAsOneWord() {
+        val en = possessiveEn()
+        for (s in listOf(0f, 0.25f)) {
+            for (w in listOf("marco's", "peter's", "mexico's")) {
+                assertEquals("$w at $s kw", w, en.decode(tapped(w, s), listOf("with")).first().word)
+            }
+        }
+        // `'s` ends the reading: no completion grows past it.
+        val all = en.decode(tapped("marco's", 0.25f), emptyList()).map { it.word }
+        assertTrue(all.toString(), all.none { it.startsWith("marco's") && it != "marco's" })
+        // A list word with its own `'s` keeps it; a second `'` never comes.
+        assertEquals("he's", en.decode(tapped("he's", 0f), emptyList()).first().word)
+        assertTrue(learnable("marco's"))
+        assertFalse(learnable("marco'"))
+    }
+
     private fun body(src: String, declaration: String): String {
         val start = src.indexOf(declaration)
         assertTrue("$declaration not found", start >= 0)
@@ -226,24 +271,72 @@ class ApostropheJoinTest {
         val eat = punct.indexOf("autospace.eatBefore(text)")
         assertTrue(punct, action in 0 until join && join < eat)
         assertTrue(src.contains("KeyType.CHAR -> onPunctuation(key.output, key)"))
-        // Every join question carries the enabled languages' eliding switch.
+        // Every join question carries the enabled languages' eliding switch and their elision heads.
         val ask = body(src, "internal fun joinsAtApostrophe(")
-        assertTrue(ask, ask.contains("elidingEnabled(config.enabledLanguages + config.language)"))
+        assertTrue(ask, ask.contains("val languages = config.enabledLanguages + config.language"))
+        assertTrue(ask, ask.contains("elidingEnabled(languages), elisionHeadsFor(languages))"))
         assertTrue(src.contains("if (!composeAccentedLetter(text) && !joinApostrophe(text, key)) finalizeThenCommitText(text)"))
         assertTrue(body(src, "override fun onKeyPressFeedback(").contains("keyDownAt[key.id] = SystemClock.uptimeMillis()"))
         val fn = body(src, "private fun joinApostrophe(")
-        val order = listOf(
+        // A `'` tapped while the other thumb draws starts the word, the stroke's lift reads it.
+        val held = listOf(
             "autospace.retractBeforeApostrophe(t)",
-            "comp.hasSwipeToken()",
+            "if (apostropheRides(config.apostropheStrokes, comp.hasPendingWord, engine.trackedSince(t))) {",
+            "commitTracked(\"'\")",
+            "comp.onToken(TapToken.apostrophe(sideOf(key), g.alphabet.apostrophe, t))",
+            "return true",
+            "joinsAtApostrophe(word)",
+        ).map { step -> fn.indexOf(step).also { assertTrue("missing: $step", it >= 0) } }
+        assertEquals(held.sorted(), held)
+        val joinPath = fn.substring(fn.indexOf("val word = wordState.tentativeWord"))
+        val order = listOf(
             "joinsAtApostrophe(word)",
             "rememberWordBeforeGesture()",
             "commitTracked(\"'\")",
             "wordState.tentativeWord += \"'\"",
             "comp.onToken(TapToken.apostrophe(",
-        ).map { step -> fn.indexOf(step).also { assertTrue("missing: $step", it >= 0) } }
+        ).map { step -> joinPath.indexOf(step).also { assertTrue("missing: $step", it >= 0) } }
         assertEquals(order.sorted(), order)
+        // A swiped word joins as a tapped one only with the apostrophe in strokes on (ApostropheStrokesTest).
+        assertTrue(joinPath.contains("swipedWordMayJoin(config.apostropheStrokes, comp.hasSwipeToken())"))
         // The retract asks the join, not the letter's prefix.
         val auto = ImeSources.declaring("fun retractBeforeApostrophe(").text
         assertTrue(auto.contains("retractBefore(tStart, -1L) { fusedBase, _ -> ime.joinsAtApostrophe(fusedBase) }"))
+    }
+
+    @Test
+    fun anElisionJoinedOverTheKeyIsLearnedAsItsTwoWords() {
+        assertEquals(listOf("nell", "altro"), learnedParts("nell'altro", 4))
+        assertEquals(listOf("l", "uomo"), learnedParts("l'uomo", 1))
+        // No join marked: the word as committed, a contraction or a tapped elision alike.
+        assertEquals(listOf("don't"), learnedParts("don't", -1))
+        assertEquals(listOf("y'all"), learnedParts("y'all", -1))
+        // A mark that points at no apostrophe, or at an end, keeps the word whole.
+        assertEquals(listOf("nellaltro"), learnedParts("nellaltro", 4))
+        assertEquals(listOf("nell'"), learnedParts("nell'", 4))
+    }
+
+    @Test
+    fun aJoinedElisionReopensAsTheWordAfterTheApostrophe() {
+        // The reload rule, on the text a joined elision leaves: the piece after the apostrophe.
+        assertEquals("altro", reloadFragment("nell'altro", { false }, { false }))
+        assertEquals("don't", reloadFragment("don't", { it == "don't" }, { false }))
+    }
+
+    @Test
+    fun theCommitLearnsAJoinedElisionAsTwoWords() {
+        // No JVM reach for the service: the commit splits only a candidate the decode marked as a join,
+        // the context holds the two words, the head is learned before the word after it.
+        val src = ImeSources.declaring("private fun commitWordInternal(").text
+        val fn = body(src, "private fun commitWordInternal(")
+        val order = listOf(
+            "val parts = learnedParts(word, proposed?.joinAt ?: -1)",
+            "ime.composer?.commitWord(word.lowercase())",
+            "ime.composer?.replaceLastContext(parts.map { it.lowercase() })",
+            "learnOne(head, proposal?.take(head.length), textBefore, lang, seeded, headContext)",
+            "lesson = learnOne(last, tailProposal, before, lang, seeded, ime.composer?.contextSnapshot())",
+        ).map { step -> fn.indexOf(step).also { assertTrue("missing: $step", it >= 0) } }
+        assertEquals(order.sorted(), order)
+        assertTrue(fn.contains("apostrophe elision word=\$word head="))
     }
 }

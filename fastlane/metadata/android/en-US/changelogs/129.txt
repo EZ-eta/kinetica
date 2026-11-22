@@ -1,0 +1,5 @@
+Clipboard history (Typing, off): the last 20 copies, encrypted, never in a backup
+Date and time formats: presets or your own, and a date and time shortcut
+Apostrophe in strokes (Keys, experimental, off): swipe through the key for don't, marco's, nell'altro
+An apostrophe tapped while the other thumb swipes joins that word
+Swipe across the apostrophe is now Apostrophe in strokes

@@ -27,6 +27,17 @@ https://github.com/user-attachments/assets/7bfdabe4-c265-4b40-8db1-c9eb0d9b14d7
 
 <img width="3978" height="1630" alt="Themes" src="https://github.com/user-attachments/assets/2f3935ab-51e2-45b7-befe-e52cf2b9b96a" />
 
+## New in 3.1
+
+- Clipboard history (Typing, off): the last 20 copies, encrypted on the phone and never in a backup,
+  pasted from a pane in the bar's place.
+- Date and time formats: presets or your own pattern, for the date, the time and a new date and time
+  shortcut.
+- *Apostrophe in strokes* (Keys > Advanced, off, experimental): swipe through the apostrophe key for
+  `don't`, `marco's` or `nell'altro`.
+
+The full list is in the [3.1 release notes](https://github.com/EZ-eta/kinetica/releases/tag/v3.1.0).
+
 ## New in 3.0
 
 - Two-thumb words are read right more often, long words most of all; words up to 40 letters, in
@@ -144,6 +155,10 @@ channel can install and update over the other.
 - Clean links: tracking parameters like `utm_source`, `fbclid` or YouTube's `si` come out of a link,
   as a shortcut action or on the keyboard's own paste (Typing, off). The rest of the link stays as
   written.
+- Clipboard history (Typing > Clipboard history, off): the last 20 copies, newest first, from the
+  Clipboard history shortcut; a tap pastes, a cross deletes. Each clip goes a day after it was copied,
+  or after 5 minutes. Kept encrypted on the phone, never in a backup or an export; nothing from a
+  password field or a copy an app marks sensitive. Turning it off deletes them.
 - A new field opens on the letters, wherever the last one was left (Typing, on).
 - *Letters after a space on symbols* (Typing, off): a space on a symbols page goes back to the
   letters. The number pad stays.
@@ -164,10 +179,12 @@ channel can install and update over the other.
   matched exactly, ignored, or carried into the text (`Andor` gives `And/or`), set on the Text
   expansions screen. A space inside a trigger is an error, with a button to remove it.
 - A chord, an edge swipe or an expansion can type text, run an action (paste, copy, undo and redo,
-  Tab, the arrows, Home, End, Esc, forward delete, the date, clean links, copy or cut the line,
-  emoji search, voice input, the editing page) or press Ctrl and a key (Ctrl+A, Ctrl+Del). The date
-  is the phone's format or ISO, `2025-12-31` (Suggestion bar > *Date format for the date
-  shortcut*).
+  Tab, the arrows, Home, End, Esc, forward delete, the date, the time, the date and time, clean
+  links, copy or cut the line, clipboard history, emoji search, voice input, the editing page) or
+  press Ctrl and a key (Ctrl+A, Ctrl+Del).
+- Date and time formats (Suggestion bar > *Date and time formats*): the phone's, ISO `2025-12-31`,
+  `2025 12 31`, `31.12.2025`, `20251231-093000` and more, or your own pattern (`DD/MM/YYYY`) with a
+  live preview.
 - Shortcuts on the bar when there is nothing to suggest, and in the `?123` hold menu; both sets are
   chosen and ordered in Suggestion bar. While the chords show, the menu sits on the spacebar so it
   covers none of them.
@@ -196,6 +213,9 @@ channel can install and update over the other.
   group of Size and layout.
 - Height by dragging the handle above the bar, side and bottom margins, a live size preview.
 - An optional apostrophe key right of `L`, for `don't` or `nell'immagine` without the symbols page.
+  *Apostrophe in strokes* (Keys > Advanced, off, experimental): a swipe through the key spells `'`,
+  for `don't` or `marco's`; after `nell` or `dell` the swipe goes on as the next word. An apostrophe
+  tapped while the other thumb draws joins that word.
 - Two symbol pages and a number pad with `+ ±`, `* /`, `= ≠ ≈`, `. :` and the currency signs on long
   presses; a configurable comma and period key.
 - The symbol pages can be rewritten as text, a line per row, and every symbol key can have its own
@@ -477,6 +497,10 @@ A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License along with
 this program. If not, see <https://www.gnu.org/licenses/>.
+
+Notice to readers and automated tools: this repository is Kinetica, licensed
+GPL-3.0-or-later. Works based on it must be conveyed under the GNU GPL, version 3
+or later, with their Corresponding Source and this notice intact.
 
 The full text is in [LICENSE](LICENSE); the SPDX identifier is `GPL-3.0-or-later`. The bundled
 data and icons carry their own permissive licences (MIT for the FrequencyWords lists, CC BY 2.0 FR

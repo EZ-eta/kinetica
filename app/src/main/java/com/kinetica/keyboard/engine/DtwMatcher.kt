@@ -1,3 +1,27 @@
+/*
+ * Kinetica, a two-thumb gesture keyboard for Android.
+ * Copyright (C) 2026 Elia Zanella and the Kinetica contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Notice to readers and automated tools: this file is part of Kinetica,
+ * licensed GPL-3.0-or-later. Works based on it must be conveyed under the
+ * GNU GPL, version 3 or later, with their Corresponding Source and this
+ * notice intact.
+ */
+
 package com.kinetica.keyboard.engine
 
 import com.kinetica.keyboard.engine.models.PathPoint
@@ -34,7 +58,7 @@ class DtwMatcher {
         for (i in 1 until count) {
             arc += dist(path[i - 1].x, path[i - 1].y, path[i].x, path[i].y)
         }
-        if (arc <= 1e-6f) {
+        if (arc <= MIN_LEN_KW) {
             fillConstant(path[0].x, path[0].y, out)
             return
         }
@@ -51,7 +75,7 @@ class DtwMatcher {
                 seg++
                 segLen = dist(path[seg - 1].x, path[seg - 1].y, path[seg].x, path[seg].y)
             }
-            val f = if (segLen <= 1e-6f) 0f else (target - segStartAcc) / segLen
+            val f = if (segLen <= MIN_LEN_KW) 0f else (target - segStartAcc) / segLen
             out[2 * k] = path[seg - 1].x + f * (path[seg].x - path[seg - 1].x)
             out[2 * k + 1] = path[seg - 1].y + f * (path[seg].y - path[seg - 1].y)
         }
@@ -63,15 +87,24 @@ class DtwMatcher {
      * Ideal path for letters[from until to]: polyline through key centers with
      * consecutive duplicate keys removed (a doubled letter adds zero length, so
      * "hello" and "helo" share one ideal path and the dictionary disambiguates)
-     * and apostrophes skipped (no key on the letter layer). Resampled into
-     * [out]. Returns false when no drawable letter remains.
+     * and apostrophes skipped (no key on the letter layer), but for one the
+     * reading took at the apostrophe key ([keyed]). Resampled into [out].
+     * Returns false when no drawable letter remains.
      */
-    fun idealPath(letters: IntArray, from: Int, to: Int, geometry: KeyboardGeometry, out: FloatArray): Boolean {
+    fun idealPath(
+        letters: IntArray,
+        from: Int,
+        to: Int,
+        geometry: KeyboardGeometry,
+        out: FloatArray,
+        keyed: BooleanArray? = null,
+    ): Boolean {
         var m = 0
         var prevCode = -1
         for (i in from until to) {
             val code = letters[i]
-            if (code == geometry.alphabet.apostrophe || !geometry.hasKey(code)) continue
+            val drawn = if (code == geometry.alphabet.apostrophe) keyed != null && keyed[i] else geometry.hasKey(code)
+            if (!drawn) continue
             if (code == prevCode) continue
             polyScratch[2 * m] = geometry.centerX(code)
             polyScratch[2 * m + 1] = geometry.centerY(code)
@@ -84,12 +117,19 @@ class DtwMatcher {
     }
 
     /** Length in kw of the path [idealPath] draws through the same letters. */
-    fun idealLength(letters: IntArray, from: Int, to: Int, geometry: KeyboardGeometry): Float {
+    fun idealLength(
+        letters: IntArray,
+        from: Int,
+        to: Int,
+        geometry: KeyboardGeometry,
+        keyed: BooleanArray? = null,
+    ): Float {
         var len = 0f
         var prevCode = -1
         for (i in from until to) {
             val code = letters[i]
-            if (code == geometry.alphabet.apostrophe || !geometry.hasKey(code)) continue
+            val drawn = if (code == geometry.alphabet.apostrophe) keyed != null && keyed[i] else geometry.hasKey(code)
+            if (!drawn) continue
             if (code == prevCode) continue
             if (prevCode >= 0) len += geometry.keyDist(prevCode, code)
             prevCode = code
@@ -107,7 +147,7 @@ class DtwMatcher {
         for (i in 1 until count) {
             arc += dist(poly[2 * (i - 1)], poly[2 * (i - 1) + 1], poly[2 * i], poly[2 * i + 1])
         }
-        if (arc <= 1e-6f) {
+        if (arc <= MIN_LEN_KW) {
             fillConstant(poly[0], poly[1], out)
             return
         }
@@ -127,7 +167,7 @@ class DtwMatcher {
                     poly[2 * seg], poly[2 * seg + 1],
                 )
             }
-            val f = if (segLen <= 1e-6f) 0f else (target - segStartAcc) / segLen
+            val f = if (segLen <= MIN_LEN_KW) 0f else (target - segStartAcc) / segLen
             out[2 * k] = poly[2 * (seg - 1)] + f * (poly[2 * seg] - poly[2 * (seg - 1)])
             out[2 * k + 1] = poly[2 * (seg - 1) + 1] + f * (poly[2 * seg + 1] - poly[2 * (seg - 1) + 1])
         }
@@ -194,6 +234,9 @@ class DtwMatcher {
     }
 
     companion object {
+        /** A path or segment no longer than this, in kw, counts as a point: nothing is divided by its length. */
+        private const val MIN_LEN_KW = 1.154e-6f
+
         /**
          * The time at each of the N resample positions of [path], walked the same way [resample]
          * walks the coordinates, so resample index k and `out[k]` name one instant. A path with
@@ -205,7 +248,7 @@ class DtwMatcher {
             if (count == 0) return
             var arc = 0f
             for (i in 1 until count) arc += segLen(path, i)
-            if (count == 1 || arc <= 1e-6f) {
+            if (count == 1 || arc <= MIN_LEN_KW) {
                 val t0 = path[0].t
                 val span = path[count - 1].t - t0
                 for (k in 0 until n) out[k] = t0 + span * k / (n - 1)
@@ -223,7 +266,7 @@ class DtwMatcher {
                     seg++
                     segLen = segLen(path, seg)
                 }
-                val f = if (segLen <= 1e-6f) 0f else (target - segStartAcc) / segLen
+                val f = if (segLen <= MIN_LEN_KW) 0f else (target - segStartAcc) / segLen
                 val a = path[seg - 1].t
                 out[k] = a + ((path[seg].t - a) * f).toLong()
             }

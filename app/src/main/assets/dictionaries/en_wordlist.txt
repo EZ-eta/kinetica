@@ -24,7 +24,7 @@ do	4419883
 i'm	4410169
 was	4401531
 no	4374975
-not	4262273
+not	4262227
 be	4210868
 are	4203821
 don	4158644
@@ -146,7 +146,7 @@ i've	668289
 there's	666943
 help	666286
 first	656387
-into	655747
+into	655727
 anything	640206
 still	639540
 find	626520
@@ -330,7 +330,7 @@ wife	254038
 days	253171
 guess	250320
 how's	249683
-tomorrow	248729
+tomorrow	248731
 matter	247812
 meet	247466
 bring	247343
@@ -527,7 +527,7 @@ high	140078
 wow	139593
 couple	138996
 half	138527
-died	138432
+died	138420
 cool	138139
 free	137598
 either	137448
@@ -586,8 +586,8 @@ lose	118712
 king	118230
 plan	118129
 dinner	117970
-sighs	117410
-sort	117267
+sighs	117418
+sort	117265
 leaving	117050
 shouldn	117029
 running	116973
@@ -819,7 +819,7 @@ film	71407
 month	71163
 lying	71098
 unless	70979
-train	70974
+train	70975
 seven	70968
 wear	70955
 clothes	70929
@@ -1076,7 +1076,7 @@ appreciate	51258
 cat	51175
 shop	50976
 driving	50866
-congratulations	50847
+congratulations	50852
 wrote	50800
 village	50792
 quit	50649
@@ -2294,7 +2294,7 @@ stronger	19713
 rate	19700
 deeply	19685
 scream	19681
-desert	19666
+desert	19676
 vehicle	19664
 illegal	19658
 pulling	19630
@@ -2506,7 +2506,7 @@ mass	17516
 alien	17513
 trapped	17495
 helps	17480
-route	17472
+route	17471
 defend	17469
 trace	17465
 nasty	17464
@@ -2932,7 +2932,7 @@ collection	14008
 oliver	13994
 wilson	13994
 accent	13993
-believes	13985
+believes	13988
 decisions	13978
 embarrassed	13972
 mobile	13970
@@ -3205,7 +3205,7 @@ chip	12537
 chffffff	12527
 surveillance	12526
 carlos	12522
-vampire	12502
+vampire	12503
 routine	12497
 uses	12485
 michelle	12482
@@ -3262,7 +3262,7 @@ ian	12239
 pet	12235
 cage	12231
 digging	12218
-spain	12200
+spain	12201
 seats	12199
 awkward	12197
 cleaned	12182
@@ -3882,7 +3882,7 @@ sang	9686
 gimme	9685
 plates	9684
 shoulders	9683
-burnt	9678
+burnt	9677
 recorded	9676
 upper	9674
 counts	9673
@@ -5501,7 +5501,7 @@ bowling	6056
 buttons	6055
 confusion	6054
 thud	6046
-hooker	6042
+hooker	6044
 ruining	6041
 dreadful	6041
 collecting	6036
@@ -6744,7 +6744,7 @@ vest	4557
 approached	4557
 mechanic	4555
 mumbai	4553
-arizona	4552
+arizona	4551
 legendary	4550
 delayed	4549
 resolve	4548

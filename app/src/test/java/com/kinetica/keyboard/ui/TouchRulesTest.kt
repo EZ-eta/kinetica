@@ -1,3 +1,27 @@
+/*
+ * Kinetica, a two-thumb gesture keyboard for Android.
+ * Copyright (C) 2026 Elia Zanella and the Kinetica contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Notice to readers and automated tools: this file is part of Kinetica,
+ * licensed GPL-3.0-or-later. Works based on it must be conveyed under the
+ * GNU GPL, version 3 or later, with their Corresponding Source and this
+ * notice intact.
+ */
+
 package com.kinetica.keyboard.ui
 
 import com.kinetica.keyboard.engine.KineticaConstants
@@ -63,31 +87,5 @@ class TouchRulesTest {
     fun aHoldBesideASwipeOpensNothingAfterTheSwipeEnds() {
         assertFalse(TouchRules.holdOpensMenu(otherOnLetters = false, swipeBeside = true))
         assertFalse(TouchRules.holdOpensMenu(otherOnLetters = true, swipeBeside = true))
-    }
-
-    @Test
-    fun aSwipeOverTheApostropheIsCutOnceItReachesALetter() {
-        val c = TouchRules.ApostropheCut()
-        assertEquals(null, c.onSample(inside = false, onLetter = true, t = 10))
-        assertEquals(null, c.onSample(inside = true, onLetter = false, t = 20))
-        assertEquals(null, c.onSample(inside = true, onLetter = false, t = 30))
-        // Out of the key between keys: not yet.
-        assertEquals(null, c.onSample(inside = false, onLetter = false, t = 40))
-        assertEquals(20L to 40L, c.onSample(inside = false, onLetter = true, t = 50))
-        // Spent: the next letter is no second cut.
-        assertEquals(null, c.onSample(inside = false, onLetter = true, t = 60))
-    }
-
-    @Test
-    fun anOvershootOntoTheApostropheThatComesBackIsOneEntry() {
-        val c = TouchRules.ApostropheCut()
-        c.onSample(inside = true, onLetter = false, t = 20)
-        c.onSample(inside = false, onLetter = false, t = 30)
-        c.onSample(inside = true, onLetter = false, t = 40)
-        assertEquals(20L to 70L, c.onSample(inside = false, onLetter = true, t = 70))
-        // A reset (a new touch) forgets an entry.
-        c.onSample(inside = true, onLetter = false, t = 80)
-        c.reset()
-        assertEquals(null, c.onSample(inside = false, onLetter = true, t = 90))
     }
 }

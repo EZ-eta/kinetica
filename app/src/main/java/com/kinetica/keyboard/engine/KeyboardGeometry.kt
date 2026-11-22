@@ -1,3 +1,27 @@
+/*
+ * Kinetica, a two-thumb gesture keyboard for Android.
+ * Copyright (C) 2026 Elia Zanella and the Kinetica contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Notice to readers and automated tools: this file is part of Kinetica,
+ * licensed GPL-3.0-or-later. Works based on it must be conveyed under the
+ * GNU GPL, version 3 or later, with their Corresponding Source and this
+ * notice intact.
+ */
+
 package com.kinetica.keyboard.engine
 
 import kotlin.math.sqrt
@@ -23,11 +47,15 @@ class KeyboardGeometry private constructor(
     /** The board's letters; a code here is a code of this alphabet. */
     val alphabet: Alphabet,
     private val present: BooleanArray,       // [letterCount]
-    private val centersX: FloatArray,        // [letterCount] kw
-    private val centersY: FloatArray,        // [letterCount] kw
-    private val rects: FloatArray,           // [letterCount*4] kw: left, top, right, bottom
+    // Sized to alphabet.size: the slot after the letters is the apostrophe key's, set only by
+    // [withApostropheKey]. The letter loops stop at letterCount, so it is never a touch's key.
+    private val centersX: FloatArray,        // [size] kw
+    private val centersY: FloatArray,        // [size] kw
+    private val rects: FloatArray,           // [size*4] kw: left, top, right, bottom
     // The letter block, the bounding box of every letter rect, kw: left, top, right, bottom.
     private val block: FloatArray,
+    /** True when the apostrophe has a place a stroke can reach: the board's apostrophe key. */
+    val hasApostropheKey: Boolean = false,
 ) {
     /** Letters this geometry can place: the alphabet's, keyed or not. */
     val letterCount: Int get() = alphabet.letterCount
@@ -39,6 +67,31 @@ class KeyboardGeometry private constructor(
 
     /** The key's rect in kw: left, top, right, bottom. */
     internal fun rectKw(code: Int): FloatArray = rects.copyOfRange(code * 4, code * 4 + 4)
+
+    /**
+     * The same board with the apostrophe key at [rectKw] (left, top, right, bottom, kw), so a
+     * stroke that reaches it can spell `'` as it spells a letter. A key lying over a letter
+     * (AZERTY's full home row puts it on `m`) is no place of its own: the board comes back as it was.
+     */
+    fun withApostropheKey(rectKw: FloatArray): KeyboardGeometry {
+        val a = alphabet.apostrophe
+        require(rectKw.size == 4) { "rectKw holds ${rectKw.size} values, not left top right bottom" }
+        if (a < 0) return this
+        for (code in 0 until alphabet.letterCount) {
+            if (!present[code]) continue
+            val base = code * 4
+            val overlaps = rectKw[0] < rects[base + 2] && rects[base] < rectKw[2] &&
+                rectKw[1] < rects[base + 3] && rects[base + 1] < rectKw[3]
+            if (overlaps) return this
+        }
+        val cx = centersX.copyOf()
+        val cy = centersY.copyOf()
+        val r = rects.copyOf()
+        for (i in 0 until 4) r[a * 4 + i] = rectKw[i]
+        cx[a] = (rectKw[0] + rectKw[2]) / 2f
+        cy[a] = (rectKw[1] + rectKw[3]) / 2f
+        return KeyboardGeometry(keyWidthPx, midlinePx, alphabet, present, cx, cy, r, block, hasApostropheKey = true)
+    }
 
     /** Euclidean distance between two key centers, kw. */
     fun keyDist(a: Int, b: Int): Float {
@@ -112,13 +165,13 @@ class KeyboardGeometry private constructor(
             codes: IntArray,
             alphabet: Alphabet = Alphabet.LATIN,
         ): KeyboardGeometry {
-            require(keyWidthPx > 0f) { "keyWidthPx must be positive" }
-            require(letterRectsPx.size == codes.size)
+            require(keyWidthPx > 0f) { "no board at a key width of $keyWidthPx px" }
+            require(letterRectsPx.size == codes.size) { "one rect per code: ${letterRectsPx.size} rects, ${codes.size} codes" }
             val n = alphabet.letterCount
             val present = BooleanArray(n)
-            val cx = FloatArray(n)
-            val cy = FloatArray(n)
-            val rects = FloatArray(n * 4)
+            val cx = FloatArray(alphabet.size)
+            val cy = FloatArray(alphabet.size)
+            val rects = FloatArray(alphabet.size * 4)
             for (i in codes.indices) {
                 val code = codes[i]
                 if (code !in 0 until n) continue

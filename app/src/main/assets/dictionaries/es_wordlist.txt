@@ -708,7 +708,7 @@ secreto	53504
 baño	53670
 mil	53364
 decirte	53207
-sam	53082
+sam	53099
 pensaba	53018
 novia	52984
 propia	52973
@@ -925,7 +925,7 @@ juro	39329
 mantener	39327
 ejército	39290
 papel	39262
-partes	39255
+partes	39251
 ten	39243
 gracioso	39166
 diría	40338
@@ -1170,7 +1170,7 @@ harry	30134
 escribir	30111
 estación	30915
 pidió	30766
-alta	30046
+alta	30051
 pista	30000
 estrella	29938
 enfermo	29931
@@ -1276,7 +1276,7 @@ golpe	27552
 quedarme	27529
 llamaré	28617
 acabado	27494
-estilo	27487
+estilo	27480
 nueve	27477
 definitivamente	27474
 quedar	27451
@@ -1395,7 +1395,7 @@ mismos	24932
 tomado	24901
 habías	25819
 planes	24830
-cine	24776
+cine	24759
 toca	24753
 brillante	24750
 confianza	24733
@@ -1770,7 +1770,7 @@ piedra	19060
 éramos	19034
 habló	19032
 charles	19029
-paga	19027
+paga	19022
 secretos	19018
 digamos	19007
 intención	19321
@@ -1802,7 +1802,7 @@ actuar	18776
 siga	18750
 llevado	18750
 comenzó	19321
-regresa	18683
+regresa	18691
 privado	18675
 mirada	18665
 demonio	18645
@@ -2060,7 +2060,7 @@ olvides	16229
 volviendo	16220
 coge	16217
 fué	16211
-llamaba	16189
+llamaba	16196
 pete	16182
 tendrán	16699
 instituto	16145
@@ -2315,7 +2315,7 @@ granja	14132
 podéis	15334
 esfuerzo	14118
 trabajaba	14117
-claire	14107
+claire	14106
 perdóname	14085
 tesoro	14073
 empleo	14071
@@ -2337,7 +2337,7 @@ pregunté	14002
 mostrar	13997
 piloto	13989
 pocas	13989
-tuvieron	13983
+tuvieron	13984
 ayudarle	13979
 bolso	13969
 llorando	13957
@@ -3065,7 +3065,7 @@ suelta	10216
 despedida	10216
 sucedido	10207
 pasta	10196
-cristal	10185
+cristal	10188
 vegas	10180
 gritando	10172
 pare	10147
@@ -3322,7 +3322,7 @@ biblia	9244
 saludos	9241
 katie	9236
 deme	9231
-adultos	9230
+adultos	9227
 sitios	9226
 serpiente	9221
 parker	9220
@@ -3886,7 +3886,7 @@ desnuda	7618
 payaso	7617
 rayo	7617
 guay	7614
-naves	7609
+naves	7613
 americana	7607
 político	7873
 diseño	7605
@@ -3933,7 +3933,7 @@ patrulla	7498
 brandon	7498
 planeando	7495
 ann	7494
-tragedia	7489
+tragedia	7484
 ethan	7478
 miami	7478
 autoridades	7476
@@ -5159,7 +5159,7 @@ homicidios	5358
 cajón	5357
 tragos	5356
 salve	5356
-valores	5354
+valores	5355
 pierre	5353
 leslie	5353
 ejecución	5352
@@ -5675,7 +5675,7 @@ camarera	4745
 herencia	4742
 vaquero	4741
 trenes	4741
-largos	4739
+largos	4740
 patria	4738
 ponía	4738
 enviando	4738

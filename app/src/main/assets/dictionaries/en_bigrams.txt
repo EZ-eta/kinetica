@@ -50,7 +50,7 @@ for	a	11730
 for	the	11709
 able	to	11689
 that	i	11670
-think	tom	11610
+think	tom	11636
 out	of	11523
 you	know	10770
 if	you	10618
@@ -82,7 +82,7 @@ mary	is	8521
 mary	are	8370
 sami	was	8286
 would	be	8269
-in	boston	8230
+in	boston	8209
 to	see	8154
 know	tom	8096
 has	been	8090
@@ -121,7 +121,7 @@ know	what	6593
 of	his	6444
 by	the	6441
 you	should	6431
-tom	to	6373
+tom	to	6370
 the	only	6364
 be	a	6338
 i	wonder	6301
@@ -136,7 +136,7 @@ to	have	6074
 there	are	6071
 into	the	6044
 he	has	6018
-to	tell	5952
+to	tell	5992
 one	who	5950
 he	thought	5907
 for	you	5871
@@ -163,7 +163,7 @@ there	is	5365
 said	they	5308
 that	by	5300
 to	take	5292
-to	a	5271
+to	a	5284
 to	australia	5267
 trying	to	5261
 tom	know	5253
@@ -177,7 +177,7 @@ a	new	5154
 was	in	5150
 supposed	to	5141
 the	door	5139
-is	very	5136
+is	very	5138
 if	i	5135
 tell	me	5130
 to	talk	5085
@@ -303,7 +303,7 @@ i	love	3371
 is	that	3363
 to	learn	3349
 you	really	3320
-be	here	3309
+be	here	3311
 every	day	3306
 we	can	3297
 the	room	3283
@@ -323,7 +323,7 @@ of	this	3190
 we	should	3155
 you	get	3135
 mary	have	3134
-should	have	3132
+should	have	3119
 why	tom	3115
 that	again	3105
 at	a	3091
@@ -451,7 +451,7 @@ you	going	2468
 the	whole	2464
 in	her	2463
 like	the	2462
-he	did	2458
+he	did	2455
 up	with	2454
 her	to	2444
 is	there	2443
@@ -485,7 +485,7 @@ what	she	2337
 the	next	2329
 ready	to	2328
 hard	to	2326
-mary	that	2316
+mary	that	2315
 where	did	2307
 be	the	2305
 make	a	2301
@@ -522,14 +522,14 @@ of	us	2215
 the	money	2208
 want	you	2207
 in	front	2203
-the	book	2186
+the	book	2198
 is	one	2185
 to	stop	2183
 as	the	2182
 not	be	2180
 you	said	2177
 the	problem	2173
-tom	be	2170
+tom	be	2172
 help	us	2168
 afraid	of	2162
 they	want	2159
@@ -564,7 +564,7 @@ this	morning	2066
 tom	should	2066
 talking	about	2065
 just	a	2059
-you	could	2054
+you	could	2053
 what	they	2050
 have	done	2048
 the	day	2040
@@ -603,7 +603,7 @@ stay	in	1932
 plan	to	1932
 a	bad	1932
 know	the	1928
-out	the	1927
+out	the	1918
 is	on	1917
 know	you	1917
 you	will	1915
@@ -628,7 +628,7 @@ come	back	1866
 up	in	1866
 because	of	1863
 of	them	1862
-the	dog	1861
+the	dog	1859
 thought	you	1858
 mary	know	1857
 was	born	1855
@@ -1266,7 +1266,7 @@ want	a	1051
 where	are	1049
 the	company	1049
 a	really	1049
-the	airport	1048
+the	airport	1046
 as	she	1045
 same	thing	1045
 born	in	1045

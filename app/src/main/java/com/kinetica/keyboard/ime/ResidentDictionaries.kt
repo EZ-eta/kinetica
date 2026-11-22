@@ -1,3 +1,27 @@
+/*
+ * Kinetica, a two-thumb gesture keyboard for Android.
+ * Copyright (C) 2026 Elia Zanella and the Kinetica contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Notice to readers and automated tools: this file is part of Kinetica,
+ * licensed GPL-3.0-or-later. Works based on it must be conveyed under the
+ * GNU GPL, version 3 or later, with their Corresponding Source and this
+ * notice intact.
+ */
+
 package com.kinetica.keyboard.ime
 
 import android.content.Context
@@ -124,6 +148,8 @@ internal class ResidentDictionaries(
         // learn from now on goes into the journal, which the install replays over these rows.
         val journal = learnJournal.open()
         val phrases = config().learnPhrases
+        // A change of the switch asks a new load, so the flags are set before any decode reads them.
+        val strokes = config().apostropheStrokes
         val rowsRead = FutureTask {
             listOfNotNull(lang, detectLang, extraLang).associateWith { readUserRows(it, phrases) }
         }
@@ -232,7 +258,7 @@ internal class ResidentDictionaries(
                         personalPairs = pairs
                         val p = WordPredictor(
                             dict.trie, bigrams, geometry(), dict.forms, counts, pairs, lang, dict.learned,
-                        )
+                        ).also { strokeApostrophes(it, strokes) }
                         // Before any decode reads them: no composer holds these predictors yet. By
                         // spelling, as askUserDictReload: a new accented form of a held key is not merged.
                         stale += replayLearns(counts, lang, learns, p::holdsSpelling)
@@ -248,7 +274,10 @@ internal class ResidentDictionaries(
                             WordPredictor(
                                 d.trie, b, geometry(), d.forms, altCounts, altPairs,
                                 language = detectLang ?: "", learnedOnly = d.learned,
-                            ).also { s -> stale += replayLearns(altCounts, s.language, learns, s::holdsSpelling) }
+                            ).also { s ->
+                                strokeApostrophes(s, strokes)
+                                stale += replayLearns(altCounts, s.language, learns, s::holdsSpelling)
+                            }
                         }
                         val xCounts = ConcurrentHashMap<String, Int>(extraRows.size * 2)
                         for (row in extraRows) xCounts[row.word] = row.frequency
@@ -258,7 +287,10 @@ internal class ResidentDictionaries(
                         extraLanguage = if (extra != null) extraLang else null
                         extraPredictor = extra?.let { (d, b) ->
                             WordPredictor(d.trie, b, geometry(), d.forms, xCounts, xPairs, language = extraLang ?: "", learnedOnly = d.learned)
-                                .also { x -> stale += replayLearns(xCounts, x.language, learns, x::holdsSpelling) }
+                                .also { x ->
+                                    strokeApostrophes(x, strokes)
+                                    stale += replayLearns(xCounts, x.language, learns, x::holdsSpelling)
+                                }
                         }
                         learnJournal.installed(journal)
                         onReady(p)

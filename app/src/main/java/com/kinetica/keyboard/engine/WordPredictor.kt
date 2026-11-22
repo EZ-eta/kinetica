@@ -1,3 +1,27 @@
+/*
+ * Kinetica, a two-thumb gesture keyboard for Android.
+ * Copyright (C) 2026 Elia Zanella and the Kinetica contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Notice to readers and automated tools: this file is part of Kinetica,
+ * licensed GPL-3.0-or-later. Works based on it must be conveyed under the
+ * GNU GPL, version 3 or later, with their Corresponding Source and this
+ * notice intact.
+ */
+
 package com.kinetica.keyboard.engine
 
 import com.kinetica.keyboard.engine.models.Dwell
@@ -46,6 +70,51 @@ class WordPredictor(
 ) {
     /** The letters this predictor's trie and geometry are spelled in. */
     val alphabet: Alphabet get() = trie.alphabet
+
+    /**
+     * Words an apostrophe elides before the next word (`nell` of `nell'altro`), from the keyboard's
+     * eliding languages. A stroke over the apostrophe key after one goes on as a new word in the same
+     * reading; empty, no join.
+     */
+    @Volatile var elisionHeads: Set<String> = emptySet()
+        set(value) {
+            headPrefixNodes = value.flatMapTo(HashSet()) { h -> (1..h.length).map { trie.prefixNode(h.substring(0, it)) } }
+                .filter { it >= 0 }.toIntArray()
+            field = value
+        }
+
+    /**
+     * True where a list word takes `'s` as a possessive the list does not spell (`mexico's`): read only
+     * where a stroke crossed the apostrophe key, then `s` ends it, on that stroke or, in [ThumbBeam], as
+     * either thumb's next letter.
+     */
+    @Volatile var possessive: Boolean = false
+
+    /**
+     * True where a tapped `'` whose touch fell inside a stroke belongs to the stroke's word ([carried]).
+     * Off, it is read where it falls in time, as a tap always was.
+     */
+    @Volatile var ridesApostrophes: Boolean = false
+
+    /**
+     * Apostrophes tapped while a stroke was down, taken out of the buffer for this decode: the reading must
+     * hold one, anywhere in the word. The thumb taps the key when it is free, not at the letter.
+     */
+    internal var carried = 0
+
+
+    /**
+     * The trie nodes that spell an elision head or the start of one. Until a reading leaves them, a
+     * buffer crossing the apostrophe key may still join, so the node's own words do not bound the
+     * letters the buffer still needs.
+     */
+    @Volatile internal var headPrefixNodes: IntArray = IntArray(0)
+        private set
+
+    /** By letter code: whether the word after an elision may start with it ([KineticaConstants.ELISION_TAIL_LETTERS]). */
+    private val elisionTail = BooleanArray(trie.alphabet.size).also { tail ->
+        for (c in KineticaConstants.ELISION_TAIL_LETTERS) trie.alphabet.codeOf(c).let { if (it >= 0) tail[it] = true }
+    }
 
     private val dtw = DtwMatcher()
     private val idealScratch = FloatArray(2 * KineticaConstants.RESAMPLE_N)
@@ -106,6 +175,11 @@ class WordPredictor(
          */
         fun pairKey(prev: String, next: String): String =
             AccentFolder.fold(prev.lowercase()) + "\u0000" + AccentFolder.fold(next.lowercase())
+
+        internal val NO_NODES = IntArray(0)
+
+        /** Every apostrophe keyed: the mask for a piece's own letters, read only at apostrophes. */
+        private val ALL_KEYED = BooleanArray(KineticaConstants.MAX_WORD_LEN) { true }
     }
 
     /**
@@ -269,6 +343,19 @@ class WordPredictor(
     fun isLivePrefix(s: String): Boolean =
         s.isNotEmpty() && trie.prefixNode(AccentFolder.fold(s.lowercase())) != -1
 
+    /** Whether [node]'s word has display forms; a possessive is read only on one without (`scoreReading` spells it). */
+    internal fun hasForms(node: Int): Boolean = forms[node] != null
+
+    /**
+     * Whether a tapped `'` after [word] may be its `'s` ([possessive]): a list word, not only learned,
+     * with no `'` in it and no display forms, so the decode can spell `marco's`.
+     */
+    fun takesPossessive(word: String): Boolean {
+        if (!possessive || word.isEmpty() || '\'' in word) return false
+        val node = trie.nodeFor(AccentFolder.fold(word.lowercase()))
+        return node != -1 && trie.isWord(node) && forms[node] == null && holdsListSpelling(word)
+    }
+
     /**
      * [isLivePrefix] by the bundled list alone: a word under [s] that the user did not only learn.
      * A learned Italian elision filed to English (`l'ora`) makes `l'` live there, never listed.
@@ -319,6 +406,81 @@ class WordPredictor(
         ownMemo.clear()
         saturation = saturationOf(tokens)
 
+        val touch = keyTouches(tokens, g)
+        if (touch.isEmpty()) return finish(decodeRiding(tokens, g, prevWordId, prevWord, beam), startNs)
+        // A short stroke that lifts on the apostrophe key may be the key touched off its edge: read both ways.
+        DecodeTrace.log { "  apostrophe touch t=${touch.values.joinToString(",") { it.tStart.toString() }}" }
+        val asDrawn = decodeRiding(tokens, g, prevWordId, prevWord, beam)
+        val asKey = decodeRiding(tokens.map { touch[it] ?: it }, g, prevWordId, prevWord, beam)
+        val best = LinkedHashMap<String, WordCandidate>()
+        for (c in asDrawn + asKey) {
+            val had = best[c.word]
+            if (had == null || c.score > had.score) best[c.word] = c
+        }
+        return finish(best.values.sortedByDescending { it.score }.take(KineticaConstants.TOP_K), startNs)
+    }
+
+    private fun decodeRiding(
+        tokens: List<InputToken>,
+        g: KeyboardGeometry,
+        prevWordId: Int,
+        prevWord: String?,
+        beam: Boolean,
+    ): List<WordCandidate> {
+        val riding = ridingApostrophes(tokens)
+        if (riding.isEmpty()) return decodeBuffer(tokens, g, prevWordId, prevWord, beam)
+        DecodeTrace.log { "  apostrophe rides t=${riding.joinToString(",") { it.tStart.toString() }}" }
+        carried = riding.size
+        try {
+            return decodeBuffer(tokens.filter { it !in riding }, g, prevWordId, prevWord, beam)
+        } finally {
+            carried = 0
+        }
+    }
+
+    /**
+     * Short strokes that lift on the apostrophe key, each as the tapped `'` it may be: a touch aimed at the
+     * key lands on `l` beside it (0.5 kw wide) and slides on. Timed at the first sample on the key.
+     */
+    private fun keyTouches(tokens: List<InputToken>, g: KeyboardGeometry): Map<InputToken, TapToken> {
+        val a = trie.alphabet.apostrophe
+        if (a < 0 || !g.hasApostropheKey) return emptyMap()
+        var out: HashMap<InputToken, TapToken>? = null
+        for (t in tokens) {
+            if (t !is SwipeToken || t.arcLen > KineticaConstants.APOSTROPHE_TOUCH_ARC_KW || t.keyContacts.size > 1) continue
+            val end = t.rawPath.lastOrNull() ?: continue
+            // Anywhere on the key: a touch is not a pass, and the lifts sat 0.59 kw from its centre.
+            if (!g.insideInflated(end.x, end.y, a, 0f)) continue
+            val on = t.rawPath.firstOrNull { g.insideInflated(it.x, it.y, a, 0f) } ?: continue
+            (out ?: HashMap<InputToken, TapToken>().also { out = it })[t] = TapToken.apostrophe(t.streamId, a, on.t)
+        }
+        return out ?: emptyMap()
+    }
+
+    /**
+     * Tapped apostrophes whose touch fell inside a stroke: the other thumb gave `'` while this one drew, so
+     * it belongs to the stroke's word, not to the stroke's letter under it at that moment (`c'era` with the
+     * tap between `r` and `a`).
+     */
+    private fun ridingApostrophes(tokens: List<InputToken>): List<TapToken> {
+        val a = trie.alphabet.apostrophe
+        if (a < 0 || !ridesApostrophes) return emptyList()
+        var out: ArrayList<TapToken>? = null
+        for (t in tokens) {
+            if (t !is TapToken || t.code != a || t.x != TapToken.NO_KEY_KW) continue
+            if (tokens.none { it is SwipeToken && t.tStart >= it.tStart && t.tStart <= it.tEnd }) continue
+            (out ?: ArrayList<TapToken>().also { out = it }).add(t)
+        }
+        return out ?: emptyList()
+    }
+
+    private fun decodeBuffer(
+        tokens: List<InputToken>,
+        g: KeyboardGeometry,
+        prevWordId: Int,
+        prevWord: String?,
+        beam: Boolean,
+    ): List<WordCandidate> {
         val heap = CandidateHeap(KineticaConstants.TOP_K)
         val seqs = MergeAlternatives.sequences(tokens, dtw)
         val patterns = ArrayList<List<Matcher>>(4)
@@ -342,7 +504,7 @@ class WordPredictor(
         val beamReads = beam && engine != 1 && ThumbBeam.applies(seqs.first(), patterns.firstOrNull())
         if (beamReads && engine == 2) {
             ThumbBeam(this, g, seqs.first(), patterns.first(), heap, prevWordId, prevWord).run()
-            return finish(heap.sortedByScoreDesc(), startNs)
+            return heap.sortedByScoreDesc()
         }
         for (p in patterns) {
             Search(p, g, prevWordId, prevWord, heap, fuzzyAnchors = false).run()
@@ -419,7 +581,7 @@ class WordPredictor(
                 ).run()
             }
         }
-        if (!beamReads) return finish(heap.sortedByScoreDesc(), startNs)
+        if (!beamReads) return heap.sortedByScoreDesc()
         // The beam scores into a copy of the passes' heap, so its abandon budget starts where
         // theirs ended, and may add at most BEAM_MAX_NEW words: a better reading still leads,
         // and the passes' own list keeps its order behind it.
@@ -436,7 +598,7 @@ class WordPredictor(
         ) {
             ThumbBeam(this, g, seqs.first(), patterns.first(), beamHeap, prevWordId, prevWord, dropsTap = true).run()
         }
-        return finish(mergeBeam(passes, beamHeap.sortedByScoreDesc()), startNs)
+        return mergeBeam(passes, beamHeap.sortedByScoreDesc())
     }
 
     /**
@@ -710,7 +872,7 @@ class WordPredictor(
     }
 
     /** How scoring one reading ended, for the calling pass's own counters. */
-    internal enum class Scored { OFFERED, SCORE, IDEAL, DTW }
+    internal enum class Scored { OFFERED, BOUND, PATHLESS, NO_FIT }
 
     /**
      * Scores the word at [node], spelled by [letters] to [depth], against [pieceCount] pieces,
@@ -736,7 +898,13 @@ class WordPredictor(
         contactKeep: Float,
         source: WordCandidate.Source,
         unsaturated: Boolean = false,
+        /** Apostrophes read at the key, by letter index: vertices of the ideal path. Null: all free. */
+        keyed: BooleanArray? = null,
+        /** Letters before an elision join, `'` included: the word's forms are spelled after them. */
+        prefixLen: Int = 0,
     ): Scored {
+        // An elision stands only before a vowel or `h`: a join whose word starts otherwise is no reading.
+        if (prefixLen in 1 until depth && !elisionTail[letters[prefixLen]]) return Scored.BOUND
         val fw = KineticaConstants.FREQ_WEIGHT_FLOOR +
             (1f - KineticaConstants.FREQ_WEIGHT_FLOOR) * trie.frequency(node) / 255f
         val bm = bigrams.multiplier(prevWordId, node)
@@ -773,7 +941,7 @@ class WordPredictor(
         if (pieceCount == 1 && pieceLetters == null) {
             val arc = pieceSeg[0]!!.letterArcLen
             if (arc >= KineticaConstants.SHORT_READING_ARC_KW) {
-                shortKeep = KineticaConstants.shortReadingKeep(dtw.idealLength(letters, pieceFrom[0], pieceTo[0], g), arc)
+                shortKeep = KineticaConstants.shortReadingKeep(dtw.idealLength(letters, pieceFrom[0], pieceTo[0], g, keyed), arc)
             }
         }
         val keep = contactKeep * shortKeep
@@ -790,20 +958,26 @@ class WordPredictor(
             // MAX_EMIT_ATTEMPTS and measured by the *LatencyIsBounded goldens.
             val dMax = KineticaConstants.maxDTotalForScore(maxNumerator * shortKeep, minScore, saturation) - tapPen
             if (dMax <= 0f) {
-                return Scored.SCORE
+                return Scored.BOUND
             }
             if (totalSteps > 0 && dMax.isFinite()) budget = dMax * totalSteps
         }
+        // A join is two words read in one stroke: one that fits worse than the bound was not drawn. Its DTW
+        // abandons there, which spares the rest of the search the work; the check below refuses the rest.
+        if (prefixLen > 0) budget = minOf(budget, (KineticaConstants.ELISION_JOIN_MAX_D_KW - tapPen) * totalSteps)
 
         var accum = 0f
         for (pi in 0 until pieceCount) {
             val m = pieceSeg[pi]!!
-            if (!dtw.idealPath(pieceLetters?.get(pi) ?: letters, pieceFrom[pi], pieceTo[pi], g, idealScratch)) {
-                return Scored.IDEAL
+            // A piece's own letters (the beam) hold an apostrophe only where its stroke crossed the key:
+            // the beam's free one belongs to no piece.
+            val pieceKeyed = if (pieceLetters == null) keyed else if (g.hasApostropheKey) ALL_KEYED else null
+            if (!dtw.idealPath(pieceLetters?.get(pi) ?: letters, pieceFrom[pi], pieceTo[pi], g, idealScratch, pieceKeyed)) {
+                return Scored.PATHLESS
             }
             val d = dtw.distanceAccum(m.resampled, idealScratch, budget - accum)
             if (d == Float.POSITIVE_INFINITY) {
-                return Scored.DTW
+                return Scored.NO_FIT
             }
             accum += d
         }
@@ -812,6 +986,7 @@ class WordPredictor(
         // conditioned on the former, the geometric term on the latter.
         val geoFit = if (totalSteps > 0) accum / totalSteps else 0f
         val dTotal = geoFit + tapPen
+        if (prefixLen > 0 && dTotal > KineticaConstants.ELISION_JOIN_MAX_D_KW) return Scored.NO_FIT
 
         val geo = if (unsaturated) {
             KineticaConstants.geometricTermUnsaturated(dTotal)
@@ -829,12 +1004,17 @@ class WordPredictor(
             heap.offer(
                 WordCandidate(
                     word, score, dTotal, fw, bmApplied, node, source, language, pb,
-                    keep, pbm,
+                    keep, pbm, joinAt = prefixLen - 1,
                 ),
             )
         } else {
             // One geometric match, several spellings ("senti"/"sentì"):
             // each variant competes with its own frequency.
+            val prefix = if (prefixLen > 0) {
+                buildString { for (i in 0 until prefixLen) append(alphabet.charOf(letters[i])) }
+            } else {
+                ""
+            }
             for (v in variants!!) {
                 val fwV = KineticaConstants.FREQ_WEIGHT_FLOOR +
                     (1f - KineticaConstants.FREQ_WEIGHT_FLOOR) * v.freqByte / 255f
@@ -844,8 +1024,8 @@ class WordPredictor(
                 val score = fwV * geo * bmApplied * pbV * pbmV * keep
                 heap.offer(
                     WordCandidate(
-                        v.display, score, dTotal, fwV, bmApplied, node, source, language, pbV,
-                        keep, pbmV,
+                        prefix + v.display, score, dTotal, fwV, bmApplied, node, source, language, pbV,
+                        keep, pbmV, joinAt = prefixLen - 1,
                     ),
                 )
             }
@@ -904,6 +1084,24 @@ class WordPredictor(
         private val pendingOrigin = arrayOfNulls<SwipeToken>(KineticaConstants.MAX_SEARCH_CUTS + 1)
         private var cutsOpen = 0
         private val letters = IntArray(KineticaConstants.MAX_WORD_LEN)
+        // The apostrophes this branch read at the key, by letter index: set and cleared by keyedOver,
+        // read by emit for the ideal path.
+        private val keyedAt = BooleanArray(KineticaConstants.MAX_WORD_LEN)
+        private var keyedCount = 0
+        // Where an elision joined a new word over the key: the `'`'s index, and the corner past the
+        // key the word starts at (index and point). Set and restored by keyedOver.
+        private var joinDepth = -1
+        // After a keyed `'`: no letter touched more than APOSTROPHE_PASS_STEP_BACK_MS before the key.
+        private var aposFloorT = Long.MIN_VALUE
+        private var joinFloorIdx = -1
+        private var joinFloorX = 0f
+        private var joinFloorY = 0f
+        private val heads = elisionHeads
+        private val maxHeadLen = heads.maxOfOrNull { it.length } ?: 0
+        // A buffer whose strokes cross the apostrophe key may join an elision after a head.
+        // A primitive array, read only when it holds a node: the prune it guards is the search's hottest test.
+        private val joinHeads: IntArray =
+            if (pattern.any { it is Matcher.Segment && it.apostrophePasses.isNotEmpty() }) headPrefixNodes else NO_NODES
         // The pieces this branch has closed, in closing order, with the letter range each
         // consumed. A piece belongs to the branch, not to a pattern slot, so the search can
         // place its own cuts. Bounded by MAX_WORD_LEN because every piece consumes a letter.
@@ -1495,6 +1693,7 @@ class WordPredictor(
                 }
                 editsLeft++
             }
+            if (m.keyless) possessiveTap(node, ti, depth, tapPen, contactKeep)
             // A tapped apostrophe stands for no other key: the loop below visits letters only, so
             // the fuzzy pass would lose it and `i's` would never reach `i'd`.
             if (!fuzzyAnchors || m.keyless) {
@@ -1573,11 +1772,34 @@ class WordPredictor(
             if (traced && depth > 0) visitsByFirst!![letters[0]]++
             if (streaming || rescue) steps++
             val m = seg
+            // An elision head spelled and the stroke going on over the apostrophe key: the reading
+            // may write `'` there and spell a new word from the trie's root.
+            if (joinDepth < 0 && lettersInSeg > 0 && depth <= maxHeadLen && m.apostrophePasses.isNotEmpty() &&
+                trie.isWord(node) && spelledHead(depth)
+            ) {
+                keyedOver(
+                    trie.root, ti, depth, segStartDepth, lettersInSeg, idealLen, lastIdx, prevLetter,
+                    tapPen, contactKeep, seg, nextTi, join = true,
+                )
+            }
+            // A carried `'` after an elision head: written there, the word after it from the trie's root.
+            if (carried > 0 && joinDepth < 0 && depth in 1..maxHeadLen && trie.isWord(node) && spelledHead(depth) &&
+                (0 until depth).none { letters[it] == alphabet.apostrophe }
+            ) {
+                carriedJoin(ti, depth, segStartDepth, lettersInSeg, idealLen, lastIdx, prevLetter, tapPen, contactKeep, seg, nextTi)
+            }
+            if (possessive && joinDepth < 0 && lettersInSeg > 0 && nextTi == pattern.size &&
+                (m.apostrophePasses.isNotEmpty() || carried > 0) && trie.isWord(node) && forms[node] == null
+            ) {
+                possessiveOver(node, ti, depth, segStartDepth, lettersInSeg, idealLen, lastIdx, prevLetter, tapPen, contactKeep, seg, nextTi)
+            }
             val count = orderChildrenByFreq(node, depth)
             if (count == 0) return
             val order = childOrder[depth]
+            // After an elision join the trie's lengths count from the join, not the reading's start.
+            val joinedLetters = if (joinDepth >= 0) joinDepth + 1 else 0
             val shortest = if (KineticaConstants.LENGTH_BOUND_PRUNE) {
-                depth + 1 + lettersStillNeeded(m, lettersInSeg + 1, nextTi)
+                depth - joinedLetters + 1 + lettersStillNeeded(m, lettersInSeg + 1, nextTi)
             } else {
                 0
             }
@@ -1638,15 +1860,27 @@ class WordPredictor(
                 }
                 val child = order[i]
                 val code = trie.letter(child)
-                if (code != alphabet.apostrophe && trie.maxWordLen(child) < shortest) continue
+                if (code != alphabet.apostrophe && trie.maxWordLen(child) < shortest &&
+                    (joinHeads.isEmpty() || child !in joinHeads)
+                ) {
+                    continue
+                }
 
                 if (code == alphabet.apostrophe) {
-                    // Transparent: apostrophes have no key and zero path length.
+                    // Transparent: apostrophes have no key and zero path length. Never charged, even
+                    // on a board with the key: a stroke past it still spells `don't` as before.
                     letters[depth] = code
                     descend(
                         child, ti, depth + 1, segStartDepth, lettersInSeg, idealLen,
                         lastIdx, prevLetter, tapPen, contactKeep, seg, nextTi,
                     )
+                    // The same apostrophe read where the stroke crossed the key.
+                    if (m.apostrophePasses.isNotEmpty()) {
+                        keyedOver(
+                            child, ti, depth, segStartDepth, lettersInSeg, idealLen, lastIdx, prevLetter,
+                            tapPen, contactKeep, seg, nextTi,
+                        )
+                    }
                     continue
                 }
                 if (!g.hasKey(code)) continue
@@ -1654,7 +1888,17 @@ class WordPredictor(
                 // A letter may match any pass of the path near its key (first
                 // or second visit, or a flyover between two other keys); the
                 // earliest admissible pass keeps the order constraint loosest.
-                val pass = m.passAtOrAfter(code, lastIdx - KineticaConstants.MONOTONE_SLACK)
+                // The first letter after an elision join is the one at the corner past the key.
+                val pass = if (joinFloorIdx >= 0 && depth == joinDepth + 1) {
+                    passAtCorner(m, code)
+                } else {
+                    m.passAtOrAfter(code, lastIdx - KineticaConstants.MONOTONE_SLACK)
+                }
+                if (aposFloorT != Long.MIN_VALUE &&
+                    m.letterTime(code, if (pass >= 0) pass else 0) < aposFloorT
+                ) {
+                    continue
+                }
                 var startKeep = 1f
                 if (lettersInSeg == 0) {
                     // A normal segment's first letter must sit near the path's
@@ -1768,6 +2012,230 @@ class WordPredictor(
         }
 
         /**
+         * A carried `'` as an elision's: no key and no leg on the ideal path, the tail from the root on the same
+         * piece. Its candidates take a slice of their own, as a keyed join's do.
+         */
+        private fun carriedJoin(
+            ti: Int,
+            depth: Int,
+            segStartDepth: Int,
+            lettersInSeg: Int,
+            idealLen: Float,
+            lastIdx: Int,
+            prevLetter: Int,
+            tapPen: Float,
+            contactKeep: Float,
+            seg: Matcher.Segment,
+            nextTi: Int,
+        ) {
+            if (depth + 1 >= KineticaConstants.MAX_WORD_LEN) return
+            letters[depth] = alphabet.apostrophe
+            val savedEmitted = emitted
+            val savedCap = emitCap
+            joinDepth = depth
+            emitCap = KineticaConstants.MAX_CANDIDATES
+            descend(
+                trie.root, ti, depth + 1, segStartDepth, lettersInSeg, idealLen, lastIdx, prevLetter,
+                tapPen, contactKeep, seg, nextTi,
+            )
+            joinDepth = -1
+            emitted = savedEmitted
+            emitCap = savedCap
+        }
+
+        /**
+         * `'` read as a letter where the piece passed over the apostrophe key after its last letter:
+         * the key a vertex of the ideal path, then on to [target], the trie's `'` child, or the root when
+         * [join] makes it an elision (`nell` `'` `altro`). Never a piece's first letter. The letters after
+         * it come after the key, with no slack back across it.
+         */
+        private fun keyedOver(
+            target: Int,
+            ti: Int,
+            depth: Int,
+            segStartDepth: Int,
+            lettersInSeg: Int,
+            idealLen: Float,
+            lastIdx: Int,
+            prevLetter: Int,
+            tapPen: Float,
+            contactKeep: Float,
+            seg: Matcher.Segment,
+            nextTi: Int,
+            join: Boolean = false,
+        ) {
+            if (streaming || rescue) return
+            if (lettersInSeg == 0 || prevLetter < 0 || depth + 1 >= KineticaConstants.MAX_WORD_LEN) return
+            val m = seg
+            val pass = m.apostrophePassAtOrAfter(lastIdx - KineticaConstants.MONOTONE_SLACK)
+            if (pass == -1) return
+            val a = alphabet.apostrophe
+            val len2 = idealLen + g.keyDist(prevLetter, a)
+            if (len2 > KineticaConstants.LEN_BAND_HI * m.arcLen + KineticaConstants.LEN_BAND_MARGIN_KW) return
+            letters[depth] = a
+            keyedAt[depth] = true
+            keyedCount++
+            val savedFloorT = aposFloorT
+            aposFloorT = maxOf(aposFloorT, m.letterTime(a, pass) - KineticaConstants.APOSTROPHE_PASS_STEP_BACK_MS)
+            val savedJoin = joinDepth
+            val savedFloor = joinFloorIdx
+            val savedFloorX = joinFloorX
+            val savedFloorY = joinFloorY
+            // A join walks the whole trie again as its tail, so its candidates take a slice of their own,
+            // given back after; the start letter's slice would otherwise be spent on one head's tails
+            // before the next head is reached (`dall` before `dell`). 16, 64 and 200 lost 33, 11 and 3 of
+            // 60 one-stroke elisions on goldens; the whole heap lost none.
+            val savedEmitted = emitted
+            val savedCap = emitCap
+            if (join) {
+                joinDepth = depth
+                // A straight run from the key gives no corner: then any letter on it may begin the word.
+                val start = m.tailStartAfter(pass)
+                joinFloorIdx = if (start > pass) start else -1
+                val o = m.apostropheOrdinal(pass)
+                if (o >= 0) {
+                    joinFloorX = m.apostropheTailX[o]
+                    joinFloorY = m.apostropheTailY[o]
+                }
+                emitCap = KineticaConstants.MAX_CANDIDATES
+            }
+            val consumed = lettersInSeg + 1
+            // A piece may close on the key itself: a thumb that lifts there, the other drawing on.
+            val closes = m.endsOnKey || (m.softEnd && pass >= 0)
+            val bandLoOk = len2 >= KineticaConstants.LEN_BAND_LO * m.letterArcLen - KineticaConstants.LEN_BAND_MARGIN_KW
+            if (consumed >= m.minLetters && closes && bandLoOk) {
+                pieceSeg[pieceCount] = m
+                pieceFrom[pieceCount] = segStartDepth
+                pieceTo[pieceCount] = depth + 1
+                pieceCount++
+                dfs(target, nextTi, depth + 1, tapPen, contactKeep)
+                pieceCount--
+            }
+            if (consumed < m.maxLetters) {
+                descend(
+                    target, ti, depth + 1, segStartDepth, consumed, len2,
+                    maxOf(lastIdx, pass + KineticaConstants.MONOTONE_SLACK), a, tapPen, contactKeep, seg, nextTi,
+                )
+            }
+            if (join) {
+                emitted = savedEmitted
+                emitCap = savedCap
+            }
+            joinDepth = savedJoin
+            joinFloorIdx = savedFloor
+            joinFloorX = savedFloorX
+            joinFloorY = savedFloorY
+            aposFloorT = savedFloorT
+            keyedCount--
+            keyedAt[depth] = false
+        }
+
+        /**
+         * `'s` after the list word at [node]: `'` where the stroke crossed the key after its last letter,
+         * then `s` as the stroke's last letter. Scored on the word itself; the reading ends there.
+         */
+        @Suppress("UNUSED_PARAMETER")
+        private fun possessiveOver(
+            node: Int,
+            ti: Int,
+            depth: Int,
+            segStartDepth: Int,
+            lettersInSeg: Int,
+            idealLen: Float,
+            lastIdx: Int,
+            prevLetter: Int,
+            tapPen: Float,
+            contactKeep: Float,
+            seg: Matcher.Segment,
+            nextTi: Int,
+        ) {
+            val a = alphabet.apostrophe
+            val sCode = alphabet.codeOf('s')
+            if (prevLetter < 0 || sCode < 0 || !g.hasKey(sCode) || depth + 2 > KineticaConstants.MAX_WORD_LEN) return
+            // A word that already holds `'` takes no `'s` (`he'll's`).
+            for (i in 0 until depth) if (letters[i] == a) return
+            val m = seg
+            val consumed = lettersInSeg + 2
+            if (consumed < m.minLetters || consumed > m.maxLetters) return
+            val keyPass = m.apostrophePassAtOrAfter(lastIdx - KineticaConstants.MONOTONE_SLACK)
+            // A carried `'` was tapped, not drawn: no pass over the key, no leg to it on the ideal path.
+            val keyed = keyPass != -1
+            if (!keyed && carried == 0) return
+            val pass = if (keyed) keyPass else lastIdx - KineticaConstants.MONOTONE_SLACK
+            val sPass = m.passAtOrAfter(sCode, pass)
+            if (sPass == -1 || !(m.isEnd(sCode) || m.softEnd)) return
+            val len2 = if (keyed) {
+                idealLen + g.keyDist(prevLetter, a) + g.keyDist(a, sCode)
+            } else {
+                idealLen + g.keyDist(prevLetter, sCode)
+            }
+            if (len2 > KineticaConstants.LEN_BAND_HI * m.arcLen + KineticaConstants.LEN_BAND_MARGIN_KW) return
+            if (len2 < KineticaConstants.LEN_BAND_LO * m.letterArcLen - KineticaConstants.LEN_BAND_MARGIN_KW) return
+            letters[depth] = a
+            letters[depth + 1] = sCode
+            if (keyed) {
+                keyedAt[depth] = true
+                keyedCount++
+            }
+            pieceSeg[pieceCount] = m
+            pieceFrom[pieceCount] = segStartDepth
+            pieceTo[pieceCount] = depth + 2
+            pieceCount++
+            dfs(node, nextTi, depth + 2, tapPen, contactKeep * KineticaConstants.POSSESSIVE_KEEP)
+            pieceCount--
+            if (keyed) {
+                keyedCount--
+                keyedAt[depth] = false
+            }
+        }
+
+        /**
+         * `'s` after the list word at [node] through a tapped `'` (the keyless anchor at [ti]) and a last tap
+         * reading `s`. Emitted here, not walked on: a completion from the word would write `marco'ss`.
+         */
+        private fun possessiveTap(node: Int, ti: Int, depth: Int, tapPen: Float, contactKeep: Float) {
+            if (!possessive || joinDepth >= 0 || cutsOpen > 0 || ti + 2 != pattern.size) return
+            if (depth == 0 || depth + 2 > KineticaConstants.MAX_WORD_LEN || !trie.isWord(node) || forms[node] != null) return
+            val a = alphabet.apostrophe
+            for (i in 0 until depth) if (letters[i] == a) return
+            val sTap = pattern[ti + 1] as? Matcher.Anchor ?: return
+            val sCode = alphabet.codeOf('s')
+            if (sTap.keyless || sCode < 0 || !g.hasKey(sCode)) return
+            val pen = if (sTap.code == sCode) {
+                0f
+            } else {
+                if (!fuzzyAnchors) return
+                val d = g.distToCenter(sTap.x, sTap.y, sCode)
+                if (d > KineticaConstants.FUZZY_TAP_RADIUS_KW) return
+                KineticaConstants.FUZZY_TAP_LAMBDA * d
+            }
+            letters[depth] = a
+            letters[depth + 1] = sCode
+            emit(node, depth + 2, tapPen + pen, contactKeep * KineticaConstants.POSSESSIVE_KEEP)
+        }
+
+        /** True when the letters so far spell one of the elision heads. */
+        private fun spelledHead(depth: Int): Boolean {
+            val sb = StringBuilder(depth)
+            for (i in 0 until depth) sb.append(alphabet.charOf(letters[i]))
+            return sb.toString() in heads
+        }
+
+        /**
+         * The pass of [code] for the first letter after an elision join: its key holds the corner past
+         * the apostrophe key, within [KineticaConstants.ELISION_TAIL_TOL_KW], and its pass is the one
+         * nearest that corner. -1 when its key is elsewhere.
+         */
+        private fun passAtCorner(m: Matcher.Segment, code: Int): Int {
+            if (g.distToCenter(joinFloorX, joinFloorY, code) > KineticaConstants.ELISION_TAIL_TOL_KW) return -1
+            var near = -1
+            for (idx in m.passesOf(code)) {
+                if (near < 0 || kotlin.math.abs(idx - joinFloorIdx) < kotlin.math.abs(near - joinFloorIdx)) near = idx
+            }
+            return near
+        }
+
+        /**
          * Fills childOrder[depth] with [node]'s children sorted best-first by
          * subtree frequency and returns the child count: if the candidate cap
          * ever bites, it bites the rarest subtrees.
@@ -1868,6 +2336,8 @@ class WordPredictor(
             contactKeep: Float,
             completion: Boolean = false,
         ) {
+            // A `'` tapped while a stroke was down is in the word somewhere.
+            if (carried > 0 && (0 until depth).none { letters[it] == alphabet.apostrophe }) return
             // An attempt is charged here, where the work is about to happen; a
             // candidate is charged below, only once this word survives every
             // abandon prune and reaches the heap.
@@ -1884,12 +2354,14 @@ class WordPredictor(
             val outcome = scoreReading(
                 g, heap, prevWordId, prevWord, node, letters, depth,
                 pieceCount, pieceSeg, null, pieceFrom, pieceTo, tapPen, contactKeep, source,
+                keyed = if (keyedCount > 0) keyedAt else null,
+                prefixLen = joinDepth + 1,
             )
             when (outcome) {
                 Scored.OFFERED -> emitted++
-                Scored.SCORE -> if (traced) abandonedScore++
-                Scored.IDEAL -> if (traced) abandonedIdeal++
-                Scored.DTW -> if (traced) abandonedDtw++
+                Scored.BOUND -> if (traced) abandonedScore++
+                Scored.PATHLESS -> if (traced) abandonedIdeal++
+                Scored.NO_FIT -> if (traced) abandonedDtw++
             }
         }
     }

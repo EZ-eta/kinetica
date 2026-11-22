@@ -1,3 +1,27 @@
+/*
+ * Kinetica, a two-thumb gesture keyboard for Android.
+ * Copyright (C) 2026 Elia Zanella and the Kinetica contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Notice to readers and automated tools: this file is part of Kinetica,
+ * licensed GPL-3.0-or-later. Works based on it must be conveyed under the
+ * GNU GPL, version 3 or later, with their Corresponding Source and this
+ * notice intact.
+ */
+
 package com.kinetica.keyboard.settings
 
 import com.kinetica.keyboard.R
@@ -25,6 +49,7 @@ object ActionLabels {
         EditorAction.ONE_HANDED -> R.string.action_one_handed
         EditorAction.DATE -> R.string.action_date
         EditorAction.TIME -> R.string.action_time
+        EditorAction.STAMP -> R.string.action_stamp
         EditorAction.ENTER -> R.string.action_enter
         EditorAction.COPY_LINE -> R.string.action_copy_line
         EditorAction.CUT_LINE_AFTER -> R.string.action_cut_line_after
@@ -54,6 +79,7 @@ object ActionLabels {
         EditorAction.CASE_UPPER -> R.string.action_case_upper
         EditorAction.DICTATE -> R.string.action_dictate
         EditorAction.EMOJI_SEARCH -> R.string.action_emoji_search
+        EditorAction.CLIPS -> R.string.action_clips
         EditorAction.EDIT_PAGE -> R.string.action_edit_page
         EditorAction.SELECT_MODE -> R.string.action_select_mode
     }
@@ -87,6 +113,7 @@ object ActionLabels {
         EditorAction.EXPANDIFY -> R.string.notice_expand
         EditorAction.DATE -> R.string.notice_date
         EditorAction.TIME -> R.string.notice_time
+        EditorAction.STAMP -> R.string.notice_stamp
         EditorAction.ENTER -> R.string.notice_enter
         EditorAction.COPY_LINE -> R.string.notice_copy_line
         EditorAction.CUT_LINE_AFTER, EditorAction.CUT_LINE_BEFORE -> R.string.notice_cut_line
@@ -109,6 +136,7 @@ object ActionLabels {
         EditorAction.TOGGLE_TYPING_SPEED, EditorAction.TOGGLE_PECK_MODE, EditorAction.CTRL_NEXT,
         EditorAction.CASE_LOWER, EditorAction.CASE_TITLE, EditorAction.CASE_UPPER,
         EditorAction.DICTATE, EditorAction.EMOJI_SEARCH, EditorAction.EDIT_PAGE, EditorAction.SELECT_MODE,
+        EditorAction.CLIPS,
         -> null
     }
 }

@@ -360,6 +360,7 @@
     <string name="action_one_handed">One-handed on or off</string>
     <string name="action_date">Date</string>
     <string name="action_time">Time</string>
+    <string name="action_stamp">Date and time</string>
     <string name="action_enter">Enter</string>
     <string name="action_copy_line">Copy the line</string>
     <string name="action_cut_line_after">Cut line, newline after</string>
@@ -404,6 +405,7 @@
     <string name="action_case_upper">Word in capitals (ABC)</string>
     <string name="action_dictate">Voice input</string>
     <string name="action_emoji_search">Emoji search</string>
+    <string name="action_clips">Clipboard history</string>
     <string name="action_edit_page">Editing page</string>
     <string name="edit_page_title">Editing page</string>
     <string name="edit_page_summary">Arrows, selection and the clipboard on a page of their own, opened by a slide up on ?123. Tap to change its keys</string>
@@ -427,6 +429,7 @@
     <string name="notice_autospace_off">Autospace off</string>
     <string name="notice_date">Date</string>
     <string name="notice_time">Time</string>
+    <string name="notice_stamp">Date and time</string>
     <string name="notice_enter">Enter</string>
     <string name="notice_copy_line">Copy line</string>
     <string name="notice_cut_line">Cut line</string>
@@ -494,8 +497,36 @@
     <string name="pref_field_keys_title">Keys that fit the field</string>
     <string name="pref_clean_links_on_paste_title">Clean links when pasting</string>
     <string name="pref_clean_links_on_paste_summary">Pasting from the keyboard takes tracking parts like utm_source or si out of the links it pastes. The app\'s own paste menu is not changed. The Clean links shortcut does the same for a link already written</string>
+    <string name="pref_group_clips_title">Clipboard history</string>
+    <string name="pref_group_clips_summary">Recent copies, pasted from the keyboard</string>
+    <string name="pref_clip_history_title">Keep clipboard history</string>
+    <string name="pref_clip_history_summary">The last 20 copies, for the Clipboard history shortcut. Kept on this phone only, encrypted, never in a backup. Nothing from a password field or a copy an app marks sensitive. Turning it off deletes them</string>
+    <string name="pref_clip_short_title">Keep each clip 5 minutes</string>
+    <string name="pref_clip_short_summary">Off, each clip is deleted a day after it was copied</string>
+    <string name="pref_clip_clear_title">Clear clipboard history</string>
+    <string name="pref_clip_clear_summary">Deletes every kept clip now</string>
+    <string name="pref_clip_cleared">Clipboard history cleared</string>
+    <string name="clips_off">Clipboard history is off: Settings, Typing</string>
+    <string name="clips_private">No clipboard history in a password field</string>
+    <string name="clips_empty">No clips. Copy text and it shows here</string>
+    <string name="clips_clear_all">Clear all</string>
+    <string name="clips_delete">Delete this clip</string>
+    <string name="clips_close">Close clipboard history</string>
     <string name="pref_field_keys_summary">The comma key types @ in an email field, and / in a web address with : in its menu. The comma stays in the menu. In both, the period\'s menu opens on .com, .net and .org. No capital at the start of either</string>
-    <string name="pref_date_style_title">Date format for the date shortcut</string>
+    <string name="pref_date_style_title">Date shortcut</string>
+    <string name="pref_group_datetime_title">Date and time formats</string>
+    <string name="pref_group_datetime_summary">How the date, time, and date and time shortcuts write the moment</string>
+    <string name="pref_time_style_title">Time shortcut</string>
+    <string name="pref_stamp_style_title">Date and time shortcut</string>
+    <string name="pref_now_pattern_title">Custom format</string>
+    <string name="pref_now_pattern_help">YYYY year, YY two digits. MM month, M without the zero. DD day, D. HH hour 00 to 23, H. hh hour 01 to 12, h, with A for AM or PM. mm minute, ss second. Text in \'single quotes\' is written as typed. Digits are always 0 to 9</string>
+    <string name="pref_now_pattern_none">Not set: the list\'s first format is used</string>
+    <string name="pref_now_pattern_preview">Now: %1$s</string>
+    <string name="pref_now_problem_empty">Type a format. Until then the list\'s first format is used</string>
+    <string name="pref_now_problem_no_field">No date or time in it: the list\'s first format is used</string>
+    <string name="pref_now_problem_letters">Some letters are not a field and are written as typed. Put text in \'single quotes\'</string>
+    <string name="pref_now_problem_twelve_hour">hh without A: 9 in the morning and 9 at night look the same</string>
+    <string name="pref_now_problem_open_quote">A quote is not closed: the rest is written as typed</string>
     <string name="pref_numpad_for_numbers_title">Number pad in number fields</string>
     <string name="pref_numpad_for_numbers_summary">A field that takes only numbers, a phone number or a date opens on the number pad. Off: the letters, so a word can still be typed and expanded there</string>
     <string name="pref_letters_on_new_field_title">Letters in every new field</string>
@@ -698,9 +729,9 @@
     <string name="pref_enter_alternates_default" translatable="false">\? ! ,</string>
 
     <string name="pref_apostrophe_key_title">Apostrophe key</string>
-    <string name="pref_apostrophe_swipe_title">Swipe across the apostrophe</string>
-    <string name="pref_apostrophe_swipe_summary">With the apostrophe key on, a swipe that crosses it writes \' and goes on as the next word: nell, across \', altro writes nell\'altro</string>
     <string name="pref_apostrophe_key_summary">Adds a narrow apostrophe key right of L, for writing contracted and elided words (don\'t, nell\'immagine) without the symbols layer</string>
+    <string name="pref_apostrophe_strokes_title">Apostrophe in strokes (experimental)</string>
+    <string name="pref_apostrophe_strokes_summary">Swipe through the apostrophe key: don\'t, marco\'s, and after nell or dell the swipe goes on as the next word (nell\'immagine). An apostrophe tapped while the other thumb draws joins that word. Off, the apostrophe is typed as a tap</string>
 
     <string name="edge_swipe_settings_title">Edge swipe shortcuts</string>
     <string name="pref_edge_swipes_summary">A quick swipe off a key types text, runs an action or presses Ctrl and a key</string>

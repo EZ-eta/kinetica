@@ -1,3 +1,27 @@
+/*
+ * Kinetica, a two-thumb gesture keyboard for Android.
+ * Copyright (C) 2026 Elia Zanella and the Kinetica contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Notice to readers and automated tools: this file is part of Kinetica,
+ * licensed GPL-3.0-or-later. Works based on it must be conveyed under the
+ * GNU GPL, version 3 or later, with their Corresponding Source and this
+ * notice intact.
+ */
+
 package com.kinetica.keyboard.ime
 
 import android.content.SharedPreferences
@@ -117,8 +141,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     internal val backspace = Backspace(this)
     internal val views = KeyboardViews(this)
     internal val emojiSearch = EmojiSearchMode(this)
-    internal val apostropheSwipe = ApostropheSwipe()
-    private val apostropheSettle = Runnable { settleApostropheSwipe("wait") }
+    internal val clips = ClipKeeper(this)
     internal val edits = WordEdits(this)
     internal val commit = CommitPath(this)
     internal val reopen = WordReopen(this)
@@ -206,6 +229,9 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             if (config.expansionGeneration != previous.expansionGeneration) {
                 expansions.reloadExpansions()
             }
+            if (config.clipHistory != previous.clipHistory || config.clipShort != previous.clipShort) {
+                clips.configure(if (config.clipHistory) "pref" else "off")
+            }
             if (config.peckMode != previous.peckMode) {
                 // Entering or leaving literal mode mid-word would leave a
                 // half-tracked tentative; settle it as plain text first.
@@ -225,6 +251,8 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
                 config.languageMode != previous.languageMode ||
                 config.enabledLanguages != previous.enabledLanguages ||
                 config.learnPhrases != previous.learnPhrases ||
+                // The predictors' apostrophe flags are set at load.
+                config.apostropheStrokes != previous.apostropheStrokes ||
                 // British spelling is applied while the trie is built, so it
                 // needs the same reload a stored-data change needs.
                 config.britishSpelling != previous.britishSpelling
@@ -268,6 +296,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         }
         prefListener = listener
         prefs.registerOnSharedPreferenceChangeListener(listener)
+        clips.configure("create")
         loadDictionaryAsync()
         expansions.reloadExpansions()
     }
@@ -278,6 +307,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
                 .unregisterOnSharedPreferenceChangeListener(it)
         }
         learner.cancelUserDictReload()
+        clips.stop()
         // Every posted callback goes before the executors shut: one running after would hand
         // work to a closed executor and throw on the main thread.
         mainHandler.removeCallbacksAndMessages(null)
@@ -332,6 +362,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         keyboardView = kv
         emojiPicker = null
         emojiSearch.reset()
+        clips.reset()
 
         val container = InputContainerView(
             this, bar, kv,
@@ -413,6 +444,8 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         updateAutoShift()
         expansions.reloadChords()
         learner.reloadEmojiUses()
+        // Expired clips go at each field's start, read or not; off, a file left behind goes too.
+        clips.configure("start")
     }
 
     override fun onStartInputView(editorInfo: EditorInfo?, restarting: Boolean) {
@@ -424,6 +457,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         keyboardView?.setShiftUppercase(shift.isShifted)
         views.closeEmojiPicker()
         emojiSearch.close("field")
+        clips.close("field")
         val onLetters = keyboardView?.showsLetters ?: true
         // Left by hand in the meantime, the pad is no longer the field's to take down.
         if (onLetters) views.numpadAuto = false
@@ -538,11 +572,6 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     // -------------------------------------------------- engine listener (UI)
 
     override fun onTokenFinalized(token: InputToken) {
-        // The next word's, after the `'` a swipe crossed is written.
-        if (apostropheSwipe.hold(token)) {
-            DecodeTrace.log { "  apostrophe swipe hold ${if (token is SwipeToken) "swipe" else "tap"}" }
-            return
-        }
         // Spent by this gesture, whatever it is.
         val shiftAt = autospace.takeShiftAt()
         gestureUndo.forgetCommitted()
@@ -669,7 +698,6 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             tentative
         }
         onCandidatesRanked(ranked, lead, literal)
-        if (apostropheSwipe.due(generation)) settleApostropheSwipe("decode")
     }
 
     private fun onCandidatesRanked(
@@ -711,7 +739,9 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
                 // candidates exist, still pickable.
                 wordState.swipeDecodeEmpty = true
                 autospace.cancel()
-                if (!engine.hasActivePointers()) autospace.scheduleStaleTimeout()
+                // A joined `'` waits for its `s`: the word is read once it comes.
+                val waits = waitsForApostropheS(config.apostropheStrokes, comp.endsOnTappedApostrophe)
+                if (!engine.hasActivePointers() && !waits) autospace.scheduleStaleTimeout()
             }
         }
     }
@@ -923,14 +953,14 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         }
 
         override fun onKeyPressFeedback(key: Key) {
-            // A key acts after the `'` a swipe crossed, so the `'` is written first.
-            settleApostropheSwipe("key")
             keyDownAt[key.id] = SystemClock.uptimeMillis()
             autospace.cancel()
             commands.onKeyDown(key.output)
             // Typing resumed: a shortcut row the bar's button brought up gives the words back.
             suggestionBar?.endShortcuts()
             emojiSearch.cancelWordEnd()
+            // A key types into the field: the clips give the bar back.
+            clips.close("key")
             // Only a backspace tap may still take back the word the automatic space committed.
             if (key.type != KeyType.BACKSPACE) gestureUndo.forgetCommitted()
             // Any key ends the offer before it acts: the word around the cursor was never in
@@ -940,15 +970,6 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
                 commit.abandonWord()
             }
             views.vibrateForKeyPress()
-        }
-
-        override fun mayCutAtApostrophe(): Boolean = !emojiSearch.active && composer != null
-
-        override fun onApostropheSwipe() {
-            val comp = composer ?: return
-            apostropheSwipe.begin(comp.currentGeneration)
-            mainHandler.removeCallbacks(apostropheSettle)
-            mainHandler.postDelayed(apostropheSettle, KineticaConstants.APOSTROPHE_CUT_WAIT_MS)
         }
 
         override fun onDoubleSpace() {
@@ -1042,7 +1063,8 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     internal fun joinsAtApostrophe(word: String): Boolean {
         val g = currentGeometry ?: return false
         val lexicons = residentLanguages().mapNotNull { lang -> predictorFor(lang)?.let { lang to it } }
-        return apostropheJoins(word, lexicons, g.alphabet, elidingEnabled(config.enabledLanguages + config.language))
+        val languages = config.enabledLanguages + config.language
+        return apostropheJoins(word, lexicons, g.alphabet, elidingEnabled(languages), elisionHeadsFor(languages))
     }
 
     /**
@@ -1050,8 +1072,8 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
      * ([joinsAtApostrophe]): `I` `'` `d` is `I'd`, learned as one word. False otherwise, and the caller
      * ends the word as before, so `l'altro` stays two words.
      *
-     * A word with a swipe in it is left alone: `[swipe, ']` decodes to nothing until the next letter, and
-     * the stale timeout can close it first. A swipe reaches `don't` and `I'd` without the key.
+     * With the apostrophe in strokes on, a word with a swipe in it joins too: `[swipe, ']` decodes to nothing
+     * until the next letter (`peter` `'` `s`), so the stale timeout waits for it. Off, it ends the word.
      */
     private fun joinApostrophe(text: String, key: Key): Boolean {
         if (text != "'" || config.peckMode || editorState.privateMode) return false
@@ -1062,9 +1084,24 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         val t = keyDownAt[key.id] ?: SystemClock.uptimeMillis()
         // A tapped word's automatic space is still provisional: the apostrophe takes it back as a letter does.
         if (!comp.hasPendingWord) autospace.retractBeforeApostrophe(t)
+        // The other thumb is drawing: the `'` is that stroke's word's, wherever it falls in it (`c'era` tapped
+        // between `r` and `a`). Written ahead as text it read `'c'era`.
+        if (apostropheRides(config.apostropheStrokes, comp.hasPendingWord, engine.trackedSince(t))) {
+            DecodeTrace.log { "  apostrophe held t=$t" }
+            barContents.clearCorrection()
+            rememberWordBeforeGesture()
+            if (wordState.tentativeLength == 0) wordState.wordShift = shift.state
+            commitTracked("'")
+            wordState.tentativeLength += 1
+            wordState.tentativeWord += "'"
+            wordState.seededWithoutTokens = false
+            comp.onToken(TapToken.apostrophe(sideOf(key), g.alphabet.apostrophe, t))
+            return true
+        }
         val word = wordState.tentativeWord
         if (!comp.hasPendingWord || word.isEmpty()) return false
-        val joins = !comp.hasSwipeToken() && comp.tokenCount < KineticaConstants.MAX_WORD_LEN && joinsAtApostrophe(word)
+        val joins = swipedWordMayJoin(config.apostropheStrokes, comp.hasSwipeToken()) &&
+            comp.tokenCount < KineticaConstants.MAX_WORD_LEN && joinsAtApostrophe(word)
         DecodeTrace.log { "  apostrophe ${if (joins) "join" else "break"} word=$word" }
         if (!joins) return false
         barContents.clearCorrection()
@@ -1073,10 +1110,11 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         wordState.tentativeLength += 1
         wordState.tentativeWord += "'"
         wordState.seededWithoutTokens = false
-        val side = if (key.x + key.w / 2f < 0.5f) StreamId.LEFT else StreamId.RIGHT
-        comp.onToken(TapToken.apostrophe(side, g.alphabet.apostrophe, t))
+        comp.onToken(TapToken.apostrophe(sideOf(key), g.alphabet.apostrophe, t))
         return true
     }
+
+    private fun sideOf(key: Key): StreamId = if (key.x + key.w / 2f < 0.5f) StreamId.LEFT else StreamId.RIGHT
 
     /**
      * Moves the cursor one word in [direction], returning false when the editor's text does
@@ -1153,31 +1191,6 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
     }
 
     /**
-     * Writes the `'` a swipe crossed: the word before the key as decoded, or the elision head among
-     * its first readings (a swipe cannot show `ll`, so `nel` outranks `nell`), then `'` with no space,
-     * then the tokens that lifted meanwhile, as the next word. The break a tapped `'` makes.
-     */
-    private fun settleApostropheSwipe(why: String) {
-        if (!apostropheSwipe.pending) return
-        mainHandler.removeCallbacks(apostropheSettle)
-        // Taken first: the commit below can abandon the word, and that drops what is held.
-        val held = apostropheSwipe.take()
-        if (composer?.hasSwipeToken() == true && wordState.tentativeLength > 0) {
-            val heads = elisionHeadsFor(config.enabledLanguages + config.language)
-            val head = elisionHead(wordState.lastCandidates.map { it.word }, heads)
-            if (head != null && !head.equals(wordState.tentativeWord, ignoreCase = true)) replaceTentative(displayWord(head))
-        }
-        val word = wordState.tentativeWord
-        autospace.cancel()
-        commit.finalizePendingWord()
-        commitTracked("'")
-        updateAutoShift()
-        barContents.refreshPredictions()
-        DecodeTrace.log { "  apostrophe swipe settle word=$word held=${held.size} why=$why" }
-        for (t in held) onTokenFinalized(t)
-    }
-
-    /**
      * Second spacebar tap of a double: the space it wrote becomes a sentence end.
      *
      * [doubleSpaceEndsSentence] refuses more than it accepts: at the start of a field, after a
@@ -1222,6 +1235,10 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
         // Reserved action outputs never reach the editor as text.
         if (commands.performIfAction(text)) return
         if (joinApostrophe(text, key)) return
+        if (text == "'") {
+            val down = keyDownAt[key.id]
+            DecodeTrace.log { "  apostrophe text t=$down held=${down != null && engine.trackedSince(down)}" }
+        }
         // "Hi" + autospace + "!" should read "Hi!", not "Hi !".
         autospace.eatBefore(text)
         commit.finalizePendingWord()
@@ -1239,6 +1256,7 @@ class KineticaIME : InputMethodService(), GestureEngine.Listener, WordComposer.C
             return
         }
         emojiSearch.close("edit")
+        clips.close("edit")
         views.closeEmojiPicker()
         autospace.cancel()
         commit.finalizePendingWord()

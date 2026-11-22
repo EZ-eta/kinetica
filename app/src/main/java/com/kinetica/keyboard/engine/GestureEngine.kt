@@ -1,3 +1,27 @@
+/*
+ * Kinetica, a two-thumb gesture keyboard for Android.
+ * Copyright (C) 2026 Elia Zanella and the Kinetica contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Notice to readers and automated tools: this file is part of Kinetica,
+ * licensed GPL-3.0-or-later. Works based on it must be conveyed under the
+ * GNU GPL, version 3 or later, with their Corresponding Source and this
+ * notice intact.
+ */
+
 package com.kinetica.keyboard.engine
 
 import com.kinetica.keyboard.engine.models.InputToken
@@ -112,38 +136,11 @@ class GestureEngine(private val listener: Listener) {
         val g = geometry
         val other = streams[1 - slotByPointer[pointerId]]
         if (g != null && other != null) DecodeTrace.log { nearLine("up", stream.streamId, xPx, yPx, other, g) }
-        // The rest of a stroke cut at the apostrophe that lifted before reaching a letter: nothing.
-        if (stream.resumed && stream.contactCount == 0) {
-            release(pointerId)
-            if (activeCount() == 0) listener.onAllPointersUp()
-            return
-        }
         val token = stream.finish(t)
         if (token is SwipeToken && g != null && DecodeTrace.enabled) tracePath(token, g)
         release(pointerId)
         listener.onTokenFinalized(token)
         if (activeCount() == 0) listener.onAllPointersUp()
-    }
-
-    /**
-     * Cuts [pointerId]'s stroke at the apostrophe key: the part before [tEnter] is finalized as a
-     * token of its own, as at a lift, and the pointer goes on as a new stroke from [tExit], in the
-     * same slot and stream. No [Listener.onAllPointersUp]: the pointer is still down. False when the
-     * pointer is not the engine's or the cut leaves no letter before it.
-     */
-    fun cutPointer(pointerId: Int, tEnter: Long, tExit: Long): Boolean {
-        val stream = streamFor(pointerId) ?: return false
-        val cut = stream.cut(tEnter, tExit) ?: return false
-        streams[slotByPointer[pointerId]] = cut.tail
-        val head = cut.head
-        val g = geometry
-        if (head is SwipeToken && g != null && DecodeTrace.enabled) tracePath(head, g)
-        DecodeTrace.log {
-            "  apostrophe swipe cut stream=${stream.streamId} head=${if (head is SwipeToken) "swipe" else "tap"} " +
-                "tEnter=$tEnter tExit=$tExit"
-        }
-        listener.onTokenFinalized(head)
-        return true
     }
 
     // The decode trace says which keys a stroke crossed, not where it went. A replay drawn
@@ -203,6 +200,10 @@ class GestureEngine(private val listener: Listener) {
     fun swipeHeldSince(t: Long): Boolean =
         streams.any { it != null && it.isSwipeCommitted && it.downTime < t }
 
+    /** Whether a thumb that landed before [t] is still down, drawing or not yet past the tap radius. */
+    fun trackedSince(t: Long): Boolean =
+        streams.any { it != null && it.downTime < t }
+
     /** Whether a pointer other than [pointerId] holds a stream. */
     fun otherTracking(pointerId: Int): Boolean =
         streams.any { it != null && it.pointerId != pointerId }
@@ -244,7 +245,10 @@ class GestureEngine(private val listener: Listener) {
             return sb.toString()
         }
 
-        /** The letter keys a capture was typed on, in kw, with the unit, midline and tap radius. */
+        /**
+         * The letter keys a capture was typed on, in kw, with the unit, midline and tap radius; the
+         * apostrophe key last when the board has one, so a stroke through it replays on it.
+         */
         fun geometryLine(g: KeyboardGeometry, tapDispKw: Float): String {
             val sb = StringBuilder(48 + g.letterCount * 28)
             sb.append("geometry kwpx=").append(kw(g.keyWidthPx))
@@ -252,8 +256,9 @@ class GestureEngine(private val listener: Listener) {
                 .append(" tap=").append("%.3f".format(Locale.ROOT, tapDispKw))
                 .append(" keys=")
             var first = true
-            for (code in 0 until g.letterCount) {
-                if (!g.hasKey(code)) continue
+            val codes = (0 until g.letterCount).filter { g.hasKey(it) } +
+                listOfNotNull(g.alphabet.apostrophe.takeIf { g.hasApostropheKey })
+            for (code in codes) {
                 if (!first) sb.append(';')
                 first = false
                 val r = g.rectKw(code)

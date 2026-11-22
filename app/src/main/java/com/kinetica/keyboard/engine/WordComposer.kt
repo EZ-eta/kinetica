@@ -1,3 +1,27 @@
+/*
+ * Kinetica, a two-thumb gesture keyboard for Android.
+ * Copyright (C) 2026 Elia Zanella and the Kinetica contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Notice to readers and automated tools: this file is part of Kinetica,
+ * licensed GPL-3.0-or-later. Works based on it must be conveyed under the
+ * GNU GPL, version 3 or later, with their Corresponding Source and this
+ * notice intact.
+ */
+
 package com.kinetica.keyboard.engine
 
 import com.kinetica.keyboard.engine.models.InputToken
@@ -83,8 +107,8 @@ class WordComposer(
         val generation: Int,
         val literal: String,
         val alternate: WordPredictor?,
-        val extra: WordPredictor? = null,
-        val weights: Map<String, Float>? = null,
+        val extraLang: WordPredictor? = null,
+        val momentum: Map<String, Float>? = null,
     )
 
     private val decodeLock = Any()
@@ -147,6 +171,10 @@ class WordComposer(
 
     fun hasSwipeToken(): Boolean = tokens.any { it !is TapToken }
 
+    /** Whether the buffer's last token in time is a tapped `'`, a word waiting for its next letter. */
+    val endsOnTappedApostrophe: Boolean
+        get() = (tokens.maxByOrNull { it.tStart } as? TapToken)?.x == TapToken.NO_KEY_KW
+
     /**
      * Decodes the buffer again, unchanged. A result that landed while a finger was still down
      * could not arm the autospace; once that finger is dropped as resting, this lets it.
@@ -193,6 +221,17 @@ class WordComposer(
     fun tokensSnapshot(): List<InputToken> = tokens.toList()
 
     /** Word committed to the editor: becomes bigram context, buffer resets. */
+    /**
+     * The last committed word in the context replaced by [words], in order: an elision committed as one
+     * word (`nell'altro`) is context `nell`, `altro`, as a tapped `'` would have left it.
+     */
+    fun replaceLastContext(words: List<String>) {
+        if (context.isEmpty()) return
+        context.removeLast()
+        for (w in words) context.addLast(w)
+        while (context.size > 2) context.removeFirst()
+    }
+
     fun commitWord(word: String) {
         if (DecodeTrace.enabled) traceCommitMiss(word)
         previousBuffer = if (tokens.isEmpty()) previousBuffer else ArrayList(tokens)
@@ -323,8 +362,8 @@ class WordComposer(
             generation = generation.incrementAndGet(),
             literal = buildLiteral(snapshot),
             alternate = alternatePredictor,
-            extra = extraPredictor,
-            weights = languageWeights,
+            extraLang = extraPredictor,
+            momentum = languageWeights,
         )
         val scheduleWorker = synchronized(decodeLock) {
             pendingDecode = request
@@ -357,7 +396,7 @@ class WordComposer(
             if (request.generation != generation.get()) continue
 
             val alternate = request.alternate
-            val weights = request.weights
+            val weights = request.momentum
             if (weights != null && alternate != null && request.literal.isEmpty()) {
                 val merged = equalFootingDecode(request, alternate, weights) ?: continue
                 deliver(request, rescueHeld(merged))
@@ -443,7 +482,7 @@ class WordComposer(
             )
         }
         val second = besideOn(alternateExecutor, alternate)
-        val third = besideOn(extraExecutor, request.extra)
+        val third = besideOn(extraExecutor, request.extraLang)
         val active = predictor.decode(request.tokens, request.context)
         if (request.generation != generation.get()) {
             second?.cancel(false)
@@ -486,7 +525,7 @@ class WordComposer(
         Thread.currentThread().interrupt()
         null
     } catch (e: ExecutionException) {
-        throw (e.cause as? RuntimeException) ?: IllegalStateException(e.cause)
+        throw (e.cause as? RuntimeException) ?: IllegalStateException("a decode died on its executor", e.cause)
     }
 
     /**

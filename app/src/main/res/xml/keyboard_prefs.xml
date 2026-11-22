@@ -285,6 +285,31 @@
                 app:singleLineTitle="false"
                 android:summary="@string/pref_clean_links_on_paste_summary"
                 android:defaultValue="false" />
+            <PreferenceScreen
+                android:key="pref_group_clips"
+                android:title="@string/pref_group_clips_title"
+                app:singleLineTitle="false"
+                android:summary="@string/pref_group_clips_summary">
+                <SwitchPreferenceCompat
+                    android:key="pref_clip_history"
+                    android:title="@string/pref_clip_history_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/pref_clip_history_summary"
+                    android:defaultValue="false" />
+                <SwitchPreferenceCompat
+                    android:key="pref_clip_short"
+                    android:dependency="pref_clip_history"
+                    android:title="@string/pref_clip_short_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/pref_clip_short_summary"
+                    android:defaultValue="false" />
+                <Preference
+                    android:key="pref_clip_clear"
+                    android:dependency="pref_clip_history"
+                    android:title="@string/pref_clip_clear_title"
+                    app:singleLineTitle="false"
+                    android:summary="@string/pref_clip_clear_summary" />
+            </PreferenceScreen>
             <SwitchPreferenceCompat
                 android:key="pref_peck_mode"
                 android:title="@string/pref_peck_mode_title"
@@ -426,14 +451,53 @@
                     <extra android:name="set" android:value="menu" />
                 </intent>
             </Preference>
-            <ListPreference
-                android:key="pref_date_style"
-                android:title="@string/pref_date_style_title"
+            <!-- Rows built for the three now actions; a pattern row shows only under Custom
+                 (KeyboardPrefsFragment.wireNowFormats). -->
+            <PreferenceScreen
+                android:key="pref_group_datetime"
+                android:title="@string/pref_group_datetime_title"
                 app:singleLineTitle="false"
-                android:entries="@array/date_style_entries"
-                android:entryValues="@array/date_style_values"
-                android:defaultValue="system"
-                app:useSimpleSummaryProvider="true" />
+                android:summary="@string/pref_group_datetime_summary">
+                <ListPreference
+                    android:key="pref_date_style"
+                    android:title="@string/pref_date_style_title"
+                    app:singleLineTitle="false"
+                    android:entries="@array/date_style_entries"
+                    android:entryValues="@array/date_style_values"
+                    android:defaultValue="system"
+                    app:useSimpleSummaryProvider="true" />
+                <EditTextPreference
+                    android:key="pref_date_pattern"
+                    android:title="@string/pref_now_pattern_title"
+                    app:singleLineTitle="false"
+                    android:dialogMessage="@string/pref_now_pattern_help" />
+                <ListPreference
+                    android:key="pref_time_style"
+                    android:title="@string/pref_time_style_title"
+                    app:singleLineTitle="false"
+                    android:entries="@array/time_style_entries"
+                    android:entryValues="@array/time_style_values"
+                    android:defaultValue="system"
+                    app:useSimpleSummaryProvider="true" />
+                <EditTextPreference
+                    android:key="pref_time_pattern"
+                    android:title="@string/pref_now_pattern_title"
+                    app:singleLineTitle="false"
+                    android:dialogMessage="@string/pref_now_pattern_help" />
+                <ListPreference
+                    android:key="pref_stamp_style"
+                    android:title="@string/pref_stamp_style_title"
+                    app:singleLineTitle="false"
+                    android:entries="@array/stamp_style_entries"
+                    android:entryValues="@array/stamp_style_values"
+                    android:defaultValue="iso"
+                    app:useSimpleSummaryProvider="true" />
+                <EditTextPreference
+                    android:key="pref_stamp_pattern"
+                    android:title="@string/pref_now_pattern_title"
+                    app:singleLineTitle="false"
+                    android:dialogMessage="@string/pref_now_pattern_help" />
+            </PreferenceScreen>
         </PreferenceScreen>
 
         <PreferenceScreen
@@ -990,10 +1054,10 @@
                 android:summary="@string/pref_apostrophe_key_summary"
                 android:defaultValue="false" />
             <SwitchPreferenceCompat
-                android:key="pref_apostrophe_swipe"
-                android:title="@string/pref_apostrophe_swipe_title"
+                android:key="pref_apostrophe_strokes"
+                android:title="@string/pref_apostrophe_strokes_title"
                 app:singleLineTitle="false"
-                android:summary="@string/pref_apostrophe_swipe_summary"
+                android:summary="@string/pref_apostrophe_strokes_summary"
                 android:defaultValue="false" />
             <com.kinetica.keyboard.settings.SteppedSliderPreference
                 android:key="pref_long_press_ms"

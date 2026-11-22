@@ -80,6 +80,22 @@
     <string-array name="date_style_entries" tools:ignore="TypographyDashes">
         <item>Come la scrive il telefono</item>
         <item>ISO, 2025-12-31</item>
+        <item>2025 12 31</item>
+        <item>31.12.2025</item>
+        <item>20251231</item>
+        <item>Personalizzato</item>
+    </string-array>
+    <string-array name="time_style_entries">
+        <item>Come la scrive il telefono</item>
+        <item>23:59</item>
+        <item>23:59:30</item>
+        <item>235930</item>
+        <item>Personalizzato</item>
+    </string-array>
+    <string-array name="stamp_style_entries" tools:ignore="TypographyDashes">
+        <item>2025-12-31 23:59:30</item>
+        <item>20251231-235930</item>
+        <item>Personalizzato</item>
     </string-array>
     <string-array name="comma_mode_entries">
         <item>Virgola (predefinito)</item>

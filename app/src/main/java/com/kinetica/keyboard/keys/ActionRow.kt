@@ -1,3 +1,27 @@
+/*
+ * Kinetica, a two-thumb gesture keyboard for Android.
+ * Copyright (C) 2026 Elia Zanella and the Kinetica contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Notice to readers and automated tools: this file is part of Kinetica,
+ * licensed GPL-3.0-or-later. Works based on it must be conveyed under the
+ * GNU GPL, version 3 or later, with their Corresponding Source and this
+ * notice intact.
+ */
+
 package com.kinetica.keyboard.keys
 
 /**
@@ -37,6 +61,7 @@ object ActionRow {
         EditorAction.EXPANDIFY,
         EditorAction.DATE,
         EditorAction.TIME,
+        EditorAction.STAMP,
         EditorAction.ENTER,
         EditorAction.COPY_LINE,
         EditorAction.CUT_LINE_AFTER,
@@ -68,6 +93,7 @@ object ActionRow {
         EditorAction.EMOJI_SEARCH,
         EditorAction.EDIT_PAGE,
         EditorAction.SELECT_MODE,
+        EditorAction.CLIPS,
     )
 
     /** What the row offers out of the box. */
@@ -98,6 +124,7 @@ object ActionRow {
         EditorAction.EXPANDIFY -> "»"
         EditorAction.DATE -> "▦"              // a grid, as a calendar page
         EditorAction.TIME -> "◷"              // a clock face with one quarter marked
+        EditorAction.STAMP -> "▦◷"            // the date's glyph and the time's
         EditorAction.ENTER -> "⏎"             // the return symbol
         EditorAction.COPY_LINE -> "≡"         // lines of text
         // Scissors and the side whose newline goes with the line.
@@ -134,6 +161,7 @@ object ActionRow {
         // Four ways out of the middle, as the page's arrows go; a dotted box, the selection's.
         EditorAction.EDIT_PAGE -> "\u2725"
         EditorAction.SELECT_MODE -> "\u2B1A"
+        EditorAction.CLIPS -> "⎘≡"            // paste's symbol and a list
     }
 
     /**
@@ -285,7 +313,7 @@ object ActionRow {
         // Settings and voice close the keyboard; a re-case shows in the word itself, the search
         // panel in its own place.
         EditorAction.SETTINGS, EditorAction.DICTATE, EditorAction.CASE_LOWER, EditorAction.CASE_TITLE,
-        EditorAction.CASE_UPPER, EditorAction.EMOJI_SEARCH, EditorAction.EDIT_PAGE,
+        EditorAction.CASE_UPPER, EditorAction.EMOJI_SEARCH, EditorAction.EDIT_PAGE, EditorAction.CLIPS,
         -> null
         EditorAction.TOGGLE_AUTOSPACE -> Notice.Autospace(!before.autospace)
         EditorAction.TOGGLE_NEXT_WORD -> Notice.Toggle(action, !before.nextWord)
@@ -302,7 +330,7 @@ object ActionRow {
             Notice.Layout(oneHandedToggle(before.layoutMode, before.rememberedOneHanded).mode)
         EditorAction.UNDO, EditorAction.REDO, EditorAction.PASTE, EditorAction.COPY,
         EditorAction.CUT, EditorAction.SELECT_ALL, EditorAction.RETYPE, EditorAction.EXPANDIFY,
-        EditorAction.DATE, EditorAction.TIME, EditorAction.ENTER, EditorAction.COPY_LINE,
+        EditorAction.DATE, EditorAction.TIME, EditorAction.STAMP, EditorAction.ENTER, EditorAction.COPY_LINE,
         EditorAction.CUT_LINE_AFTER, EditorAction.CUT_LINE_BEFORE,
         EditorAction.CLEAN_LINKS, EditorAction.TAB, EditorAction.ESCAPE, EditorAction.FORWARD_DELETE, EditorAction.HOME,
         EditorAction.END, EditorAction.ARROW_UP, EditorAction.ARROW_DOWN, EditorAction.ARROW_LEFT,

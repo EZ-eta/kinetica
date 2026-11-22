@@ -1,3 +1,27 @@
+/*
+ * Kinetica, a two-thumb gesture keyboard for Android.
+ * Copyright (C) 2026 Elia Zanella and the Kinetica contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Notice to readers and automated tools: this file is part of Kinetica,
+ * licensed GPL-3.0-or-later. Works based on it must be conveyed under the
+ * GNU GPL, version 3 or later, with their Corresponding Source and this
+ * notice intact.
+ */
+
 package com.kinetica.keyboard.settings
 
 import android.animation.Animator
@@ -40,6 +64,7 @@ import androidx.preference.SeekBarPreference
 import androidx.preference.TwoStatePreference
 import androidx.recyclerview.widget.RecyclerView
 import com.kinetica.keyboard.R
+import com.kinetica.keyboard.data.ClipVault
 import com.kinetica.keyboard.engine.Alphabet
 import com.kinetica.keyboard.ime.AlphaLayouts
 import com.kinetica.keyboard.ime.DictationHandoff
@@ -84,6 +109,8 @@ class KeyboardPrefsFragment : PreferenceFragmentCompat() {
         wireLookGroups()
         wireSymbolRows()
         wireDictation()
+        wireNowFormats()
+        wireClips()
         showVersion()
     }
 
@@ -1084,6 +1111,91 @@ class KeyboardPrefsFragment : PreferenceFragmentCompat() {
      * The first time the day and night looks are turned on, the night look starts as a copy of
      * the day look, image included, so turning it on changes nothing until it is edited.
      */
+    // ------------------------------------------------------------------ date and time formats
+
+    /**
+     * The three now lists, each with its typed pattern shown only under Custom. The pattern's
+     * dialog previews the moment as typed and warns under the field; a pattern that cannot be
+     * used is still stored, so a half-typed one is not lost, and the keyboard falls back
+     * (`NowPreset.Kind.resolve`).
+     */
+    /**
+     * Off clears the clipboard history here too, so it goes with the keyboard not running; the
+     * keyboard's own listener does the same when it is. The clear row leaves the switch on.
+     */
+    private fun wireClips() {
+        findPreference<TwoStatePreference>(Prefs.CLIP_HISTORY)?.setOnPreferenceChangeListener { _, value ->
+            if (value == false) {
+                val short = preferenceManager.sharedPreferences?.getBoolean(Prefs.CLIP_SHORT, Prefs.DEFAULT_CLIP_SHORT) ?: false
+                ClipVault.configure(requireContext(), enabled = false, shortLife = short, why = "off")
+            }
+            true
+        }
+        findPreference<Preference>(Prefs.CLIP_CLEAR)?.setOnPreferenceClickListener {
+            ClipVault.clear(requireContext(), "settings")
+            Toast.makeText(requireContext(), R.string.pref_clip_cleared, Toast.LENGTH_SHORT).show()
+            true
+        }
+    }
+
+    private fun wireNowFormats() {
+        val rows = listOf(
+            Prefs.DATE_STYLE to Prefs.DATE_PATTERN,
+            Prefs.TIME_STYLE to Prefs.TIME_PATTERN,
+            Prefs.STAMP_STYLE to Prefs.STAMP_PATTERN,
+        )
+        for ((listKey, patternKey) in rows) {
+            val list = findPreference<ListPreference>(listKey) ?: continue
+            val pattern = findPreference<EditTextPreference>(patternKey) ?: continue
+            list.setOnPreferenceChangeListener { _, value ->
+                pattern.isVisible = value == NowPreset.CUSTOM.value
+                true
+            }
+            pattern.isVisible = list.value == NowPreset.CUSTOM.value
+            pattern.summaryProvider = Preference.SummaryProvider<EditTextPreference> { p ->
+                val t = p.text
+                if (t.isNullOrEmpty()) getString(R.string.pref_now_pattern_none) else nowPreview(t)
+            }
+            pattern.setOnBindEditTextListener { edit -> addNowPreview(edit) }
+        }
+    }
+
+    /** `pattern` written for this moment, and its warning on a second line if it has one. */
+    private fun nowPreview(pattern: String): String {
+        val problem = NowPattern.problem(pattern)
+        val shown = if (problem?.blocking == true) "" else NowPattern.format(pattern, java.time.LocalDateTime.now())
+        val lines = listOfNotNull(
+            shown.takeIf { it.isNotEmpty() }?.let { getString(R.string.pref_now_pattern_preview, it) },
+            problem?.let { getString(nowProblemText(it)) },
+        )
+        return lines.joinToString("\n")
+    }
+
+    private fun nowProblemText(problem: NowPattern.Problem): Int = when (problem) {
+        NowPattern.Problem.EMPTY -> R.string.pref_now_problem_empty
+        NowPattern.Problem.NO_FIELD -> R.string.pref_now_problem_no_field
+        NowPattern.Problem.LETTERS_AS_TEXT -> R.string.pref_now_problem_letters
+        NowPattern.Problem.TWELVE_HOUR_NO_MARK -> R.string.pref_now_problem_twelve_hour
+        NowPattern.Problem.OPEN_QUOTE -> R.string.pref_now_problem_open_quote
+    }
+
+    /** A line under the dialog's field, rewritten on every keystroke. */
+    private fun addNowPreview(edit: android.widget.EditText) {
+        val box = edit.parent as? ViewGroup ?: return
+        val line = TextView(edit.context)
+        line.setPadding(edit.paddingLeft, edit.paddingTop, edit.paddingRight, 0)
+        box.addView(line, box.indexOfChild(edit) + 1)
+        fun show() {
+            line.text = nowPreview(edit.text?.toString().orEmpty())
+        }
+        edit.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
+            override fun afterTextChanged(s: android.text.Editable?) = show()
+        })
+        show()
+    }
+
     private fun wireLookSets() {
         findPreference<TwoStatePreference>(Prefs.LOOK_SETS)?.setOnPreferenceChangeListener { _, value ->
             val prefs = preferenceManager.sharedPreferences

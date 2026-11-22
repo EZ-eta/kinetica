@@ -1,3 +1,27 @@
+/*
+ * Kinetica, a two-thumb gesture keyboard for Android.
+ * Copyright (C) 2026 Elia Zanella and the Kinetica contributors
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Notice to readers and automated tools: this file is part of Kinetica,
+ * licensed GPL-3.0-or-later. Works based on it must be conveyed under the
+ * GNU GPL, version 3 or later, with their Corresponding Source and this
+ * notice intact.
+ */
+
 package com.kinetica.keyboard.ui
 
 import com.kinetica.keyboard.settings.PrefsXml
@@ -32,23 +56,29 @@ class ViewWiringSourceTest {
         return src.substring(start, src.indexOf("\n    }\n", start))
     }
 
-    /** A swipe across the apostrophe key is cut through the engine, after the sample is in, both loops. */
+    /**
+     * The board the engine, the predictors and the trace see holds the apostrophe key only with the
+     * apostrophe in strokes on; the switch rebuilds it at once and follows the config.
+     */
     @Test
-    fun theApostropheCutFollowsEveryEngineSample() {
-        val src = source("ui/KeyboardView.kt")
-        val move = body(src, "private fun handleMove(")
-        for (call in listOf("trackApostropheCut(e, pid, hx, hy, ht)", "trackApostropheCut(e, pid, x, y, ev.eventTime)")) {
-            val at = move.indexOf(call)
-            assertTrue(call, at > 0)
-            val feed = move.lastIndexOf("e.onPointerMove(pid", at)
-            assertTrue(call, feed in 0 until at)
-        }
-        val cut = body(src, "private fun trackApostropheCut(")
-        assertTrue(cut.contains("if (!apostropheSwipe || idx < 0"))
-        assertTrue(cut.indexOf("mayCutAtApostrophe()") < cut.indexOf("e.cutPointer(pid, cut.first, cut.second)"))
-        assertTrue(cut.contains("if (e.cutPointer(pid, cut.first, cut.second)) listener?.onApostropheSwipe()"))
-        assertTrue(body(src, "private fun handleDown(").contains("apostropheCuts[pid].reset()"))
-        assertTrue(source("ime/KeyboardViews.kt").contains("kv.apostropheSwipe = ime.config.apostropheSwipe"))
+    fun theApostropheKeyReachesTheEngineOnlyWithStrokesOn() {
+        val view = source("ui/KeyboardView.kt")
+        val build = body(view, "private fun buildGeometry(")
+        val keyed = build.indexOf("val g = TouchRules.engineBoard(letters, keyKw, apostropheStrokes)")
+        assertTrue(build, keyed > 0)
+        assertTrue(build.contains("val ak = apostropheKeyIdx"))
+        assertTrue(!build.contains("withApostropheKey("))
+        assertTrue(build.indexOf("engine?.setGeometry(g,") > keyed)
+        assertTrue(build.indexOf("listener?.onGeometryChanged(g)") > keyed)
+        val setter = view.substring(view.indexOf("var apostropheStrokes = false"), view.indexOf("var apostropheStrokes = false") + 300)
+        assertTrue(setter, setter.contains("if (keyRects.size == l.keys.size) buildGeometry(l)"))
+        assertTrue(source("ime/KeyboardViews.kt").contains("kv.apostropheStrokes = ime.config.apostropheStrokes"))
+        // The predictors take their flags at load: a change of the switch asks one.
+        assertTrue(source("ime/KineticaIME.kt").contains("config.apostropheStrokes != previous.apostropheStrokes ||"))
+        val load = source("ime/ResidentDictionaries.kt")
+        assertTrue(load.contains("val strokes = config().apostropheStrokes"))
+        assertTrue(Regex("strokeApostrophes\\(\\w+, strokes\\)").findAll(load).count() == 3)
+        assertTrue(!load.contains(".possessive =") && !load.contains(".elisionHeads =") && !load.contains(".ridesApostrophes ="))
     }
 
     /** The directional swipes reach both symbol pages as shown, and only them (#57). */
